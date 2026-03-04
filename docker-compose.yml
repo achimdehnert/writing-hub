@@ -1,0 +1,31 @@
+version: '3.9'
+
+services:
+  web:
+    build: .
+    container_name: writing_hub_web_dev
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8095:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.development
+      - DEBUG=True
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15
+    container_name: writing_hub_db_dev
+    environment:
+      POSTGRES_DB: writing_hub_db
+      POSTGRES_USER: writing_hub
+      POSTGRES_PASSWORD: writing_hub_dev
+    volumes:
+      - pgdata_dev:/var/lib/postgresql/data
+    ports:
+      - "5435:5432"
+
+volumes:
+  pgdata_dev:

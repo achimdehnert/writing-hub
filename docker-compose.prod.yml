@@ -1,0 +1,40 @@
+version: '3.9'
+
+services:
+  writing_hub_web:
+    image: ghcr.io/achimdehnert/writing-hub:latest
+    container_name: writing_hub_web
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    volumes:
+      - writing_hub_media:/app/media
+      - writing_hub_static:/app/staticfiles
+    depends_on:
+      - writing_hub_db
+    ports:
+      - "8095:8000"
+    networks:
+      - writing_hub_net
+
+  writing_hub_db:
+    image: postgres:15
+    container_name: writing_hub_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: writing_hub_db
+      POSTGRES_USER: writing_hub
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - writing_hub_pgdata:/var/lib/postgresql/data
+    networks:
+      - writing_hub_net
+
+volumes:
+  writing_hub_pgdata:
+  writing_hub_media:
+  writing_hub_static:
+
+networks:
+  writing_hub_net:
+    driver: bridge
