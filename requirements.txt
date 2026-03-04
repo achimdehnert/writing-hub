@@ -1,0 +1,75 @@
+# ============================================================================
+# Writing Hub — Autorenplattform
+# Requirements for Django 5.2 LTS Project (ADR-083)
+# ============================================================================
+
+# Core Django & Web Framework
+Django==5.2.6
+gunicorn==23.0.0
+whitenoise==6.11.0
+python-decouple==3.8
+
+# Django Extensions
+django-filter==24.3
+django-crispy-forms==2.3
+crispy-bootstrap5==2024.10
+djangorestframework==3.16.1
+
+# Error Tracking
+sentry-sdk==2.18.0
+
+# HTTP
+requests==2.32.5
+httpx==0.28.1
+aiohttp==3.13.2
+
+# Handler Framework
+pydantic==2.12.0
+pydantic-settings==2.12.0
+structlog==25.4.0
+asgiref==3.8.1
+
+# ============================================================================
+# Platform Framework Packages (iil-ecosystem — PRIMARY LLM INTEGRATION)
+# All LLM calls go through aifw.
+# ============================================================================
+iil-aifw>=0.6.0,<1
+iil-authoringfw>=0.3.0,<1
+iil-promptfw>=0.5.0,<1
+
+# LLM provider libs (transitive)
+litellm>=1.0.0
+openai==2.7.1
+anthropic==0.71.0
+tiktoken==0.12.0
+
+# Database
+psycopg2-binary==2.9.10
+dj-database-url>=2.0.0
+pgvector>=0.3.0
+
+# Celery (für async LLM Tasks — ADR-081 Befund 1)
+celery==5.5.3
+redis==7.0.1
+django-celery-beat==2.8.1
+
+# Utilities
+python-dateutil==2.9.0.post0
+PyYAML==6.0.3
+python-dotenv==1.0.0
+markdown==3.4.1
+jsonschema==4.25.1
+orjson==3.11.4
+tenacity==9.1.2
+
+# Document Processing (IdeaImport ADR-081)
+python-docx==1.2.0
+PyPDF2==3.0.1
+pdfplumber==0.11.7
+
+# Image Processing
+Pillow==12.0.0
+
+# Security
+cryptography==46.0.3
+PyJWT==2.10.1
