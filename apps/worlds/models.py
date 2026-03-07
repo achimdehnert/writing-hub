@@ -1,8 +1,17 @@
 """
-Worlds App — SSoT für Weltenbau (ADR-082, ADR-083)
+Worlds App — SSoT fuer Weltenbau (ADR-082, ADR-083)
 
-Extrahiert aus bfagent/apps/writing_hub/models_world.py.
-Modelle: World, WorldLocation, WorldRule, WorldCharacter, ProjectWorld, ProjectWorldCharacter
+Model-Gruppen:
+  1. World               — Welt-Definition (User-owned, projektunabhaengig)
+  2. WorldLocation       — Orte innerhalb einer Welt (hierarchisch)
+  3. WorldRule           — Regeln/Constraints einer Welt
+  4. WorldCharacter      — Charakter auf Welt-Ebene (SSoT)
+  5. ProjectWorld        — M2M: World <-> BookProject
+  6. ProjectWorldCharacter — M2M: WorldCharacter <-> BookProject mit Projekt-Overrides
+
+weltenfw-Kompatibilitaet: Diese Models implementieren das Weltenbau-SSoT-Pattern
+identisch zur iil-weltenfw Spezifikation. Bei Verfuegbarkeit kann weltenfw
+als Drop-in genutzt werden.
 """
 from __future__ import annotations
 
@@ -12,12 +21,16 @@ from django.conf import settings
 from django.db import models
 
 
+# =============================================================================
+# 1. World
+# =============================================================================
+
+
 class World(models.Model):
     """
-    Projektunabhängige Weltdefinition.
-
-    Eine Welt gehört einem User und kann in beliebig vielen Projekten
-    verwendet werden über die ProjectWorld M2M-Beziehung.
+    Projektunabhaengige Weltdefinition.
+    Eine Welt gehoert einem User und kann in beliebig vielen
+    Projekten verwendet werden via ProjectWorld M2M.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -43,14 +56,18 @@ class World(models.Model):
     politics = models.TextField(blank=True)
     economy = models.TextField(blank=True)
     history = models.TextField(blank=True)
+    atmosphere = models.TextField(
+        blank=True,
+        help_text="Stimmung und Atmosphaere der Welt",
+    )
 
     class Language(models.TextChoices):
-        DE = "de", "🇩🇪 Deutsch"
-        EN = "en", "🇬🇧 English"
-        ES = "es", "🇪🇸 Español"
-        FR = "fr", "🇫🇷 Français"
-        IT = "it", "🇮🇹 Italiano"
-        PT = "pt", "🇵🇹 Português"
+        DE = "de", "Deutsch"
+        EN = "en", "English"
+        ES = "es", "Espanol"
+        FR = "fr", "Francais"
+        IT = "it", "Italiano"
+        PT = "pt", "Portugues"
 
     language = models.CharField(
         max_length=5,
@@ -78,20 +95,32 @@ class World(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             from django.utils.text import slugify
+
             base_slug = slugify(self.name)
-            self.slug = f"{base_slug}-{str(self.id)[:8]}" if self.id else base_slug
+            self.slug = (
+                f"{base_slug}-{str(self.id)[:8]}" if self.id else base_slug
+            )
         super().save(*args, **kwargs)
 
 
+# =============================================================================
+# 2. WorldLocation
+# =============================================================================
+
+
 class WorldLocation(models.Model):
-    """
-    Orte innerhalb einer Welt (hierarchisch).
-    """
+    """Orte innerhalb einer Welt (hierarchisch)."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    world = models.ForeignKey("World", on_delete=models.CASCADE, related_name="locations")
+    world = models.ForeignKey(
+        "World", on_delete=models.CASCADE, related_name="locations"
+    )
     parent = models.ForeignKey(
-        "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="children"
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="children",
     )
 
     name = models.CharField(max_length=200)
@@ -102,11 +131,13 @@ class WorldLocation(models.Model):
         ("region", "Region"),
         ("city", "Stadt"),
         ("district", "Stadtteil"),
-        ("building", "Gebäude"),
+        ("building", "Gebaeude"),
         ("landmark", "Wahrzeichen"),
         ("natural", "Naturmerkmal"),
     ]
-    location_type = models.CharField(max_length=20, choices=LOCATION_TYPES, default="city")
+    location_type = models.CharField(
+        max_length=20, choices=LOCATION_TYPES, default="city"
+    )
     description = models.TextField(blank=True)
     significance = models.TextField(blank=True)
     coordinates = models.JSONField(blank=True, null=True)
@@ -124,13 +155,18 @@ class WorldLocation(models.Model):
         return f"{self.name} ({self.get_location_type_display()})"
 
 
+# =============================================================================
+# 3. WorldRule
+# =============================================================================
+
+
 class WorldRule(models.Model):
-    """
-    Regeln und Constraints einer Welt.
-    """
+    """Regeln und Constraints einer Welt."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    world = models.ForeignKey("World", on_delete=models.CASCADE, related_name="rules")
+    world = models.ForeignKey(
+        "World", on_delete=models.CASCADE, related_name="rules"
+    )
 
     CATEGORY_CHOICES = [
         ("physics", "Physik"),
@@ -140,7 +176,9 @@ class WorldRule(models.Model):
         ("biology", "Biologie"),
         ("economy", "Wirtschaft"),
     ]
-    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default="physics")
+    category = models.CharField(
+        max_length=20, choices=CATEGORY_CHOICES, default="physics"
+    )
     rule = models.CharField(max_length=500)
     explanation = models.TextField(blank=True)
 
@@ -149,7 +187,9 @@ class WorldRule(models.Model):
         ("strong", "Stark - Nur mit gutem Grund"),
         ("guideline", "Richtlinie - Flexibel"),
     ]
-    importance = models.CharField(max_length=20, choices=IMPORTANCE_CHOICES, default="strong")
+    importance = models.CharField(
+        max_length=20, choices=IMPORTANCE_CHOICES, default="strong"
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -164,13 +204,25 @@ class WorldRule(models.Model):
         return f"[{self.get_category_display()}] {self.rule[:50]}"
 
 
+# =============================================================================
+# 4. WorldCharacter
+# =============================================================================
+
+
 class WorldCharacter(models.Model):
     """
-    Charakter auf Welt-Ebene — projektunabhängige SSoT (ADR-082).
+    Charakter auf Welt-Ebene — projektunabhaengige SSoT (ADR-082).
+
+    Ein Charakter gehoert zu einer Welt und kann in beliebig vielen
+    Projekten referenziert werden via ProjectWorldCharacter.
+
+    weltenfw-Kompatibilitaet: Identisch zur iil-weltenfw WorldCharacter-Spezifikation.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    world = models.ForeignKey("World", on_delete=models.CASCADE, related_name="characters")
+    world = models.ForeignKey(
+        "World", on_delete=models.CASCADE, related_name="characters"
+    )
 
     name = models.CharField(max_length=200)
 
@@ -183,27 +235,31 @@ class WorldCharacter(models.Model):
         MENTOR = "mentor", "Mentor"
         LOVE_INTEREST = "love_interest", "Love Interest"
 
-    role = models.CharField(max_length=20, choices=Role.choices, default=Role.SUPPORTING)
+    role = models.CharField(
+        max_length=20, choices=Role.choices, default=Role.SUPPORTING
+    )
 
     description = models.TextField(blank=True)
-    background = models.TextField(blank=True)
-    personality = models.TextField(blank=True)
-    appearance = models.TextField(blank=True)
-    motivation = models.TextField(blank=True)
-    arc = models.TextField(blank=True)
+    background = models.TextField(blank=True, help_text="Hintergrundgeschichte")
+    personality = models.TextField(blank=True, help_text="Persoenlichkeitsmerkmale")
+    appearance = models.TextField(blank=True, help_text="Physische Beschreibung")
+    motivation = models.TextField(blank=True, help_text="Antrieb, Ziele")
+    arc = models.TextField(blank=True, help_text="Charakterbogen (generisch)")
 
-    wound = models.TextField(blank=True)
-    secret = models.TextField(blank=True)
-    dark_trait = models.TextField(blank=True)
+    wound = models.TextField(blank=True, help_text="Innere Verletzung/Trauma")
+    secret = models.TextField(blank=True, help_text="Verborgenes Geheimnis")
+    dark_trait = models.TextField(blank=True, help_text="Dunkle Seite/Schattenseite")
 
-    voice_sample = models.TextField(blank=True)
-    speech_patterns = models.TextField(blank=True)
+    voice_sample = models.TextField(blank=True, help_text="Beispiel-Dialog")
+    speech_patterns = models.TextField(blank=True, help_text="Sprachmuster, Dialekt")
 
     portrait_image = models.ImageField(
         upload_to="world_character_portraits/", blank=True, null=True
     )
 
-    is_template = models.BooleanField(default=False)
+    is_template = models.BooleanField(
+        default=False, help_text="Vorlage fuer neue Charaktere"
+    )
     tags = models.JSONField(blank=True, default=list)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -218,3 +274,91 @@ class WorldCharacter(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.get_role_display()}) — {self.world.name}"
+
+
+# =============================================================================
+# 5. ProjectWorld
+# =============================================================================
+
+
+class ProjectWorld(models.Model):
+    """
+    M2M: World <-> BookProject mit Projekt-spezifischer Rolle.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        "projects.BookProject",
+        on_delete=models.CASCADE,
+        related_name="world_links",
+    )
+    world = models.ForeignKey(
+        "World",
+        on_delete=models.CASCADE,
+        related_name="project_links",
+    )
+
+    ROLE_CHOICES = [
+        ("primary", "Primaerwelt"),
+        ("secondary", "Nebenwelt"),
+        ("parallel", "Parallelwelt"),
+        ("historical", "Historisch"),
+    ]
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="primary")
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "wh_project_worlds"
+        unique_together = ["project", "world"]
+        ordering = ["project", "role"]
+        verbose_name = "Project World"
+        verbose_name_plural = "Project Worlds"
+
+    def __str__(self):
+        return f"{self.world.name} -> {self.project} ({self.role})"
+
+
+# =============================================================================
+# 6. ProjectWorldCharacter
+# =============================================================================
+
+
+class ProjectWorldCharacter(models.Model):
+    """
+    M2M: WorldCharacter <-> BookProject mit projekt-spezifischen Anpassungen.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        "projects.BookProject",
+        on_delete=models.CASCADE,
+        related_name="world_character_links",
+    )
+    character = models.ForeignKey(
+        "WorldCharacter",
+        on_delete=models.CASCADE,
+        related_name="project_links",
+    )
+
+    project_arc = models.TextField(
+        blank=True, help_text="Charakterbogen in diesem Buch"
+    )
+    project_role = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text="Rolle in diesem Buch (kann von World abweichen)",
+    )
+    first_chapter = models.PositiveIntegerField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "wh_project_world_characters"
+        unique_together = ["project", "character"]
+        ordering = ["project", "character__role", "character__name"]
+        verbose_name = "Project World Character"
+        verbose_name_plural = "Project World Characters"
+
+    def __str__(self):
+        return f"{self.character.name} -> {self.project}"
