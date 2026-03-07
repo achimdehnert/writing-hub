@@ -1,7 +1,15 @@
 """
 Writing Hub — Base Settings (ADR-083)
 
-Platform-konforme Einstellungsstruktur analog zu bfagent.
+Package-Integration:
+  - iil-aifw      → INSTALLED_APPS: "aifw"           (DB-driven LLM routing)
+  - iil-weltenfw  → INSTALLED_APPS: "weltenfw.django" (WeltenHub REST client)
+  - iil-promptfw  → kein INSTALLED_APPS (pure Python library)
+  - iil-authoringfw → kein INSTALLED_APPS (pure Python schemas)
+
+Settings:
+  WELTENHUB_URL   = https://weltenforger.com/api/v1  (WeltenHub API endpoint)
+  WELTENHUB_TOKEN = <token>                           (per-tenant API token)
 """
 import os
 from pathlib import Path
@@ -28,9 +36,11 @@ INSTALLED_APPS = [
     "django_filters",
     "crispy_forms",
     "crispy_bootstrap5",
+    # iil Platform packages (Django-integrated)
+    "aifw",                  # LLM routing: AIActionType, LLMProvider, AIUsageLog
+    "weltenfw.django",       # WeltenHub client: get_client() singleton
     # Local apps
     "apps.core.apps.CoreConfig",
-    "apps.worlds.apps.WorldsConfig",
     "apps.projects.apps.ProjectsConfig",
     "apps.series.apps.SeriesConfig",
     "apps.authoring.apps.AuthoringConfig",
@@ -118,9 +128,34 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 20,
 }
 
-# bfagent -> writing-hub Service Integration
-BFAGENT_API_URL = os.environ.get("BFAGENT_API_URL", "http://localhost:8000")
-BFAGENT_API_SECRET = os.environ.get("BFAGENT_API_SECRET", "")
+# ============================================================================
+# iil-weltenfw — WeltenHub REST Client
+# Dokumentation: https://pypi.org/project/iil-weltenfw/
+# get_client() liefert WeltenClient-Singleton pro Worker (lazy init).
+# Multi-Tenant: eigenen WeltenClient(token=user_token) pro Request erstellen.
+# ============================================================================
+WELTENHUB_URL = os.environ.get("WELTENHUB_URL", "https://weltenforger.com/api/v1")
+WELTENHUB_TOKEN = os.environ.get("WELTENHUB_TOKEN", "")
+WELTENHUB_LOOKUP_TTL = int(os.environ.get("WELTENHUB_LOOKUP_TTL", "3600"))
+WELTENHUB_TIMEOUT = float(os.environ.get("WELTENHUB_TIMEOUT", "30.0"))
+
+# ============================================================================
+# iil-aifw — LLM Routing
+# Konfiguration via Django Admin: AIActionType, LLMProvider, LLMModel
+# Seed: python manage.py init_llm_config
+# action_codes für writing-hub:
+#   chapter_write, chapter_brief, chapter_analyze
+#   character_generate, outline_generate, outline_beat_expand
+#   idea_generate, idea_to_premise, style_check
+#   world_generate, world_expand, world_locations
+# ============================================================================
+
+# ============================================================================
+# iil-promptfw — Prompt Templates
+# YAML-Templates in templates/prompts/ ablegen.
+# Laden: PromptStack.from_directory(BASE_DIR / "templates" / "prompts")
+# ============================================================================
+PROMPT_TEMPLATES_DIR = str(BASE_DIR / "templates" / "prompts")
 
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
@@ -141,6 +176,8 @@ LOGGING = {
     "loggers": {
         "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
         "apps": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
+        "weltenfw": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "aifw": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
 

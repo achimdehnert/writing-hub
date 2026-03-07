@@ -1,7 +1,14 @@
 """
-Worlds App Services
+Worlds Services — writing-hub
 
-Alle LLM-Calls via aifw. Kein direkter API-Zugriff.
+Nutzt iil-weltenfw als REST-Client gegen WeltenHub.
+Nutzt iil-aifw für LLM-Generierung.
+Nutzt iil-authoringfw-Schemas für typisierte Zwischen-Daten.
+
+Dokumentation:
+  https://pypi.org/project/iil-weltenfw/
+  https://pypi.org/project/iil-aifw/
+  https://pypi.org/project/iil-authoringfw/
 """
 
 from .character_service import WorldCharacterService, CharacterGenerationResult
