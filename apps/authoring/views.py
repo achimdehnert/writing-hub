@@ -165,3 +165,110 @@ class chapter_quality_score(APIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+class OutlineGenerateView(APIView):
+    """
+    POST /authoring/projects/<project_id>/outline/generate/
+
+    Gliederung via OutlineGeneratorService (aifw) generieren.
+    Body: {genre, premise, chapter_count, style}
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, project_id):
+        from apps.authoring.services.outline_service import OutlineGeneratorService
+
+        svc = OutlineGeneratorService(project_id=str(project_id))
+        result = svc.generate_outline(
+            genre=request.data.get("genre", ""),
+            premise=request.data.get("premise", ""),
+            chapter_count=int(request.data.get("chapter_count", 12)),
+            style=request.data.get("style", ""),
+        )
+        if not result.success:
+            return Response({"detail": result.error}, status=status.HTTP_502_BAD_GATEWAY)
+
+        return Response({
+            "title": result.title,
+            "premise": result.premise,
+            "acts": result.acts,
+            "beats": result.beats,
+        }, status=status.HTTP_201_CREATED)
+
+
+class OutlineBeatExpandView(APIView):
+    """
+    POST /authoring/projects/<project_id>/outline/beat/<beat_id>/expand/
+
+    Einzelnen Beat via LLM vertiefen.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, project_id, beat_id):
+        from apps.authoring.services.outline_service import OutlineGeneratorService
+
+        svc = OutlineGeneratorService(project_id=str(project_id))
+        expanded = svc.expand_beat(
+            beat_id=str(beat_id),
+            context=request.data.get("context", ""),
+        )
+        if not expanded:
+            return Response({"detail": "Beat konnte nicht erweitert werden."}, status=status.HTTP_502_BAD_GATEWAY)
+
+        return Response({"beat_id": beat_id, "expanded": expanded})
+
+
+class IdeaGenerateView(APIView):
+    """
+    POST /authoring/ideas/generate/
+
+    Buch-Ideen via IdeaGeneratorService (aifw) generieren.
+    Body: {genre, keywords, count}
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from apps.idea_import.services.idea_service import IdeaGeneratorService
+
+        svc = IdeaGeneratorService()
+        result = svc.generate_ideas(
+            genre=request.data.get("genre", ""),
+            keywords=request.data.get("keywords", []),
+            count=int(request.data.get("count", 5)),
+        )
+        if not result.success:
+            return Response({"detail": result.error}, status=status.HTTP_502_BAD_GATEWAY)
+
+        return Response({"ideas": result.ideas}, status=status.HTTP_201_CREATED)
+
+
+class IdeaToPremiseView(APIView):
+    """
+    POST /authoring/ideas/<idea_id>/to-premise/
+
+    Rohe Idee in strukturiertes Premise umwandeln.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, idea_id):
+        from apps.idea_import.models import IdeaCapture
+        from apps.idea_import.services.idea_service import IdeaGeneratorService
+
+        try:
+            idea = IdeaCapture.objects.get(pk=idea_id, submitted_by=request.user)
+        except IdeaCapture.DoesNotExist:
+            return Response({"detail": "Idee nicht gefunden."}, status=status.HTTP_404_NOT_FOUND)
+
+        svc = IdeaGeneratorService()
+        result = svc.idea_to_premise(raw_idea=idea.raw_text)
+        if not result.success:
+            return Response({"detail": result.error}, status=status.HTTP_502_BAD_GATEWAY)
+
+        return Response({
+            "idea_id": str(idea_id),
+            "premise": result.premise,
+            "genre": result.genre,
+            "themes": result.themes,
+            "protagonist": result.protagonist,
+        }, status=status.HTTP_201_CREATED)

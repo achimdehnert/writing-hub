@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "weltenfw.django",       # WeltenHub client: get_client() singleton
     # Local apps
     "apps.core.apps.CoreConfig",
+    "apps.worlds.apps.WorldsConfig",
     "apps.projects.apps.ProjectsConfig",
     "apps.series.apps.SeriesConfig",
     "apps.authoring.apps.AuthoringConfig",
