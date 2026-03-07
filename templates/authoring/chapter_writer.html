@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Kapitel schreiben — {{ project.title }}{% endblock %}
+{% block page_title %}<i class="bi bi-pen me-2"></i>{{ project.title }}{% endblock %}
+
+{% block topbar_actions %}
+<span class="text-muted small me-3">{{ chapter_count }} Kapitel</span>
+<button class="btn btn-primary btn-sm" id="btn-generate" onclick="startGeneration()">
+    <i class="bi bi-stars"></i> KI-Schreiben
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+
+    <!-- Kapitel-Liste -->
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-header d-flex align-items-center justify-content-between py-2">
+                <span class="fw-semibold small">Kapitel</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush" id="chapter-list">
+                    {% for chapter in chapters %}
+                    <a href="#" class="list-group-item list-group-item-action border-0 py-2 px-3
+                        {% if forloop.first %}active{% endif %}"
+                        style="background: transparent; color: #e2e8f0;"
+                        onclick="selectChapter('{{ chapter.id }}', '{{ chapter.title|escapejs }}'); return false;">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-muted small">{{ chapter.order }}</span>
+                            <span class="small text-truncate">{{ chapter.title }}</span>
+                        </div>
+                    </a>
+                    {% empty %}
+                    <div class="p-3 text-muted small text-center">Noch keine Kapitel</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Editor -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header d-flex align-items-center justify-content-between py-2">
+                <span class="fw-semibold small" id="chapter-title-display">Kapitel wählen</span>
+                <div class="d-flex gap-2">
+                    <span class="text-muted small" id="word-count">0 Wörter</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <textarea id="chapter-content"
+                    class="form-control border-0 rounded-0 h-100"
+                    style="min-height: 600px; background: #0f1117; color: #e2e8f0; resize: none; font-family: 'Georgia', serif; font-size: .95rem; line-height: 1.8;"
+                    placeholder="Kapitel-Inhalt erscheint hier nach der KI-Generierung..."></textarea>
+            </div>
+            <div class="card-footer d-flex justify-content-end gap-2 py-2">
+                <button class="btn btn-sm btn-outline-secondary" onclick="saveContent()">
+                    <i class="bi bi-floppy"></i> Speichern
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kontext-Panel -->
+    <div class="col-md-3">
+        <div class="card mb-3">
+            <div class="card-header py-2">
+                <span class="fw-semibold small"><i class="bi bi-sliders me-1"></i>Einstellungen</span>
+            </div>
+            <div class="card-body">
+                <label class="form-label small text-muted">Ziel-Wortanzahl</label>
+                <input type="number" id="target-words" class="form-control form-control-sm bg-dark text-light border-secondary mb-3" value="2000" min="500" max="10000" step="500">
+
+                <label class="form-label small text-muted">Beat / Szenen-Notiz</label>
+                <textarea id="chapter-beat" class="form-control form-control-sm bg-dark text-light border-secondary mb-3" rows="3" placeholder="Was passiert in diesem Kapitel?"></textarea>
+
+                <label class="form-label small text-muted">Emotionaler Bogen</label>
+                <input type="text" id="emotional-arc" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="z.B. Hoffnung → Zweifel → Entschluss">
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header py-2">
+                <span class="fw-semibold small"><i class="bi bi-people me-1"></i>Charaktere</span>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for char in characters %}
+                    <li class="list-group-item border-0 py-1 px-3 small" style="background: transparent; color: #94a3b8;">
+                        <i class="bi bi-person me-1"></i>{{ char.name }}
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item border-0 py-2 px-3 small text-muted" style="background: transparent;">Keine Charaktere verknüpft</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Job-Status -->
+        <div class="card d-none" id="job-status-card">
+            <div class="card-body py-3 text-center">
+                <div class="spinner-border spinner-border-sm text-primary mb-2" id="job-spinner"></div>
+                <div class="small text-muted" id="job-status-text">Generierung läuft...</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const PROJECT_ID = "{{ project.pk }}";
+let currentChapterId = null;
+let pollInterval = null;
+
+function selectChapter(id, title) {
+    currentChapterId = id;
+    document.getElementById("chapter-title-display").textContent = title;
+    document.querySelectorAll("#chapter-list a").forEach(el => el.classList.remove("active"));
+    event.target.closest("a").classList.add("active");
+}
+
+function startGeneration() {
+    if (!currentChapterId) {
+        alert("Bitte zuerst ein Kapitel auswählen.");
+        return;
+    }
+    const btn = document.getElementById("btn-generate");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Läuft...';
+    document.getElementById("job-status-card").classList.remove("d-none");
+
+    fetch(`/api/v1/authoring/projects/${PROJECT_ID}/chapters/${currentChapterId}/write/`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken")},
+        body: JSON.stringify({
+            target_word_count: parseInt(document.getElementById("target-words").value),
+            chapter_beat: document.getElementById("chapter-beat").value,
+            emotional_arc: document.getElementById("emotional-arc").value,
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.job_id) pollJobStatus(data.job_id);
+    })
+    .catch(err => {
+        console.error(err);
+        resetBtn();
+    });
+}
+
+function pollJobStatus(jobId) {
+    pollInterval = setInterval(() => {
+        fetch(`/api/v1/authoring/jobs/${jobId}/status/`)
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById("job-status-text").textContent = `Status: ${data.status}`;
+            if (data.status === "done") {
+                clearInterval(pollInterval);
+                document.getElementById("chapter-content").value = data.content || "";
+                updateWordCount(data.content || "");
+                document.getElementById("job-status-card").classList.add("d-none");
+                resetBtn();
+            } else if (data.status === "failed") {
+                clearInterval(pollInterval);
+                document.getElementById("job-status-text").textContent = `Fehler: ${data.error}`;
+                document.getElementById("job-spinner").classList.add("d-none");
+                resetBtn();
+            }
+        });
+    }, 3000);
+}
+
+function updateWordCount(text) {
+    const count = text.trim() ? text.trim().split(/\s+/).length : 0;
+    document.getElementById("word-count").textContent = `${count} Wörter`;
+}
+
+function resetBtn() {
+    const btn = document.getElementById("btn-generate");
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-stars"></i> KI-Schreiben';
+}
+
+function saveContent() {
+    const content = document.getElementById("chapter-content").value;
+    // Speichern via API (placeholder)
+    console.log("Speichern:", content.length, "Zeichen");
+}
+
+function getCookie(name) {
+    const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+    return v ? v[2] : null;
+}
+
+document.getElementById("chapter-content").addEventListener("input", e => updateWordCount(e.target.value));
+</script>
+{% endblock %}
