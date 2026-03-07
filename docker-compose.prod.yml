@@ -13,7 +13,7 @@ services:
     depends_on:
       - writing_hub_db
     ports:
-      - "8095:8000"
+      - "127.0.0.1:8097:8000"
     networks:
       - writing_hub_net
 

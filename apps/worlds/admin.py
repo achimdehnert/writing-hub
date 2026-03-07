@@ -1,35 +1,19 @@
 from django.contrib import admin
 
-from .models import World, WorldCharacter, WorldLocation, WorldRule
+from .models import ProjectCharacterLink, ProjectWorldLink
 
 
-@admin.register(World)
-class WorldAdmin(admin.ModelAdmin):
-    list_display = ["name", "owner", "language", "is_public", "created_at"]
-    list_filter = ["language", "is_public", "is_template"]
-    search_fields = ["name", "description"]
-    readonly_fields = ["id", "created_at", "updated_at"]
+@admin.register(ProjectWorldLink)
+class ProjectWorldLinkAdmin(admin.ModelAdmin):
+    list_display = ["project", "weltenhub_world_id", "role", "created_at"]
+    list_filter = ["role"]
+    search_fields = ["weltenhub_world_id", "notes"]
+    readonly_fields = ["id", "created_at"]
 
 
-@admin.register(WorldCharacter)
-class WorldCharacterAdmin(admin.ModelAdmin):
-    list_display = ["name", "world", "role", "is_template", "created_at"]
-    list_filter = ["role", "world", "is_template"]
-    search_fields = ["name", "description", "world__name"]
-    readonly_fields = ["id", "created_at", "updated_at"]
-
-
-@admin.register(WorldLocation)
-class WorldLocationAdmin(admin.ModelAdmin):
-    list_display = ["name", "world", "location_type", "parent"]
-    list_filter = ["location_type", "world"]
-    search_fields = ["name", "description"]
-    readonly_fields = ["id", "created_at", "updated_at"]
-
-
-@admin.register(WorldRule)
-class WorldRuleAdmin(admin.ModelAdmin):
-    list_display = ["rule", "world", "category", "importance"]
-    list_filter = ["category", "importance", "world"]
-    search_fields = ["rule", "explanation"]
-    readonly_fields = ["id", "created_at", "updated_at"]
+@admin.register(ProjectCharacterLink)
+class ProjectCharacterLinkAdmin(admin.ModelAdmin):
+    list_display = ["project", "weltenhub_character_id", "project_role", "created_at"]
+    list_filter = ["project_role"]
+    search_fields = ["weltenhub_character_id", "project_arc", "notes"]
+    readonly_fields = ["id", "created_at"]
