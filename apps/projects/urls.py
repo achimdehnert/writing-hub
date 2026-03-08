@@ -11,6 +11,7 @@ urlpatterns = [
     path("<uuid:pk>/", views_html.ProjectDetailView.as_view(), name="detail"),
     path("<uuid:pk>/edit/", views_html.ProjectUpdateView.as_view(), name="edit"),
     path("<uuid:pk>/write/", views_html.ChapterWriterView.as_view(), name="chapter_writer"),
+    path("<uuid:pk>/outline/create/", views_html.OutlineCreateView.as_view(), name="outline_create"),
     # REST API
     path("api/", views.BookProjectListView.as_view(), name="api_list"),
     path("api/<uuid:pk>/", views.BookProjectDetailView.as_view(), name="api_detail"),

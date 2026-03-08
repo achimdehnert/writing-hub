@@ -24,26 +24,26 @@
             </div>
             <div class="card-body">
                 <dl class="mb-0">
-                    <dt class="text-muted small">Typ</dt>
-                    <dd class="mb-2">{{ project.get_content_type_display }}</dd>
+                    <dt class="text-muted small mb-1">Typ</dt>
+                    <dd class="mb-3 fw-semibold" style="color:#e2e8f0;">{{ project.get_content_type_display }}</dd>
 
                     {% if project.genre %}
-                    <dt class="text-muted small">Genre</dt>
-                    <dd class="mb-2">{{ project.genre }}</dd>
+                    <dt class="text-muted small mb-1">Genre</dt>
+                    <dd class="mb-3 fw-semibold" style="color:#e2e8f0;">{{ project.genre }}</dd>
                     {% endif %}
 
                     {% if project.target_audience %}
-                    <dt class="text-muted small">Zielgruppe</dt>
-                    <dd class="mb-2">{{ project.target_audience }}</dd>
+                    <dt class="text-muted small mb-1">Zielgruppe</dt>
+                    <dd class="mb-3" style="color:#cbd5e1;">{{ project.target_audience }}</dd>
                     {% endif %}
 
                     {% if project.target_word_count %}
-                    <dt class="text-muted small">Ziel-Wortanzahl</dt>
-                    <dd class="mb-2">{{ project.target_word_count|floatformat:0 }}</dd>
+                    <dt class="text-muted small mb-1">Ziel-Wortanzahl</dt>
+                    <dd class="mb-3 fw-semibold" style="color:#e2e8f0;">{{ project.target_word_count|floatformat:0 }} Wörter</dd>
                     {% endif %}
 
-                    <dt class="text-muted small">Erstellt</dt>
-                    <dd class="mb-0">{{ project.created_at|date:"d.m.Y" }}</dd>
+                    <dt class="text-muted small mb-1">Erstellt</dt>
+                    <dd class="mb-0" style="color:#cbd5e1;">{{ project.created_at|date:"d.m.Y" }}</dd>
                 </dl>
             </div>
         </div>
@@ -99,14 +99,91 @@
                     {% endfor %}
                 </ul>
                 {% else %}
-                <div class="p-4 text-center text-muted small">
-                    <i class="bi bi-list-ol display-6 d-block mb-2"></i>
-                    Noch kein Outline vorhanden
+                <div class="p-4 text-center">
+                    <i class="bi bi-list-ol display-5 d-block mb-2 text-muted"></i>
+                    <p class="text-muted small mb-3">Noch kein Outline vorhanden</p>
                 </div>
                 {% endif %}
             </div>
+            <div class="card-footer d-flex gap-2 py-2">
+                <button class="btn btn-sm btn-outline-light flex-grow-1" data-bs-toggle="modal" data-bs-target="#outlineModal">
+                    <i class="bi bi-plus-lg me-1"></i> Outline erstellen
+                </button>
+                <button class="btn btn-sm btn-primary flex-grow-1" id="btn-gen-outline" onclick="generateOutline()">
+                    <i class="bi bi-stars me-1"></i> KI-Generator
+                </button>
+            </div>
         </div>
+
+<!-- Outline erstellen Modal -->
+<div class="modal fade" id="outlineModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background:#1a1d27; border:1px solid #2d3148; color:#e2e8f0;">
+      <div class="modal-header border-secondary py-2">
+        <h6 class="modal-title"><i class="bi bi-list-ol me-2"></i>Outline erstellen</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'projects:outline_create' project.pk %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label small text-muted">Name</label>
+            <input type="text" name="name" class="form-control bg-dark text-light border-secondary"
+                   placeholder="z.B. Erster Entwurf" required autofocus>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small text-muted">Notizen</label>
+            <textarea name="notes" rows="3" class="form-control bg-dark text-light border-secondary"
+                      placeholder="Struktur-Ideen, Akt-Aufteilung ..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary py-2">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Abbrechen</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Erstellen</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
     </div>
 
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const PROJECT_ID = "{{ project.pk }}";
+
+function generateOutline() {
+    const btn = document.getElementById('btn-gen-outline');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Generiert...';
+    fetch(`/api/v1/authoring/projects/${PROJECT_ID}/outline/generate/`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+        body: JSON.stringify({})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.outline_id || data.name || data.id) {
+            location.reload();
+        } else {
+            alert('KI-Outline: ' + (data.detail || JSON.stringify(data)));
+            resetGenBtn();
+        }
+    })
+    .catch(() => { alert('Fehler bei der KI-Generierung.'); resetGenBtn(); });
+}
+
+function resetGenBtn() {
+    const btn = document.getElementById('btn-gen-outline');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-stars me-1"></i> KI-Generator';
+}
+
+function getCookie(name) {
+    const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+    return v ? v[2] : null;
+}
+</script>
 {% endblock %}

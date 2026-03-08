@@ -1,10 +1,10 @@
 """
 Projects — HTML Frontend Views (ADR-083)
 """
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
+from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from .models import BookProject, OutlineVersion
@@ -54,6 +54,21 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_success_url(self):
         return reverse_lazy("projects:detail", kwargs={"pk": self.object.pk})
+
+
+class OutlineCreateView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        project = get_object_or_404(BookProject, pk=pk, owner=request.user)
+        name = request.POST.get("name", "").strip() or "Erster Entwurf"
+        notes = request.POST.get("notes", "")
+        OutlineVersion.objects.create(
+            project=project,
+            created_by=request.user,
+            name=name,
+            source="manual",
+            notes=notes,
+        )
+        return redirect("projects:detail", pk=pk)
 
 
 class ChapterWriterView(LoginRequiredMixin, DetailView):
