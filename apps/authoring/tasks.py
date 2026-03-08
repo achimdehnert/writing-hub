@@ -5,8 +5,6 @@ Async Kapitel-Generierung: kein asyncio.run() im Request-Handler.
 Flow: View → write_chapter_task.delay() → Polling-API → Ergebnis
 """
 
-import logging
-
 import structlog
 from celery import shared_task
 

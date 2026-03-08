@@ -20,7 +20,6 @@ import time
 from dataclasses import dataclass, field
 from decimal import Decimal
 from enum import Enum
-from uuid import UUID
 
 from .llm_router import LLMRouter, LLMRoutingError, get_quality_level_for_tier
 from .project_context_service import ProjectContextService

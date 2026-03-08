@@ -14,7 +14,7 @@ import logging
 
 from outlinefw import OutlineGenerator
 from outlinefw.frameworks import FRAMEWORKS, list_frameworks
-from outlinefw.schemas import GenerationStatus, LLMQuality, OutlineNode, OutlineResult, ProjectContext
+from outlinefw.schemas import LLMQuality, OutlineNode, OutlineResult, ProjectContext
 
 from apps.authoring.services.llm_router import LLMRouter
 from apps.authoring.services.project_context_service import ProjectContextService

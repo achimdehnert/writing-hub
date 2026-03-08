@@ -179,7 +179,7 @@ class WorldCharacterService:
         except LLMRoutingError as exc:
             logger.error("enrich_character LLM-Fehler: %s", exc)
             return {}
-        except Exception as exc:
+        except Exception:
             logger.exception("enrich_character unerwarteter Fehler")
             return {}
 

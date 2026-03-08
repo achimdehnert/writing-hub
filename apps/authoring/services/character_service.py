@@ -18,7 +18,7 @@ from apps.worlds.services.character_service import (
 __all__ = [
     "CharacterData",
     "CharacterGenerationResult",
-    "WorldCharacterService as CharacterGeneratorService",
+    "CharacterGeneratorService",
 ]
 
 # Alias fuer Rueckwaertskompatibilitaet

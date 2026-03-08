@@ -49,7 +49,6 @@ class QualityGateService:
         from apps.authoring.models import (
             ChapterDimensionScore,
             ChapterQualityScore,
-            ProjectQualityConfig,
             QualityDimension,
         )
         from apps.projects.models import BookProject

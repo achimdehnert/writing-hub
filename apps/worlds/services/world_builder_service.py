@@ -15,7 +15,7 @@ Packages:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from uuid import UUID
 
 from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
@@ -232,7 +232,7 @@ class WorldBuilderService:
         client = get_client()
         try:
             world = client.worlds.get(weltenhub_world_id)
-        except Exception as exc:
+        except Exception:
             return ""
 
         messages = [
