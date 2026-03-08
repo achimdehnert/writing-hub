@@ -265,7 +265,8 @@ class ChapterProductionService:
         ]
 
         try:
-            import json, re
+            import json
+            import re
             raw = self._router.completion(
                 "chapter_analyze", messages, quality_level=self._quality_level
             )
