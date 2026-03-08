@@ -79,61 +79,95 @@
         </div>
         {% endif %}
 
+        <!-- Outline Versionen Selector -->
         <div class="card">
             <div class="card-header d-flex align-items-center justify-content-between py-2">
-                <span class="fw-semibold small"><i class="bi bi-list-ol me-1"></i>Outline-Versionen</span>
-                <span class="badge bg-secondary">{{ outlines.count }}</span>
-            </div>
-            <div class="card-body p-0">
+                <span class="fw-semibold small"><i class="bi bi-list-ol me-1"></i>Outline</span>
                 {% if outlines %}
-                <ul class="list-group list-group-flush">
-                    {% for outline in outlines %}
-                    <li class="list-group-item border-0 py-2 px-3 d-flex align-items-center justify-content-between"
-                        style="background: transparent; color: #e2e8f0;">
-                        <div>
-                            <span class="small fw-semibold">{{ outline.name }}</span>
-                            <span class="text-muted small ms-2">{{ outline.source }}</span>
+                <select class="form-select form-select-sm bg-dark text-light border-secondary w-auto"
+                        onchange="location.href='?outline=' + this.value">
+                    {% for o in outlines %}
+                    <option value="{{ o.pk }}" {% if o == selected_outline %}selected{% endif %}>
+                        {{ o.name }} ({{ o.created_at|date:"d.m.Y" }})
+                    </option>
+                    {% endfor %}
+                </select>
+                {% else %}
+                <span class="badge bg-secondary">0</span>
+                {% endif %}
+            </div>
+
+            <div class="card-body p-0">
+                {% if outline_nodes %}
+                <ul class="list-group list-group-flush" style="max-height:320px;overflow-y:auto;">
+                    {% for node in outline_nodes %}
+                    <li class="list-group-item border-0 py-2 px-3"
+                        style="background:transparent; color:#e2e8f0; border-bottom:1px solid #2d3148 !important;">
+                        <div class="d-flex align-items-start gap-2">
+                            <span class="text-muted small mt-1" style="min-width:1.5rem;">{{ node.order }}.</span>
+                            <div class="flex-grow-1">
+                                <div class="small fw-semibold">{{ node.title }}</div>
+                                {% if node.description %}
+                                <div class="text-muted" style="font-size:.78rem;line-height:1.4;">{{ node.description|truncatechars:120 }}</div>
+                                {% endif %}
+                            </div>
+                            <span class="badge bg-dark border border-secondary text-muted" style="font-size:.65rem;">{{ node.beat_type }}</span>
                         </div>
-                        <span class="text-muted small">{{ outline.created_at|date:"d.m.Y" }}</span>
                     </li>
                     {% endfor %}
                 </ul>
+                {% elif selected_outline %}
+                <div class="p-4 text-center text-muted small">
+                    <i class="bi bi-journal-text d-block mb-2" style="font-size:2rem;"></i>
+                    Outline ohne Kapitel — KI-Generator nutzen
+                </div>
                 {% else %}
-                <div class="p-4 text-center">
-                    <i class="bi bi-list-ol display-5 d-block mb-2 text-muted"></i>
-                    <p class="text-muted small mb-3">Noch kein Outline vorhanden</p>
+                <div class="p-4 text-center text-muted small">
+                    <i class="bi bi-list-ol d-block mb-2" style="font-size:2rem;"></i>
+                    Noch kein Outline vorhanden
                 </div>
                 {% endif %}
             </div>
+
             <div class="card-footer d-flex gap-2 py-2">
-                <button class="btn btn-sm btn-outline-light flex-grow-1" data-bs-toggle="modal" data-bs-target="#outlineModal">
-                    <i class="bi bi-plus-lg me-1"></i> Outline erstellen
+                <button class="btn btn-sm btn-outline-light flex-grow-1"
+                        data-bs-toggle="modal" data-bs-target="#outlineModal">
+                    <i class="bi bi-plus-lg me-1"></i> Manuell erstellen
                 </button>
-                <button class="btn btn-sm btn-primary flex-grow-1" id="btn-gen-outline" onclick="generateOutline()">
+                <button class="btn btn-sm btn-primary flex-grow-1"
+                        data-bs-toggle="modal" data-bs-target="#generateModal">
                     <i class="bi bi-stars me-1"></i> KI-Generator
                 </button>
             </div>
         </div>
+    </div><!-- /col-md-8 -->
+</div><!-- /row -->
 
-<!-- Outline erstellen Modal -->
+<!-- Modal: Manuell erstellen -->
 <div class="modal fade" id="outlineModal" tabindex="-1">
   <div class="modal-dialog">
-    <div class="modal-content" style="background:#1a1d27; border:1px solid #2d3148; color:#e2e8f0;">
+    <div class="modal-content" style="background:#1a1d27;border:1px solid #2d3148;color:#e2e8f0;">
       <div class="modal-header border-secondary py-2">
-        <h6 class="modal-title"><i class="bi bi-list-ol me-2"></i>Outline erstellen</h6>
+        <h6 class="modal-title"><i class="bi bi-list-ol me-2"></i>Outline manuell erstellen</h6>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <form method="post" action="{% url 'projects:outline_create' project.pk %}">
         {% csrf_token %}
         <div class="modal-body">
           <div class="mb-3">
-            <label class="form-label small text-muted">Name</label>
+            <label class="form-label small text-muted">Name *</label>
             <input type="text" name="name" class="form-control bg-dark text-light border-secondary"
                    placeholder="z.B. Erster Entwurf" required autofocus>
           </div>
           <div class="mb-3">
+            <label class="form-label small text-muted">Anzahl leerer Kapitel</label>
+            <input type="number" name="chapter_count" class="form-control bg-dark text-light border-secondary"
+                   placeholder="z.B. 12" min="0" max="50" value="12">
+            <div class="form-text text-muted" style="font-size:.75rem;">0 = nur Version ohne Kapitel anlegen</div>
+          </div>
+          <div class="mb-3">
             <label class="form-label small text-muted">Notizen</label>
-            <textarea name="notes" rows="3" class="form-control bg-dark text-light border-secondary"
+            <textarea name="notes" rows="2" class="form-control bg-dark text-light border-secondary"
                       placeholder="Struktur-Ideen, Akt-Aufteilung ..."></textarea>
           </div>
         </div>
@@ -145,45 +179,57 @@
     </div>
   </div>
 </div>
-    </div>
 
+<!-- Modal: KI-Generator -->
+<div class="modal fade" id="generateModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background:#1a1d27;border:1px solid #2d3148;color:#e2e8f0;">
+      <div class="modal-header border-secondary py-2">
+        <h6 class="modal-title"><i class="bi bi-stars me-2"></i>KI-Outline generieren</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'projects:outline_generate' project.pk %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label small text-muted">Framework</label>
+            <select name="framework" class="form-select bg-dark text-light border-secondary">
+              <option value="three_act">Drei-Akt-Struktur</option>
+              <option value="save_the_cat">Save the Cat (15 Beats)</option>
+              <option value="heros_journey">Heldenreise</option>
+              <option value="five_act">Fünf-Akt-Struktur</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small text-muted">Kapitelanzahl</label>
+            <input type="number" name="chapter_count" class="form-control bg-dark text-light border-secondary"
+                   value="12" min="3" max="50">
+          </div>
+          <div class="alert py-2 px-3" style="background:#1e2235;border:1px solid #2d3148;font-size:.8rem;color:#94a3b8;">
+            <i class="bi bi-info-circle me-1"></i>
+            Die KI nutzt Titel, Genre und Beschreibung des Projekts als Kontext.
+            Dies kann 10–30 Sekunden dauern.
+          </div>
+        </div>
+        <div class="modal-footer border-secondary py-2">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Abbrechen</button>
+          <button type="submit" class="btn btn-primary btn-sm" id="btn-ki-submit">
+            <i class="bi bi-stars me-1"></i>Generieren
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
-const PROJECT_ID = "{{ project.pk }}";
-
-function generateOutline() {
-    const btn = document.getElementById('btn-gen-outline');
+document.querySelector('#generateModal form')?.addEventListener('submit', function() {
+    const btn = document.getElementById('btn-ki-submit');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Generiert...';
-    fetch(`/api/v1/authoring/projects/${PROJECT_ID}/outline/generate/`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
-        body: JSON.stringify({})
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.outline_id || data.name || data.id) {
-            location.reload();
-        } else {
-            alert('KI-Outline: ' + (data.detail || JSON.stringify(data)));
-            resetGenBtn();
-        }
-    })
-    .catch(() => { alert('Fehler bei der KI-Generierung.'); resetGenBtn(); });
-}
-
-function resetGenBtn() {
-    const btn = document.getElementById('btn-gen-outline');
-    btn.disabled = false;
-    btn.innerHTML = '<i class="bi bi-stars me-1"></i> KI-Generator';
-}
-
-function getCookie(name) {
-    const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
-    return v ? v[2] : null;
-}
+});
 </script>
 {% endblock %}

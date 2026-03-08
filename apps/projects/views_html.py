@@ -40,7 +40,18 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["outlines"] = OutlineVersion.objects.filter(project=self.object)
+        outlines = OutlineVersion.objects.filter(project=self.object).order_by("-created_at")
+        ctx["outlines"] = outlines
+        selected_id = self.request.GET.get("outline")
+        if selected_id:
+            try:
+                selected = outlines.get(pk=selected_id)
+            except OutlineVersion.DoesNotExist:
+                selected = outlines.filter(is_active=True).first() or outlines.first()
+        else:
+            selected = outlines.filter(is_active=True).first() or outlines.first()
+        ctx["selected_outline"] = selected
+        ctx["outline_nodes"] = selected.nodes.order_by("order") if selected else []
         return ctx
 
 
@@ -58,16 +69,52 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
 
 class OutlineCreateView(LoginRequiredMixin, View):
     def post(self, request, pk):
+        from apps.projects.models import OutlineNode
         project = get_object_or_404(BookProject, pk=pk, owner=request.user)
         name = request.POST.get("name", "").strip() or "Erster Entwurf"
         notes = request.POST.get("notes", "")
-        OutlineVersion.objects.create(
+        chapter_count = int(request.POST.get("chapter_count", 0) or 0)
+        version = OutlineVersion.objects.create(
             project=project,
             created_by=request.user,
             name=name,
             source="manual",
             notes=notes,
+            is_active=True,
         )
+        if chapter_count > 0:
+            OutlineNode.objects.bulk_create([
+                OutlineNode(
+                    outline_version=version,
+                    title=f"Kapitel {i + 1}",
+                    beat_type="chapter",
+                    order=i + 1,
+                )
+                for i in range(min(chapter_count, 50))
+            ])
+        return redirect("projects:detail", pk=pk)
+
+
+class OutlineGenerateView(LoginRequiredMixin, View):
+    """Django POST view (kein DRF) — kein CSRF-Problem bei session auth."""
+    def post(self, request, pk):
+        from apps.authoring.services.outline_service import OutlineGeneratorService
+        project = get_object_or_404(BookProject, pk=pk, owner=request.user)
+        framework = request.POST.get("framework", "three_act")
+        chapter_count = int(request.POST.get("chapter_count", 12) or 12)
+        svc = OutlineGeneratorService()
+        result = svc.generate_outline(
+            project_id=str(project.pk),
+            framework=framework,
+            chapter_count=chapter_count,
+        )
+        if result.success and result.nodes:
+            svc.save_outline(
+                project_id=str(project.pk),
+                nodes=result.nodes,
+                name=f"KI: {framework.replace('_', ' ').title()} ({chapter_count} Kap.)",
+                user=request.user,
+            )
         return redirect("projects:detail", pk=pk)
 
 
