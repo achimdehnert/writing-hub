@@ -12,9 +12,15 @@ Settings:
   WELTENHUB_TOKEN = <token>                           (per-tenant API token)
 """
 import os
+import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+# outlinefw MVP: src/ auf sys.path damit "import outlinefw" funktioniert
+_SRC_DIR = str(BASE_DIR / "src")
+if _SRC_DIR not in sys.path:
+    sys.path.insert(0, _SRC_DIR)
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-writing-hub-dev-key")
 
