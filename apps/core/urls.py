@@ -16,4 +16,5 @@ def root_redirect(request):
 urlpatterns = [
     path("", root_redirect, name="root"),
     path("health/", health_check, name="health"),
+    path("healthz/", health_check, name="healthz"),
 ]
