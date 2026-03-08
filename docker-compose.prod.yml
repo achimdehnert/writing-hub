@@ -21,10 +21,8 @@ services:
     image: postgres:15
     container_name: writing_hub_db
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: writing_hub_db
-      POSTGRES_USER: writing_hub
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    env_file:
+      - .env.prod
     volumes:
       - writing_hub_pgdata:/var/lib/postgresql/data
     networks:
