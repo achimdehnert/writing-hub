@@ -10,13 +10,11 @@ Dieser Service bleibt fuer Rueckwaertskompatibilitaet mit ChapterProductionServi
 """
 
 from apps.worlds.services.character_service import (
-    CharacterData,
     CharacterGenerationResult,
     WorldCharacterService,
 )
 
 __all__ = [
-    "CharacterData",
     "CharacterGenerationResult",
     "CharacterGeneratorService",
 ]
