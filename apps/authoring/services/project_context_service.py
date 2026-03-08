@@ -79,9 +79,9 @@ class ProjectContextService:
 
     def get_context(self, project_id: str) -> ProjectContext:
         """Vollstaendigen Kontext fuer ein Buchprojekt laden."""
-        from apps.projects.models import BookProject, OutlineNode, OutlineVersion
-        from apps.worlds.models import World, Character
         from apps.authoring.models import AuthorStyleDNA
+        from apps.projects.models import BookProject, OutlineNode, OutlineVersion
+        from apps.worlds.models import Character, World
 
         try:
             project = BookProject.objects.get(pk=project_id)

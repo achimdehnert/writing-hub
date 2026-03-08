@@ -11,8 +11,8 @@ Dokumentation:
   https://pypi.org/project/iil-authoringfw/
 """
 
-from .character_service import WorldCharacterService, CharacterGenerationResult
-from .world_builder_service import WorldBuilderService, WorldBuildResult
+from .character_service import CharacterGenerationResult, WorldCharacterService
+from .world_builder_service import WorldBuildResult, WorldBuilderService
 
 __all__ = [
     "CharacterGenerationResult",

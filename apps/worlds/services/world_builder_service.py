@@ -68,9 +68,9 @@ class WorldBuilderService:
     def _build_prompt_stack(self):
         """promptfw.PromptStack laden (YAML-Templates aus templates/prompts/)."""
         try:
-            from promptfw import PromptStack
-            from django.conf import settings
             import os
+            from django.conf import settings
+            from promptfw import PromptStack
 
             templates_dir = getattr(settings, "PROMPT_TEMPLATES_DIR", None)
             if templates_dir and os.path.isdir(templates_dir):
@@ -179,8 +179,8 @@ class WorldBuilderService:
         role: str = "primary",
     ) -> bool:
         """Lokales ProjectWorldLink anlegen."""
-        from apps.worlds.models import ProjectWorldLink
         from apps.projects.models import BookProject
+        from apps.worlds.models import ProjectWorldLink
 
         try:
             project = BookProject.objects.get(pk=project_id)
@@ -201,8 +201,8 @@ class WorldBuilderService:
         Alle Welten eines Projekts aus WeltenHub laden.
         Gibt Liste von weltenfw.schema.world.WorldSchema zurueck.
         """
-        from apps.worlds.models import ProjectWorldLink
         from weltenfw.django import get_client
+        from apps.worlds.models import ProjectWorldLink
 
         links = ProjectWorldLink.objects.filter(project_id=project_id)
         client = get_client()

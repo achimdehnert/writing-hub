@@ -228,8 +228,8 @@ class WorldCharacterService:
         project_arc_map: dict[str, str] | None = None,
     ) -> int:
         """Charaktere mit lokalem Projekt verknuepfen via ProjectCharacterLink."""
-        from apps.worlds.models import ProjectCharacterLink
         from apps.projects.models import BookProject
+        from apps.worlds.models import ProjectCharacterLink
 
         try:
             project = BookProject.objects.get(pk=project_id)
@@ -254,8 +254,8 @@ class WorldCharacterService:
         Alle Charaktere eines Projekts aus WeltenHub laden.
         Gibt Liste von weltenfw.schema.character.CharacterSchema zurueck.
         """
-        from apps.worlds.models import ProjectCharacterLink
         from weltenfw.django import get_client
+        from apps.worlds.models import ProjectCharacterLink
 
         links = ProjectCharacterLink.objects.filter(project_id=project_id)
         client = get_client()
