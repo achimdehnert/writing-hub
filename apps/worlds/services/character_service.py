@@ -254,8 +254,8 @@ class WorldCharacterService:
         Alle Charaktere eines Projekts aus WeltenHub laden.
         Gibt Liste von weltenfw.schema.character.CharacterSchema zurueck.
         """
-        from weltenfw.django import get_client
         from apps.worlds.models import ProjectCharacterLink
+        from weltenfw.django import get_client
 
         links = ProjectCharacterLink.objects.filter(project_id=project_id)
         client = get_client()

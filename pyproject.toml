@@ -12,7 +12,7 @@ exclude = ["*/migrations/*"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]
-ignore = ["E501"]
+ignore = ["E501", "I001"]
 per-file-ignores = {"*/migrations/*" = ["I001", "E501"]}
 
 [tool.ruff.lint.isort]
