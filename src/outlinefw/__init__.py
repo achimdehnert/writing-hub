@@ -1,28 +1,54 @@
 """
-outlinefw — Story Outline Framework (MVP)
-==========================================
+outlinefw — Story Outline Framework
+=====================================
 
 Pure-Python, framework-agnostic outline generation.
-No Django, no DB — only Pydantic schemas + LLM generation logic.
+No Django, no DB in core modules.
 
 Usage:
     from outlinefw import OutlineGenerator, FRAMEWORKS
-    from outlinefw.schemas import OutlineNode, OutlineResult
-
-Later: extracted to iil-outlinefw PyPI package.
+    from outlinefw.schemas import ProjectContext, OutlineResult
 """
 
-from .frameworks import FRAMEWORKS, get_framework
-from .generator import OutlineGenerator
-from .parser import parse_nodes
-from .schemas import OutlineNode, OutlineResult, ProjectContext
+from outlinefw.frameworks import FRAMEWORKS, FrameworkDefinition, get_framework, list_frameworks
+from outlinefw.generator import LLMRouter, LLMRouterError, LLMRouterTimeout, OutlineGenerator
+from outlinefw.parser import parse_nodes
+from outlinefw.schemas import (
+    ActPhase,
+    BeatDefinition,
+    GenerationStatus,
+    LLMQuality,
+    OutlineGenerationError,
+    OutlineNode,
+    OutlineResult,
+    ParseResult,
+    ParseStatus,
+    ProjectContext,
+    TensionLevel,
+)
+
+__version__ = "0.1.0"
 
 __all__ = [
-    "FRAMEWORKS",
-    "get_framework",
+    "__version__",
     "OutlineGenerator",
+    "LLMRouter",
+    "LLMRouterError",
+    "LLMRouterTimeout",
     "parse_nodes",
+    "ProjectContext",
     "OutlineNode",
     "OutlineResult",
-    "ProjectContext",
+    "ParseResult",
+    "BeatDefinition",
+    "FrameworkDefinition",
+    "OutlineGenerationError",
+    "ActPhase",
+    "TensionLevel",
+    "LLMQuality",
+    "GenerationStatus",
+    "ParseStatus",
+    "FRAMEWORKS",
+    "get_framework",
+    "list_frameworks",
 ]

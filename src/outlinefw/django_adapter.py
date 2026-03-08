@@ -1,38 +1,52 @@
 """
-outlinefw.django_adapter — Django-Bridge für outlinefw
+outlinefw.django_adapter -- writing-hub Django bridge for outlinefw.
 
-Kapselt:
-- DB-Speicherung (OutlineVersion + OutlineNode)
-- ProjectContext aus BookProject laden
-- LLMRouter-Adapter (writing-hub LLMRouter → outlinefw LLMRouter Protocol)
+Implements OutlineServiceBase ABC for writing-hub:
+  - get_tenant_id: extracts user.id from request (no multi-tenancy in writing-hub)
+  - persist_outline: saves OutlineVersion + OutlineNodes to DB
+  - get_llm_router: returns WritingHubLLMRouterAdapter
 
-Nur diese Datei hat Django-Abhängigkeiten.
+Also provides standalone helpers for legacy callers:
+  - project_context_from_db(project_id) -> ProjectContext
+  - save_outline_to_db(project_id, nodes, ...) -> str | None
 """
 from __future__ import annotations
 
 import logging
+from typing import Any
 
-from .schemas import OutlineNode, ProjectContext
+from outlinefw._base import InMemoryOutlineService, OutlineServiceBase  # noqa: F401
+from outlinefw.schemas import LLMQuality, OutlineNode, OutlineResult, ProjectContext
 
 logger = logging.getLogger(__name__)
 
 
+# ---------------------------------------------------------------------------
+# Standalone helpers (used by legacy outline_service.py callers)
+# ---------------------------------------------------------------------------
+
+
 def project_context_from_db(project_id: str) -> ProjectContext:
-    """BookProject → ProjectContext (ohne weltenfw-Calls, nur lokale DB)."""
+    """Load ProjectContext from writing-hub BookProject."""
     from apps.projects.models import BookProject
 
     try:
         p = BookProject.objects.get(pk=project_id)
     except BookProject.DoesNotExist:
         logger.warning("project_context_from_db: Projekt %s nicht gefunden", project_id)
-        return ProjectContext()
+        return ProjectContext(
+            title="Unbekannt", genre="Unbekannt",
+            logline="Kein Kontext verfuegbar.", protagonist="Unbekannt", setting="Unbekannt",
+        )
 
     return ProjectContext(
-        title=p.title or "",
-        genre=p.genre or "",
-        description=p.description or "",
-        target_audience=p.target_audience or "",
-        target_word_count=p.target_word_count or 0,
+        title=p.title or "Unbekannt",
+        genre=p.genre or "Roman",
+        logline=p.description[:500] if p.description else "Kein Kontext.",
+        protagonist="Protagonist",
+        setting="Unbekannt",
+        target_word_count=p.target_word_count,
+        language_code="de",
     )
 
 
@@ -41,15 +55,12 @@ def save_outline_to_db(
     nodes: list[OutlineNode],
     name: str = "KI-generiert",
     framework: str = "",
-    user=None,
+    user: Any = None,
 ) -> str | None:
-    """
-    OutlineVersion + OutlineNodes in DB speichern.
-
-    - Deaktiviert vorherige aktive Version.
-    - Gibt neue OutlineVersion-UUID zurück.
-    """
-    from apps.projects.models import BookProject, OutlineNode as DBNode, OutlineVersion
+    """Persist OutlineVersion + OutlineNodes for writing-hub."""
+    from apps.projects.models import BookProject
+    from apps.projects.models import OutlineNode as DBNode
+    from apps.projects.models import OutlineVersion
 
     try:
         project = BookProject.objects.get(pk=project_id)

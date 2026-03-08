@@ -2,10 +2,9 @@
 Outline Generator Service
 ==========================
 
-Thin wrapper um outlinefw.OutlineGenerator.
-Kein inline LLM/Parse-Code mehr — alles in src/outlinefw/.
+Thin wrapper around outlinefw.OutlineGenerator for writing-hub.
 
-Öffentliche API bleibt kompatibel mit bestehenden Aufrufern:
+Public API:
     svc = OutlineGeneratorService()
     result = svc.generate_outline(project_id, framework="save_the_cat")
     version_id = svc.save_outline(project_id, result.nodes, name="...", user=user)
@@ -20,14 +19,14 @@ from outlinefw.django_adapter import (
     save_outline_to_db,
 )
 from outlinefw.frameworks import FRAMEWORKS, list_frameworks
-from outlinefw.schemas import OutlineNode, OutlineResult as OutlineGenerationResult
+from outlinefw.schemas import GenerationStatus, LLMQuality, OutlineNode, OutlineResult
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
     "OutlineGeneratorService",
     "OutlineNode",
-    "OutlineGenerationResult",
+    "OutlineResult",
     "FRAMEWORKS",
     "list_frameworks",
 ]
@@ -35,15 +34,16 @@ __all__ = [
 
 class OutlineGeneratorService:
     """
-    Facade um outlinefw.OutlineGenerator für writing-hub.
+    Facade around outlinefw.OutlineGenerator for writing-hub.
 
-    Verwendung:
+    Usage:
         svc = OutlineGeneratorService()
         result = svc.generate_outline(project_id, framework="save_the_cat")
-        version_id = svc.save_outline(project_id, result.nodes, name="KI-Draft", user=user)
+        if result.success:
+            version_id = svc.save_outline(project_id, result.nodes, framework="save_the_cat", user=user)
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._gen = OutlineGenerator(WritingHubLLMRouterAdapter())
 
     def generate_outline(
@@ -52,30 +52,13 @@ class OutlineGeneratorService:
         framework: str = "three_act",
         chapter_count: int = 12,
         quality_level: int | None = None,
-    ) -> OutlineGenerationResult:
+    ) -> OutlineResult:
         ctx = project_context_from_db(project_id)
+        quality = LLMQuality(quality_level) if quality_level else LLMQuality.STANDARD
         return self._gen.generate(
+            framework_key=framework,
             context=ctx,
-            framework=framework,
-            chapter_count=chapter_count,
-            quality_level=quality_level,
-        )
-
-    def expand_beat(
-        self,
-        project_id: str,
-        beat_title: str,
-        beat_description: str = "",
-        sub_chapter_count: int = 3,
-        quality_level: int | None = None,
-    ) -> OutlineGenerationResult:
-        ctx = project_context_from_db(project_id)
-        return self._gen.expand_beat(
-            context=ctx,
-            beat_title=beat_title,
-            beat_description=beat_description,
-            sub_count=sub_chapter_count,
-            quality_level=quality_level,
+            quality=quality,
         )
 
     def save_outline(
@@ -83,11 +66,13 @@ class OutlineGeneratorService:
         project_id: str,
         nodes: list[OutlineNode],
         name: str = "KI-generiert",
+        framework: str = "",
         user=None,
     ) -> str | None:
         return save_outline_to_db(
             project_id=project_id,
             nodes=nodes,
             name=name,
+            framework=framework,
             user=user,
         )

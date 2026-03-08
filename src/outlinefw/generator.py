@@ -1,161 +1,276 @@
 """
-outlinefw.generator — OutlineGenerator
+outlinefw/src/outlinefw/generator.py
 
-Framework-agnostischer Outline-Generator.
-LLM-Calls via iil-aifw (action_code routing).
-Kein Django, kein DB.
+OutlineGenerator — orchestrates LLM call + parse_nodes().
 
-Usage:
-    gen = OutlineGenerator(llm_router)
-    result = gen.generate(context, framework="save_the_cat", chapter_count=15)
-    result = gen.expand_beat(context, beat_title="Midpoint", sub_count=3)
+Fixes:
+  - BLOCKER B-2: LLMRouter Protocol has full error contract
+    (LLMRouterError, timeout, retry semantics defined)
+  - KRITISCH K-3: Always returns OutlineResult, never raises
+  - Platform standard: asgiref.async_to_sync for any async LLM call bridging
+  - No asyncio.run() anywhere
+
+LLMRouter Protocol:
+  Anything implementing completion() is compatible —
+  iil-aifw, test doubles, custom routers.
 """
+
 from __future__ import annotations
 
 import logging
-from typing import Protocol
+import time
+from typing import Any, Protocol, runtime_checkable
 
-from .frameworks import FRAMEWORKS, get_framework
-from .parser import parse_nodes
-from .schemas import OutlineNode, OutlineResult, ProjectContext
+from outlinefw.frameworks import get_framework
+from outlinefw.parser import parse_nodes
+from outlinefw.schemas import (
+    FrameworkDefinition,
+    GenerationStatus,
+    LLMQuality,
+    OutlineResult,
+    ParseStatus,
+    ProjectContext,
+)
 
 logger = logging.getLogger(__name__)
 
 
+# ---------------------------------------------------------------------------
+# LLMRouter Protocol (Fixes BLOCKER B-2)
+# ---------------------------------------------------------------------------
+
+
+class LLMRouterError(Exception):
+    """Raised by LLMRouter.completion() on unrecoverable failure."""
+    pass
+
+
+class LLMRouterTimeout(LLMRouterError):
+    """Raised when LLM call exceeds the allowed timeout."""
+    pass
+
+
+@runtime_checkable
 class LLMRouter(Protocol):
-    """Minimales Interface — kompatibel mit writing-hub LLMRouter."""
+    """
+    Structural protocol for LLM routing.
+    Compatible with iil-aifw and any custom router.
+
+    action_code:  Semantic identifier for prompt routing (e.g. "outline.generate")
+    messages:     OpenAI-compatible message list [{"role": ..., "content": ...}]
+    quality:      LLMQuality enum (DRAFT=1, STANDARD=2, PREMIUM=3)
+    priority:     "speed" | "balanced" | "quality"
+
+    Returns:
+        str — the LLM completion text
+
+    Raises:
+        LLMRouterError    — on any unrecoverable LLM failure
+        LLMRouterTimeout  — on timeout
+    """
+
     def completion(
         self,
         action_code: str,
-        messages: list[dict],
-        quality_level: int | None = None,
+        messages: list[dict[str, str]],
+        quality: LLMQuality = LLMQuality.STANDARD,
         priority: str = "balanced",
     ) -> str: ...
 
 
+# ---------------------------------------------------------------------------
+# Prompt Builder
+# ---------------------------------------------------------------------------
+
+_SYSTEM_PROMPT = """\
+Du bist ein professioneller Story-Struktur-Assistent.
+Erstelle eine vollständige Story-Outline im angegebenen Framework.
+Antworte AUSSCHLIESSLICH mit einem JSON-Array von Beat-Objekten.
+Kein erklärender Text, kein Markdown außer dem JSON selbst.
+
+Jedes Beat-Objekt muss folgende Felder enthalten:
+- beat_name: string (Framework-Beat-Identifier)
+- position: float (0.0 bis 1.0)
+- act: string (act_1 | act_2a | act_2b | act_3)
+- title: string (prägnanter Titel für diesen Beat)
+- summary: string (150-300 Zeichen, konkreter Inhalt für diese Geschichte)
+- tension: string (low | medium | high | peak)
+- key_events: array of strings (2-4 konkrete Ereignisse)
+"""
+
+
+def _build_user_prompt(
+    framework: FrameworkDefinition,
+    context: ProjectContext,
+) -> str:
+    beats_overview = "\n".join(
+        f"  {i+1}. [{b.position:.2f}] {b.name}: {b.description}"
+        for i, b in enumerate(framework.beats)
+    )
+    themes_str = ", ".join(context.themes) if context.themes else "nicht spezifiziert"
+
+    return f"""\
+Framework: {framework.name} ({len(framework.beats)} Beats)
+
+Beats in Reihenfolge:
+{beats_overview}
+
+Projekt-Kontext:
+- Titel: {context.title}
+- Genre: {context.genre}
+- Logline: {context.logline}
+- Protagonist: {context.protagonist}
+- Setting: {context.setting}
+- Themen: {themes_str}
+- Ton: {context.tone or 'nicht spezifiziert'}
+- Ausgabesprache: {context.language_code}
+
+Erstelle jetzt das vollständige JSON-Array mit allen {len(framework.beats)} Beats.
+Jeder Beat muss konkret auf diese spezifische Geschichte zugeschnitten sein.
+"""
+
+
+# ---------------------------------------------------------------------------
+# OutlineGenerator
+# ---------------------------------------------------------------------------
+
+
 class OutlineGenerator:
     """
-    Generiert Outlines via LLM.
+    Generates story outlines by calling an LLMRouter and parsing the response.
 
-    Entkoppelt von Django/DB — nimmt einen LLMRouter entgegen,
-    der das aifw-Routing kapselt.
+    Usage:
+        generator = OutlineGenerator(router=my_aifw_router)
+        result = generator.generate(
+            framework_key="save_the_cat",
+            context=ProjectContext(...),
+        )
+        if result.success:
+            for node in result.nodes:
+                print(node.title)
+        else:
+            logger.error(result.error_message)
     """
 
-    def __init__(self, router: LLMRouter):
+    def __init__(self, router: LLMRouter) -> None:
+        if not isinstance(router, LLMRouter):
+            raise TypeError(
+                f"router must implement the LLMRouter Protocol. Got: {type(router).__name__}"
+            )
         self._router = router
 
     def generate(
         self,
+        framework_key: str,
         context: ProjectContext,
-        framework: str = "three_act",
-        chapter_count: int = 12,
-        quality_level: int | None = None,
+        quality: LLMQuality = LLMQuality.STANDARD,
+        priority: str = "balanced",
     ) -> OutlineResult:
         """
-        Vollständige Outline generieren.
+        Generate a complete outline. Always returns OutlineResult — never raises.
 
-        Args:
-            context:       Projektkontext (Titel, Genre, Premise, …)
-            framework:     Key aus FRAMEWORKS
-            chapter_count: Anzahl Kapitel/Beats
-            quality_level: aifw quality routing (optional)
-
-        Returns:
-            OutlineResult mit nodes oder error
+        On failure: OutlineResult.status is PARSE_ERROR, LLM_ERROR, or VALIDATION_ERROR.
+        On partial: OutlineResult.status is PARTIAL.
+        On success: OutlineResult.status is SUCCESS.
         """
-        fw = get_framework(framework)
-        beats_str = ", ".join(fw["beats"])
-        ctx_block = context.to_prompt_block()
+        start_ms = int(time.time() * 1000)
 
+        # Resolve framework
+        try:
+            framework = get_framework(framework_key)
+        except KeyError as e:
+            return OutlineResult(
+                status=GenerationStatus.VALIDATION_ERROR,
+                framework_key=framework_key,
+                framework_name="",
+                project_title=context.title,
+                error_message=str(e),
+                total_beats=0,
+            )
+
+        # Build prompt
         messages = [
-            {
-                "role": "system",
-                "content": (
-                    f"Du bist ein Buchstruktur-Experte. "
-                    f"Erstelle eine Outline nach der {fw['name']}-Methode.\n\n"
-                    f"{ctx_block}"
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"Erstelle eine Outline mit genau {chapter_count} Kapiteln/Beats "
-                    f"nach der {fw['name']}-Struktur ({fw['description']}).\n\n"
-                    f"Framework-Beats als Orientierung: {beats_str}\n\n"
-                    "Gib ein JSON-Array zurück:\n"
-                    '[{"order": 1, "title": "...", "description": "2-3 Sätze", '
-                    '"beat_type": "chapter", "beat": "...", "act": "act_1", '
-                    '"emotional_arc": "...", "notes": ""}, ...]\n\n'
-                    f"Exakt {chapter_count} Einträge. Nur JSON, kein erklärender Text."
-                ),
-            },
+            {"role": "system", "content": _SYSTEM_PROMPT},
+            {"role": "user", "content": _build_user_prompt(framework, context)},
         ]
 
+        # Call LLM
+        raw_response = ""
         try:
-            raw = self._router.completion(
-                "outline_generate",
-                messages,
-                quality_level=quality_level,
-                priority="quality",
+            raw_response = self._router.completion(
+                action_code="outline.generate",
+                messages=messages,
+                quality=quality,
+                priority=priority,
             )
-            nodes = parse_nodes(raw)
-            if not nodes:
-                return OutlineResult(
-                    success=False,
-                    framework=framework,
-                    error="LLM-Antwort enthielt keine gültigen Nodes.",
-                )
-            return OutlineResult(success=True, nodes=nodes, framework=framework)
-
-        except Exception as exc:
-            logger.error("OutlineGenerator.generate Fehler: %s", exc)
-            return OutlineResult(success=False, framework=framework, error=str(exc))
-
-    def expand_beat(
-        self,
-        context: ProjectContext,
-        beat_title: str,
-        beat_description: str = "",
-        sub_count: int = 3,
-        quality_level: int | None = None,
-    ) -> OutlineResult:
-        """Einzelnen Beat in Sub-Kapitel/Szenen aufbrechen."""
-        ctx_block = context.to_prompt_block()
-
-        messages = [
-            {
-                "role": "system",
-                "content": (
-                    "Du bist ein Buchstruktur-Experte. "
-                    "Entwickle einen Outline-Beat in konkrete Szenen aus.\n\n"
-                    f"{ctx_block}"
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"Beat: {beat_title}\n"
-                    + (f"Beschreibung: {beat_description}\n" if beat_description else "")
-                    + f"\nErarbeite {sub_count} konkrete Szenen/Sub-Kapitel.\n"
-                    'JSON-Array: [{"order": 1, "title": "...", '
-                    '"description": "...", "beat_type": "scene", "beat": "..."}]'
-                ),
-            },
-        ]
-
-        try:
-            raw = self._router.completion(
-                "outline_beat_expand",
-                messages,
-                quality_level=quality_level,
+        except LLMRouterTimeout as e:
+            logger.warning("LLM timeout for outline generation: %s", e)
+            return OutlineResult(
+                status=GenerationStatus.LLM_ERROR,
+                framework_key=framework_key,
+                framework_name=framework.name,
+                project_title=context.title,
+                error_message=f"LLM timeout: {e}",
+                raw_llm_response="",
+                total_beats=len(framework.beats),
+                generation_time_ms=int(time.time() * 1000) - start_ms,
             )
-            nodes = parse_nodes(raw)
-            return OutlineResult(success=True, nodes=nodes)
-        except Exception as exc:
-            logger.error("OutlineGenerator.expand_beat Fehler: %s", exc)
-            return OutlineResult(success=False, error=str(exc))
+        except LLMRouterError as e:
+            logger.error("LLM error for outline generation: %s", e)
+            return OutlineResult(
+                status=GenerationStatus.LLM_ERROR,
+                framework_key=framework_key,
+                framework_name=framework.name,
+                project_title=context.title,
+                error_message=str(e),
+                raw_llm_response="",
+                total_beats=len(framework.beats),
+                generation_time_ms=int(time.time() * 1000) - start_ms,
+            )
 
-    @staticmethod
-    def context_from_dict(data: dict) -> ProjectContext:
-        """Convenience: dict → ProjectContext."""
-        return ProjectContext(**{k: v for k, v in data.items() if k in ProjectContext.model_fields})
+        # Parse response
+        parse_result = parse_nodes(raw_response)
+        elapsed_ms = int(time.time() * 1000) - start_ms
+
+        base: dict[str, Any] = {
+            "framework_key": framework_key,
+            "framework_name": framework.name,
+            "project_title": context.title,
+            "raw_llm_response": raw_response,
+            "parse_result": parse_result,
+            "total_beats": len(framework.beats),
+            "generation_time_ms": elapsed_ms,
+        }
+
+        if parse_result.status == ParseStatus.SUCCESS:
+            return OutlineResult(
+                status=GenerationStatus.SUCCESS,
+                nodes=parse_result.nodes,
+                generated_beats=len(parse_result.nodes),
+                **base,
+            )
+
+        if parse_result.status == ParseStatus.PARTIAL:
+            return OutlineResult(
+                status=GenerationStatus.PARTIAL,
+                nodes=parse_result.nodes,
+                generated_beats=len(parse_result.nodes),
+                error_message=parse_result.error_message,
+                **base,
+            )
+
+        if parse_result.status == ParseStatus.EMPTY:
+            return OutlineResult(
+                status=GenerationStatus.PARSE_ERROR,
+                error_message=f"LLM returned empty response: {parse_result.error_message}",
+                generated_beats=0,
+                **base,
+            )
+
+        # MALFORMED_JSON or SCHEMA_MISMATCH
+        return OutlineResult(
+            status=GenerationStatus.PARSE_ERROR,
+            error_message=parse_result.error_message,
+            generated_beats=0,
+            **base,
+        )
