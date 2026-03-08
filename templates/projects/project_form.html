@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}{% if form.instance.pk %}Projekt bearbeiten{% else %}Neues Projekt{% endif %} — Writing Hub{% endblock %}
+{% block nav_projects %}active{% endblock %}
+{% block page_title %}{% if form.instance.pk %}Projekt bearbeiten{% else %}Neues Projekt{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-body p-4">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Titel *</label>
+                        <input type="text" name="title" value="{{ form.title.value|default:'' }}"
+                            class="form-control bg-dark text-light border-secondary{% if form.title.errors %} is-invalid{% endif %}"
+                            placeholder="z.B. Der stille Ozean" required autofocus>
+                        {% for e in form.title.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Beschreibung / Prämisse</label>
+                        <textarea name="description" rows="4"
+                            class="form-control bg-dark text-light border-secondary{% if form.description.errors %} is-invalid{% endif %}"
+                            placeholder="Worum geht es in diesem Projekt?">{{ form.description.value|default:'' }}</textarea>
+                        {% for e in form.description.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted">Inhaltstyp</label>
+                            <select name="content_type" class="form-select bg-dark text-light border-secondary">
+                                {% for val, label in form.fields.content_type.choices %}
+                                <option value="{{ val }}" {% if form.content_type.value == val %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted">Genre</label>
+                            <input type="text" name="genre" value="{{ form.genre.value|default:'' }}"
+                                class="form-control bg-dark text-light border-secondary"
+                                placeholder="z.B. Thriller, Fantasy, Krimi">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-8">
+                            <label class="form-label small text-muted">Zielgruppe</label>
+                            <input type="text" name="target_audience" value="{{ form.target_audience.value|default:'' }}"
+                                class="form-control bg-dark text-light border-secondary"
+                                placeholder="z.B. Erwachsene 25–45, Jugendliche">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted">Ziel-Wortanzahl</label>
+                            <input type="number" name="target_word_count" value="{{ form.target_word_count.value|default:'' }}"
+                                class="form-control bg-dark text-light border-secondary"
+                                placeholder="80000" min="1000" step="1000">
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a href="{% url 'projects:list' %}" class="btn btn-outline-secondary">Abbrechen</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>
+                            {% if form.instance.pk %}Speichern{% else %}Projekt erstellen{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -8,17 +8,19 @@ from django.urls import include, path
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    # Auth (Login / Logout)
+    path("accounts/", include("django.contrib.auth.urls")),
+    # Frontend HTML
+    path("", include("apps.core.urls", namespace="core")),
+    path("projects/", include("apps.projects.urls", namespace="projects")),
     # REST API für bfagent-Integration (ADR-083 Phase 3)
     path("api/v1/", include("apps.api.urls", namespace="api")),
-    # Domain-spezifische Endpunkte
+    # Domain-spezifische API-Endpunkte
     path("api/v1/worlds/", include("apps.worlds.urls", namespace="worlds")),
-    path("api/v1/projects/", include("apps.projects.urls", namespace="projects")),
     path("api/v1/series/", include("apps.series.urls", namespace="series")),
     path("api/v1/idea-import/", include("apps.idea_import.urls", namespace="idea_import")),
     # Authoring: ChapterWriter + QualityGate (ADR-083 Phase 3)
     path("api/v1/authoring/", include("apps.authoring.urls", namespace="authoring")),
-    # Health
-    path("health/", include("apps.core.urls", namespace="core")),
 ]
 
 if settings.DEBUG:

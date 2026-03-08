@@ -39,8 +39,13 @@
             <i class="bi bi-globe2"></i> Welten
         </a>
         <hr class="border-secondary mx-3">
+        {% if user.is_staff %}
         <a href="/admin/" class="nav-link">
             <i class="bi bi-gear"></i> Admin
+        </a>
+        {% endif %}
+        <a href="{% url 'logout' %}" class="nav-link">
+            <i class="bi bi-box-arrow-left"></i> Abmelden
         </a>
     </nav>
     <div class="p-3 text-muted" style="font-size:.75rem;">
