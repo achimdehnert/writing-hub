@@ -84,6 +84,7 @@
             <div class="card-header d-flex align-items-center justify-content-between py-2">
                 <span class="fw-semibold small"><i class="bi bi-list-ol me-1"></i>Outline</span>
                 {% if outlines %}
+<div class="d-flex align-items-center gap-2">
                 <select class="form-select form-select-sm bg-dark text-light border-secondary w-auto"
                         onchange="location.href='?outline=' + this.value">
                     {% for o in outlines %}
@@ -92,6 +93,14 @@
                     </option>
                     {% endfor %}
                 </select>
+                {% if selected_outline %}
+                <a href="{% url 'outlines:detail' selected_outline.pk %}"
+                   class="btn btn-outline-secondary btn-sm py-0 px-2"
+                   title="Outline-Detail öffnen">
+                    <i class="bi bi-box-arrow-up-right"></i>
+                </a>
+                {% endif %}
+                </div>
                 {% else %}
                 <span class="badge bg-secondary">0</span>
                 {% endif %}
@@ -198,6 +207,7 @@
               <option value="save_the_cat">Save the Cat (15 Beats)</option>
               <option value="heros_journey">Heldenreise</option>
               <option value="five_act">Fünf-Akt-Struktur</option>
+              <option value="dan_harmon">Dan Harmon Story Circle</option>
             </select>
           </div>
           <div class="mb-3">

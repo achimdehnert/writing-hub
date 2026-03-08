@@ -13,6 +13,7 @@ urlpatterns = [
     # Frontend HTML
     path("", include("apps.core.urls", namespace="core")),
     path("projects/", include("apps.projects.urls", namespace="projects")),
+    path("outlines/", include("apps.outlines.urls", namespace="outlines")),
     # REST API für bfagent-Integration (ADR-083 Phase 3)
     path("api/v1/", include("apps.api.urls", namespace="api")),
     # Domain-spezifische API-Endpunkte

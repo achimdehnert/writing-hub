@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Outlines — Writing Hub{% endblock %}
+{% block nav_outlines %}active{% endblock %}
+{% block page_title %}<i class="bi bi-list-ol me-2"></i>Outlines{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex align-items-center justify-content-between py-2">
+                <span class="fw-semibold small">Alle Outline-Versionen</span>
+                <span class="badge bg-secondary">{{ paginator.count }}</span>
+            </div>
+            <div class="card-body p-0">
+                {% if outlines %}
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover mb-0" style="--bs-table-bg: transparent; --bs-table-hover-bg: #1e2235;">
+                        <thead style="background:#1e2235; color:#94a3b8; font-size:.78rem;">
+                            <tr>
+                                <th class="px-3 py-2">Name</th>
+                                <th class="py-2">Projekt</th>
+                                <th class="py-2">Quelle</th>
+                                <th class="py-2">Kapitel</th>
+                                <th class="py-2">Status</th>
+                                <th class="py-2">Erstellt</th>
+                                <th class="py-2"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for outline in outlines %}
+                            <tr>
+                                <td class="px-3 py-2">
+                                    <a href="{% url 'outlines:detail' outline.pk %}"
+                                       class="fw-semibold text-decoration-none"
+                                       style="color:#e2e8f0;">
+                                        {{ outline.name }}
+                                    </a>
+                                </td>
+                                <td class="py-2">
+                                    <a href="{% url 'projects:detail' outline.project.pk %}"
+                                       class="text-decoration-none text-muted small">
+                                        <i class="bi bi-folder2-open me-1"></i>{{ outline.project.title|truncatechars:30 }}
+                                    </a>
+                                </td>
+                                <td class="py-2">
+                                    {% if outline.source == "ai_generated" %}
+                                    <span class="badge" style="background:#312e81;color:#a5b4fc;font-size:.7rem;">
+                                        <i class="bi bi-stars me-1"></i>KI
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-dark border border-secondary text-muted" style="font-size:.7rem;">
+                                        Manuell
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td class="py-2 text-muted small">
+                                    {{ outline.nodes.count }}
+                                </td>
+                                <td class="py-2">
+                                    {% if outline.is_active %}
+                                    <span class="badge" style="background:#14532d;color:#86efac;font-size:.7rem;">Aktiv</span>
+                                    {% else %}
+                                    <span class="badge bg-dark border border-secondary text-muted" style="font-size:.7rem;">Archiv</span>
+                                    {% endif %}
+                                </td>
+                                <td class="py-2 text-muted small">{{ outline.created_at|date:"d.m.Y" }}</td>
+                                <td class="py-2 text-end pe-3">
+                                    <a href="{% url 'outlines:detail' outline.pk %}"
+                                       class="btn btn-outline-secondary btn-sm py-0 px-2">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if is_paginated %}
+                <div class="d-flex justify-content-center py-3 gap-2">
+                    {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                    {% endif %}
+                    <span class="btn btn-sm disabled text-muted">
+                        {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+                    </span>
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% else %}
+                <div class="p-5 text-center text-muted">
+                    <i class="bi bi-list-ol d-block mb-3" style="font-size:3rem;"></i>
+                    <p class="mb-3">Noch keine Outlines vorhanden.</p>
+                    <a href="{% url 'projects:list' %}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-folder2-open me-1"></i>Zu den Projekten
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

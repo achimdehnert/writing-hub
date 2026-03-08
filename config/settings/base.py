@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "apps.projects.apps.ProjectsConfig",
     "apps.series.apps.SeriesConfig",
     "apps.authoring.apps.AuthoringConfig",
+    "apps.outlines.apps.OutlinesConfig",
     "apps.illustration.apps.IllustrationConfig",
     "apps.idea_import.apps.IdeaImportConfig",
     "apps.api.apps.ApiConfig",
