@@ -4,7 +4,11 @@ API App — Service-to-Service REST-Endpunkte für bfagent → writing-hub (ADR-
 Auth: JWT oder Shared Secret via Authorization-Header.
 Phase 3: Vollständige Implementierung aller Endpunkte.
 """
+import time
+
 from django.conf import settings
+from django.db import connection
+from django.db.migrations.executor import MigrationExecutor
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -124,3 +128,63 @@ class HealthApiView(APIView):
             "service": "writing-hub",
             "version": "phase-3",
         })
+
+
+class HealthExtendedApiView(APIView):
+    """
+    GET /api/v1/health/extended/
+    Erweiterter Health-Check für Grafana/Monitoring:
+    - DB-Erreichbarkeit + Latenz
+    - Pending Migrations
+    - App-Version
+    Kein Auth erforderlich.
+    """
+    permission_classes = []
+
+    def get(self, request):
+        result = {
+            "status": "ok",
+            "service": "writing-hub",
+            "version": getattr(settings, "APP_VERSION", "phase-3"),
+            "checks": {},
+        }
+        http_status = 200
+
+        # DB Check
+        t0 = time.monotonic()
+        try:
+            connection.ensure_connection()
+            db_latency_ms = round((time.monotonic() - t0) * 1000, 2)
+            result["checks"]["database"] = {
+                "status": "ok",
+                "latency_ms": db_latency_ms,
+            }
+        except Exception as exc:
+            result["checks"]["database"] = {
+                "status": "error",
+                "detail": str(exc),
+            }
+            result["status"] = "degraded"
+            http_status = 503
+
+        # Migrations Check
+        try:
+            executor = MigrationExecutor(connection)
+            plan = executor.migration_plan(executor.loader.graph.leaf_nodes())
+            pending = len(plan)
+            result["checks"]["migrations"] = {
+                "status": "ok" if pending == 0 else "pending",
+                "pending_count": pending,
+            }
+            if pending > 0:
+                result["status"] = "degraded"
+                http_status = 503
+        except Exception as exc:
+            result["checks"]["migrations"] = {
+                "status": "error",
+                "detail": str(exc),
+            }
+            result["status"] = "degraded"
+            http_status = 503
+
+        return Response(result, status=http_status)

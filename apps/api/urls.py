@@ -6,6 +6,7 @@ app_name = "api"
 
 urlpatterns = [
     path("health/", views.HealthApiView.as_view(), name="health"),
+    path("health/extended/", views.HealthExtendedApiView.as_view(), name="health-extended"),
     path("worlds/", views.WorldsApiView.as_view(), name="worlds"),
     path("worlds/<uuid:world_id>/characters/", views.WorldCharactersApiView.as_view(), name="world-characters"),
     path("projects/<uuid:project_id>/outline/", views.ProjectOutlineApiView.as_view(), name="project-outline"),
