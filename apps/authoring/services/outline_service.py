@@ -16,7 +16,7 @@ from outlinefw import OutlineGenerator
 from outlinefw.frameworks import FRAMEWORKS, list_frameworks
 from outlinefw.schemas import LLMQuality, OutlineNode, OutlineResult, ProjectContext
 
-from apps.authoring.services.llm_router import LLMRouter
+from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
 from apps.authoring.services.project_context_service import ProjectContextService
 
 logger = logging.getLogger(__name__)
@@ -29,11 +29,21 @@ __all__ = [
     "list_frameworks",
 ]
 
+_FALLBACK_ACTION_CODES = [
+    "outline.generate",
+    "outline_generate",
+    "chapter_outline",
+]
+
 
 class _OutlineLLMRouterAdapter:
     """
     Wraps writing-hub's LLMRouter to satisfy outlinefw's LLMRouter protocol.
-    outlinefw expects: completion(action_code, messages, quality, priority) -> str
+
+    Tries action_codes in order until one succeeds:
+      1. outline.generate  (registered in AIActionType)
+      2. outline_generate  (fallback slug variant)
+      3. chapter_outline   (always present as final fallback)
     """
 
     def __init__(self, quality_level: int | None = None) -> None:
@@ -47,13 +57,39 @@ class _OutlineLLMRouterAdapter:
         quality: LLMQuality = LLMQuality.STANDARD,
         priority: str = "balanced",
     ) -> str:
-        ql = self._quality_level or quality.value if hasattr(quality, "value") else self._quality_level
-        return self._router.completion(
-            action_code=action_code,
-            messages=messages,
-            quality_level=ql,
-            priority=priority,
-        )
+        ql = self._quality_level or (quality.value if hasattr(quality, "value") else None)
+
+        codes_to_try = [action_code]
+        for fb in _FALLBACK_ACTION_CODES:
+            if fb not in codes_to_try:
+                codes_to_try.append(fb)
+
+        last_exc: Exception | None = None
+        for code in codes_to_try:
+            try:
+                result = self._router.completion(
+                    action_code=code,
+                    messages=messages,
+                    quality_level=ql,
+                    priority=priority,
+                )
+                if code != action_code:
+                    logger.info(
+                        "_OutlineLLMRouterAdapter: fallback '%s' -> '%s' succeeded",
+                        action_code, code,
+                    )
+                return result
+            except LLMRoutingError as exc:
+                last_exc = exc
+                logger.debug(
+                    "_OutlineLLMRouterAdapter: action_code '%s' failed: %s", code, exc
+                )
+                continue
+
+        raise LLMRoutingError(
+            f"Kein action_code verf\u00fcgbar f\u00fcr outline generation. "
+            f"Versucht: {codes_to_try}. Letzter Fehler: {last_exc}"
+        ) from last_exc
 
 
 def _project_context_from_db(project_id: str) -> ProjectContext:
