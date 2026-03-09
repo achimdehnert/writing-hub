@@ -6,6 +6,13 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deploy target'
+        required: true
+        default: 'production'
+        type: choice
+        options: [production, staging]
 
 # ═══════════════════════════════════════════════════════════════════════════
 # STAGE 1: CI — Hardcoding Scan, Lint, Tests
@@ -91,15 +98,18 @@ jobs:
           DJANGO_SETTINGS_MODULE: config.settings.test
 
 # ═══════════════════════════════════════════════════════════════════════════
-# STAGE 2: Deploy (only on workflow_dispatch)
-# Builds on ubuntu-latest, pushes to GHCR, deploys via SSH to prod server.
-# Server path: /opt/writing-hub  |  compose: docker-compose.prod.yml
+# STAGE 2a: Staging Deploy — auto on develop push
+# Image tag: :staging  |  Server path: /opt/writing-hub-staging
+# Domain: writing-hub.iil.pet (Port 8098)
 # ═══════════════════════════════════════════════════════════════════════════
-  fast-deploy:
-    name: "Deploy"
+  deploy-staging:
+    name: "Deploy → Staging"
     needs: [ci, hardcode-scan]
-    if: github.event_name == 'workflow_dispatch'
+    if: |
+      github.ref == 'refs/heads/develop' ||
+      (github.event_name == 'workflow_dispatch' && inputs.environment == 'staging')
     runs-on: ubuntu-latest
+    environment: staging
     permissions:
       contents: read
       packages: write
@@ -109,12 +119,12 @@ jobs:
       - name: Log in to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Build and push image
+      - name: Build and push staging image
         run: |
-          IMAGE="ghcr.io/achimdehnert/writing-hub:latest"
+          IMAGE="ghcr.io/achimdehnert/writing-hub:staging"
           docker build -t "$IMAGE" .
           docker push "$IMAGE"
-          echo "✅ Image pushed: $IMAGE"
+          echo "✅ Staging image pushed: $IMAGE"
 
       - name: Setup SSH
         run: |
@@ -123,15 +133,87 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H 88.198.191.108 >> ~/.ssh/known_hosts
 
-      - name: Deploy via SSH
+      - name: Deploy staging via SSH
+        env:
+          ENV_CONTENT: ${{ secrets.WRITINGHUB_ENV_STAGING }}
         run: |
+          # Copy compose file to server
+          scp -i ~/.ssh/id_rsa docker-compose.staging.yml root@88.198.191.108:/opt/writing-hub-staging/docker-compose.staging.yml
+
           ssh -i ~/.ssh/id_rsa root@88.198.191.108 bash << 'ENDSSH'
             set -e
-            mkdir -p /opt/writing-hub
+            mkdir -p /opt/writing-hub-staging
+            docker pull ghcr.io/achimdehnert/writing-hub:staging
+            cd /opt/writing-hub-staging
+            docker compose -f docker-compose.staging.yml up -d --remove-orphans
+            sleep 8
+            docker compose -f docker-compose.staging.yml exec -T writing_hub_staging_web python manage.py migrate --no-input
+            docker compose -f docker-compose.staging.yml exec -T writing_hub_staging_web python manage.py collectstatic --no-input
+            docker compose -f docker-compose.staging.yml ps
+            echo "✅ Staging deploy complete"
+          ENDSSH
+
+      - name: Write .env.staging on server
+        run: |
+          ssh -i ~/.ssh/id_rsa root@88.198.191.108 "printf '%s' '${{ secrets.WRITINGHUB_ENV_STAGING }}' > /opt/writing-hub-staging/.env.staging"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STAGE 2b: Production Deploy — only on workflow_dispatch (environment=production)
+# Image tag: :latest  |  Server path: /opt/writing-hub
+# Domain: writing.iil.pet (Port 8097)
+# ═══════════════════════════════════════════════════════════════════════════
+  deploy-production:
+    name: "Deploy → Production"
+    needs: [ci, hardcode-scan]
+    if: |
+      github.event_name == 'workflow_dispatch' &&
+      (inputs.environment == 'production' || inputs.environment == '')
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build and push production image
+        run: |
+          IMAGE="ghcr.io/achimdehnert/writing-hub:latest"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "✅ Production image pushed: $IMAGE"
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 88.198.191.108 >> ~/.ssh/known_hosts
+
+      - name: Write .env.prod on server
+        run: |
+          ssh -i ~/.ssh/id_rsa root@88.198.191.108 "printf '%s' '${{ secrets.WRITINGHUB_ENV_PROD }}' > /opt/writing-hub/.env.prod"
+
+      - name: Deploy production via SSH
+        run: |
+          scp -i ~/.ssh/id_rsa docker-compose.prod.yml root@88.198.191.108:/opt/writing-hub/docker-compose.prod.yml
+
+          ssh -i ~/.ssh/id_rsa root@88.198.191.108 bash << 'ENDSSH'
+            set -e
             docker pull ghcr.io/achimdehnert/writing-hub:latest
             cd /opt/writing-hub
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
-            sleep 10
+            sleep 8
+            docker compose -f docker-compose.prod.yml exec -T writing_hub_web python manage.py migrate --no-input
+            docker compose -f docker-compose.prod.yml exec -T writing_hub_web python manage.py collectstatic --no-input
             docker compose -f docker-compose.prod.yml ps
-            echo "✅ Deploy complete"
+            echo "✅ Production deploy complete"
           ENDSSH
+
+      - name: Health check
+        run: |
+          sleep 5
+          curl -sf --max-time 15 https://writing.iil.pet/health/ && echo "✅ Health OK" || echo "⚠️ Health check failed"
