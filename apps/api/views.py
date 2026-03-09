@@ -28,42 +28,44 @@ class ServiceTokenPermission:
 
 class WorldsApiView(APIView):
     """
-    GET /api/v1/worlds/?owner=<user_id>
-    Liefert Welten eines Users für bfagent-Integration.
+    GET /api/v1/worlds/?project=<project_id>
+
+    Liefert die ProjectWorldLinks des Users (lokale Verknüpfungen zu WeltenHub-Welten).
+    SSoT für Welt-Daten ist WeltenHub — hier werden nur die Link-UUIDs zurückgegeben.
     """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from apps.worlds.models import World
-        from apps.worlds.serializers import WorldSerializer
+        from apps.worlds.models import ProjectWorldLink
+        from apps.worlds.serializers import ProjectWorldLinkSerializer
 
-        owner_id = request.query_params.get("owner")
-        qs = World.objects.all()
-        if owner_id:
-            qs = qs.filter(owner_id=owner_id)
-        else:
-            qs = qs.filter(owner=request.user)
+        project_id = request.query_params.get("project")
+        qs = ProjectWorldLink.objects.filter(project__owner=request.user)
+        if project_id:
+            qs = qs.filter(project_id=project_id)
 
-        serializer = WorldSerializer(qs, many=True)
+        serializer = ProjectWorldLinkSerializer(qs, many=True)
         return Response(serializer.data)
 
 
 class WorldCharactersApiView(APIView):
     """
-    GET /api/v1/worlds/<id>/characters/
-    Liefert Charaktere einer Welt.
+    GET /api/v1/worlds/<world_id>/characters/
+
+    Liefert ProjectCharacterLinks für Projekte des Users, die mit dieser WeltenHub-Welt verknüpft sind.
+    SSoT für Charakter-Daten ist WeltenHub — hier werden nur die Link-UUIDs zurückgegeben.
     """
     permission_classes = [IsAuthenticated]
 
     def get(self, request, world_id):
-        from apps.worlds.models import WorldCharacter
-        from apps.worlds.serializers import WorldCharacterSerializer
+        from apps.worlds.models import ProjectCharacterLink
+        from apps.worlds.serializers import ProjectCharacterLinkSerializer
 
-        qs = WorldCharacter.objects.filter(
-            world_id=world_id,
-            world__owner=request.user,
+        qs = ProjectCharacterLink.objects.filter(
+            project__owner=request.user,
+            project__world_links__weltenhub_world_id=world_id,
         )
-        serializer = WorldCharacterSerializer(qs, many=True)
+        serializer = ProjectCharacterLinkSerializer(qs, many=True)
         return Response(serializer.data)
 
 
