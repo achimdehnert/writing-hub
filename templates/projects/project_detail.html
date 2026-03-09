@@ -24,15 +24,28 @@
             </div>
             <div class="card-body">
                 <dl class="mb-0">
-                    <dt class="text-muted small mb-1">Typ</dt>
-                    <dd class="mb-3 fw-semibold" style="color:#e2e8f0;">{{ project.get_content_type_display }}</dd>
+                    {% if project.series %}
+                    <dt class="text-muted small mb-1">Serie</dt>
+                    <dd class="mb-3 fw-semibold" style="color:#a78bfa;">{{ project.series }}</dd>
+                    {% endif %}
 
-                    {% if project.genre %}
+                    {% if project.content_type_lookup %}
+                    <dt class="text-muted small mb-1">Typ</dt>
+                    <dd class="mb-3 fw-semibold" style="color:#e2e8f0;">{{ project.content_type_lookup }}</dd>
+                    {% endif %}
+
+                    {% if project.genre_lookup %}
+                    <dt class="text-muted small mb-1">Genre</dt>
+                    <dd class="mb-3 fw-semibold" style="color:#e2e8f0;">{{ project.genre_lookup }}</dd>
+                    {% elif project.genre %}
                     <dt class="text-muted small mb-1">Genre</dt>
                     <dd class="mb-3 fw-semibold" style="color:#e2e8f0;">{{ project.genre }}</dd>
                     {% endif %}
 
-                    {% if project.target_audience %}
+                    {% if project.audience_lookup %}
+                    <dt class="text-muted small mb-1">Zielgruppe</dt>
+                    <dd class="mb-3" style="color:#cbd5e1;">{{ project.audience_lookup }}</dd>
+                    {% elif project.target_audience %}
                     <dt class="text-muted small mb-1">Zielgruppe</dt>
                     <dd class="mb-3" style="color:#cbd5e1;">{{ project.target_audience }}</dd>
                     {% endif %}
@@ -66,7 +79,7 @@
         </div>
     </div>
 
-    <!-- Beschreibung + Outlines -->
+    <!-- Beschreibung + Outlines + Ideen + Welten -->
     <div class="col-md-8">
         {% if project.description %}
         <div class="card mb-3">
@@ -149,6 +162,72 @@
                 </button>
             </div>
         </div>
+
+        <!-- Ideen -->
+        <div class="card mt-3">
+            <div class="card-header d-flex align-items-center justify-content-between py-2">
+                <span class="fw-semibold small"><i class="bi bi-lightbulb me-1"></i>Ideen-Imports</span>
+                <span class="badge bg-secondary">{{ idea_drafts|length }}</span>
+            </div>
+            <div class="card-body p-0">
+                {% if idea_drafts %}
+                <ul class="list-group list-group-flush">
+                    {% for draft in idea_drafts %}
+                    <li class="list-group-item border-0 py-2 px-3"
+                        style="background:transparent; color:#e2e8f0; border-bottom:1px solid #2d3148 !important;">
+                        <div class="d-flex align-items-center justify-content-between gap-2">
+                            <div class="small">
+                                <span class="fw-semibold">{{ draft.source_filename|default:"Freitext" }}</span>
+                                <span class="text-muted ms-2" style="font-size:.75rem;">{{ draft.created_at|date:"d.m.Y" }}</span>
+                            </div>
+                            <span class="badge {% if draft.status == 'committed' %}bg-success{% elif draft.status == 'pending_review' %}bg-warning text-dark{% else %}bg-secondary{% endif %}"
+                                  style="font-size:.65rem;">{{ draft.get_status_display }}</span>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="p-3 text-center text-muted small">
+                    <i class="bi bi-lightbulb d-block mb-1" style="font-size:1.5rem;"></i>
+                    Noch keine Ideen importiert
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Welten -->
+        <div class="card mt-3">
+            <div class="card-header d-flex align-items-center justify-content-between py-2">
+                <span class="fw-semibold small"><i class="bi bi-globe me-1"></i>Verknüpfte Welten</span>
+                <span class="badge bg-secondary">{{ world_links|length }}</span>
+            </div>
+            <div class="card-body p-0">
+                {% if world_links %}
+                <ul class="list-group list-group-flush">
+                    {% for link in world_links %}
+                    <li class="list-group-item border-0 py-2 px-3"
+                        style="background:transparent; color:#e2e8f0; border-bottom:1px solid #2d3148 !important;">
+                        <div class="d-flex align-items-center justify-content-between gap-2">
+                            <div class="small">
+                                <span class="fw-semibold">{{ link.weltenhub_world_id }}</span>
+                                <span class="badge bg-dark border border-secondary text-muted ms-2" style="font-size:.65rem;">{{ link.role }}</span>
+                            </div>
+                            {% if link.notes %}
+                            <span class="text-muted" style="font-size:.75rem;">{{ link.notes|truncatechars:40 }}</span>
+                            {% endif %}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="p-3 text-center text-muted small">
+                    <i class="bi bi-globe d-block mb-1" style="font-size:1.5rem;"></i>
+                    Keine Welten verknüpft
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
     </div><!-- /col-md-8 -->
 </div><!-- /row -->
 
