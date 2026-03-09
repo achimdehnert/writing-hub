@@ -57,10 +57,15 @@ class _OutlineLLMRouterAdapter:
 
 
 def _project_context_from_db(project_id: str) -> ProjectContext:
-    """Build outlinefw.ProjectContext from writing-hub DB.
+    """
+    Build outlinefw.ProjectContext from writing-hub DB.
 
-    Provides safe fallbacks for all fields that outlinefw validates
-    as non-empty strings (logline, protagonist, setting).
+    Loads full context via ProjectContextService:
+    - title, genre, description, premise, logline, themes
+    - characters (name, role, description)
+    - worlds (name, description)
+
+    Provides safe fallbacks for non-empty fields required by outlinefw.
     """
     svc = ProjectContextService()
     local_ctx = svc.get_context(project_id)
@@ -69,31 +74,46 @@ def _project_context_from_db(project_id: str) -> ProjectContext:
     genre = local_ctx.genre or "Allgemein"
 
     description = local_ctx.description or ""
-    logline = (local_ctx.logline or description[:200]).strip()
+    logline = (local_ctx.logline or local_ctx.premise or description[:200]).strip()
     if len(logline) < 10:
-        logline = f"{title} — ein {genre}-Werk."
+        logline = f"{title} \u2014 ein {genre}-Werk."
 
     protagonist = next(
         (c["name"] for c in local_ctx.characters if c.get("role") in ("protagonist", "main")),
         "",
     ).strip()
+    if not protagonist and local_ctx.characters:
+        protagonist = local_ctx.characters[0].get("name", "").strip()
     if not protagonist:
         protagonist = "Protagonist"
 
+    world_names = [w.get("name", "") for w in local_ctx.worlds if w.get("name")]
     setting = (getattr(local_ctx, "setting", "") or "").strip()
+    if not setting and world_names:
+        setting = world_names[0]
     if not setting:
         setting = genre
 
-    return ProjectContext(
+    themes = local_ctx.themes or []
+
+    ctx = ProjectContext(
         title=title,
         genre=genre,
         logline=logline,
         protagonist=protagonist,
         setting=setting,
-        themes=local_ctx.themes or [],
+        themes=themes,
         tone=getattr(local_ctx, "tone", "") or "",
         language_code="de",
     )
+
+    logger.info(
+        "_project_context_from_db project=%s title=%r protagonist=%r setting=%r "
+        "themes=%s characters=%d worlds=%d",
+        project_id, title, protagonist, setting,
+        themes, len(local_ctx.characters), len(local_ctx.worlds),
+    )
+    return ctx
 
 
 def _save_outline_to_db(
@@ -158,8 +178,8 @@ class OutlineGeneratorService:
         self._adapter._quality_level = quality_level
         ctx = _project_context_from_db(project_id)
         logger.info(
-            "generate_outline project=%s framework=%s ctx_title=%s ctx_logline=%r",
-            project_id, framework, ctx.title, ctx.logline[:40],
+            "generate_outline project=%s framework=%s ctx_title=%s logline=%r",
+            project_id, framework, ctx.title, ctx.logline[:60],
         )
         quality = LLMQuality(quality_level) if quality_level else LLMQuality.STANDARD
         return self._gen.generate(
