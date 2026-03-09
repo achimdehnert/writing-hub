@@ -28,12 +28,10 @@
                     <dt class="text-muted small mb-1">Serie</dt>
                     <dd class="mb-3 fw-semibold" style="color:#a78bfa;">{{ project.series }}</dd>
                     {% endif %}
-
                     {% if project.content_type_lookup %}
                     <dt class="text-muted small mb-1">Typ</dt>
                     <dd class="mb-3 fw-semibold" style="color:#e2e8f0;">{{ project.content_type_lookup }}</dd>
                     {% endif %}
-
                     {% if project.genre_lookup %}
                     <dt class="text-muted small mb-1">Genre</dt>
                     <dd class="mb-3 fw-semibold" style="color:#e2e8f0;">{{ project.genre_lookup }}</dd>
@@ -41,7 +39,6 @@
                     <dt class="text-muted small mb-1">Genre</dt>
                     <dd class="mb-3 fw-semibold" style="color:#e2e8f0;">{{ project.genre }}</dd>
                     {% endif %}
-
                     {% if project.audience_lookup %}
                     <dt class="text-muted small mb-1">Zielgruppe</dt>
                     <dd class="mb-3" style="color:#cbd5e1;">{{ project.audience_lookup }}</dd>
@@ -49,12 +46,10 @@
                     <dt class="text-muted small mb-1">Zielgruppe</dt>
                     <dd class="mb-3" style="color:#cbd5e1;">{{ project.target_audience }}</dd>
                     {% endif %}
-
                     {% if project.target_word_count %}
                     <dt class="text-muted small mb-1">Ziel-Wortanzahl</dt>
                     <dd class="mb-3 fw-semibold" style="color:#e2e8f0;">{{ project.target_word_count|floatformat:0 }} Wörter</dd>
                     {% endif %}
-
                     <dt class="text-muted small mb-1">Erstellt</dt>
                     <dd class="mb-0" style="color:#cbd5e1;">{{ project.created_at|date:"d.m.Y" }}</dd>
                 </dl>
@@ -92,39 +87,37 @@
         </div>
         {% endif %}
 
-        <!-- Outline Versionen Selector -->
+        <!-- Outline -->
         <div class="card">
             <div class="card-header d-flex align-items-center justify-content-between py-2">
                 <span class="fw-semibold small"><i class="bi bi-list-ol me-1"></i>Outline</span>
                 {% if outlines %}
                 <div class="d-flex align-items-center gap-2">
-                <select class="form-select form-select-sm bg-dark text-light border-secondary w-auto"
-                        onchange="location.href='?outline=' + this.value">
-                    {% for o in outlines %}
-                    <option value="{{ o.pk }}" {% if o == selected_outline %}selected{% endif %}>
-                        {{ o.name }} ({{ o.created_at|date:"d.m.Y" }})
-                    </option>
-                    {% endfor %}
-                </select>
-                {% if selected_outline %}
-                <a href="{% url 'outlines:detail' selected_outline.pk %}"
-                   class="btn btn-outline-secondary btn-sm py-0 px-2"
-                   title="Outline-Detail öffnen">
-                    <i class="bi bi-box-arrow-up-right"></i>
-                </a>
-                {% endif %}
+                    <select class="form-select form-select-sm bg-dark text-light border-secondary w-auto"
+                            onchange="location.href='?outline=' + this.value">
+                        {% for o in outlines %}
+                        <option value="{{ o.pk }}" {% if o == selected_outline %}selected{% endif %}>
+                            {{ o.name }} ({{ o.created_at|date:"d.m.Y" }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% if selected_outline %}
+                    <a href="{% url 'outlines:detail' selected_outline.pk %}"
+                       class="btn btn-outline-secondary btn-sm py-0 px-2" title="Outline-Detail öffnen">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+                    {% endif %}
                 </div>
                 {% else %}
                 <span class="badge bg-secondary">0</span>
                 {% endif %}
             </div>
-
             <div class="card-body p-0">
                 {% if outline_nodes %}
                 <ul class="list-group list-group-flush" style="max-height:320px;overflow-y:auto;">
                     {% for node in outline_nodes %}
                     <li class="list-group-item border-0 py-2 px-3"
-                        style="background:transparent; color:#e2e8f0; border-bottom:1px solid #2d3148 !important;">
+                        style="background:transparent;color:#e2e8f0;border-bottom:1px solid #2d3148 !important;">
                         <div class="d-flex align-items-start gap-2">
                             <span class="text-muted small mt-1" style="min-width:1.5rem;">{{ node.order }}.</span>
                             <div class="flex-grow-1">
@@ -150,7 +143,6 @@
                 </div>
                 {% endif %}
             </div>
-
             <div class="card-footer d-flex gap-2 py-2">
                 <button class="btn btn-sm btn-outline-light flex-grow-1"
                         data-bs-toggle="modal" data-bs-target="#outlineModal">
@@ -174,7 +166,7 @@
                 <ul class="list-group list-group-flush">
                     {% for draft in idea_drafts %}
                     <li class="list-group-item border-0 py-2 px-3"
-                        style="background:transparent; color:#e2e8f0; border-bottom:1px solid #2d3148 !important;">
+                        style="background:transparent;color:#e2e8f0;border-bottom:1px solid #2d3148 !important;">
                         <div class="d-flex align-items-center justify-content-between gap-2">
                             <div class="small">
                                 <span class="fw-semibold">{{ draft.source_filename|default:"Freitext" }}</span>
@@ -190,19 +182,17 @@
                 <div class="p-3 text-center">
                     <i class="bi bi-lightbulb d-block mb-2 text-muted" style="font-size:1.5rem;"></i>
                     <p class="text-muted small mb-2">Noch keine Ideen importiert</p>
-                    <a href="/api/v1/idea-import/?project={{ project.pk }}"
-                       class="btn btn-sm btn-outline-secondary">
-                        <i class="bi bi-plus me-1"></i> Idee importieren
-                    </a>
+                    <p class="text-muted small">
+                        <i class="bi bi-info-circle me-1"></i>Ideen-Import über bfagent-Integration verfügbar.
+                    </p>
                 </div>
                 {% endif %}
             </div>
             {% if idea_drafts %}
             <div class="card-footer py-2">
-                <a href="/api/v1/idea-import/?project={{ project.pk }}"
-                   class="btn btn-sm btn-outline-secondary w-100">
-                    <i class="bi bi-plus me-1"></i> Weitere Idee importieren
-                </a>
+                <p class="text-muted small mb-0 text-center">
+                    <i class="bi bi-info-circle me-1"></i>Ideen-Import über bfagent-Integration.
+                </p>
             </div>
             {% endif %}
         </div>
@@ -218,10 +208,10 @@
                 <ul class="list-group list-group-flush">
                     {% for link in world_links %}
                     <li class="list-group-item border-0 py-2 px-3"
-                        style="background:transparent; color:#e2e8f0; border-bottom:1px solid #2d3148 !important;">
+                        style="background:transparent;color:#e2e8f0;border-bottom:1px solid #2d3148 !important;">
                         <div class="d-flex align-items-center justify-content-between gap-2">
                             <div class="small">
-                                <a href="{{ WELTENHUB_URL }}/worlds/{{ link.weltenhub_world_id }}/"
+                                <a href="https://weltenforger.com/worlds/{{ link.weltenhub_world_id }}/"
                                    target="_blank" rel="noopener"
                                    class="fw-semibold text-decoration-none" style="color:#7dd3fc;">
                                     <i class="bi bi-box-arrow-up-right me-1" style="font-size:.7rem;"></i>
@@ -252,6 +242,20 @@
     </div><!-- /col-md-8 -->
 </div><!-- /row -->
 
+{% if messages %}
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:1100;">
+    {% for msg in messages %}
+    <div class="toast show align-items-center text-white {% if msg.tags == 'error' %}bg-danger{% elif msg.tags == 'warning' %}bg-warning text-dark{% else %}bg-success{% endif %} border-0 mb-2"
+         role="alert">
+        <div class="d-flex">
+            <div class="toast-body small">{{ msg }}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
 <!-- Modal: Outline anwenden -->
 <div class="modal fade" id="outlineModal" tabindex="-1">
   <div class="modal-dialog">
@@ -265,7 +269,8 @@
         <div class="modal-body">
           <div class="mb-3">
             <label class="form-label small text-muted">Framework wählen *</label>
-            <select name="framework_template" class="form-select bg-dark text-light border-secondary" required>
+            <select id="outlineFrameworkSelect" name="framework_template"
+                    class="form-select bg-dark text-light border-secondary" required>
               <option value="">— Framework auswählen —</option>
               <option value="three_act">Drei-Akt-Struktur</option>
               <option value="save_the_cat">Save the Cat (15 Beats)</option>
@@ -274,18 +279,18 @@
               <option value="dan_harmon">Dan Harmon Story Circle</option>
               <option value="blank">Leere Kapitel (ohne Framework)</option>
             </select>
-            <div class="form-text text-muted" style="font-size:.75rem;">Wähle ein Framework — die Kapitel werden entsprechend vorbereitet.</div>
+            <div class="form-text text-muted" style="font-size:.75rem;">Wähle ein Framework — Kapitel werden entsprechend vorbereitet.</div>
           </div>
           <div class="mb-3">
             <label class="form-label small text-muted">Name der Version</label>
-            <input type="text" name="name" class="form-control bg-dark text-light border-secondary"
-                   placeholder="z.B. Erster Entwurf (optional — wird automatisch gesetzt)">
+            <input id="outlineNameInput" type="text" name="name"
+                   class="form-control bg-dark text-light border-secondary"
+                   placeholder="wird automatisch gesetzt">
           </div>
           <div class="mb-3">
-            <label class="form-label small text-muted">Anzahl Kapitel</label>
+            <label class="form-label small text-muted">Anzahl Kapitel <small class="text-muted">(nur für „Leere Kapitel“)</small></label>
             <input type="number" name="chapter_count" class="form-control bg-dark text-light border-secondary"
                    placeholder="z.B. 12" min="0" max="50" value="12">
-            <div class="form-text text-muted" style="font-size:.75rem;">0 = nur Struktur ohne Kapitel anlegen</div>
           </div>
           <div class="mb-3">
             <label class="form-label small text-muted">Notizen</label>
@@ -295,7 +300,9 @@
         </div>
         <div class="modal-footer border-secondary py-2">
           <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Abbrechen</button>
-          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Anwenden</button>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-check-lg me-1"></i>Anwenden
+          </button>
         </div>
       </form>
     </div>
@@ -310,7 +317,7 @@
         <h6 class="modal-title"><i class="bi bi-stars me-2"></i>KI-Outline generieren</h6>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-      <form method="post" action="{% url 'projects:outline_generate' project.pk %}">
+      <form id="generateForm" method="post" action="{% url 'projects:outline_generate' project.pk %}">
         {% csrf_token %}
         <div class="modal-body">
           <div class="mb-3">
@@ -325,12 +332,13 @@
           </div>
           <div class="mb-3">
             <label class="form-label small text-muted">Kapitelanzahl</label>
-            <input type="number" name="chapter_count" class="form-control bg-dark text-light border-secondary"
+            <input type="number" name="chapter_count"
+                   class="form-control bg-dark text-light border-secondary"
                    value="12" min="3" max="50">
           </div>
           <div class="alert py-2 px-3" style="background:#1e2235;border:1px solid #2d3148;font-size:.8rem;color:#94a3b8;">
             <i class="bi bi-info-circle me-1"></i>
-            Die KI nutzt Titel, Genre, ausgewähltes Framework und Beschreibung des Projekts als Kontext.
+            Die KI nutzt Titel, Genre, ausgewähltes Framework und Beschreibung als Kontext.
             Dies kann 10–30 Sekunden dauern.
           </div>
         </div>
@@ -349,14 +357,16 @@
 
 {% block extra_js %}
 <script>
-document.querySelector('#generateModal form')?.addEventListener('submit', function() {
+document.getElementById('generateForm')?.addEventListener('submit', function() {
     const btn = document.getElementById('btn-ki-submit');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Generiert...';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Generiert...';
+    }
 });
 
-document.querySelector('#outlineModal select[name="framework_template"]')?.addEventListener('change', function() {
-    const nameInput = document.querySelector('#outlineModal input[name="name"]');
+document.getElementById('outlineFrameworkSelect')?.addEventListener('change', function() {
+    const nameInput = document.getElementById('outlineNameInput');
     const labels = {
         'three_act': 'Drei-Akt-Struktur',
         'save_the_cat': 'Save the Cat',
@@ -365,9 +375,13 @@ document.querySelector('#outlineModal select[name="framework_template"]')?.addEv
         'dan_harmon': 'Dan Harmon Story Circle',
         'blank': 'Leere Kapitel',
     };
-    if (this.value && !nameInput.value) {
-        nameInput.placeholder = labels[this.value] || '';
+    if (nameInput && !nameInput.value) {
+        nameInput.placeholder = labels[this.value] || 'wird automatisch gesetzt';
     }
+});
+
+document.querySelectorAll('.toast').forEach(function(el) {
+    setTimeout(function() { el.classList.remove('show'); }, 5000);
 });
 </script>
 {% endblock %}

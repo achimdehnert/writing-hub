@@ -41,6 +41,15 @@ OUTLINE_FRAMEWORKS = {
     ],
 }
 
+FW_LABELS = {
+    "three_act": "Drei-Akt-Struktur",
+    "save_the_cat": "Save the Cat",
+    "heros_journey": "Heldenreise",
+    "five_act": "Fünf-Akt-Struktur",
+    "dan_harmon": "Dan Harmon Story Circle",
+    "blank": "Leere Kapitel",
+}
+
 
 class ProjectListView(LoginRequiredMixin, ListView):
     model = BookProject
@@ -61,13 +70,10 @@ class ProjectListView(LoginRequiredMixin, ListView):
             qs = qs.filter(series__isnull=True)
         elif series_id:
             qs = qs.filter(series_id=series_id)
-
         if genre_id:
             qs = qs.filter(genre_lookup_id=genre_id)
-
         if ct_id:
             qs = qs.filter(content_type_lookup_id=ct_id)
-
         if q:
             qs = qs.filter(title__icontains=q)
 
@@ -100,9 +106,7 @@ class ProjectCreateView(LoginRequiredMixin, CreateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["series"].queryset = BookSeries.objects.filter(
-            owner=self.request.user
-        )
+        form.fields["series"].queryset = BookSeries.objects.filter(owner=self.request.user)
         form.fields["series"].empty_label = "— keine Serie —"
         form.fields["content_type_lookup"].empty_label = "— bitte wählen —"
         form.fields["genre_lookup"].empty_label = "— bitte wählen —"
@@ -133,15 +137,11 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
             try:
                 selected = outlines.get(pk=selected_id)
             except OutlineVersion.DoesNotExist:
-                selected = (
-                    outlines.filter(is_active=True).first() or outlines.first()
-                )
+                selected = outlines.filter(is_active=True).first() or outlines.first()
         else:
             selected = outlines.filter(is_active=True).first() or outlines.first()
         ctx["selected_outline"] = selected
-        ctx["outline_nodes"] = (
-            selected.nodes.order_by("order") if selected else []
-        )
+        ctx["outline_nodes"] = selected.nodes.order_by("order") if selected else []
         ctx["outline_frameworks"] = list(OUTLINE_FRAMEWORKS.keys())
 
         from apps.idea_import.models import IdeaImportDraft
@@ -169,9 +169,7 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["series"].queryset = BookSeries.objects.filter(
-            owner=self.request.user
-        )
+        form.fields["series"].queryset = BookSeries.objects.filter(owner=self.request.user)
         form.fields["series"].empty_label = "— keine Serie —"
         form.fields["content_type_lookup"].empty_label = "— bitte wählen —"
         form.fields["genre_lookup"].empty_label = "— bitte wählen —"
@@ -183,7 +181,7 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
 
 
 class OutlineCreateView(LoginRequiredMixin, View):
-    """Manuell Outline anlegen via Framework-Template."""
+    """Manuell Outline via Framework anlegen."""
 
     def get(self, request, pk):
         return redirect("projects:detail", pk=pk)
@@ -194,32 +192,22 @@ class OutlineCreateView(LoginRequiredMixin, View):
         name = request.POST.get("name", "").strip()
         notes = request.POST.get("notes", "")
         chapter_count = int(request.POST.get("chapter_count", 0) or 0)
-        framework_template = request.POST.get("framework_template", "blank")
+        framework_template = request.POST.get("framework_template", "").strip()
 
         logger.info(
             "OutlineCreateView.post pk=%s framework=%s chapter_count=%s user=%s",
             pk, framework_template, chapter_count, request.user,
         )
 
-        if not framework_template or framework_template == "":
+        if not framework_template:
             messages.warning(request, "Bitte ein Framework auswählen.")
             return redirect("projects:detail", pk=pk)
 
         if not name:
-            fw_labels = {
-                "three_act": "Drei-Akt-Struktur",
-                "save_the_cat": "Save the Cat",
-                "heros_journey": "Heldenreise",
-                "five_act": "Fünf-Akt-Struktur",
-                "dan_harmon": "Dan Harmon Story Circle",
-                "blank": "Leere Kapitel",
-            }
-            name = fw_labels.get(framework_template, framework_template)
+            name = FW_LABELS.get(framework_template, framework_template)
 
         try:
-            OutlineVersion.objects.filter(
-                project=project, is_active=True
-            ).update(is_active=False)
+            OutlineVersion.objects.filter(project=project, is_active=True).update(is_active=False)
 
             version = OutlineVersion.objects.create(
                 project=project,
@@ -241,10 +229,7 @@ class OutlineCreateView(LoginRequiredMixin, View):
                     )
                     for i, beat in enumerate(beats)
                 ])
-                messages.success(
-                    request,
-                    f'Outline „{name}“ mit {len(beats)} Kapiteln angelegt.',
-                )
+                messages.success(request, f'Outline „{name}“ mit {len(beats)} Kapiteln angelegt.')
             elif chapter_count > 0:
                 OutlineNode.objects.bulk_create([
                     OutlineNode(
@@ -255,10 +240,7 @@ class OutlineCreateView(LoginRequiredMixin, View):
                     )
                     for i in range(min(chapter_count, 50))
                 ])
-                messages.success(
-                    request,
-                    f'Outline „{name}“ mit {chapter_count} leeren Kapiteln angelegt.',
-                )
+                messages.success(request, f'Outline „{name}“ mit {chapter_count} leeren Kapiteln angelegt.')
             else:
                 messages.success(request, f'Outline-Struktur „{name}“ angelegt.')
 
@@ -270,7 +252,7 @@ class OutlineCreateView(LoginRequiredMixin, View):
 
 
 class OutlineGenerateView(LoginRequiredMixin, View):
-    """Django POST view (kein DRF) — kein CSRF-Problem bei session auth."""
+    """KI-Outline generieren."""
 
     def get(self, request, pk):
         return redirect("projects:detail", pk=pk)
@@ -278,7 +260,7 @@ class OutlineGenerateView(LoginRequiredMixin, View):
     def post(self, request, pk):
         from apps.authoring.services.outline_service import OutlineGeneratorService
         project = get_object_or_404(BookProject, pk=pk, owner=request.user)
-        framework = request.POST.get("framework", "three_act")
+        framework = request.POST.get("framework", "three_act").strip()
         chapter_count = int(request.POST.get("chapter_count", 12) or 12)
 
         logger.info(
@@ -294,16 +276,15 @@ class OutlineGenerateView(LoginRequiredMixin, View):
                 chapter_count=chapter_count,
             )
             if result.success and result.nodes:
+                OutlineVersion.objects.filter(project=project, is_active=True).update(is_active=False)
                 svc.save_outline(
                     project_id=str(project.pk),
                     nodes=result.nodes,
-                    name=(
-                        f"KI: {framework.replace('_', ' ').title()}"
-                        f" ({chapter_count} Kap.)"
-                    ),
+                    name=f"KI: {FW_LABELS.get(framework, framework)} ({chapter_count} Kap.)",
+                    framework=framework,
                     user=request.user,
                 )
-                messages.success(request, "KI-Outline wurde generiert.")
+                messages.success(request, f"KI-Outline ({FW_LABELS.get(framework, framework)}) wurde generiert.")
             else:
                 messages.warning(request, "KI konnte kein Outline generieren.")
         except Exception as exc:
