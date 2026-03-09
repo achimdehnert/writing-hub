@@ -81,7 +81,7 @@ class ProjectContextService:
         """Vollstaendigen Kontext fuer ein Buchprojekt laden."""
         from apps.authoring.models import AuthorStyleDNA
         from apps.projects.models import BookProject, OutlineNode, OutlineVersion
-        from apps.worlds.models import Character, World
+        from apps.worlds.models import ProjectCharacterLink, ProjectWorldLink
 
         try:
             project = BookProject.objects.get(pk=project_id)
@@ -89,43 +89,56 @@ class ProjectContextService:
             logger.warning("ProjectContextService: Projekt %s nicht gefunden", project_id)
             return ProjectContext(project_id=str(project_id))
 
+        genre_name = str(project.genre_lookup) if project.genre_lookup_id else project.genre
+
         ctx = ProjectContext(
             project_id=str(project.pk),
             title=project.title,
-            genre=project.genre,
+            genre=genre_name,
             description=project.description,
             content_type=project.content_type,
             target_word_count=project.target_word_count or 0,
         )
 
-        # Charaktere
+        # Charaktere — SSoT ist WeltenHub, lokale Links als Referenz
         try:
-            characters = Character.objects.filter(
-                project=project, is_active=True
-            ).order_by("role", "name")
-            ctx.characters = [
-                {
-                    "name": c.name,
-                    "role": c.role,
-                    "description": c.description,
-                    "motivation": c.motivation,
-                }
-                for c in characters
-            ]
+            char_links = ProjectCharacterLink.objects.filter(project=project)
+            characters = []
+            for link in char_links:
+                try:
+                    from weltenfw.django import get_client
+                    char = get_client().characters.get(link.weltenhub_character_id)
+                    characters.append({
+                        "name": getattr(char, "name", str(link.weltenhub_character_id)),
+                        "role": link.project_role or getattr(char, "role", ""),
+                        "description": (
+                            getattr(char, "description", "")
+                            or getattr(char, "backstory", "")
+                        ),
+                        "motivation": getattr(char, "motivation", ""),
+                    })
+                except Exception:
+                    pass
+            ctx.characters = characters
         except Exception:
             pass
 
-        # Welten
+        # Welten — SSoT ist WeltenHub, lokale Links als Referenz
         try:
-            worlds = World.objects.filter(project=project, is_active=True)
-            ctx.worlds = [
-                {
-                    "name": w.name,
-                    "description": w.description,
-                    "atmosphere": w.atmosphere,
-                }
-                for w in worlds
-            ]
+            world_links = ProjectWorldLink.objects.filter(project=project)
+            worlds = []
+            for link in world_links:
+                try:
+                    from weltenfw.django import get_client
+                    world = get_client().worlds.get(link.weltenhub_world_id)
+                    worlds.append({
+                        "name": getattr(world, "name", str(link.weltenhub_world_id)),
+                        "description": getattr(world, "description", ""),
+                        "atmosphere": getattr(world, "atmosphere", ""),
+                    })
+                except Exception:
+                    pass
+            ctx.worlds = worlds
         except Exception:
             pass
 
