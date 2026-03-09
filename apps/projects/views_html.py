@@ -8,7 +8,7 @@ from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from apps.series.models import BookSeries
-from .models import AudienceLookup, BookProject, ContentTypeLookup, GenreLookup, OutlineVersion
+from .models import BookProject, OutlineVersion
 
 
 class ProjectListView(LoginRequiredMixin, ListView):
