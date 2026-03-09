@@ -1,6 +1,9 @@
 """
 Projects — HTML Frontend Views (ADR-083)
 """
+import logging
+
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
@@ -9,6 +12,8 @@ from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from apps.series.models import BookSeries
 from .models import BookProject, OutlineVersion
+
+logger = logging.getLogger(__name__)
 
 OUTLINE_FRAMEWORKS = {
     "three_act": [
@@ -178,6 +183,11 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
 
 
 class OutlineCreateView(LoginRequiredMixin, View):
+    """Manuell Outline anlegen via Framework-Template."""
+
+    def get(self, request, pk):
+        return redirect("projects:detail", pk=pk)
+
     def post(self, request, pk):
         from apps.projects.models import OutlineNode
         project = get_object_or_404(BookProject, pk=pk, owner=request.user)
@@ -185,6 +195,15 @@ class OutlineCreateView(LoginRequiredMixin, View):
         notes = request.POST.get("notes", "")
         chapter_count = int(request.POST.get("chapter_count", 0) or 0)
         framework_template = request.POST.get("framework_template", "blank")
+
+        logger.info(
+            "OutlineCreateView.post pk=%s framework=%s chapter_count=%s user=%s",
+            pk, framework_template, chapter_count, request.user,
+        )
+
+        if not framework_template or framework_template == "":
+            messages.warning(request, "Bitte ein Framework auswählen.")
+            return redirect("projects:detail", pk=pk)
 
         if not name:
             fw_labels = {
@@ -197,62 +216,100 @@ class OutlineCreateView(LoginRequiredMixin, View):
             }
             name = fw_labels.get(framework_template, framework_template)
 
-        version = OutlineVersion.objects.create(
-            project=project,
-            created_by=request.user,
-            name=name,
-            source="manual",
-            notes=notes,
-            is_active=True,
-        )
+        try:
+            OutlineVersion.objects.filter(
+                project=project, is_active=True
+            ).update(is_active=False)
 
-        beats = OUTLINE_FRAMEWORKS.get(framework_template, [])
-        if beats:
-            OutlineNode.objects.bulk_create([
-                OutlineNode(
-                    outline_version=version,
-                    title=beat,
-                    beat_type="chapter",
-                    order=i + 1,
+            version = OutlineVersion.objects.create(
+                project=project,
+                created_by=request.user,
+                name=name,
+                source="manual",
+                notes=notes,
+                is_active=True,
+            )
+
+            beats = OUTLINE_FRAMEWORKS.get(framework_template, [])
+            if beats:
+                OutlineNode.objects.bulk_create([
+                    OutlineNode(
+                        outline_version=version,
+                        title=beat,
+                        beat_type="chapter",
+                        order=i + 1,
+                    )
+                    for i, beat in enumerate(beats)
+                ])
+                messages.success(
+                    request,
+                    f'Outline „{name}“ mit {len(beats)} Kapiteln angelegt.',
                 )
-                for i, beat in enumerate(beats)
-            ])
-        elif chapter_count > 0:
-            OutlineNode.objects.bulk_create([
-                OutlineNode(
-                    outline_version=version,
-                    title=f"Kapitel {i + 1}",
-                    beat_type="chapter",
-                    order=i + 1,
+            elif chapter_count > 0:
+                OutlineNode.objects.bulk_create([
+                    OutlineNode(
+                        outline_version=version,
+                        title=f"Kapitel {i + 1}",
+                        beat_type="chapter",
+                        order=i + 1,
+                    )
+                    for i in range(min(chapter_count, 50))
+                ])
+                messages.success(
+                    request,
+                    f'Outline „{name}“ mit {chapter_count} leeren Kapiteln angelegt.',
                 )
-                for i in range(min(chapter_count, 50))
-            ])
+            else:
+                messages.success(request, f'Outline-Struktur „{name}“ angelegt.')
+
+        except Exception as exc:
+            logger.exception("OutlineCreateView error pk=%s: %s", pk, exc)
+            messages.error(request, f"Fehler beim Anlegen: {exc}")
+
         return redirect("projects:detail", pk=pk)
 
 
 class OutlineGenerateView(LoginRequiredMixin, View):
     """Django POST view (kein DRF) — kein CSRF-Problem bei session auth."""
+
+    def get(self, request, pk):
+        return redirect("projects:detail", pk=pk)
+
     def post(self, request, pk):
         from apps.authoring.services.outline_service import OutlineGeneratorService
         project = get_object_or_404(BookProject, pk=pk, owner=request.user)
         framework = request.POST.get("framework", "three_act")
         chapter_count = int(request.POST.get("chapter_count", 12) or 12)
-        svc = OutlineGeneratorService()
-        result = svc.generate_outline(
-            project_id=str(project.pk),
-            framework=framework,
-            chapter_count=chapter_count,
+
+        logger.info(
+            "OutlineGenerateView.post pk=%s framework=%s chapter_count=%s user=%s",
+            pk, framework, chapter_count, request.user,
         )
-        if result.success and result.nodes:
-            svc.save_outline(
+
+        try:
+            svc = OutlineGeneratorService()
+            result = svc.generate_outline(
                 project_id=str(project.pk),
-                nodes=result.nodes,
-                name=(
-                    f"KI: {framework.replace('_', ' ').title()}"
-                    f" ({chapter_count} Kap.)"
-                ),
-                user=request.user,
+                framework=framework,
+                chapter_count=chapter_count,
             )
+            if result.success and result.nodes:
+                svc.save_outline(
+                    project_id=str(project.pk),
+                    nodes=result.nodes,
+                    name=(
+                        f"KI: {framework.replace('_', ' ').title()}"
+                        f" ({chapter_count} Kap.)"
+                    ),
+                    user=request.user,
+                )
+                messages.success(request, "KI-Outline wurde generiert.")
+            else:
+                messages.warning(request, "KI konnte kein Outline generieren.")
+        except Exception as exc:
+            logger.exception("OutlineGenerateView error pk=%s: %s", pk, exc)
+            messages.error(request, f"KI-Fehler: {exc}")
+
         return redirect("projects:detail", pk=pk)
 
 
