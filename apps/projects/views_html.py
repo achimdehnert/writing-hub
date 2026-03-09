@@ -317,7 +317,21 @@ class ChapterWriterView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["chapters"] = []
-        ctx["chapter_count"] = 0
-        ctx["characters"] = []
+        from apps.worlds.models import ProjectCharacterLink
+
+        active_outline = OutlineVersion.objects.filter(
+            project=self.object, is_active=True
+        ).order_by("-created_at").first()
+
+        if active_outline:
+            chapters = list(active_outline.nodes.order_by("order"))
+        else:
+            chapters = []
+
+        ctx["chapters"] = chapters
+        ctx["chapter_count"] = len(chapters)
+        ctx["active_outline"] = active_outline
+        ctx["characters"] = ProjectCharacterLink.objects.filter(
+            project=self.object
+        ).select_related()
         return ctx

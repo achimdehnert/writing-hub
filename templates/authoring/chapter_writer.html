@@ -5,6 +5,9 @@
 
 {% block topbar_actions %}
 <span class="text-muted small me-3">{{ chapter_count }} Kapitel</span>
+{% if active_outline %}
+<span class="text-muted small me-3">{{ active_outline.name }}</span>
+{% endif %}
 <button class="btn btn-primary btn-sm" id="btn-generate" onclick="startGeneration()">
     <i class="bi bi-stars"></i> KI-Schreiben
 </button>
@@ -18,6 +21,9 @@
         <div class="card h-100">
             <div class="card-header d-flex align-items-center justify-content-between py-2">
                 <span class="fw-semibold small">Kapitel</span>
+                {% if active_outline %}
+                <span class="badge bg-secondary small">{{ active_outline.name|truncatechars:20 }}</span>
+                {% endif %}
             </div>
             <div class="card-body p-0">
                 <div class="list-group list-group-flush" id="chapter-list">
@@ -25,14 +31,19 @@
                     <a href="#" class="list-group-item list-group-item-action border-0 py-2 px-3
                         {% if forloop.first %}active{% endif %}"
                         style="background: transparent; color: #e2e8f0;"
-                        onclick="selectChapter('{{ chapter.id }}', '{{ chapter.title|escapejs }}'); return false;">
+                        onclick="selectChapter('{{ chapter.id }}', '{{ chapter.title|escapejs }}', '{{ chapter.description|escapejs }}'); return false;">
                         <div class="d-flex align-items-center gap-2">
                             <span class="text-muted small">{{ chapter.order }}</span>
                             <span class="small text-truncate">{{ chapter.title }}</span>
                         </div>
                     </a>
                     {% empty %}
-                    <div class="p-3 text-muted small text-center">Noch keine Kapitel</div>
+                    <div class="p-3 text-center">
+                        <div class="text-muted small mb-2">Noch keine Kapitel</div>
+                        <a href="{% url 'projects:detail' project.pk %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Outline anlegen
+                        </a>
+                    </div>
                     {% endfor %}
                 </div>
             </div>
@@ -88,7 +99,7 @@
                 <ul class="list-group list-group-flush">
                     {% for char in characters %}
                     <li class="list-group-item border-0 py-1 px-3 small" style="background: transparent; color: #94a3b8;">
-                        <i class="bi bi-person me-1"></i>{{ char.name }}
+                        <i class="bi bi-person me-1"></i>{{ char.project_role|default:char.notes|default:"Charakter" }}
                     </li>
                     {% empty %}
                     <li class="list-group-item border-0 py-2 px-3 small text-muted" style="background: transparent;">Keine Charaktere verknüpft</li>
@@ -115,9 +126,12 @@ const PROJECT_ID = "{{ project.pk }}";
 let currentChapterId = null;
 let pollInterval = null;
 
-function selectChapter(id, title) {
+function selectChapter(id, title, description) {
     currentChapterId = id;
     document.getElementById("chapter-title-display").textContent = title;
+    if (description) {
+        document.getElementById("chapter-beat").value = description;
+    }
     document.querySelectorAll("#chapter-list a").forEach(el => el.classList.remove("active"));
     event.target.closest("a").classList.add("active");
 }
@@ -186,7 +200,6 @@ function resetBtn() {
 
 function saveContent() {
     const content = document.getElementById("chapter-content").value;
-    // Speichern via API (placeholder)
     console.log("Speichern:", content.length, "Zeichen");
 }
 
@@ -196,5 +209,11 @@ function getCookie(name) {
 }
 
 document.getElementById("chapter-content").addEventListener("input", e => updateWordCount(e.target.value));
+
+// Erstes Kapitel automatisch auswählen
+window.addEventListener("DOMContentLoaded", () => {
+    const first = document.querySelector("#chapter-list a");
+    if (first) first.click();
+});
 </script>
 {% endblock %}
