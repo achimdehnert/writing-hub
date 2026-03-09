@@ -68,9 +68,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Check migrations
+      - name: Run migrations
         if: matrix.job == 'test'
-        run: python manage.py migrate --check
+        run: python manage.py migrate
         env:
           DJANGO_SETTINGS_MODULE: config.settings.test
 
