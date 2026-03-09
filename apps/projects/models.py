@@ -12,6 +12,58 @@ from django.conf import settings
 from django.db import models
 
 
+class ContentTypeLookup(models.Model):
+    """
+    Verwaltbare Inhaltstypen (Roman, Sachbuch, …) — via Django Admin pflegbar.
+    """
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=50, unique=True)
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        db_table = "wh_content_type_lookup"
+        ordering = ["order", "name"]
+        verbose_name = "Inhaltstyp"
+        verbose_name_plural = "Inhaltstypen"
+
+    def __str__(self):
+        return self.name
+
+
+class GenreLookup(models.Model):
+    """
+    Verwaltbare Genre-Liste (Fantasy, Thriller, …) — via Django Admin pflegbar.
+    """
+    name = models.CharField(max_length=100, unique=True)
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        db_table = "wh_genre_lookup"
+        ordering = ["order", "name"]
+        verbose_name = "Genre"
+        verbose_name_plural = "Genres"
+
+    def __str__(self):
+        return self.name
+
+
+class AudienceLookup(models.Model):
+    """
+    Verwaltbare Zielgruppen (Erwachsene, Jugendliche, …) — via Django Admin pflegbar.
+    """
+    name = models.CharField(max_length=200, unique=True)
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        db_table = "wh_audience_lookup"
+        ordering = ["order", "name"]
+        verbose_name = "Zielgruppe"
+        verbose_name_plural = "Zielgruppen"
+
+    def __str__(self):
+        return self.name
+
+
 class BookProject(models.Model):
     """
     Buchprojekt — zentrales Objekt des Writing Hub.
@@ -32,8 +84,41 @@ class BookProject(models.Model):
         help_text="ID des entsprechenden bfagent.BookProjects (für API-Sync)",
     )
 
+    series = models.ForeignKey(
+        "series.BookSeries",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="projects",
+        verbose_name="Serie",
+        help_text="Buchserie zu der dieses Projekt gehört (optional)",
+    )
+
     title = models.CharField(max_length=300)
     description = models.TextField(blank=True)
+
+    content_type_lookup = models.ForeignKey(
+        ContentTypeLookup,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        verbose_name="Inhaltstyp",
+        related_name="projects",
+    )
+
+    genre_lookup = models.ForeignKey(
+        GenreLookup,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        verbose_name="Genre",
+        related_name="projects",
+    )
+
+    audience_lookup = models.ForeignKey(
+        AudienceLookup,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        verbose_name="Zielgruppe",
+        related_name="projects",
+    )
 
     class ContentType(models.TextChoices):
         NOVEL = "novel", "Roman"

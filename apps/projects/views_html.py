@@ -7,6 +7,7 @@ from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
+from apps.series.models import BookSeries
 from .models import BookProject, OutlineVersion
 
 
@@ -22,8 +23,21 @@ class ProjectListView(LoginRequiredMixin, ListView):
 class ProjectCreateView(LoginRequiredMixin, CreateView):
     model = BookProject
     template_name = "projects/project_form.html"
-    fields = ["title", "description", "content_type", "genre", "target_audience", "target_word_count"]
+    fields = [
+        "title", "description", "series",
+        "content_type_lookup", "genre_lookup", "audience_lookup",
+        "target_word_count",
+    ]
     success_url = reverse_lazy("projects:list")
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields["series"].queryset = BookSeries.objects.filter(owner=self.request.user)
+        form.fields["series"].empty_label = "— keine Serie —"
+        form.fields["content_type_lookup"].empty_label = "— bitte wählen —"
+        form.fields["genre_lookup"].empty_label = "— bitte wählen —"
+        form.fields["audience_lookup"].empty_label = "— bitte wählen —"
+        return form
 
     def form_valid(self, form):
         form.instance.owner = self.request.user
@@ -58,10 +72,23 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
 class ProjectUpdateView(LoginRequiredMixin, UpdateView):
     model = BookProject
     template_name = "projects/project_form.html"
-    fields = ["title", "description", "content_type", "genre", "target_audience", "target_word_count"]
+    fields = [
+        "title", "description", "series",
+        "content_type_lookup", "genre_lookup", "audience_lookup",
+        "target_word_count",
+    ]
 
     def get_queryset(self):
         return BookProject.objects.filter(owner=self.request.user)
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields["series"].queryset = BookSeries.objects.filter(owner=self.request.user)
+        form.fields["series"].empty_label = "— keine Serie —"
+        form.fields["content_type_lookup"].empty_label = "— bitte wählen —"
+        form.fields["genre_lookup"].empty_label = "— bitte wählen —"
+        form.fields["audience_lookup"].empty_label = "— bitte wählen —"
+        return form
 
     def get_success_url(self):
         return reverse_lazy("projects:detail", kwargs={"pk": self.object.pk})
