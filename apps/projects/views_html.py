@@ -17,7 +17,44 @@ class ProjectListView(LoginRequiredMixin, ListView):
     context_object_name = "projects"
 
     def get_queryset(self):
-        return BookProject.objects.filter(owner=self.request.user, is_active=True)
+        qs = BookProject.objects.filter(
+            owner=self.request.user, is_active=True
+        ).select_related("genre_lookup", "content_type_lookup", "series")
+
+        series_id = self.request.GET.get("serie")
+        genre_id = self.request.GET.get("genre")
+        ct_id = self.request.GET.get("typ")
+        q = self.request.GET.get("q", "").strip()
+
+        if series_id == "none":
+            qs = qs.filter(series__isnull=True)
+        elif series_id:
+            qs = qs.filter(series_id=series_id)
+
+        if genre_id:
+            qs = qs.filter(genre_lookup_id=genre_id)
+
+        if ct_id:
+            qs = qs.filter(content_type_lookup_id=ct_id)
+
+        if q:
+            qs = qs.filter(title__icontains=q)
+
+        return qs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        from apps.projects.models import ContentTypeLookup, GenreLookup
+        ctx["series_options"] = BookSeries.objects.filter(
+            owner=self.request.user
+        ).order_by("title")
+        ctx["genre_options"] = GenreLookup.objects.all().order_by("order", "name")
+        ctx["ct_options"] = ContentTypeLookup.objects.all().order_by("order", "name")
+        ctx["filter_serie"] = self.request.GET.get("serie", "")
+        ctx["filter_genre"] = self.request.GET.get("genre", "")
+        ctx["filter_typ"] = self.request.GET.get("typ", "")
+        ctx["filter_q"] = self.request.GET.get("q", "")
+        return ctx
 
 
 class ProjectCreateView(LoginRequiredMixin, CreateView):
@@ -71,7 +108,9 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
         else:
             selected = outlines.filter(is_active=True).first() or outlines.first()
         ctx["selected_outline"] = selected
-        ctx["outline_nodes"] = selected.nodes.order_by("order") if selected else []
+        ctx["outline_nodes"] = (
+            selected.nodes.order_by("order") if selected else []
+        )
 
         from apps.idea_import.models import IdeaImportDraft
         from apps.worlds.models import ProjectWorldLink
@@ -156,7 +195,10 @@ class OutlineGenerateView(LoginRequiredMixin, View):
             svc.save_outline(
                 project_id=str(project.pk),
                 nodes=result.nodes,
-                name=f"KI: {framework.replace('_', ' ').title()} ({chapter_count} Kap.)",
+                name=(
+                    f"KI: {framework.replace('_', ' ').title()}"
+                    f" ({chapter_count} Kap.)"
+                ),
                 user=request.user,
             )
         return redirect("projects:detail", pk=pk)
