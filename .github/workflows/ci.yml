@@ -1,2 +1,13 @@
-# Replaced by ci-cd.yml — this file is intentionally kept empty.
-# See .github/workflows/ci-cd.yml
+name: _disabled_ci
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'This workflow is disabled — use ci-cd.yml instead'
+        required: false
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    if: false
+    steps:
+      - run: echo "disabled"
