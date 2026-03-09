@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Serie löschen — Writing Hub{% endblock %}
+{% block nav_series %}active{% endblock %}
+{% block page_title %}<i class="bi bi-trash me-2"></i>Serie löschen{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'series_html:list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Zurück
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card border-danger" style="border-color:#ef4444 !important;">
+            <div class="card-header py-2" style="background:#2d1515;border-color:#ef4444;">
+                <span class="fw-semibold small text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Serie wirklich löschen?</span>
+            </div>
+            <div class="card-body">
+                <p style="color:#e2e8f0;">Die Serie <strong>{{ object.title }}</strong> wird unwiderruflich gelöscht.</p>
+                {% with count=object.projects.count %}
+                {% if count %}
+                <div class="alert py-2 px-3 mb-3" style="background:#2d1a1a;border:1px solid #7f1d1d;font-size:.85rem;color:#fca5a5;">
+                    <i class="bi bi-info-circle me-1"></i>
+                    {{ count }} verknüpfte{{ count|pluralize:"s" }} Projekt{{ count|pluralize:",e" }} verlier{{ count|pluralize:"t,en" }} die Serienzuweisung.
+                </div>
+                {% endif %}
+                {% endwith %}
+                <form method="post" class="d-flex gap-2 justify-content-end">
+                    {% csrf_token %}
+                    <a href="{% url 'series_html:list' %}" class="btn btn-outline-secondary btn-sm">Abbrechen</a>
+                    <button type="submit" class="btn btn-danger btn-sm">
+                        <i class="bi bi-trash me-1"></i>Endgültig löschen
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

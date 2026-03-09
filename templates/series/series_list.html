@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Serien — Writing Hub{% endblock %}
+{% block nav_series %}active{% endblock %}
+{% block page_title %}<i class="bi bi-collection me-2"></i>Meine Serien{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'series_html:create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i> Neue Serie
+</a>
+{% endblock %}
+
+{% block content %}
+{% if series_list %}
+<div class="row g-3">
+    {% for series in series_list %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-header d-flex align-items-center justify-content-between py-2">
+                <span class="fw-semibold small"><i class="bi bi-collection me-1"></i>{{ series.title }}</span>
+                <div class="d-flex gap-1">
+                    <a href="{% url 'series_html:edit' series.pk %}"
+                       class="btn btn-outline-secondary btn-sm py-0 px-2" title="Bearbeiten">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <a href="{% url 'series_html:delete' series.pk %}"
+                       class="btn btn-outline-danger btn-sm py-0 px-2" title="Löschen">
+                        <i class="bi bi-trash"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if series.genre %}
+                <span class="badge bg-dark border border-secondary text-muted mb-2" style="font-size:.7rem;">{{ series.genre }}</span>
+                {% endif %}
+                {% if series.description %}
+                <p class="small mb-2" style="color:#cbd5e1;line-height:1.5;">{{ series.description|truncatechars:120 }}</p>
+                {% endif %}
+                {% with count=series.projects.count %}
+                {% if count %}
+                <div class="text-muted small mt-2">
+                    <i class="bi bi-folder2-open me-1"></i>{{ count }} Projekt{{ count|pluralize:",e" }}
+                </div>
+                {% endif %}
+                {% endwith %}
+            </div>
+            <div class="card-footer py-2" style="font-size:.75rem; color:#64748b;">
+                <i class="bi bi-calendar3 me-1"></i>{{ series.created_at|date:"d.m.Y" }}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-collection d-block mb-3" style="font-size:3rem;color:#2d3148;"></i>
+        <p class="text-muted mb-3">Noch keine Serien vorhanden.</p>
+        <a href="{% url 'series_html:create' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i> Erste Serie anlegen
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

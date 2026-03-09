@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}{% if object %}{{ object.title }} bearbeiten{% else %}Neue Serie{% endif %} — Writing Hub{% endblock %}
+{% block nav_series %}active{% endblock %}
+{% block page_title %}
+    <i class="bi bi-collection me-2"></i>
+    {% if object %}{{ object.title }} bearbeiten{% else %}Neue Serie anlegen{% endif %}
+{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'series_html:list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Zurück
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header py-2">
+                <span class="fw-semibold small">
+                    {% if object %}<i class="bi bi-pencil me-1"></i>Bearbeiten{% else %}<i class="bi bi-plus-lg me-1"></i>Neue Serie{% endif %}
+                </span>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Titel *</label>
+                        <input type="text" name="title" value="{{ form.title.value|default:'' }}"
+                               class="form-control bg-dark text-light border-secondary"
+                               placeholder="z.B. Die Chroniken von Elara" required autofocus>
+                        {% if form.title.errors %}
+                        <div class="text-danger small mt-1">{{ form.title.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Genre</label>
+                        <input type="text" name="genre" value="{{ form.genre.value|default:'' }}"
+                               class="form-control bg-dark text-light border-secondary"
+                               placeholder="z.B. Fantasy, Thriller">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Beschreibung</label>
+                        <textarea name="description" rows="4"
+                                  class="form-control bg-dark text-light border-secondary"
+                                  placeholder="Kurzbeschreibung der Serie ...">{{ form.description.value|default:'' }}</textarea>
+                    </div>
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a href="{% url 'series_html:list' %}" class="btn btn-outline-secondary btn-sm">Abbrechen</a>
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-check-lg me-1"></i>
+                            {% if object %}Speichern{% else %}Anlegen{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
