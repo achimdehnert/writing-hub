@@ -5,11 +5,12 @@ from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 
+from apps.projects.models import GenreLookup
 from .models import BookSeries
 from .serializers import BookSeriesSerializer
 
 
-# ── REST API Views ─────────────────────────────────────────────────────
+# ── REST API Views ──────────────────────────────────────────────────────
 
 class BookSeriesListView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
@@ -27,7 +28,7 @@ class BookSeriesDetailView(generics.RetrieveUpdateAPIView):
         return BookSeries.objects.filter(owner=self.request.user)
 
 
-# ── HTML Frontend Views ────────────────────────────────────────────────
+# ── HTML Frontend Views ─────────────────────────────────────────────────
 
 class SeriesListView(LoginRequiredMixin, ListView):
     model = BookSeries
@@ -47,6 +48,11 @@ class SeriesCreateView(LoginRequiredMixin, CreateView):
     fields = ["title", "description", "genre"]
     success_url = reverse_lazy("series_html:list")
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["genre_options"] = GenreLookup.objects.all().order_by("order", "name")
+        return ctx
+
     def form_valid(self, form):
         form.instance.owner = self.request.user
         messages.success(
@@ -64,6 +70,11 @@ class SeriesUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_queryset(self):
         return BookSeries.objects.filter(owner=self.request.user)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["genre_options"] = GenreLookup.objects.all().order_by("order", "name")
+        return ctx
 
     def form_valid(self, form):
         messages.success(

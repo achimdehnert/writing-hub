@@ -36,9 +36,24 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small text-muted">Genre</label>
+                        {% if genre_options %}
+                        <select name="genre" class="form-select bg-dark text-light border-secondary">
+                            <option value="">— kein Genre —</option>
+                            {% for g in genre_options %}
+                            <option value="{{ g.name }}"
+                                {% if form.genre.value == g.name %}selected{% endif %}>
+                                {{ g.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% else %}
                         <input type="text" name="genre" value="{{ form.genre.value|default:'' }}"
                                class="form-control bg-dark text-light border-secondary"
                                placeholder="z.B. Fantasy, Thriller">
+                        {% endif %}
+                        {% if form.genre.errors %}
+                        <div class="text-danger small mt-1">{{ form.genre.errors|join:", " }}</div>
+                        {% endif %}
                     </div>
                     <div class="mb-3">
                         <label class="form-label small text-muted">Beschreibung</label>

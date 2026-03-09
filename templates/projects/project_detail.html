@@ -97,7 +97,7 @@
             <div class="card-header d-flex align-items-center justify-content-between py-2">
                 <span class="fw-semibold small"><i class="bi bi-list-ol me-1"></i>Outline</span>
                 {% if outlines %}
-<div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-2">
                 <select class="form-select form-select-sm bg-dark text-light border-secondary w-auto"
                         onchange="location.href='?outline=' + this.value">
                     {% for o in outlines %}
@@ -154,7 +154,7 @@
             <div class="card-footer d-flex gap-2 py-2">
                 <button class="btn btn-sm btn-outline-light flex-grow-1"
                         data-bs-toggle="modal" data-bs-target="#outlineModal">
-                    <i class="bi bi-plus-lg me-1"></i> Manuell erstellen
+                    <i class="bi bi-layout-text-sidebar me-1"></i> Outline anwenden
                 </button>
                 <button class="btn btn-sm btn-primary flex-grow-1"
                         data-bs-toggle="modal" data-bs-target="#generateModal">
@@ -187,12 +187,24 @@
                     {% endfor %}
                 </ul>
                 {% else %}
-                <div class="p-3 text-center text-muted small">
-                    <i class="bi bi-lightbulb d-block mb-1" style="font-size:1.5rem;"></i>
-                    Noch keine Ideen importiert
+                <div class="p-3 text-center">
+                    <i class="bi bi-lightbulb d-block mb-2 text-muted" style="font-size:1.5rem;"></i>
+                    <p class="text-muted small mb-2">Noch keine Ideen importiert</p>
+                    <a href="/api/v1/idea-import/?project={{ project.pk }}"
+                       class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-plus me-1"></i> Idee importieren
+                    </a>
                 </div>
                 {% endif %}
             </div>
+            {% if idea_drafts %}
+            <div class="card-footer py-2">
+                <a href="/api/v1/idea-import/?project={{ project.pk }}"
+                   class="btn btn-sm btn-outline-secondary w-100">
+                    <i class="bi bi-plus me-1"></i> Weitere Idee importieren
+                </a>
+            </div>
+            {% endif %}
         </div>
 
         <!-- Welten -->
@@ -209,7 +221,12 @@
                         style="background:transparent; color:#e2e8f0; border-bottom:1px solid #2d3148 !important;">
                         <div class="d-flex align-items-center justify-content-between gap-2">
                             <div class="small">
-                                <span class="fw-semibold">{{ link.weltenhub_world_id }}</span>
+                                <a href="{{ WELTENHUB_URL }}/worlds/{{ link.weltenhub_world_id }}/"
+                                   target="_blank" rel="noopener"
+                                   class="fw-semibold text-decoration-none" style="color:#7dd3fc;">
+                                    <i class="bi bi-box-arrow-up-right me-1" style="font-size:.7rem;"></i>
+                                    {{ link.weltenhub_world_id }}
+                                </a>
                                 <span class="badge bg-dark border border-secondary text-muted ms-2" style="font-size:.65rem;">{{ link.role }}</span>
                             </div>
                             {% if link.notes %}
@@ -220,9 +237,13 @@
                     {% endfor %}
                 </ul>
                 {% else %}
-                <div class="p-3 text-center text-muted small">
-                    <i class="bi bi-globe d-block mb-1" style="font-size:1.5rem;"></i>
-                    Keine Welten verknüpft
+                <div class="p-3 text-center">
+                    <i class="bi bi-globe d-block mb-2 text-muted" style="font-size:1.5rem;"></i>
+                    <p class="text-muted small mb-2">Keine Welten verknüpft</p>
+                    <a href="https://weltenforger.com" target="_blank" rel="noopener"
+                       class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> WeltenHub öffnen
+                    </a>
                 </div>
                 {% endif %}
             </div>
@@ -231,27 +252,40 @@
     </div><!-- /col-md-8 -->
 </div><!-- /row -->
 
-<!-- Modal: Manuell erstellen -->
+<!-- Modal: Outline anwenden -->
 <div class="modal fade" id="outlineModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content" style="background:#1a1d27;border:1px solid #2d3148;color:#e2e8f0;">
       <div class="modal-header border-secondary py-2">
-        <h6 class="modal-title"><i class="bi bi-list-ol me-2"></i>Outline manuell erstellen</h6>
+        <h6 class="modal-title"><i class="bi bi-layout-text-sidebar me-2"></i>Outline anwenden</h6>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <form method="post" action="{% url 'projects:outline_create' project.pk %}">
         {% csrf_token %}
         <div class="modal-body">
           <div class="mb-3">
-            <label class="form-label small text-muted">Name *</label>
-            <input type="text" name="name" class="form-control bg-dark text-light border-secondary"
-                   placeholder="z.B. Erster Entwurf" required autofocus>
+            <label class="form-label small text-muted">Framework wählen *</label>
+            <select name="framework_template" class="form-select bg-dark text-light border-secondary" required>
+              <option value="">— Framework auswählen —</option>
+              <option value="three_act">Drei-Akt-Struktur</option>
+              <option value="save_the_cat">Save the Cat (15 Beats)</option>
+              <option value="heros_journey">Heldenreise</option>
+              <option value="five_act">Fünf-Akt-Struktur</option>
+              <option value="dan_harmon">Dan Harmon Story Circle</option>
+              <option value="blank">Leere Kapitel (ohne Framework)</option>
+            </select>
+            <div class="form-text text-muted" style="font-size:.75rem;">Wähle ein Framework — die Kapitel werden entsprechend vorbereitet.</div>
           </div>
           <div class="mb-3">
-            <label class="form-label small text-muted">Anzahl leerer Kapitel</label>
+            <label class="form-label small text-muted">Name der Version</label>
+            <input type="text" name="name" class="form-control bg-dark text-light border-secondary"
+                   placeholder="z.B. Erster Entwurf (optional — wird automatisch gesetzt)">
+          </div>
+          <div class="mb-3">
+            <label class="form-label small text-muted">Anzahl Kapitel</label>
             <input type="number" name="chapter_count" class="form-control bg-dark text-light border-secondary"
                    placeholder="z.B. 12" min="0" max="50" value="12">
-            <div class="form-text text-muted" style="font-size:.75rem;">0 = nur Version ohne Kapitel anlegen</div>
+            <div class="form-text text-muted" style="font-size:.75rem;">0 = nur Struktur ohne Kapitel anlegen</div>
           </div>
           <div class="mb-3">
             <label class="form-label small text-muted">Notizen</label>
@@ -261,7 +295,7 @@
         </div>
         <div class="modal-footer border-secondary py-2">
           <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Abbrechen</button>
-          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Erstellen</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Anwenden</button>
         </div>
       </form>
     </div>
@@ -296,7 +330,7 @@
           </div>
           <div class="alert py-2 px-3" style="background:#1e2235;border:1px solid #2d3148;font-size:.8rem;color:#94a3b8;">
             <i class="bi bi-info-circle me-1"></i>
-            Die KI nutzt Titel, Genre und Beschreibung des Projekts als Kontext.
+            Die KI nutzt Titel, Genre, ausgewähltes Framework und Beschreibung des Projekts als Kontext.
             Dies kann 10–30 Sekunden dauern.
           </div>
         </div>
@@ -319,6 +353,21 @@ document.querySelector('#generateModal form')?.addEventListener('submit', functi
     const btn = document.getElementById('btn-ki-submit');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Generiert...';
+});
+
+document.querySelector('#outlineModal select[name="framework_template"]')?.addEventListener('change', function() {
+    const nameInput = document.querySelector('#outlineModal input[name="name"]');
+    const labels = {
+        'three_act': 'Drei-Akt-Struktur',
+        'save_the_cat': 'Save the Cat',
+        'heros_journey': 'Heldenreise',
+        'five_act': 'Fünf-Akt-Struktur',
+        'dan_harmon': 'Dan Harmon Story Circle',
+        'blank': 'Leere Kapitel',
+    };
+    if (this.value && !nameInput.value) {
+        nameInput.placeholder = labels[this.value] || '';
+    }
 });
 </script>
 {% endblock %}

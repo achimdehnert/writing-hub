@@ -190,3 +190,6 @@ X_FRAME_OPTIONS = "SAMEORIGIN"
 LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/projects/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
+
+# Django Admin — ensure static files are served correctly
+ADMIN_MEDIA_PREFIX = "/static/admin/"

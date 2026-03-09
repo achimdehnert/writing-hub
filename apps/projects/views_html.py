@@ -10,6 +10,32 @@ from django.views.generic import CreateView, DetailView, ListView, UpdateView
 from apps.series.models import BookSeries
 from .models import BookProject, OutlineVersion
 
+OUTLINE_FRAMEWORKS = {
+    "three_act": [
+        "Akt I: Einführung", "Wendepunkt 1", "Akt II: Konfrontation",
+        "Mittelpunkt", "Wendepunkt 2", "Akt III: Auflösung",
+    ],
+    "save_the_cat": [
+        "Opening Image", "Theme Stated", "Set-Up", "Catalyst", "Debate",
+        "Break into Two", "B Story", "Fun and Games", "Midpoint", "Bad Guys Close In",
+        "All Is Lost", "Dark Night of the Soul", "Break into Three", "Finale", "Final Image",
+    ],
+    "heros_journey": [
+        "Gewöhnliche Welt", "Ruf zum Abenteuer", "Weigerung", "Mentor",
+        "Überschreiten der Schwelle", "Prüfungen & Verbündete", "Die innerste Höhle",
+        "Die große Prüfung", "Belohnung", "Der Rückweg", "Auferstehung", "Rückkehr mit dem Elixier",
+    ],
+    "five_act": [
+        "Akt I: Exposition", "Akt II: Steigende Handlung", "Akt III: Höhepunkt",
+        "Akt IV: Fallende Handlung", "Akt V: Katastrophe / Auflösung",
+    ],
+    "dan_harmon": [
+        "You (Held in Komfortzone)", "Need (Etwas fehlt)", "Go (Unbekannte Zone betreten)",
+        "Search (Anpassung / Suche)", "Find (Was gesucht wurde finden)",
+        "Take (Preis zahlen)", "Return (Zurückkehren)", "Change (Veränderung)",
+    ],
+}
+
 
 class ProjectListView(LoginRequiredMixin, ListView):
     model = BookProject
@@ -111,6 +137,7 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
         ctx["outline_nodes"] = (
             selected.nodes.order_by("order") if selected else []
         )
+        ctx["outline_frameworks"] = list(OUTLINE_FRAMEWORKS.keys())
 
         from apps.idea_import.models import IdeaImportDraft
         from apps.worlds.models import ProjectWorldLink
@@ -154,9 +181,22 @@ class OutlineCreateView(LoginRequiredMixin, View):
     def post(self, request, pk):
         from apps.projects.models import OutlineNode
         project = get_object_or_404(BookProject, pk=pk, owner=request.user)
-        name = request.POST.get("name", "").strip() or "Erster Entwurf"
+        name = request.POST.get("name", "").strip()
         notes = request.POST.get("notes", "")
         chapter_count = int(request.POST.get("chapter_count", 0) or 0)
+        framework_template = request.POST.get("framework_template", "blank")
+
+        if not name:
+            fw_labels = {
+                "three_act": "Drei-Akt-Struktur",
+                "save_the_cat": "Save the Cat",
+                "heros_journey": "Heldenreise",
+                "five_act": "Fünf-Akt-Struktur",
+                "dan_harmon": "Dan Harmon Story Circle",
+                "blank": "Leere Kapitel",
+            }
+            name = fw_labels.get(framework_template, framework_template)
+
         version = OutlineVersion.objects.create(
             project=project,
             created_by=request.user,
@@ -165,7 +205,19 @@ class OutlineCreateView(LoginRequiredMixin, View):
             notes=notes,
             is_active=True,
         )
-        if chapter_count > 0:
+
+        beats = OUTLINE_FRAMEWORKS.get(framework_template, [])
+        if beats:
+            OutlineNode.objects.bulk_create([
+                OutlineNode(
+                    outline_version=version,
+                    title=beat,
+                    beat_type="chapter",
+                    order=i + 1,
+                )
+                for i, beat in enumerate(beats)
+            ])
+        elif chapter_count > 0:
             OutlineNode.objects.bulk_create([
                 OutlineNode(
                     outline_version=version,
