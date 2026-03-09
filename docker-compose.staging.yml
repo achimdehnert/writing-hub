@@ -1,0 +1,38 @@
+version: '3.9'
+
+services:
+  writing_hub_staging_web:
+    image: ghcr.io/achimdehnert/writing-hub:staging
+    container_name: writing_hub_staging_web
+    restart: unless-stopped
+    env_file:
+      - .env.staging
+    volumes:
+      - writing_hub_staging_media:/app/media
+      - writing_hub_staging_static:/app/staticfiles
+    depends_on:
+      - writing_hub_staging_db
+    ports:
+      - "127.0.0.1:8098:8000"
+    networks:
+      - writing_hub_staging_net
+
+  writing_hub_staging_db:
+    image: postgres:15
+    container_name: writing_hub_staging_db
+    restart: unless-stopped
+    env_file:
+      - .env.staging
+    volumes:
+      - writing_hub_staging_pgdata:/var/lib/postgresql/data
+    networks:
+      - writing_hub_staging_net
+
+volumes:
+  writing_hub_staging_pgdata:
+  writing_hub_staging_media:
+  writing_hub_staging_static:
+
+networks:
+  writing_hub_staging_net:
+    driver: bridge
