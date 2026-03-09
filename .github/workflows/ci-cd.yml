@@ -153,6 +153,8 @@ jobs:
               python manage.py migrate --no-input
             docker compose -f docker-compose.staging.yml exec -T writing_hub_staging_web \
               python manage.py collectstatic --no-input --clear
+            docker compose -f docker-compose.staging.yml exec -T writing_hub_staging_web \
+              python manage.py seed_all || echo "seed_all warning (non-critical)"
             docker compose -f docker-compose.staging.yml ps
             echo "✅ Staging deploy complete"
           ENDSSH
@@ -219,6 +221,8 @@ jobs:
               python manage.py migrate --no-input
             docker compose -f docker-compose.prod.yml exec -T writing_hub_web \
               python manage.py collectstatic --no-input --clear
+            docker compose -f docker-compose.prod.yml exec -T writing_hub_web \
+              python manage.py seed_all || echo "seed_all warning (non-critical)"
             docker compose -f docker-compose.prod.yml ps
             echo "✅ Production deploy complete"
           ENDSSH
