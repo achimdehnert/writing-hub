@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Ideen-Imports — Writing Hub{% endblock %}
+{% block nav_ideas %}active{% endblock %}
+{% block page_title %}<i class="bi bi-lightbulb me-2"></i>Ideen-Imports{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card text-center py-3">
+            <div class="fw-bold" style="font-size:1.5rem;color:#6366f1;">{{ total }}</div>
+            <div class="text-muted small">Gesamt</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center py-3">
+            <div class="fw-bold" style="font-size:1.5rem;color:#f59e0b;">{{ pending }}</div>
+            <div class="text-muted small">Wartet auf Review</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center py-3">
+            <div class="fw-bold" style="font-size:1.5rem;color:#22c55e;">{{ committed }}</div>
+            <div class="text-muted small">Committed</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header py-2">
+        <span class="fw-semibold small"><i class="bi bi-lightbulb me-1"></i>Alle Ideen-Imports</span>
+    </div>
+    <div class="card-body p-0">
+        {% if drafts %}
+        <ul class="list-group list-group-flush">
+            {% for draft in drafts %}
+            <li class="list-group-item border-0 py-3 px-4"
+                style="background:transparent;color:#e2e8f0;border-bottom:1px solid #2d3148 !important;">
+                <div class="d-flex align-items-start justify-content-between gap-3">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="fw-semibold">{{ draft.source_filename|default:"Freitext" }}</span>
+                            <span class="badge {% if draft.status == 'committed' %}bg-success{% elif draft.status == 'pending_review' %}bg-warning text-dark{% elif draft.status == 'partial' %}bg-info text-dark{% else %}bg-secondary{% endif %}"
+                                  style="font-size:.65rem;">{{ draft.get_status_display }}</span>
+                        </div>
+                        <div class="text-muted small">
+                            <a href="{% url 'projects:detail' draft.project.pk %}"
+                               class="text-decoration-none" style="color:#a78bfa;">
+                                <i class="bi bi-folder2-open me-1"></i>{{ draft.project.title }}
+                            </a>
+                            <span class="ms-3"><i class="bi bi-clock me-1"></i>{{ draft.created_at|date:"d.m.Y H:i" }}</span>
+                        </div>
+                        {% if draft.available_sections %}
+                        <div class="mt-1">
+                            {% for section in draft.available_sections %}
+                            <span class="badge bg-dark border border-secondary text-muted me-1" style="font-size:.65rem;">{{ section }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="text-end">
+                        <span class="text-muted small">{{ draft.source_format|default:"—" }}</span>
+                    </div>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="p-5 text-center">
+            <i class="bi bi-lightbulb d-block mb-3 text-muted" style="font-size:3rem;"></i>
+            <p class="text-muted mb-1">Noch keine Ideen-Imports vorhanden</p>
+            <p class="text-muted small">Ideen werden über die bfagent-Integration importiert.</p>
+        </div>
+        {% endif %}
+    </div>
+    {% if is_paginated %}
+    <div class="card-footer py-2 d-flex justify-content-center gap-2">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-chevron-left"></i>
+        </a>
+        {% endif %}
+        <span class="btn btn-sm disabled" style="color:#94a3b8;">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-chevron-right"></i>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

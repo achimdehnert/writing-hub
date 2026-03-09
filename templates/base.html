@@ -38,10 +38,10 @@
         <a href="{% url 'series_html:list' %}" class="nav-link {% block nav_series %}{% endblock %}">
             <i class="bi bi-collection"></i> Serien
         </a>
-        <a href="#" class="nav-link {% block nav_ideas %}{% endblock %}">
+        <a href="{% url 'ideas:list' %}" class="nav-link {% block nav_ideas %}{% endblock %}">
             <i class="bi bi-lightbulb"></i> Ideen
         </a>
-        <a href="#" class="nav-link {% block nav_worlds %}{% endblock %}">
+        <a href="{% url 'worlds_html:list' %}" class="nav-link {% block nav_worlds %}{% endblock %}">
             <i class="bi bi-globe2"></i> Welten
         </a>
         <hr class="border-secondary mx-3">

@@ -15,6 +15,8 @@ urlpatterns = [
     path("projects/", include("apps.projects.urls", namespace="projects")),
     path("outlines/", include("apps.outlines.urls", namespace="outlines")),
     path("serien/", include("apps.series.urls_html", namespace="series_html")),
+    path("ideen/", include("apps.idea_import.urls_html", namespace="ideas")),
+    path("welten/", include("apps.worlds.urls_html", namespace="worlds_html")),
     # REST API für bfagent-Integration (ADR-083 Phase 3)
     path("api/v1/", include("apps.api.urls", namespace="api")),
     # Domain-spezifische API-Endpunkte

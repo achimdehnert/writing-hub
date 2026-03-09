@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Welten — Writing Hub{% endblock %}
+{% block nav_worlds %}active{% endblock %}
+{% block page_title %}<i class="bi bi-globe2 me-2"></i>Verknüpfte Welten{% endblock %}
+
+{% block topbar_actions %}
+<a href="https://weltenforger.com" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-box-arrow-up-right me-1"></i> WeltenHub öffnen
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card text-center py-3">
+            <div class="fw-bold" style="font-size:1.5rem;color:#6366f1;">{{ total }}</div>
+            <div class="text-muted small">Verknüpfte Welten</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header py-2">
+        <span class="fw-semibold small"><i class="bi bi-globe2 me-1"></i>Alle Welten-Verknüpfungen</span>
+    </div>
+    <div class="card-body p-0">
+        {% if world_links %}
+        <ul class="list-group list-group-flush">
+            {% for link in world_links %}
+            <li class="list-group-item border-0 py-3 px-4"
+                style="background:transparent;color:#e2e8f0;border-bottom:1px solid #2d3148 !important;">
+                <div class="d-flex align-items-start justify-content-between gap-3">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <a href="https://weltenforger.com/worlds/{{ link.weltenhub_world_id }}/"
+                               target="_blank" rel="noopener"
+                               class="fw-semibold text-decoration-none" style="color:#7dd3fc;">
+                                <i class="bi bi-box-arrow-up-right me-1" style="font-size:.7rem;"></i>
+                                {{ link.weltenhub_world_id }}
+                            </a>
+                            <span class="badge bg-dark border border-secondary text-muted" style="font-size:.65rem;">{{ link.get_role_display }}</span>
+                        </div>
+                        <div class="text-muted small">
+                            <a href="{% url 'projects:detail' link.project.pk %}"
+                               class="text-decoration-none" style="color:#a78bfa;">
+                                <i class="bi bi-folder2-open me-1"></i>{{ link.project.title }}
+                            </a>
+                        </div>
+                        {% if link.notes %}
+                        <div class="mt-1 text-muted" style="font-size:.8rem;">{{ link.notes|truncatechars:80 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="text-muted small">{{ link.created_at|date:"d.m.Y" }}</div>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="p-5 text-center">
+            <i class="bi bi-globe2 d-block mb-3 text-muted" style="font-size:3rem;"></i>
+            <p class="text-muted mb-1">Keine Welten verknüpft</p>
+            <p class="text-muted small mb-3">Welten werden über WeltenHub verwaltet und hier verknüpft.</p>
+            <a href="https://weltenforger.com" target="_blank" rel="noopener"
+               class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-box-arrow-up-right me-1"></i> WeltenHub öffnen
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
