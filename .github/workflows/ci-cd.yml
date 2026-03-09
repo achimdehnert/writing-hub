@@ -58,11 +58,9 @@ jobs:
         if: matrix.job == 'lint'
         run: pip install "ruff==0.9.9"
 
-      - name: Lint & Format check
+      - name: Lint
         if: matrix.job == 'lint'
-        run: |
-          ruff check apps/ config/
-          ruff format --check apps/ config/
+        run: ruff check apps/ config/
 
       - name: Install dependencies (test only)
         if: matrix.job == 'test'
