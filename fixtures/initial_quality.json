@@ -1,0 +1,106 @@
+[
+  {
+    "model": "authoring.qualitydimension",
+    "pk": "00000001-0000-0000-0000-000000000001",
+    "fields": {
+      "code": "style", "name_de": "Stil & Stimme", "name_en": "Style & Voice",
+      "description": "Konsistenz des Schreibstils und der Autorstimme",
+      "weight": "1.00", "is_active": true, "sort_order": 1,
+      "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "authoring.qualitydimension",
+    "pk": "00000001-0000-0000-0000-000000000002",
+    "fields": {
+      "code": "pacing", "name_de": "Pacing", "name_en": "Pacing",
+      "description": "Tempogef\u00fchl und Spannungsbogen",
+      "weight": "1.00", "is_active": true, "sort_order": 2,
+      "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "authoring.qualitydimension",
+    "pk": "00000001-0000-0000-0000-000000000003",
+    "fields": {
+      "code": "dialogue", "name_de": "Dialog", "name_en": "Dialogue",
+      "description": "Nat\u00fcrlichkeit und Charakterisierung durch Dialoge",
+      "weight": "1.00", "is_active": true, "sort_order": 3,
+      "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "authoring.qualitydimension",
+    "pk": "00000001-0000-0000-0000-000000000004",
+    "fields": {
+      "code": "scene", "name_de": "Szenenstruktur", "name_en": "Scene Structure",
+      "description": "Aufbau und Zielf\u00fchrung einzelner Szenen",
+      "weight": "1.00", "is_active": true, "sort_order": 4,
+      "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "authoring.qualitydimension",
+    "pk": "00000001-0000-0000-0000-000000000005",
+    "fields": {
+      "code": "genre", "name_de": "Genre-Konformit\u00e4t", "name_en": "Genre Fit",
+      "description": "Einhaltung von Genre-Konventionen",
+      "weight": "1.00", "is_active": true, "sort_order": 5,
+      "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "authoring.qualitydimension",
+    "pk": "00000001-0000-0000-0000-000000000006",
+    "fields": {
+      "code": "serial_logic", "name_de": "Serienlogik", "name_en": "Serial Logic",
+      "description": "Kontinuit\u00e4t \u00fcber Kapitel und B\u00e4nde hinweg",
+      "weight": "1.00", "is_active": true, "sort_order": 6,
+      "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "authoring.gatedecisiontype",
+    "pk": "00000002-0000-0000-0000-000000000001",
+    "fields": {
+      "code": "approve", "name_de": "Genehmigt", "name_en": "Approved",
+      "description": "Kapitel genehmigt und kann committed werden",
+      "color": "success", "icon": "bi-check-circle",
+      "allows_commit": true, "sort_order": 1,
+      "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "authoring.gatedecisiontype",
+    "pk": "00000002-0000-0000-0000-000000000002",
+    "fields": {
+      "code": "review", "name_de": "Review erforderlich", "name_en": "Needs Review",
+      "description": "Kapitel ben\u00f6tigt manuellen Review",
+      "color": "warning", "icon": "bi-eye",
+      "allows_commit": false, "sort_order": 2,
+      "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "authoring.gatedecisiontype",
+    "pk": "00000002-0000-0000-0000-000000000003",
+    "fields": {
+      "code": "revise", "name_de": "\u00dcberarbeitung n\u00f6tig", "name_en": "Needs Revision",
+      "description": "Kapitel muss \u00fcberarbeitet werden",
+      "color": "danger", "icon": "bi-pencil-square",
+      "allows_commit": false, "sort_order": 3,
+      "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "authoring.gatedecisiontype",
+    "pk": "00000002-0000-0000-0000-000000000004",
+    "fields": {
+      "code": "reject", "name_de": "Abgelehnt", "name_en": "Rejected",
+      "description": "Kapitel abgelehnt",
+      "color": "dark", "icon": "bi-x-circle",
+      "allows_commit": false, "sort_order": 4,
+      "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"
+    }
+  }
+]

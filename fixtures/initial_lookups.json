@@ -1,0 +1,29 @@
+[
+  {"model": "projects.contenttypelookup", "pk": 1, "fields": {"name": "Roman", "slug": "roman", "order": 1}},
+  {"model": "projects.contenttypelookup", "pk": 2, "fields": {"name": "Sachbuch", "slug": "sachbuch", "order": 2}},
+  {"model": "projects.contenttypelookup", "pk": 3, "fields": {"name": "Kurzgeschichte", "slug": "kurzgeschichte", "order": 3}},
+  {"model": "projects.contenttypelookup", "pk": 4, "fields": {"name": "Novelle", "slug": "novelle", "order": 4}},
+  {"model": "projects.contenttypelookup", "pk": 5, "fields": {"name": "Drehbuch", "slug": "drehbuch", "order": 5}},
+  {"model": "projects.contenttypelookup", "pk": 6, "fields": {"name": "H\u00f6rbuch", "slug": "hoerbuch", "order": 6}},
+
+  {"model": "projects.genrelookup", "pk": 1, "fields": {"name": "Fantasy", "order": 1}},
+  {"model": "projects.genrelookup", "pk": 2, "fields": {"name": "Science Fiction", "order": 2}},
+  {"model": "projects.genrelookup", "pk": 3, "fields": {"name": "Thriller", "order": 3}},
+  {"model": "projects.genrelookup", "pk": 4, "fields": {"name": "Krimi", "order": 4}},
+  {"model": "projects.genrelookup", "pk": 5, "fields": {"name": "Romance", "order": 5}},
+  {"model": "projects.genrelookup", "pk": 6, "fields": {"name": "Horror", "order": 6}},
+  {"model": "projects.genrelookup", "pk": 7, "fields": {"name": "Historischer Roman", "order": 7}},
+  {"model": "projects.genrelookup", "pk": 8, "fields": {"name": "Liebesroman", "order": 8}},
+  {"model": "projects.genrelookup", "pk": 9, "fields": {"name": "Abenteuer", "order": 9}},
+  {"model": "projects.genrelookup", "pk": 10, "fields": {"name": "Drama", "order": 10}},
+  {"model": "projects.genrelookup", "pk": 11, "fields": {"name": "Satire", "order": 11}},
+  {"model": "projects.genrelookup", "pk": 12, "fields": {"name": "Biografie", "order": 12}},
+  {"model": "projects.genrelookup", "pk": 13, "fields": {"name": "Ratgeber", "order": 13}},
+  {"model": "projects.genrelookup", "pk": 14, "fields": {"name": "Allgemein", "order": 99}},
+
+  {"model": "projects.audiencelookup", "pk": 1, "fields": {"name": "Erwachsene", "order": 1}},
+  {"model": "projects.audiencelookup", "pk": 2, "fields": {"name": "Jugendliche (YA)", "order": 2}},
+  {"model": "projects.audiencelookup", "pk": 3, "fields": {"name": "Kinder", "order": 3}},
+  {"model": "projects.audiencelookup", "pk": 4, "fields": {"name": "New Adult", "order": 4}},
+  {"model": "projects.audiencelookup", "pk": 5, "fields": {"name": "Allgemein", "order": 99}}
+]
