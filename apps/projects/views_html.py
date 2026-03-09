@@ -32,7 +32,9 @@ class ProjectCreateView(LoginRequiredMixin, CreateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["series"].queryset = BookSeries.objects.filter(owner=self.request.user)
+        form.fields["series"].queryset = BookSeries.objects.filter(
+            owner=self.request.user
+        )
         form.fields["series"].empty_label = "— keine Serie —"
         form.fields["content_type_lookup"].empty_label = "— bitte wählen —"
         form.fields["genre_lookup"].empty_label = "— bitte wählen —"
@@ -54,18 +56,31 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        outlines = OutlineVersion.objects.filter(project=self.object).order_by("-created_at")
+        outlines = OutlineVersion.objects.filter(
+            project=self.object
+        ).order_by("-created_at")
         ctx["outlines"] = outlines
         selected_id = self.request.GET.get("outline")
         if selected_id:
             try:
                 selected = outlines.get(pk=selected_id)
             except OutlineVersion.DoesNotExist:
-                selected = outlines.filter(is_active=True).first() or outlines.first()
+                selected = (
+                    outlines.filter(is_active=True).first() or outlines.first()
+                )
         else:
             selected = outlines.filter(is_active=True).first() or outlines.first()
         ctx["selected_outline"] = selected
         ctx["outline_nodes"] = selected.nodes.order_by("order") if selected else []
+
+        from apps.idea_import.models import IdeaImportDraft
+        from apps.worlds.models import ProjectWorldLink
+        ctx["idea_drafts"] = IdeaImportDraft.objects.filter(
+            project=self.object
+        ).exclude(
+            status=IdeaImportDraft.Status.DISCARDED
+        ).order_by("-created_at")[:10]
+        ctx["world_links"] = ProjectWorldLink.objects.filter(project=self.object)
         return ctx
 
 
@@ -83,7 +98,9 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["series"].queryset = BookSeries.objects.filter(owner=self.request.user)
+        form.fields["series"].queryset = BookSeries.objects.filter(
+            owner=self.request.user
+        )
         form.fields["series"].empty_label = "— keine Serie —"
         form.fields["content_type_lookup"].empty_label = "— bitte wählen —"
         form.fields["genre_lookup"].empty_label = "— bitte wählen —"
