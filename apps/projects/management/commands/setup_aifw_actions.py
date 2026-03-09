@@ -81,41 +81,49 @@ class Command(BaseCommand):
         )
         if created:
             self.stdout.write(self.style.SUCCESS(f"  ✓ Provider erstellt: {provider_name}"))
-        elif force:
+        else:
             provider.api_key_env_var = api_key_env
             provider.is_active = True
             provider.save(update_fields=["api_key_env_var", "is_active"])
             self.stdout.write(self.style.WARNING(f"  ↻ Provider aktualisiert: {provider_name}"))
-        else:
-            self.stdout.write(f"  — Provider existiert: {provider_name}")
 
-        # 2. LLMModel
+        # 2. LLMModel — immer name + is_active sicherstellen
         self.stdout.write(f"\n[2] LLMModel '{model_name}' ...")
-        model_obj, created = LLMModel.objects.get_or_create(
-            provider=provider,
-            name=model_name,
-            defaults={
-                "display_name": model_name,
-                "max_tokens": 4096,
-                "is_active": True,
-                "is_default": True,
-            },
-        )
-        if created:
-            self.stdout.write(self.style.SUCCESS(f"  ✓ Model erstellt: {model_name}"))
-        elif force:
+        try:
+            model_obj = LLMModel.objects.get(provider=provider, name=model_name)
+            model_obj.display_name = model_name
             model_obj.is_active = True
             model_obj.is_default = True
-            model_obj.save(update_fields=["is_active", "is_default"])
+            model_obj.save(update_fields=["display_name", "is_active", "is_default"])
             self.stdout.write(self.style.WARNING(f"  ↻ Model aktualisiert: {model_name}"))
-        else:
-            self.stdout.write(f"  — Model existiert: {model_name}")
+        except LLMModel.DoesNotExist:
+            # Prüfe ob ein defekter Eintrag mit leerem Namen für diesen Provider existiert
+            broken = LLMModel.objects.filter(provider=provider, name="").first()
+            if broken:
+                broken.name = model_name
+                broken.display_name = model_name
+                broken.is_active = True
+                broken.is_default = True
+                broken.save(update_fields=["name", "display_name", "is_active", "is_default"])
+                model_obj = broken
+                self.stdout.write(self.style.WARNING(
+                    f"  ↻ Defekten Model-Eintrag (leer) repariert → '{model_name}'"
+                ))
+            else:
+                model_obj = LLMModel.objects.create(
+                    provider=provider,
+                    name=model_name,
+                    display_name=model_name,
+                    max_tokens=4096,
+                    is_active=True,
+                    is_default=True,
+                )
+                self.stdout.write(self.style.SUCCESS(f"  ✓ Model erstellt: {model_name}"))
 
         # 3. AIActionTypes
         self.stdout.write("\n[3] AIActionTypes ...")
         created_count = 0
         updated_count = 0
-        skipped_count = 0
 
         for code, name, max_tokens in ACTION_CODES:
             try:
@@ -134,34 +142,25 @@ class Command(BaseCommand):
                 if created:
                     created_count += 1
                     self.stdout.write(self.style.SUCCESS(f"  ✓ {code}"))
-                elif force:
-                    obj.name = name
-                    obj.default_model = model_obj
-                    obj.max_tokens = max_tokens
-                    obj.is_active = True
-                    obj.save(update_fields=["name", "default_model", "max_tokens", "is_active"])
-                    updated_count += 1
-                    self.stdout.write(self.style.WARNING(f"  ↻ {code}"))
                 else:
-                    if obj.default_model is None:
-                        obj.default_model = model_obj
-                        obj.is_active = True
-                        obj.save(update_fields=["default_model", "is_active"])
-                        updated_count += 1
-                        self.stdout.write(self.style.WARNING(
-                            f"  ↻ {code} (kein Modell — automatisch gesetzt)"
-                        ))
-                    else:
-                        skipped_count += 1
-                        self.stdout.write(f"  — {code}")
+                    # Immer model + is_active sicherstellen
+                    obj.default_model = model_obj
+                    obj.is_active = True
+                    if force:
+                        obj.name = name
+                        obj.max_tokens = max_tokens
+                    obj.save(update_fields=[
+                        "default_model", "is_active",
+                        *(["name", "max_tokens"] if force else []),
+                    ])
+                    updated_count += 1
+                    self.stdout.write(self.style.WARNING(f"  ↻ {code} (Modell gesetzt)"))
             except Exception as exc:
                 self.stderr.write(self.style.ERROR(f"  ✗ {code}: {exc}"))
 
         self.stdout.write("")
         self.stdout.write(self.style.SUCCESS(
-            f"Fertig: {created_count} erstellt, "
-            f"{updated_count} aktualisiert, "
-            f"{skipped_count} übersprungen."
+            f"Fertig: {created_count} erstellt, {updated_count} aktualisiert."
         ))
         self.stdout.write(self.style.SUCCESS(
             f"Provider: {provider_name} | Model: {model_name}"
