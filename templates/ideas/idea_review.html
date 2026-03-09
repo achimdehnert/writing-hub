@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Ideen-Review — Writing Hub{% endblock %}
+{% block nav_ideas %}active{% endblock %}
+{% block page_title %}<i class="bi bi-check2-square me-2"></i>Ideen-Review{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'ideas:list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Zurück
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+<div class="col-md-4">
+    <div class="card mb-3">
+        <div class="card-header py-2">
+            <span class="fw-semibold small"><i class="bi bi-info-circle me-1"></i>Import-Info</span>
+        </div>
+        <div class="card-body">
+            <dl class="mb-0 small">
+                <dt class="text-muted mb-1">Projekt</dt>
+                <dd class="mb-2">
+                    <a href="{% url 'projects:detail' draft.project.pk %}" class="text-decoration-none" style="color:#a78bfa;">{{ draft.project.title }}</a>
+                </dd>
+                <dt class="text-muted mb-1">Quelle</dt>
+                <dd class="mb-2">{{ draft.source_filename|default:"Freitext" }}</dd>
+                <dt class="text-muted mb-1">Format</dt>
+                <dd class="mb-2">{{ draft.source_format|upper }}</dd>
+                <dt class="text-muted mb-1">Importiert</dt>
+                <dd class="mb-0">{{ draft.created_at|date:"d.m.Y H:i" }}</dd>
+            </dl>
+        </div>
+    </div>
+
+    {% if confidence %}
+    <div class="card">
+        <div class="card-header py-2">
+            <span class="fw-semibold small"><i class="bi bi-bar-chart me-1"></i>Konfidenz</span>
+        </div>
+        <div class="card-body">
+            {% for section, score in confidence.items %}
+            <div class="mb-2">
+                <div class="d-flex justify-content-between small mb-1">
+                    <span class="text-muted">{{ section }}</span>
+                    <span class="{% if score >= 0.7 %}text-success{% elif score >= 0.4 %}text-warning{% else %}text-danger{% endif %}">{{ score|floatformat:0 }}%</span>
+                </div>
+                <div class="progress" style="height:4px;background:#2d3148;">
+                    <div class="progress-bar {% if score >= 0.7 %}bg-success{% elif score >= 0.4 %}bg-warning{% else %}bg-danger{% endif %}"
+                         style="width:{{ score|floatformat:0 }}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="col-md-8">
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="commit">
+
+        {% if 'metadata' in sections %}
+        <div class="card mb-3">
+            <div class="card-header py-2 d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <input type="checkbox" name="sections" value="metadata" id="sec_metadata" class="form-check-input" checked>
+                    <label for="sec_metadata" class="fw-semibold small mb-0"><i class="bi bi-tag me-1"></i>Metadaten</label>
+                </div>
+                <span class="badge bg-success" style="font-size:.65rem;">{{ summary.metadata_fields }} Felder</span>
+            </div>
+            <div class="card-body">
+                {% if data.title %}<p class="small mb-1"><span class="text-muted">Titel:</span> {{ data.title }}</p>{% endif %}
+                {% if data.genre %}<p class="small mb-1"><span class="text-muted">Genre:</span> {{ data.genre }}</p>{% endif %}
+                {% if data.description %}<p class="small mb-1"><span class="text-muted">Beschreibung:</span> {{ data.description|truncatechars:200 }}</p>{% endif %}
+                {% if data.target_audience %}<p class="small mb-0"><span class="text-muted">Zielgruppe:</span> {{ data.target_audience }}</p>{% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if 'outline' in sections %}
+        <div class="card mb-3">
+            <div class="card-header py-2 d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <input type="checkbox" name="sections" value="outline" id="sec_outline" class="form-check-input" checked>
+                    <label for="sec_outline" class="fw-semibold small mb-0"><i class="bi bi-list-ol me-1"></i>Outline-Beats</label>
+                </div>
+                <span class="badge bg-success" style="font-size:.65rem;">{{ summary.outline_beats }} Beats / {{ summary.chapters }} Kapitel</span>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush" style="max-height:200px;overflow-y:auto;">
+                    {% for beat in data.outline_beats %}
+                    <li class="list-group-item border-0 py-1 px-3"
+                        style="background:transparent;color:#e2e8f0;font-size:.82rem;border-bottom:1px solid #2d3148 !important;">
+                        {{ forloop.counter }}. {{ beat.title }}
+                    </li>
+                    {% endfor %}
+                    {% for ch in data.chapters %}
+                    <li class="list-group-item border-0 py-1 px-3"
+                        style="background:transparent;color:#cbd5e1;font-size:.82rem;border-bottom:1px solid #2d3148 !important;">
+                        Kap. {{ ch.number|default:forloop.counter }}: {{ ch.title }}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if 'characters' in sections %}
+        <div class="card mb-3">
+            <div class="card-header py-2 d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <input type="checkbox" name="sections" value="characters" id="sec_characters" class="form-check-input">
+                    <label for="sec_characters" class="fw-semibold small mb-0"><i class="bi bi-people me-1"></i>Charaktere</label>
+                </div>
+                <span class="badge bg-secondary" style="font-size:.65rem;">{{ summary.characters }} Charaktere <span class="text-muted">(noch nicht implementiert)</span></span>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if not sections %}
+        <div class="alert" style="background:#1e2235;border:1px solid #f59e0b;color:#f59e0b;">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            Die KI konnte keine strukturierten Inhalte erkennen. Bitte Dokument prüfen und ggf. als Freitext eingeben.
+        </div>
+        {% endif %}
+
+        <div class="d-flex gap-2 justify-content-end mt-3">
+            <button type="submit" name="action" value="discard"
+                    class="btn btn-outline-danger btn-sm"
+                    onclick="return confirm('Import verwerfen?')">
+                <i class="bi bi-trash me-1"></i> Verwerfen
+            </button>
+            {% if sections %}
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="bi bi-check-lg me-1"></i> Ausgewählte übernehmen
+            </button>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+</div>
+{% endblock %}

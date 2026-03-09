@@ -4,6 +4,12 @@
 {% block nav_ideas %}active{% endblock %}
 {% block page_title %}<i class="bi bi-lightbulb me-2"></i>Ideen-Imports{% endblock %}
 
+{% block topbar_actions %}
+<a href="{% url 'ideas:upload' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-cloud-upload me-1"></i> Datei hochladen
+</a>
+{% endblock %}
+
 {% block content %}
 <div class="row g-3 mb-4">
     <div class="col-md-4">
@@ -27,8 +33,11 @@
 </div>
 
 <div class="card">
-    <div class="card-header py-2">
+    <div class="card-header py-2 d-flex align-items-center justify-content-between">
         <span class="fw-semibold small"><i class="bi bi-lightbulb me-1"></i>Alle Ideen-Imports</span>
+        <a href="{% url 'ideas:upload' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-cloud-upload me-1"></i> Neu importieren
+        </a>
     </div>
     <div class="card-body p-0">
         {% if drafts %}
@@ -39,13 +48,14 @@
                 <div class="d-flex align-items-start justify-content-between gap-3">
                     <div class="flex-grow-1">
                         <div class="d-flex align-items-center gap-2 mb-1">
-                            <span class="fw-semibold">{{ draft.source_filename|default:"Freitext" }}</span>
+                            <a href="{% url 'ideas:review' draft.pk %}" class="fw-semibold text-decoration-none" style="color:#e2e8f0;">
+                                {{ draft.source_filename|default:"Freitext" }}
+                            </a>
                             <span class="badge {% if draft.status == 'committed' %}bg-success{% elif draft.status == 'pending_review' %}bg-warning text-dark{% elif draft.status == 'partial' %}bg-info text-dark{% else %}bg-secondary{% endif %}"
                                   style="font-size:.65rem;">{{ draft.get_status_display }}</span>
                         </div>
                         <div class="text-muted small">
-                            <a href="{% url 'projects:detail' draft.project.pk %}"
-                               class="text-decoration-none" style="color:#a78bfa;">
+                            <a href="{% url 'projects:detail' draft.project.pk %}" class="text-decoration-none" style="color:#a78bfa;">
                                 <i class="bi bi-folder2-open me-1"></i>{{ draft.project.title }}
                             </a>
                             <span class="ms-3"><i class="bi bi-clock me-1"></i>{{ draft.created_at|date:"d.m.Y H:i" }}</span>
@@ -58,8 +68,10 @@
                         </div>
                         {% endif %}
                     </div>
-                    <div class="text-end">
-                        <span class="text-muted small">{{ draft.source_format|default:"—" }}</span>
+                    <div>
+                        {% if draft.status == 'pending_review' %}
+                        <a href="{% url 'ideas:review' draft.pk %}" class="btn btn-sm btn-outline-primary">Review</a>
+                        {% endif %}
                     </div>
                 </div>
             </li>
@@ -68,25 +80,12 @@
         {% else %}
         <div class="p-5 text-center">
             <i class="bi bi-lightbulb d-block mb-3 text-muted" style="font-size:3rem;"></i>
-            <p class="text-muted mb-1">Noch keine Ideen-Imports vorhanden</p>
-            <p class="text-muted small">Ideen werden über die bfagent-Integration importiert.</p>
+            <p class="text-muted mb-3">Noch keine Ideen-Imports vorhanden</p>
+            <a href="{% url 'ideas:upload' %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-cloud-upload me-1"></i> Ersten Import starten
+            </a>
         </div>
         {% endif %}
     </div>
-    {% if is_paginated %}
-    <div class="card-footer py-2 d-flex justify-content-center gap-2">
-        {% if page_obj.has_previous %}
-        <a href="?page={{ page_obj.previous_page_number }}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-chevron-left"></i>
-        </a>
-        {% endif %}
-        <span class="btn btn-sm disabled" style="color:#94a3b8;">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
-        {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-chevron-right"></i>
-        </a>
-        {% endif %}
-    </div>
-    {% endif %}
 </div>
 {% endblock %}
