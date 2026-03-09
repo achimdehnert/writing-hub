@@ -78,7 +78,15 @@ jobs:
       - name: Run tests
         if: matrix.job == 'test'
         run: |
-          python -m pytest; code=$?; [ "$code" -eq 5 ] && echo "⚠️ No tests collected" || exit "$code"
+          set +e
+          python -m pytest
+          code=$?
+          set -e
+          if [ "$code" -eq 5 ]; then
+            echo "⚠️ No tests collected — skipping"
+            exit 0
+          fi
+          exit "$code"
         env:
           DJANGO_SETTINGS_MODULE: config.settings.test
 
@@ -116,17 +124,14 @@ jobs:
           ssh-keyscan -H 88.198.191.108 >> ~/.ssh/known_hosts
 
       - name: Deploy via SSH
-        env:
-          WRITINGHUB_ENV_PROD: ${{ secrets.WRITINGHUB_ENV_PROD }}
         run: |
-          ssh root@88.198.191.108 "
+          ssh -i ~/.ssh/id_rsa root@88.198.191.108 bash << 'ENDSSH'
             set -e
             mkdir -p /opt/writing-hub
-            printf '%s' '${{ secrets.WRITINGHUB_ENV_PROD }}' > /opt/writing-hub/.env.prod
             docker pull ghcr.io/achimdehnert/writing-hub:latest
             cd /opt/writing-hub
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
             sleep 10
             docker compose -f docker-compose.prod.yml ps
-            echo '✅ Deploy complete'
-          "
+            echo "✅ Deploy complete"
+          ENDSSH
