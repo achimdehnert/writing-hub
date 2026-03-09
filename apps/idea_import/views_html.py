@@ -54,7 +54,7 @@ class IdeaUploadView(LoginRequiredMixin, View):
             DocumentNormalizerService, UnsupportedFormatError,
         )
         from apps.idea_import.services.idea_extractor import (
-            extract_ideas, available_sections, section_summary,
+            extract_ideas, available_sections,
         )
 
         project_id = request.POST.get("project_id")
@@ -106,9 +106,8 @@ class IdeaUploadView(LoginRequiredMixin, View):
             )
 
             sections = available_sections(extracted_data)
-            summary = section_summary(extracted_data)
             logger.info("IdeaUpload: project=%s draft=%s sections=%s", project.pk, draft.pk, sections)
-            messages.success(request, f"Extraktion abgeschlossen: {', '.join(sections) or 'keine Sektionen erkannt'}.")
+            messages.success(request, f"Extraktion: {', '.join(sections) or 'keine Sektionen erkannt'}.")
             return redirect("ideas:review", pk=draft.pk)
 
         except UnsupportedFormatError as exc:
