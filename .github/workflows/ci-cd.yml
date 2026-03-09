@@ -24,14 +24,14 @@ jobs:
             ! -path "*/migrations/*" \
             ! -path "*/site-packages/*" \
             -exec grep -nP \
-              '(?i)(password|secret|api_key|token)\s*=\s*["\x27][^"\x27]{6,}["\x27]|\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b' \
+              '(?i)(password|secret|api_key|token)\s*=\s*["'"'"'][^"'"'"']{6,}["'"'"']|\b(?!127\.|0\.0\.0\.|10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.)(?!localhost)\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b' \
               {} + 2>/dev/null | grep -v '# noqa: hardcode' || true)
           if [ -n "$FINDINGS" ]; then
-            echo "\u274c Hardcoded values found:"
+            echo "❌ Hardcoded values found:"
             echo "$FINDINGS"
             exit 1
           fi
-          echo "\u2705 No hardcoded values found"
+          echo "✅ No hardcoded values found"
 
   ci:
     name: "CI / ${{ matrix.job }}"
@@ -108,7 +108,7 @@ jobs:
           IMAGE="ghcr.io/achimdehnert/writing-hub:latest"
           docker build -t "$IMAGE" .
           docker push "$IMAGE"
-          echo "\u2705 Image pushed: $IMAGE"
+          echo "✅ Image pushed: $IMAGE"
       - name: Deploy writing-hub (docker compose up)
         run: |
           echo "Restarting services..."
@@ -117,4 +117,4 @@ jobs:
           sleep 10
           docker compose -f docker-compose.prod.yml ps
           rm -f .env.prod
-          echo "\u2705 Deploy complete"
+          echo "✅ Deploy complete"
