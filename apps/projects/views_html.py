@@ -6,7 +6,7 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
@@ -220,6 +220,7 @@ class OutlineCreateView(LoginRequiredMixin, View):
 
             beats = OUTLINE_FRAMEWORKS.get(framework_template, [])
             if beats:
+                from apps.projects.models import OutlineNode
                 OutlineNode.objects.bulk_create([
                     OutlineNode(
                         outline_version=version,
@@ -229,8 +230,9 @@ class OutlineCreateView(LoginRequiredMixin, View):
                     )
                     for i, beat in enumerate(beats)
                 ])
-                messages.success(request, f'Outline „{name}“ mit {len(beats)} Kapiteln angelegt.')
+                messages.success(request, f'Outline „{name}" mit {len(beats)} Kapiteln angelegt.')
             elif chapter_count > 0:
+                from apps.projects.models import OutlineNode
                 OutlineNode.objects.bulk_create([
                     OutlineNode(
                         outline_version=version,
@@ -240,9 +242,12 @@ class OutlineCreateView(LoginRequiredMixin, View):
                     )
                     for i in range(min(chapter_count, 50))
                 ])
-                messages.success(request, f'Outline „{name}“ mit {chapter_count} leeren Kapiteln angelegt.')
+                messages.success(request, f'Outline „{name}" mit {chapter_count} leeren Kapiteln angelegt.')
             else:
-                messages.success(request, f'Outline-Struktur „{name}“ angelegt.')
+                messages.success(request, f'Outline-Struktur „{name}" angelegt.')
+
+            url = reverse("projects:detail", kwargs={"pk": pk}) + f"?outline={version.pk}"
+            return redirect(url)
 
         except Exception as exc:
             logger.exception("OutlineCreateView error pk=%s: %s", pk, exc)
@@ -277,16 +282,24 @@ class OutlineGenerateView(LoginRequiredMixin, View):
             )
             if result.success and result.nodes:
                 OutlineVersion.objects.filter(project=project, is_active=True).update(is_active=False)
-                svc.save_outline(
+                version_id = svc.save_outline(
                     project_id=str(project.pk),
                     nodes=result.nodes,
-                    name=f"KI: {FW_LABELS.get(framework, framework)} ({chapter_count} Kap.)",
+                    name=f"KI: {FW_LABELS.get(framework, framework)}",
                     framework=framework,
                     user=request.user,
                 )
-                messages.success(request, f"KI-Outline ({FW_LABELS.get(framework, framework)}) wurde generiert.")
+                messages.success(
+                    request,
+                    f"KI-Outline ({FW_LABELS.get(framework, framework)}, {len(result.nodes)} Beats) generiert."
+                )
+                url = reverse("projects:detail", kwargs={"pk": pk})
+                if version_id:
+                    url += f"?outline={version_id}"
+                return redirect(url)
             else:
-                messages.warning(request, "KI konnte kein Outline generieren.")
+                err = getattr(result, "error_message", "") or ""
+                messages.warning(request, f"KI-Fehler: {err}" if err else "KI konnte kein Outline generieren.")
         except Exception as exc:
             logger.exception("OutlineGenerateView error pk=%s: %s", pk, exc)
             messages.error(request, f"KI-Fehler: {exc}")
