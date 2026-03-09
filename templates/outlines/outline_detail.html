@@ -6,204 +6,130 @@
 
 {% block topbar_actions %}
 <a href="{% url 'projects:detail' project.pk %}" class="btn btn-outline-secondary btn-sm">
-    <i class="bi bi-folder2-open me-1"></i>{{ project.title|truncatechars:25 }}
+    <i class="bi bi-folder2-open me-1"></i> {{ project.title }}
 </a>
-{% if not outline.is_active %}
-<form method="post" action="{% url 'outlines:set_active' outline.pk %}" class="d-inline">
-    {% csrf_token %}
-    <button type="submit" class="btn btn-outline-success btn-sm">
-        <i class="bi bi-check-circle me-1"></i>Als aktiv setzen
-    </button>
-</form>
-{% else %}
-<span class="badge py-2 px-3" style="background:#14532d;color:#86efac;">
-    <i class="bi bi-check-circle me-1"></i>Aktive Version
-</span>
-{% endif %}
-<form method="post" action="{% url 'outlines:delete' outline.pk %}"
-      onsubmit="return confirm('Outline „{{ outline.name }}" wirklich löschen?')" class="d-inline">
-    {% csrf_token %}
-    <button type="submit" class="btn btn-outline-danger btn-sm">
-        <i class="bi bi-trash"></i>
-    </button>
-</form>
+<a href="{% url 'outlines:list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Alle Outlines
+</a>
 {% endblock %}
 
 {% block content %}
 <div class="row g-4">
 
-    <!-- Meta-Sidebar -->
-    <div class="col-md-3">
-        <div class="card mb-3">
-            <div class="card-header py-2">
-                <span class="fw-semibold small"><i class="bi bi-info-circle me-1"></i>Info</span>
-            </div>
-            <div class="card-body">
-                <dl class="mb-0">
-                    <dt class="text-muted small mb-1">Quelle</dt>
-                    <dd class="mb-3 fw-semibold" style="color:#e2e8f0;">
-                        {% if outline.source == "ai_generated" %}
-                        <i class="bi bi-stars me-1" style="color:#818cf8;"></i>KI-generiert
-                        {% else %}
-                        <i class="bi bi-pencil me-1"></i>Manuell
-                        {% endif %}
-                    </dd>
-
-                    <dt class="text-muted small mb-1">Kapitel</dt>
-                    <dd class="mb-3 fw-semibold" style="color:#e2e8f0;">{{ node_count }}</dd>
-
-                    <dt class="text-muted small mb-1">Status</dt>
-                    <dd class="mb-3">
-                        {% if outline.is_active %}
-                        <span class="badge" style="background:#14532d;color:#86efac;">Aktiv</span>
-                        {% else %}
-                        <span class="badge bg-dark border border-secondary text-muted">Archiv</span>
-                        {% endif %}
-                    </dd>
-
-                    {% if outline.notes %}
-                    <dt class="text-muted small mb-1">Notizen</dt>
-                    <dd class="mb-3 small" style="color:#cbd5e1;">{{ outline.notes }}</dd>
-                    {% endif %}
-
-                    <dt class="text-muted small mb-1">Erstellt</dt>
-                    <dd class="mb-0" style="color:#cbd5e1;">{{ outline.created_at|date:"d.m.Y H:i" }}</dd>
-                </dl>
-            </div>
+<div class="col-md-3">
+    <div class="card mb-3">
+        <div class="card-header py-2">
+            <span class="fw-semibold small"><i class="bi bi-info-circle me-1"></i>Info</span>
         </div>
-
-        <div class="card">
-            <div class="card-header py-2">
-                <span class="fw-semibold small"><i class="bi bi-grid me-1"></i>Aktionen</span>
-            </div>
-            <div class="card-body d-grid gap-2">
-                <a href="{% url 'projects:chapter_writer' project.pk %}" class="btn btn-primary btn-sm">
-                    <i class="bi bi-pen me-1"></i>Kapitel schreiben
-                </a>
-                <a href="{% url 'outlines:list' %}" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-arrow-left me-1"></i>Alle Outlines
-                </a>
-                <a href="{% url 'projects:detail' project.pk %}" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-folder2-open me-1"></i>Zum Projekt
-                </a>
-            </div>
+        <div class="card-body">
+            <dl class="mb-0 small">
+                <dt class="text-muted mb-1">Projekt</dt>
+                <dd class="mb-2" style="color:#a78bfa;">{{ project.title }}</dd>
+                <dt class="text-muted mb-1">Kapitel</dt>
+                <dd class="mb-2">{{ node_count }}</dd>
+                <dt class="text-muted mb-1">Quelle</dt>
+                <dd class="mb-2">{{ outline.source }}</dd>
+                <dt class="text-muted mb-1">Status</dt>
+                <dd class="mb-0">
+                    {% if outline.is_active %}
+                    <span class="badge bg-success" style="font-size:.65rem;">Aktiv</span>
+                    {% else %}
+                    <span class="badge bg-secondary" style="font-size:.65rem;">Inaktiv</span>
+                    {% endif %}
+                </dd>
+            </dl>
         </div>
     </div>
 
-    <!-- Nodes -->
-    <div class="col-md-9">
-        <div class="card">
-            <div class="card-header py-2 d-flex align-items-center justify-content-between">
-                <span class="fw-semibold small">
-                    <i class="bi bi-list-numbered me-1"></i>Kapitel / Beats
-                </span>
-                <span class="badge bg-secondary">{{ node_count }}</span>
-            </div>
-            <div class="card-body p-0">
-                {% if nodes %}
-                <div id="node-list">
-                {% for node in nodes %}
-                <div class="border-bottom py-2 px-3" style="border-color:#2d3148 !important;"
-                     id="node-{{ node.pk }}">
-                    <div class="d-flex align-items-start gap-3">
-                        <!-- Nummer -->
-                        <span class="text-muted fw-bold mt-1" style="min-width:2rem;font-size:.9rem;">
-                            {{ node.order }}.
-                        </span>
-                        <!-- Content -->
-                        <div class="flex-grow-1">
-                            <div class="d-flex align-items-center gap-2 mb-1">
-                                <span class="fw-semibold" style="color:#e2e8f0;">{{ node.title }}</span>
-                                {% if node.beat_type == "chapter" %}
-                                <span class="badge" style="background:#1e3a5f;color:#7dd3fc;font-size:.65rem;">Kapitel</span>
-                                {% elif node.beat_type == "scene" %}
-                                <span class="badge" style="background:#1e1b4b;color:#a5b4fc;font-size:.65rem;">Szene</span>
-                                {% elif node.beat_type == "act" %}
-                                <span class="badge" style="background:#3b1f2b;color:#f9a8d4;font-size:.65rem;">Akt</span>
-                                {% elif node.beat_type == "beat" %}
-                                <span class="badge" style="background:#1c2e1c;color:#86efac;font-size:.65rem;">Beat</span>
-                                {% else %}
-                                <span class="badge bg-dark border border-secondary text-muted" style="font-size:.65rem;">{{ node.beat_type }}</span>
-                                {% endif %}
-                            </div>
-                            {% if node.description %}
-                            <p class="mb-1 text-muted" style="font-size:.82rem;line-height:1.5;">
-                                {{ node.description }}
-                            </p>
-                            {% endif %}
-                            {% if node.notes %}
-                            <p class="mb-0" style="font-size:.75rem;color:#64748b;font-style:italic;">
-                                <i class="bi bi-sticky me-1"></i>{{ node.notes }}
-                            </p>
-                            {% endif %}
+    <div class="d-flex flex-column gap-2">
+        {% if not outline.is_active %}
+        <form method="post" action="{% url 'outlines:set_active' outline.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-primary btn-sm w-100">
+                <i class="bi bi-check-circle me-1"></i> Als aktiv setzen
+            </button>
+        </form>
+        {% endif %}
+        <form method="post" action="{% url 'outlines:delete' outline.pk %}"
+              onsubmit="return confirm('Outline wirklich löschen?')">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                <i class="bi bi-trash me-1"></i> Löschen
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="col-md-9">
+    <div class="card">
+        <div class="card-header py-2 d-flex align-items-center justify-content-between">
+            <span class="fw-semibold small"><i class="bi bi-list-ol me-1"></i>Kapitel / Beats</span>
+            <span class="text-muted small">{{ node_count }} Einträge</span>
+        </div>
+        <div class="card-body p-0">
+            {% if nodes %}
+            {% for node in nodes %}
+            <div class="px-4 py-3" style="border-bottom:1px solid #2d3148;">
+                <div class="d-flex align-items-start justify-content-between gap-3">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="text-muted small" style="min-width:1.5rem;">{{ node.order }}.</span>
+                            <span class="fw-semibold">{{ node.title }}</span>
+                            <span class="badge bg-dark border border-secondary text-muted" style="font-size:.6rem;">{{ node.beat_type }}</span>
                         </div>
-                        <!-- Edit Button -->
-                        <button class="btn btn-outline-secondary btn-sm py-0 px-2 flex-shrink-0"
-                                style="font-size:.75rem;"
-                                onclick="toggleEdit('{{ node.pk }}')">
+                        {% if node.description %}
+                        <div class="text-muted small ms-4" style="white-space:pre-wrap;line-height:1.5;">{{ node.description }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex gap-1 flex-shrink-0">
+                        <form method="post" action="{% url 'outlines:node_enrich' node.pk %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-primary btn-sm"
+                                    title="KI-Verfeinerung"
+                                    onclick="this.disabled=true;this.innerHTML='<span class=\'spinner-border spinner-border-sm\'></span>';this.form.submit();">
+                                <i class="bi bi-stars"></i>
+                            </button>
+                        </form>
+                        <button class="btn btn-outline-secondary btn-sm"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#edit-{{ node.pk }}"
+                                title="Bearbeiten">
                             <i class="bi bi-pencil"></i>
                         </button>
                     </div>
+                </div>
 
-                    <!-- Inline Edit Form (hidden by default) -->
-                    <div id="edit-{{ node.pk }}" class="d-none mt-2 ps-5">
-                        <form method="post" action="{% url 'outlines:node_update' node.pk %}">
-                            {% csrf_token %}
-                            <div class="row g-2">
-                                <div class="col-12">
-                                    <input type="text" name="title" value="{{ node.title }}"
-                                           class="form-control form-control-sm bg-dark text-light border-secondary">
-                                </div>
-                                <div class="col-md-9">
-                                    <textarea name="description" rows="2"
-                                              class="form-control form-control-sm bg-dark text-light border-secondary"
-                                              placeholder="Beschreibung">{{ node.description }}</textarea>
-                                </div>
-                                <div class="col-md-3">
-                                    <select name="beat_type" class="form-select form-select-sm bg-dark text-light border-secondary">
-                                        {% for val, label in node.BEAT_TYPES %}
-                                        <option value="{{ val }}" {% if node.beat_type == val %}selected{% endif %}>{{ label }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <div class="col-12">
-                                    <input type="text" name="notes" value="{{ node.notes }}"
-                                           class="form-control form-control-sm bg-dark text-light border-secondary"
-                                           placeholder="Notizen">
-                                </div>
-                                <div class="col-12 d-flex gap-2">
-                                    <button type="submit" class="btn btn-primary btn-sm py-0">
-                                        <i class="bi bi-check-lg me-1"></i>Speichern
-                                    </button>
-                                    <button type="button" class="btn btn-outline-secondary btn-sm py-0"
-                                            onclick="toggleEdit('{{ node.pk }}')">
-                                        Abbrechen
-                                    </button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
+                <div class="collapse mt-2" id="edit-{{ node.pk }}">
+                    <form method="post" action="{% url 'outlines:node_update' node.pk %}" class="ms-4">
+                        {% csrf_token %}
+                        <div class="mb-2">
+                            <input type="text" name="title" value="{{ node.title }}"
+                                   class="form-control form-control-sm bg-dark text-light border-secondary">
+                        </div>
+                        <div class="mb-2">
+                            <textarea name="description" rows="4"
+                                      class="form-control form-control-sm bg-dark text-light border-secondary"
+                                      placeholder="Beschreibung...">{{ node.description }}</textarea>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-sm">Speichern</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#edit-{{ node.pk }}">Abbrechen</button>
+                        </div>
+                    </form>
                 </div>
-                {% endfor %}
-                </div>
-                {% else %}
-                <div class="p-5 text-center text-muted">
-                    <i class="bi bi-journal-text d-block mb-2" style="font-size:2.5rem;"></i>
-                    <p class="small mb-0">Keine Kapitel vorhanden — KI-Generator im Projekt nutzen.</p>
-                </div>
-                {% endif %}
             </div>
+            {% endfor %}
+            {% else %}
+            <div class="p-5 text-center">
+                <i class="bi bi-list-ol d-block mb-2 text-muted" style="font-size:2.5rem;"></i>
+                <p class="text-muted">Noch keine Kapitel in diesem Outline.</p>
+            </div>
+            {% endif %}
         </div>
     </div>
+</div>
 
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-function toggleEdit(pk) {
-    const el = document.getElementById('edit-' + pk);
-    el.classList.toggle('d-none');
-}
-</script>
 {% endblock %}

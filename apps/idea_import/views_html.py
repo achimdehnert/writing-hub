@@ -2,6 +2,7 @@
 Idea Import — HTML Frontend Views
 """
 import logging
+import uuid
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -160,6 +161,10 @@ class IdeaReviewView(LoginRequiredMixin, View):
                     stats["metadata"] = _commit_metadata(project, data)
                 if "outline" in approved:
                     stats["outline"] = _commit_outline(project, data, request.user)
+                if "characters" in approved:
+                    stats["characters"] = _commit_characters(project, data)
+                if "world" in approved:
+                    stats["world"] = _commit_world(project, data)
 
             committed_all = set(approved) >= set(_available_sections_from_data(data))
             draft.status = (
@@ -174,6 +179,10 @@ class IdeaReviewView(LoginRequiredMixin, View):
                 parts.append(f"{stats['metadata']} Metadaten")
             if "outline" in stats:
                 parts.append(f"{stats['outline']} Outline-Beats")
+            if "characters" in stats:
+                parts.append(f"{stats['characters']} Charaktere")
+            if "world" in stats:
+                parts.append(f"{stats['world']} Welt-Elemente")
             messages.success(request, f"Commit: {', '.join(parts)}." if parts else "Commit abgeschlossen.")
             return redirect("projects:detail", pk=project.pk)
 
@@ -248,3 +257,70 @@ def _commit_outline(project, data: dict, user) -> int:
         for b in all_beats
     ])
     return len(all_beats)
+
+
+def _commit_characters(project, data: dict) -> int:
+    """
+    Charaktere als ProjectCharacterLink anlegen.
+    Da writing-hub SSoT WeltenHub ist, werden hier nur Platzhalter-UUIDs
+    erstellt — echte WeltenHub-Integration erfordert API-Aufruf.
+    Vorerst: Charakter-Namen werden als notes gespeichert.
+    """
+    from apps.worlds.models import ProjectCharacterLink
+
+    characters = data.get("characters", [])
+    count = 0
+    for char in characters:
+        name = char.get("name", "").strip()
+        if not name:
+            continue
+        role = char.get("role", "supporting")
+        description = char.get("description", "")
+        arc = char.get("arc", "")
+        placeholder_id = uuid.uuid5(uuid.NAMESPACE_DNS, f"{project.pk}:{name}")
+        _, created = ProjectCharacterLink.objects.get_or_create(
+            project=project,
+            weltenhub_character_id=placeholder_id,
+            defaults={
+                "project_role": role,
+                "project_arc": arc,
+                "notes": f"{name}: {description[:200]}" if description else name,
+            },
+        )
+        if created:
+            count += 1
+    return count
+
+
+def _commit_world(project, data: dict) -> int:
+    """
+    Welt-Elemente als ProjectWorldLink-Notes anlegen.
+    Vorerst: Ein Link mit allen Welt-Elementen als notes.
+    """
+    from apps.worlds.models import ProjectWorldLink
+
+    world_elements = data.get("world_elements", [])
+    if not world_elements:
+        return 0
+
+    notes_parts = []
+    for elem in world_elements:
+        name = elem.get("name", "").strip()
+        desc = elem.get("description", "").strip()
+        etype = elem.get("element_type", "concept")
+        if name:
+            notes_parts.append(f"[{etype}] {name}: {desc[:100]}" if desc else f"[{etype}] {name}")
+
+    if not notes_parts:
+        return 0
+
+    placeholder_world_id = uuid.uuid5(uuid.NAMESPACE_DNS, f"{project.pk}:idea_import")
+    _, created = ProjectWorldLink.objects.get_or_create(
+        project=project,
+        weltenhub_world_id=placeholder_world_id,
+        defaults={
+            "role": "primary",
+            "notes": "\n".join(notes_parts)[:2000],
+        },
+    )
+    return len(world_elements) if created else 0

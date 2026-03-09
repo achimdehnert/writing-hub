@@ -112,10 +112,46 @@
         <div class="card mb-3">
             <div class="card-header py-2 d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center gap-2">
-                    <input type="checkbox" name="sections" value="characters" id="sec_characters" class="form-check-input">
+                    <input type="checkbox" name="sections" value="characters" id="sec_characters" class="form-check-input" checked>
                     <label for="sec_characters" class="fw-semibold small mb-0"><i class="bi bi-people me-1"></i>Charaktere</label>
                 </div>
-                <span class="badge bg-secondary" style="font-size:.65rem;">{{ summary.characters }} Charaktere <span class="text-muted">(noch nicht implementiert)</span></span>
+                <span class="badge bg-primary" style="font-size:.65rem;">{{ summary.characters }} Charaktere</span>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush" style="max-height:180px;overflow-y:auto;">
+                    {% for char in data.characters %}
+                    <li class="list-group-item border-0 py-2 px-3"
+                        style="background:transparent;color:#e2e8f0;font-size:.82rem;border-bottom:1px solid #2d3148 !important;">
+                        <span class="fw-semibold">{{ char.name }}</span>
+                        <span class="badge bg-dark border border-secondary text-muted ms-1" style="font-size:.6rem;">{{ char.role }}</span>
+                        {% if char.description %}<div class="text-muted" style="font-size:.75rem;">{{ char.description|truncatechars:80 }}</div>{% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if 'world' in sections %}
+        <div class="card mb-3">
+            <div class="card-header py-2 d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <input type="checkbox" name="sections" value="world" id="sec_world" class="form-check-input" checked>
+                    <label for="sec_world" class="fw-semibold small mb-0"><i class="bi bi-globe2 me-1"></i>Welt-Elemente</label>
+                </div>
+                <span class="badge bg-info text-dark" style="font-size:.65rem;">{{ summary.world_elements }} Elemente</span>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush" style="max-height:180px;overflow-y:auto;">
+                    {% for elem in data.world_elements %}
+                    <li class="list-group-item border-0 py-2 px-3"
+                        style="background:transparent;color:#e2e8f0;font-size:.82rem;border-bottom:1px solid #2d3148 !important;">
+                        <span class="fw-semibold">{{ elem.name }}</span>
+                        <span class="badge bg-dark border border-secondary text-muted ms-1" style="font-size:.6rem;">{{ elem.element_type }}</span>
+                        {% if elem.description %}<div class="text-muted" style="font-size:.75rem;">{{ elem.description|truncatechars:80 }}</div>{% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
             </div>
         </div>
         {% endif %}
@@ -123,7 +159,7 @@
         {% if not sections %}
         <div class="alert" style="background:#1e2235;border:1px solid #f59e0b;color:#f59e0b;">
             <i class="bi bi-exclamation-triangle me-1"></i>
-            Die KI konnte keine strukturierten Inhalte erkennen. Bitte Dokument prüfen und ggf. als Freitext eingeben.
+            Die KI konnte keine strukturierten Inhalte erkennen. Bitte Dokument prüfen.
         </div>
         {% endif %}
 
