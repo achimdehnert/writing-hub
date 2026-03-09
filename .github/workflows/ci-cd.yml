@@ -98,12 +98,12 @@ jobs:
           DJANGO_SETTINGS_MODULE: config.settings.test
 
 # ═══════════════════════════════════════════════════════════════════════════
-# STAGE 2a: Staging Deploy — auto on develop push
-# Image tag: :staging  |  Server path: /opt/writing-hub-staging
-# Domain: writing-hub.iil.pet (Port 8098)
+# STAGE 2a: Staging Deploy
+# Trigger: push to develop  OR  workflow_dispatch (environment=staging)
+# Image: :staging  |  Path: /opt/writing-hub-staging  |  Domain: staging.writing.iil.pet (Port 8098)
 # ═══════════════════════════════════════════════════════════════════════════
   deploy-staging:
-    name: "Deploy → Staging"
+    name: "Deploy → Staging (staging.writing.iil.pet)"
     needs: [ci, hardcode-scan]
     if: |
       github.ref == 'refs/heads/develop' ||
@@ -133,41 +133,47 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H 88.198.191.108 >> ~/.ssh/known_hosts
 
-      - name: Deploy staging via SSH
-        env:
-          ENV_CONTENT: ${{ secrets.WRITINGHUB_ENV_STAGING }}
+      - name: Write .env.staging on server
         run: |
-          # Copy compose file to server
-          scp -i ~/.ssh/id_rsa docker-compose.staging.yml root@88.198.191.108:/opt/writing-hub-staging/docker-compose.staging.yml
+          ssh -i ~/.ssh/id_rsa root@88.198.191.108 \
+            "printf '%s' '${{ secrets.WRITINGHUB_ENV_STAGING }}' > /opt/writing-hub-staging/.env.staging"
 
-          ssh -i ~/.ssh/id_rsa root@88.198.191.108 bash << 'ENDSSH'
+      - name: Copy compose file and deploy
+        run: |
+          scp -i ~/.ssh/id_rsa docker-compose.staging.yml \
+            root@88.198.191.108:/opt/writing-hub-staging/docker-compose.staging.yml
+
+          ssh -i ~/.ssh/id_rsa root@88.198.191.108 << 'ENDSSH'
             set -e
-            mkdir -p /opt/writing-hub-staging
             docker pull ghcr.io/achimdehnert/writing-hub:staging
             cd /opt/writing-hub-staging
             docker compose -f docker-compose.staging.yml up -d --remove-orphans
             sleep 8
-            docker compose -f docker-compose.staging.yml exec -T writing_hub_staging_web python manage.py migrate --no-input
-            docker compose -f docker-compose.staging.yml exec -T writing_hub_staging_web python manage.py collectstatic --no-input
+            docker compose -f docker-compose.staging.yml exec -T writing_hub_staging_web \
+              python manage.py migrate --no-input
+            docker compose -f docker-compose.staging.yml exec -T writing_hub_staging_web \
+              python manage.py collectstatic --no-input --clear
             docker compose -f docker-compose.staging.yml ps
             echo "✅ Staging deploy complete"
           ENDSSH
 
-      - name: Write .env.staging on server
+      - name: Health check
         run: |
-          ssh -i ~/.ssh/id_rsa root@88.198.191.108 "printf '%s' '${{ secrets.WRITINGHUB_ENV_STAGING }}' > /opt/writing-hub-staging/.env.staging"
+          sleep 5
+          curl -sf --max-time 15 https://staging.writing.iil.pet/health/ \
+            && echo "✅ Staging health OK" \
+            || echo "⚠️ Staging health check failed"
 
 # ═══════════════════════════════════════════════════════════════════════════
-# STAGE 2b: Production Deploy — only on workflow_dispatch (environment=production)
-# Image tag: :latest  |  Server path: /opt/writing-hub
-# Domain: writing.iil.pet (Port 8097)
+# STAGE 2b: Production Deploy
+# Trigger: workflow_dispatch (environment=production)
+# Image: :latest  |  Path: /opt/writing-hub  |  Domain: writing.iil.pet (Port 8097)
 # ═══════════════════════════════════════════════════════════════════════════
   deploy-production:
-    name: "Deploy → Production"
+    name: "Deploy → Production (writing.iil.pet)"
     needs: [ci, hardcode-scan]
     if: |
-      github.event_name == 'workflow_dispatch' &&
-      (inputs.environment == 'production' || inputs.environment == '')
+      github.event_name == 'workflow_dispatch' && inputs.environment == 'production'
     runs-on: ubuntu-latest
     environment: production
     permissions:
@@ -195,20 +201,24 @@ jobs:
 
       - name: Write .env.prod on server
         run: |
-          ssh -i ~/.ssh/id_rsa root@88.198.191.108 "printf '%s' '${{ secrets.WRITINGHUB_ENV_PROD }}' > /opt/writing-hub/.env.prod"
+          ssh -i ~/.ssh/id_rsa root@88.198.191.108 \
+            "printf '%s' '${{ secrets.WRITINGHUB_ENV_PROD }}' > /opt/writing-hub/.env.prod"
 
-      - name: Deploy production via SSH
+      - name: Copy compose file and deploy
         run: |
-          scp -i ~/.ssh/id_rsa docker-compose.prod.yml root@88.198.191.108:/opt/writing-hub/docker-compose.prod.yml
+          scp -i ~/.ssh/id_rsa docker-compose.prod.yml \
+            root@88.198.191.108:/opt/writing-hub/docker-compose.prod.yml
 
-          ssh -i ~/.ssh/id_rsa root@88.198.191.108 bash << 'ENDSSH'
+          ssh -i ~/.ssh/id_rsa root@88.198.191.108 << 'ENDSSH'
             set -e
             docker pull ghcr.io/achimdehnert/writing-hub:latest
             cd /opt/writing-hub
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
             sleep 8
-            docker compose -f docker-compose.prod.yml exec -T writing_hub_web python manage.py migrate --no-input
-            docker compose -f docker-compose.prod.yml exec -T writing_hub_web python manage.py collectstatic --no-input
+            docker compose -f docker-compose.prod.yml exec -T writing_hub_web \
+              python manage.py migrate --no-input
+            docker compose -f docker-compose.prod.yml exec -T writing_hub_web \
+              python manage.py collectstatic --no-input --clear
             docker compose -f docker-compose.prod.yml ps
             echo "✅ Production deploy complete"
           ENDSSH
@@ -216,4 +226,6 @@ jobs:
       - name: Health check
         run: |
           sleep 5
-          curl -sf --max-time 15 https://writing.iil.pet/health/ && echo "✅ Health OK" || echo "⚠️ Health check failed"
+          curl -sf --max-time 15 https://writing.iil.pet/health/ \
+            && echo "✅ Production health OK" \
+            || echo "⚠️ Production health check failed"
