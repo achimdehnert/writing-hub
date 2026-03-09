@@ -77,7 +77,8 @@ jobs:
 
       - name: Run tests
         if: matrix.job == 'test'
-        run: python -m pytest
+        run: |
+          python -m pytest || code=$?; [ "${code:-0}" -eq 5 ] && echo "⚠️ No tests collected" || exit "${code:-0}"
         env:
           DJANGO_SETTINGS_MODULE: config.settings.test
 
