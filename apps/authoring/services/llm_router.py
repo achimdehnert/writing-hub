@@ -32,6 +32,19 @@ def get_quality_level_for_tier(tier: str) -> int | None:
     return _TIER_QUALITY_MAP.get(tier.lower()) if tier else None
 
 
+def _get_configuration_error_class():
+    """aifw.exceptions.ConfigurationError laden — mit Fallback auf Exception."""
+    try:
+        from aifw.exceptions import ConfigurationError
+        return ConfigurationError
+    except (ImportError, ModuleNotFoundError):
+        try:
+            from aifw import ConfigurationError  # noqa: F401
+            return ConfigurationError
+        except (ImportError, AttributeError):
+            return Exception
+
+
 class LLMRouter:
     """
     Einheitlicher LLM-Router via aifw.
@@ -72,7 +85,7 @@ class LLMRouter:
         Raises:
             LLMRoutingError: kein AIActionType konfiguriert oder aifw-Fehler
         """
-        from aifw.exceptions import ConfigurationError
+        ConfigurationError = _get_configuration_error_class()
 
         try:
             result = sync_completion(
@@ -110,7 +123,7 @@ class LLMRouter:
     ) -> str:
         """Async LLM-Call via aifw."""
         from aifw import completion as aifw_completion
-        from aifw.exceptions import ConfigurationError
+        ConfigurationError = _get_configuration_error_class()
 
         try:
             result = await aifw_completion(

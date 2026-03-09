@@ -7,7 +7,7 @@ from .base import *  # noqa: F401, F403
 
 DEBUG = False
 
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "writing.bfagent.iil.pet").split(",")
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "writing.iil.pet").split(",")
 
 DATABASES = {
     "default": {
@@ -28,3 +28,7 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://writing.iil.pet",
+]
