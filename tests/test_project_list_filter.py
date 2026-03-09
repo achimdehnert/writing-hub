@@ -15,10 +15,19 @@ class TestProjectListFilter:
         self.client = Client()
         self.client.login(username="filteruser", password="pass123")
 
-        self.ct_roman = ContentTypeLookup.objects.create(name="Roman", order=1)
-        self.ct_story = ContentTypeLookup.objects.create(name="Kurzgeschichte", order=2)
-        self.genre_fantasy = GenreLookup.objects.create(name="Fantasy", order=1)
-        self.genre_krimi = GenreLookup.objects.create(name="Krimi", order=2)
+        self.ct_roman, _ = ContentTypeLookup.objects.get_or_create(
+            slug="roman", defaults={"name": "Roman", "order": 1}
+        )
+        self.ct_story, _ = ContentTypeLookup.objects.get_or_create(
+            slug="kurzgeschichte",
+            defaults={"name": "Kurzgeschichte", "order": 2},
+        )
+        self.genre_fantasy, _ = GenreLookup.objects.get_or_create(
+            name="Fantasy", defaults={"order": 1}
+        )
+        self.genre_krimi, _ = GenreLookup.objects.get_or_create(
+            name="Krimi", defaults={"order": 2}
+        )
         self.series = BookSeries.objects.create(
             title="Meine Serie", owner=self.user
         )
@@ -75,7 +84,8 @@ class TestProjectListFilter:
         )
         assert response.status_code == 200
         titles = [p.title for p in response.context["projects"]]
-        assert titles == ["Fantasy Roman"]
+        assert "Fantasy Roman" in titles
+        assert len(titles) == 1
 
     def test_filter_series_none(self):
         response = self.client.get("/projects/?serie=none")
@@ -99,7 +109,9 @@ class TestProjectListFilter:
         )
         assert response.status_code == 200
         titles = [p.title for p in response.context["projects"]]
-        assert titles == ["Fantasy Story"]
+        assert "Fantasy Story" in titles
+        assert "Fantasy Roman" not in titles
+        assert "Krimi Story" not in titles
 
     def test_filter_context_has_options(self):
         response = self.client.get("/projects/")

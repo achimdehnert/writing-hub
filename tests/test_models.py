@@ -3,7 +3,12 @@ import uuid
 import pytest
 from django.contrib.auth.models import User
 
-from apps.projects.models import BookProject
+from apps.projects.models import (
+    AudienceLookup,
+    BookProject,
+    ContentTypeLookup,
+    GenreLookup,
+)
 from apps.series.models import BookSeries
 from apps.worlds.models import ProjectWorldLink
 
@@ -11,7 +16,9 @@ from apps.worlds.models import ProjectWorldLink
 @pytest.mark.django_db
 class TestBookProjectModel:
     def setup_method(self):
-        self.user = User.objects.create_user(username="modeluser", password="pass123")
+        self.user = User.objects.create_user(
+            username="modeluser", password="pass123"
+        )
 
     def test_create_book_project(self):
         project = BookProject.objects.create(
@@ -30,16 +37,23 @@ class TestBookProjectModel:
         assert "My Book" in str(project)
 
     def test_book_project_owner_filter(self):
-        other = User.objects.create_user(username="otheruser", password="pass123")
+        other = User.objects.create_user(
+            username="otheruser", password="pass123"
+        )
         BookProject.objects.create(title="Mine", owner=self.user)
         BookProject.objects.create(title="Theirs", owner=other)
         assert BookProject.objects.filter(owner=self.user).count() == 1
 
     def test_book_project_with_lookup_fields(self):
-        from apps.projects.models import ContentTypeLookup, GenreLookup, AudienceLookup
-        ct = ContentTypeLookup.objects.create(name="Roman", order=1)
-        genre = GenreLookup.objects.create(name="Fantasy", order=1)
-        audience = AudienceLookup.objects.create(name="Erwachsene", order=1)
+        ct, _ = ContentTypeLookup.objects.get_or_create(
+            slug="roman-test", defaults={"name": "Roman Test", "order": 99}
+        )
+        genre, _ = GenreLookup.objects.get_or_create(
+            name="Fantasy Test", defaults={"order": 99}
+        )
+        audience, _ = AudienceLookup.objects.get_or_create(
+            name="Erwachsene Test", defaults={"order": 99}
+        )
         project = BookProject.objects.create(
             title="Fantasy Roman",
             owner=self.user,
@@ -52,7 +66,9 @@ class TestBookProjectModel:
         assert project.audience_lookup == audience
 
     def test_book_project_with_series(self):
-        series = BookSeries.objects.create(title="Meine Serie", owner=self.user)
+        series = BookSeries.objects.create(
+            title="Meine Serie", owner=self.user
+        )
         project = BookProject.objects.create(
             title="Band 1",
             owner=self.user,
@@ -72,7 +88,9 @@ class TestBookProjectModel:
 @pytest.mark.django_db
 class TestBookSeriesModel:
     def setup_method(self):
-        self.user = User.objects.create_user(username="seriesuser", password="pass123")
+        self.user = User.objects.create_user(
+            username="seriesuser", password="pass123"
+        )
 
     def test_create_series(self):
         series = BookSeries.objects.create(
@@ -84,13 +102,17 @@ class TestBookSeriesModel:
         assert str(series) == "Die Chroniken"
 
     def test_series_owner_filter(self):
-        other = User.objects.create_user(username="otherseriesuser", password="pass123")
+        other = User.objects.create_user(
+            username="otherseriesuser", password="pass123"
+        )
         BookSeries.objects.create(title="Mine", owner=self.user)
         BookSeries.objects.create(title="Theirs", owner=other)
         assert BookSeries.objects.filter(owner=self.user).count() == 1
 
     def test_series_delete_nullifies_project_series(self):
-        series = BookSeries.objects.create(title="Temporäre Serie", owner=self.user)
+        series = BookSeries.objects.create(
+            title="Temporäre Serie", owner=self.user
+        )
         project = BookProject.objects.create(
             title="Projekt in Serie",
             owner=self.user,
@@ -104,8 +126,12 @@ class TestBookSeriesModel:
 @pytest.mark.django_db
 class TestProjectWorldLinkModel:
     def setup_method(self):
-        self.user = User.objects.create_user(username="worldlinkuser", password="pass123")
-        self.project = BookProject.objects.create(title="Linked Project", owner=self.user)
+        self.user = User.objects.create_user(
+            username="worldlinkuser", password="pass123"
+        )
+        self.project = BookProject.objects.create(
+            title="Linked Project", owner=self.user
+        )
         self.world_id = uuid.uuid4()
 
     def test_create_project_world_link(self):
@@ -124,4 +150,6 @@ class TestProjectWorldLinkModel:
         )
         project_pk = self.project.pk
         self.project.delete()
-        assert ProjectWorldLink.objects.filter(project_id=project_pk).count() == 0
+        assert ProjectWorldLink.objects.filter(
+            project_id=project_pk
+        ).count() == 0
