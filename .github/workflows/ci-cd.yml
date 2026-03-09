@@ -78,43 +78,55 @@ jobs:
       - name: Run tests
         if: matrix.job == 'test'
         run: |
-          python -m pytest || code=$?; [ "${code:-0}" -eq 5 ] && echo "⚠️ No tests collected" || exit "${code:-0}"
+          python -m pytest; code=$?; [ "$code" -eq 5 ] && echo "⚠️ No tests collected" || exit "$code"
         env:
           DJANGO_SETTINGS_MODULE: config.settings.test
 
 # ═══════════════════════════════════════════════════════════════════════════
-# STAGE 2: Deploy (ADR-042: only on workflow_dispatch)
-# Builds image from checkout, pushes to GHCR, then docker compose up.
-# .env.prod written from WRITINGHUB_ENV_PROD secret (compose env_file directive).
+# STAGE 2: Deploy (only on workflow_dispatch)
+# Builds on ubuntu-latest, pushes to GHCR, deploys via SSH to prod server.
+# Server path: /opt/writing-hub  |  compose: docker-compose.prod.yml
 # ═══════════════════════════════════════════════════════════════════════════
   fast-deploy:
     name: "Deploy"
     needs: [ci, hardcode-scan]
     if: github.event_name == 'workflow_dispatch'
-    runs-on: [self-hosted, dev-server]
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4
-      - name: Write .env.prod from secret
-        env:
-          WRITINGHUB_ENV_PROD: ${{ secrets.WRITINGHUB_ENV_PROD }}
-        run: printf '%s' "$WRITINGHUB_ENV_PROD" > .env.prod
+
       - name: Log in to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
       - name: Build and push image
         run: |
           IMAGE="ghcr.io/achimdehnert/writing-hub:latest"
           docker build -t "$IMAGE" .
           docker push "$IMAGE"
           echo "✅ Image pushed: $IMAGE"
-      - name: Deploy writing-hub (docker compose up)
+
+      - name: Setup SSH
         run: |
-          echo "Restarting services..."
-          docker compose -f docker-compose.prod.yml up -d --remove-orphans
-          echo "Waiting for health..."
-          sleep 10
-          docker compose -f docker-compose.prod.yml ps
-          rm -f .env.prod
-          echo "✅ Deploy complete"
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 88.198.191.108 >> ~/.ssh/known_hosts
+
+      - name: Deploy via SSH
+        env:
+          WRITINGHUB_ENV_PROD: ${{ secrets.WRITINGHUB_ENV_PROD }}
+        run: |
+          ssh root@88.198.191.108 "
+            set -e
+            mkdir -p /opt/writing-hub
+            printf '%s' '${{ secrets.WRITINGHUB_ENV_PROD }}' > /opt/writing-hub/.env.prod
+            docker pull ghcr.io/achimdehnert/writing-hub:latest
+            cd /opt/writing-hub
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            sleep 10
+            docker compose -f docker-compose.prod.yml ps
+            echo '✅ Deploy complete'
+          "
