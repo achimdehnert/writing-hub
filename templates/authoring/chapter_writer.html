@@ -29,10 +29,10 @@
                         <span class="text-muted small me-1">{{ chapter.order }}.</span>
                         <span class="small text-light">{{ chapter.title|truncatechars:25 }}</span>
                     </div>
-                    <span class="chapter-status badge ms-1" id="status-{{ chapter.id }}" style="font-size: 0.6rem;"></span>
+                    <span class="badge ms-1" id="status-{{ chapter.id }}" style="font-size: 0.6rem;"></span>
                 </div>
                 <div class="mt-1">
-                    <button class="btn btn-xs btn-outline-primary py-0 px-1" style="font-size: 0.65rem;"
+                    <button class="btn btn-outline-primary py-0 px-1" style="font-size: 0.65rem;"
                         onclick="event.stopPropagation(); startGeneration('{{ chapter.id }}', '{{ chapter.title|escapejs }}', '{{ chapter.description|escapejs }}')">
                         <i class="bi bi-stars"></i> KI
                     </button>
@@ -51,11 +51,8 @@
 
     <!-- Editor Mitte -->
     <div class="col-md-7 d-flex flex-column" style="background: #0f1117;">
-        <!-- Editor-Header -->
         <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom" style="min-height: 48px;">
-            <div class="d-flex align-items-center gap-2">
-                <span class="fw-semibold" id="chapter-title-display" style="color: #e2e8f0;">Kapitel wählen</span>
-            </div>
+            <span class="fw-semibold" id="chapter-title-display" style="color: #e2e8f0;">Kapitel wählen</span>
             <div class="d-flex align-items-center gap-2">
                 <span class="text-muted small" id="word-count">0 Wörter</span>
                 <button class="btn btn-sm btn-outline-secondary" id="btn-regenerate" onclick="regenerate()" style="display:none;">
@@ -70,13 +67,11 @@
             </div>
         </div>
 
-        <!-- Spinner / Status -->
         <div id="gen-status" class="d-none px-3 py-2 border-bottom d-flex align-items-center gap-2" style="background: #1a2332;">
             <div class="spinner-border spinner-border-sm text-primary" id="gen-spinner"></div>
             <span class="small text-muted" id="gen-status-text">Generierung läuft...</span>
         </div>
 
-        <!-- Textarea -->
         <div class="flex-grow-1 d-flex flex-column p-3">
             <textarea id="chapter-content"
                 class="flex-grow-1 border-0 w-100 h-100"
@@ -99,12 +94,11 @@
                     style="background: #1a1f2e; color: #e2e8f0; border-color: #2d3748;"
                     value="2000" min="500" max="20000" step="500">
                 <div class="d-flex gap-1 mt-1 flex-wrap">
-                    {% for wc in "2000,5000,10000,15000,20000"|split:"," %}
-                    <button class="btn btn-xs btn-outline-secondary py-0 px-1" style="font-size: 0.65rem;"
-                        onclick="document.getElementById('target-words').value='{{ wc }}'">
-                        {{ wc }}
-                    </button>
-                    {% endfor %}
+                    <button class="btn btn-outline-secondary py-0 px-1" style="font-size: 0.65rem;" onclick="document.getElementById('target-words').value='2000'">2k</button>
+                    <button class="btn btn-outline-secondary py-0 px-1" style="font-size: 0.65rem;" onclick="document.getElementById('target-words').value='5000'">5k</button>
+                    <button class="btn btn-outline-secondary py-0 px-1" style="font-size: 0.65rem;" onclick="document.getElementById('target-words').value='10000'">10k</button>
+                    <button class="btn btn-outline-secondary py-0 px-1" style="font-size: 0.65rem;" onclick="document.getElementById('target-words').value='15000'">15k</button>
+                    <button class="btn btn-outline-secondary py-0 px-1" style="font-size: 0.65rem;" onclick="document.getElementById('target-words').value='20000'">20k</button>
                 </div>
             </div>
 
@@ -151,7 +145,6 @@
 const PROJECT_ID = "{{ project.pk }}";
 let currentChapterId = null;
 let pollInterval = null;
-let hasContent = false;
 
 function selectChapter(id, title, description) {
     currentChapterId = id;
@@ -159,7 +152,6 @@ function selectChapter(id, title, description) {
     if (description) {
         document.getElementById("chapter-beat").value = description;
     }
-    // Aktive Markierung
     document.querySelectorAll(".chapter-item").forEach(el => {
         el.style.background = "";
         el.style.borderLeft = "3px solid transparent";
@@ -169,10 +161,8 @@ function selectChapter(id, title, description) {
         active.style.background = "#1e2a3a";
         active.style.borderLeft = "3px solid #6366f1";
     }
-    // Buttons aktivieren
     document.getElementById("btn-generate-main").disabled = false;
     document.getElementById("btn-save").disabled = false;
-    // Vorhandenen Inhalt laden (aus localStorage falls vorhanden)
     const saved = localStorage.getItem("chapter_" + id);
     const textarea = document.getElementById("chapter-content");
     if (saved) {
@@ -212,7 +202,6 @@ function startGenerationCurrent() {
 }
 
 function startGeneration(chapterId, title, description) {
-    // Kapitel auswählen falls nicht aktiv
     if (currentChapterId !== chapterId) {
         selectChapter(chapterId, title, description);
     }
@@ -221,6 +210,7 @@ function startGeneration(chapterId, title, description) {
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Läuft...';
     const statusEl = document.getElementById("gen-status");
     statusEl.classList.remove("d-none");
+    document.getElementById("gen-spinner").classList.remove("d-none");
     document.getElementById("gen-status-text").textContent = "Generierung läuft...";
 
     fetch(`/api/v1/authoring/projects/${PROJECT_ID}/chapters/${chapterId}/write/`, {
@@ -249,7 +239,7 @@ function pollJobStatus(jobId, chapterId) {
         fetch(`/api/v1/authoring/jobs/${jobId}/status/`)
         .then(r => r.json())
         .then(data => {
-            document.getElementById("gen-status-text").textContent = `Status: ${data.status}`;
+            document.getElementById("gen-status-text").textContent = "Status: " + data.status;
             if (data.status === "done") {
                 clearInterval(pollInterval);
                 const content = data.content || "";
@@ -257,7 +247,7 @@ function pollJobStatus(jobId, chapterId) {
                 updateWordCount(content);
                 localStorage.setItem("chapter_" + chapterId, content);
                 document.getElementById("gen-status").classList.add("d-none");
-                document.getElementById("status-" + chapterId).textContent = "✅";
+                document.getElementById("status-" + chapterId).textContent = "\u2705";
                 showRegenerateBtn(true);
                 resetBtn();
             } else if (data.status === "failed") {
@@ -276,7 +266,7 @@ function showError(msg) {
 
 function updateWordCount(text) {
     const count = text.trim() ? text.trim().split(/\s+/).length : 0;
-    document.getElementById("word-count").textContent = `${count.toLocaleString("de-DE")} Wörter`;
+    document.getElementById("word-count").textContent = count.toLocaleString("de-DE") + " Wörter";
 }
 
 function resetBtn() {
@@ -300,14 +290,13 @@ function getCookie(name) {
     return v ? v[2] : null;
 }
 
-// Erstes Kapitel automatisch auswählen
 window.addEventListener("DOMContentLoaded", () => {
     const first = document.querySelector(".chapter-item");
     if (first) {
         const id = first.id.replace("chapter-item-", "");
-        const title = first.querySelector(".text-light")?.textContent?.trim() || "";
-        const beat = first.dataset.description || "";
-        selectChapter(id, title, beat);
+        const titleEl = first.querySelector(".text-light");
+        const title = titleEl ? titleEl.textContent.trim() : "";
+        selectChapter(id, title, "");
     }
 });
 </script>
