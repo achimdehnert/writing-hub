@@ -77,10 +77,7 @@ class AuthorStyleLookup(models.Model):
 
 
 class OutlineFramework(models.Model):
-    key = models.SlugField(
-        max_length=80, unique=True,
-        help_text="Eindeutiger Schlüssel, z.B. 'save_the_cat'",
-    )
+    key = models.SlugField(max_length=80, unique=True)
     name = models.CharField(max_length=200)
     subtitle = models.CharField(max_length=300, blank=True)
     icon = models.CharField(max_length=60, blank=True, default="bi-list-ol")
@@ -104,9 +101,7 @@ class OutlineFramework(models.Model):
 
 class OutlineFrameworkBeat(models.Model):
     framework = models.ForeignKey(
-        OutlineFramework,
-        on_delete=models.CASCADE,
-        related_name="beats",
+        OutlineFramework, on_delete=models.CASCADE, related_name="beats"
     )
     order = models.PositiveSmallIntegerField(default=0)
     name = models.CharField(max_length=200)
@@ -127,47 +122,30 @@ class OutlineFrameworkBeat(models.Model):
 class BookProject(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="book_projects",
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="book_projects"
     )
     bfagent_id = models.IntegerField(null=True, blank=True, db_index=True)
     series = models.ForeignKey(
-        "series.BookSeries",
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name="projects",
-        verbose_name="Serie",
+        "series.BookSeries", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="projects", verbose_name="Serie",
     )
     title = models.CharField(max_length=300)
     description = models.TextField(blank=True)
     content_type_lookup = models.ForeignKey(
-        ContentTypeLookup,
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        verbose_name="Inhaltstyp",
-        related_name="projects",
+        ContentTypeLookup, on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name="Inhaltstyp", related_name="projects",
     )
     genre_lookup = models.ForeignKey(
-        GenreLookup,
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        verbose_name="Genre",
-        related_name="projects",
+        GenreLookup, on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name="Genre", related_name="projects",
     )
     audience_lookup = models.ForeignKey(
-        AudienceLookup,
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        verbose_name="Zielgruppe",
-        related_name="projects",
+        AudienceLookup, on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name="Zielgruppe", related_name="projects",
     )
     writing_style = models.ForeignKey(
-        "authors.WritingStyle",
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        verbose_name="Schreibstil",
-        related_name="projects",
+        "authors.WritingStyle", on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name="Schreibstil", related_name="projects",
     )
 
     class ContentType(models.TextChoices):
@@ -203,11 +181,13 @@ class OutlineVersion(models.Model):
         "BookProject", on_delete=models.CASCADE, related_name="outline_versions"
     )
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
     )
     name = models.CharField(max_length=200)
+    version_label = models.CharField(
+        max_length=200, blank=True, default="",
+        help_text="Optionales Label für diese Version",
+    )
     source = models.CharField(
         max_length=80, default="manual",
         help_text="Framework-Key oder 'manual'/'ai'",
@@ -224,6 +204,32 @@ class OutlineVersion(models.Model):
 
     def __str__(self):
         return f"{self.project.title} — {self.name}"
+
+    def save_as_new_version(self, name=None, label=None, user=None):
+        """Erstellt eine Kopie dieser Version mit neuem Namen."""
+        new = OutlineVersion.objects.create(
+            project=self.project,
+            created_by=user,
+            name=name or f"{self.name} (Kopie)",
+            version_label=label or "",
+            source=self.source,
+            notes=self.notes,
+            is_active=False,
+        )
+        for node in self.nodes.order_by("order"):
+            OutlineNode.objects.create(
+                outline_version=new,
+                title=node.title,
+                description=node.description,
+                beat_type=node.beat_type,
+                beat_phase=node.beat_phase,
+                act=node.act,
+                target_words=node.target_words,
+                emotional_arc=node.emotional_arc,
+                order=node.order,
+                notes=node.notes,
+            )
+        return new
 
 
 class OutlineNode(models.Model):
@@ -242,6 +248,22 @@ class OutlineNode(models.Model):
         ("part", "Teil"),
     ]
     beat_type = models.CharField(max_length=20, choices=BEAT_TYPES, default="chapter")
+    beat_phase = models.CharField(
+        max_length=100, blank=True, default="",
+        help_text="Beat/Phase des Frameworks, z.B. 'Opening Image'",
+    )
+    act = models.CharField(
+        max_length=100, blank=True, default="",
+        help_text="Akt/Teil, z.B. 'Akt 1 - Setup'",
+    )
+    target_words = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Ziel-Wortanzahl für dieses Kapitel",
+    )
+    emotional_arc = models.CharField(
+        max_length=300, blank=True, default="",
+        help_text="Emotionaler Bogen des Kapitels",
+    )
     order = models.PositiveIntegerField(default=0)
     notes = models.TextField(blank=True)
     content = models.TextField(blank=True)

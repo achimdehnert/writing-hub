@@ -3,12 +3,19 @@ Outlines — HTML Views
 
 Eigenständiger Outline-Bereich: Liste, Detail/Editor, Node-Edit, Delete.
 Nutzt apps.projects.models (OutlineVersion, OutlineNode, OutlineFramework).
+
+Generation-Flow:
+  POST /outlines/<pk>/generate-full/   → OutlineGenerateFullView
+    Schritt 1: Erzeugt Kapitel-Struktur (Titel + Beat-Phase)
+    Schritt 2: Pro Kapitel detailliertes Outline (description + emotional_arc)
+  POST /outlines/<pk>/save-version/    → OutlineSaveVersionView
+    Speichert aktuelle Version als benannte Kopie
 """
 import logging
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 from django.views.generic import DetailView, ListView
 
@@ -18,7 +25,6 @@ logger = logging.getLogger(__name__)
 
 
 class OutlineListView(LoginRequiredMixin, ListView):
-    """Alle Outlines des eingeloggten Users über alle Projekte."""
     template_name = "outlines/outline_list.html"
     context_object_name = "outlines"
     paginate_by = 20
@@ -33,7 +39,6 @@ class OutlineListView(LoginRequiredMixin, ListView):
 
 
 class OutlineDetailView(LoginRequiredMixin, DetailView):
-    """Outline Editor — BFAgent-style mit DB-Frameworks, Listbox, Beats-Preview."""
     template_name = "outlines/outline_detail.html"
     context_object_name = "outline"
 
@@ -55,7 +60,6 @@ class OutlineDetailView(LoginRequiredMixin, DetailView):
             project=project
         ).order_by("-created_at")
 
-        # Frameworks aus DB
         frameworks = list(
             OutlineFramework.objects
             .filter(is_active=True)
@@ -63,16 +67,9 @@ class OutlineDetailView(LoginRequiredMixin, DetailView):
             .order_by("order", "name")
         )
         ctx["frameworks"] = frameworks
-
-        # Aktives Framework anhand outline.source
-        active_fw = None
-        for fw in frameworks:
-            if fw.key == outline.source:
-                active_fw = fw
-                break
+        active_fw = next((f for f in frameworks if f.key == outline.source), None)
         ctx["active_fw"] = active_fw
 
-        # Statistiken
         total_words = sum(n.word_count for n in nodes if n.word_count)
         written = sum(1 for n in nodes if n.word_count and n.word_count > 0)
         ctx["stat_words"] = total_words
@@ -96,9 +93,7 @@ class OutlineDetailView(LoginRequiredMixin, DetailView):
 
 class OutlineDeleteView(LoginRequiredMixin, View):
     def post(self, request, pk):
-        outline = get_object_or_404(
-            OutlineVersion, pk=pk, project__owner=request.user
-        )
+        outline = get_object_or_404(OutlineVersion, pk=pk, project__owner=request.user)
         project_pk = outline.project.pk
         name = outline.name
         outline.delete()
@@ -108,9 +103,7 @@ class OutlineDeleteView(LoginRequiredMixin, View):
 
 class OutlineSetActiveView(LoginRequiredMixin, View):
     def post(self, request, pk):
-        outline = get_object_or_404(
-            OutlineVersion, pk=pk, project__owner=request.user
-        )
+        outline = get_object_or_404(OutlineVersion, pk=pk, project__owner=request.user)
         OutlineVersion.objects.filter(
             project=outline.project, is_active=True
         ).update(is_active=False)
@@ -120,27 +113,49 @@ class OutlineSetActiveView(LoginRequiredMixin, View):
         return redirect("outlines:detail", pk=pk)
 
 
+class OutlineSaveVersionView(LoginRequiredMixin, View):
+    """Aktuelle Outline als neue benannte Version speichern."""
+
+    def post(self, request, pk):
+        outline = get_object_or_404(OutlineVersion, pk=pk, project__owner=request.user)
+        name = request.POST.get("version_name", "").strip()
+        label = request.POST.get("version_label", "").strip()
+        if not name:
+            name = f"{outline.name} v{outline.project.outline_versions.count() + 1}"
+        new_version = outline.save_as_new_version(name=name, label=label, user=request.user)
+        messages.success(request, f'Version „{new_version.name}" gespeichert.')
+        return redirect("outlines:detail", pk=new_version.pk)
+
+
 class OutlineNodeUpdateView(LoginRequiredMixin, View):
     def post(self, request, pk):
         node = get_object_or_404(
-            OutlineNode,
-            pk=pk,
-            outline_version__project__owner=request.user,
+            OutlineNode, pk=pk, outline_version__project__owner=request.user
         )
         node.title = request.POST.get("title", node.title).strip() or node.title
         node.description = request.POST.get("description", node.description)
         node.notes = request.POST.get("notes", node.notes)
         node.beat_type = request.POST.get("beat_type", node.beat_type)
-        node.save(update_fields=["title", "description", "notes", "beat_type"])
+        node.beat_phase = request.POST.get("beat_phase", node.beat_phase)
+        node.act = request.POST.get("act", node.act)
+        node.emotional_arc = request.POST.get("emotional_arc", node.emotional_arc)
+        tw = request.POST.get("target_words", "")
+        if tw:
+            try:
+                node.target_words = int(tw)
+            except ValueError:
+                pass
+        node.save(update_fields=[
+            "title", "description", "notes", "beat_type",
+            "beat_phase", "act", "emotional_arc", "target_words",
+        ])
         messages.success(request, f'Kapitel „{node.title}" gespeichert.')
         return redirect("outlines:detail", pk=node.outline_version.pk)
 
 
 class OutlineNodeAddView(LoginRequiredMixin, View):
     def post(self, request, pk):
-        outline = get_object_or_404(
-            OutlineVersion, pk=pk, project__owner=request.user
-        )
+        outline = get_object_or_404(OutlineVersion, pk=pk, project__owner=request.user)
         max_order = outline.nodes.count()
         title = request.POST.get("title", "").strip() or f"Kapitel {max_order + 1}"
         OutlineNode.objects.create(
@@ -156,9 +171,7 @@ class OutlineNodeAddView(LoginRequiredMixin, View):
 class OutlineNodeDeleteView(LoginRequiredMixin, View):
     def post(self, request, pk):
         node = get_object_or_404(
-            OutlineNode,
-            pk=pk,
-            outline_version__project__owner=request.user,
+            OutlineNode, pk=pk, outline_version__project__owner=request.user
         )
         outline_pk = node.outline_version.pk
         name = node.title
@@ -167,15 +180,134 @@ class OutlineNodeDeleteView(LoginRequiredMixin, View):
         return redirect("outlines:detail", pk=outline_pk)
 
 
+class OutlineGenerateFullView(LoginRequiredMixin, View):
+    """
+    Vollständige 2-Schritt-Generierung mit templatefw:
+    Schritt 1: Kapitel-Struktur (Titel, Beat-Phase, Akt, Zielwörter)
+    Schritt 2: Pro Kapitel detailliertes Outline (description, emotional_arc)
+    """
+
+    def post(self, request, pk):
+        from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
+        from apps.authoring.services.project_context_service import ProjectContextService
+
+        outline = get_object_or_404(OutlineVersion, pk=pk, project__owner=request.user)
+        project = outline.project
+        detail_level = request.POST.get("detail_level", "full")
+
+        try:
+            ctx_svc = ProjectContextService()
+            proj_ctx = ctx_svc.get_context(str(project.pk))
+            context_block = proj_ctx.to_prompt_block()
+        except Exception:
+            context_block = f"Projekt: {project.title}\nGenre: {project.genre}"
+
+        nodes = list(outline.nodes.order_by("order"))
+        if not nodes:
+            messages.warning(request, "Keine Kapitel vorhanden. Zuerst Outline anlegen.")
+            return redirect("outlines:detail", pk=pk)
+
+        router = LLMRouter()
+        fw_name = outline.source
+        total = len(nodes)
+        updated = 0
+
+        # Schritt 1: Struktur-Pass — Beat-Phase, Akt, Zielwörter
+        try:
+            target_per_chapter = (
+                round(project.target_word_count / total)
+                if project.target_word_count else 3000
+            )
+            structure_prompt = (
+                f"{context_block}\n\n"
+                f"Framework: {fw_name}\n"
+                f"Kapitel ({total} Stk.):\n"
+                + "\n".join(f"{n.order}. {n.title}" for n in nodes)
+                + "\n\nWeise jedem Kapitel zu:\n"
+                "- Beat/Phase (aus dem Framework)\n"
+                "- Akt (z.B. 'Akt 1 - Setup', 'Akt 2 - Konfrontation', 'Akt 3 - Auflösung')\n"
+                f"- Ziel-Wörter (Summe soll {project.target_word_count or total * target_per_chapter} ergeben)\n\n"
+                "Antworte NUR als JSON-Array:\n"
+                '[{"order":1,"beat_phase":"Opening Image","act":"Akt 1 - Setup","target_words":3000},...]'
+            )
+            raw = router.completion(
+                action_code="chapter_outline",
+                messages=[
+                    {"role": "system", "content": "Du bist ein Story-Struktur-Experte. Antworte nur mit JSON."},
+                    {"role": "user", "content": structure_prompt},
+                ],
+            )
+            import json
+            import re
+            match = re.search(r'\[.*\]', raw, re.DOTALL)
+            if match:
+                structure = json.loads(match.group())
+                struct_map = {item["order"]: item for item in structure}
+                for node in nodes:
+                    s = struct_map.get(node.order, {})
+                    node.beat_phase = s.get("beat_phase", node.beat_phase)
+                    node.act = s.get("act", node.act)
+                    node.target_words = s.get("target_words") or node.target_words
+                    node.save(update_fields=["beat_phase", "act", "target_words"])
+        except (LLMRoutingError, Exception) as exc:
+            logger.warning("OutlineGenerateFull Step1 error: %s", exc)
+
+        # Schritt 2: Detail-Pass — description + emotional_arc pro Kapitel
+        if detail_level in ("full", "detail"):
+            for node in nodes:
+                try:
+                    beat_ctx = f"Beat/Phase: {node.beat_phase}\nAkt: {node.act}" if node.beat_phase else ""
+                    node_prompt = (
+                        f"{context_block}\n\n"
+                        f"{beat_ctx}\n"
+                        f"Kapitel {node.order}: {node.title}\n"
+                        f"Ziel-Wörter: {node.target_words or 3000}\n"
+                        f"Bisheriges Outline:\n{node.description or '(leer)'}\n\n"
+                        "Erstelle ein detailliertes Kapitel-Outline mit:\n"
+                        "- 2-4 Szenen mit Ort und konkreter Handlung\n"
+                        "- Dialog-Hinweise\n"
+                        "- Innerer Monolog des Protagonisten\n"
+                        "- Cliffhanger am Ende\n\n"
+                        "Antworte als JSON: {\"description\": \"...\", \"emotional_arc\": \"...\"}"
+                    )
+                    raw = router.completion(
+                        action_code="chapter_outline",
+                        messages=[
+                            {"role": "system", "content": "Du bist ein Romanautor. Antworte nur mit JSON."},
+                            {"role": "user", "content": node_prompt},
+                        ],
+                    )
+                    import json
+                    import re
+                    match = re.search(r'\{.*\}', raw, re.DOTALL)
+                    if match:
+                        data = json.loads(match.group())
+                        node.description = data.get("description", raw)
+                        node.emotional_arc = data.get("emotional_arc", "")
+                    else:
+                        node.description = raw
+                    node.save(update_fields=["description", "emotional_arc"])
+                    updated += 1
+                except (LLMRoutingError, Exception) as exc:
+                    logger.warning("OutlineGenerateFull Step2 node=%s: %s", node.order, exc)
+                    continue
+
+        messages.success(
+            request,
+            f'Outline vollständig generiert: {updated}/{total} Kapitel mit Details.'
+        )
+        return redirect("outlines:detail", pk=pk)
+
+
 class OutlineNodeEnrichView(LoginRequiredMixin, View):
+    """KI-Verfeinerung eines einzelnen Outline-Nodes."""
+
     def post(self, request, pk):
         from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
         from apps.authoring.services.project_context_service import ProjectContextService
 
         node = get_object_or_404(
-            OutlineNode,
-            pk=pk,
-            outline_version__project__owner=request.user,
+            OutlineNode, pk=pk, outline_version__project__owner=request.user
         )
         project = node.outline_version.project
 
@@ -184,38 +316,45 @@ class OutlineNodeEnrichView(LoginRequiredMixin, View):
             ctx = ctx_svc.get_context(str(project.pk))
             context_block = ctx.to_prompt_block()
             existing = node.description.strip() or "(noch kein Inhalt)"
+            beat_ctx = f"Beat/Phase: {node.beat_phase}\nAkt: {node.act}\n" if node.beat_phase else ""
             system_prompt = (
                 "Du bist ein erfahrener Romanautor und Story-Entwickler.\n"
                 "Du erweiterst kurze Kapitel-Outlines zu detaillierten Szenenplanungen.\n"
-                "Antworte auf Deutsch, nur mit dem Outline-Text, keine Erklärungen."
+                "Antworte als JSON: {\"description\": \"...\", \"emotional_arc\": \"...\"}"
             )
             user_prompt = (
                 f"Projekt-Kontext:\n{context_block}\n\n"
-                f"Kapitel {node.order}: {node.title}\n\n"
+                f"{beat_ctx}"
+                f"Kapitel {node.order}: {node.title}\n"
+                f"Ziel-Wörter: {node.target_words or 3000}\n\n"
                 f"Bisheriger Inhalt:\n{existing}\n\n"
-                "Erstelle ein DETAILLIERTES Kapitel-Outline mit:\n"
-                "- Was passiert in diesem Kapitel (konkrete Handlung)\n"
-                "- Welche Charaktere sind involviert\n"
-                "- Emotionaler Bogen des Protagonisten\n"
-                "- Cliffhanger / Hook am Ende\n\n"
-                "2-4 Szenen, jeweils mit Ort und konkreter Beschreibung."
+                "Erstelle ein DETAILLIERTES Kapitel-Outline mit 2-4 Szenen, Dialog-Hinweisen, "
+                "innerem Monolog und Cliffhanger. JSON-Format."
             )
             router = LLMRouter()
-            enriched = router.completion(
+            raw = router.completion(
                 action_code="chapter_outline",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
             )
-            node.description = enriched
-            node.save(update_fields=["description"])
-            messages.success(request, f'Kapitel „{node.title}" wurde KI-verfeinert.')
+            import json
+            import re
+            match = re.search(r'\{.*\}', raw, re.DOTALL)
+            if match:
+                data = json.loads(match.group())
+                node.description = data.get("description", raw)
+                node.emotional_arc = data.get("emotional_arc", node.emotional_arc)
+            else:
+                node.description = raw
+            node.save(update_fields=["description", "emotional_arc"])
+            messages.success(request, f'Kapitel „{node.title}" KI-verfeinert.')
         except LLMRoutingError as exc:
             logger.warning("OutlineNodeEnrich LLMRoutingError node=%s: %s", pk, exc)
             messages.warning(request, f"KI nicht verfügbar: {exc}")
         except Exception as exc:
             logger.exception("OutlineNodeEnrich error node=%s: %s", pk, exc)
-            messages.error(request, f"Fehler bei KI-Verfeinerung: {exc}")
+            messages.error(request, f"Fehler: {exc}")
 
         return redirect("outlines:detail", pk=node.outline_version.pk)
