@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-
 {% block title %}Kapitel schreiben — {{ project.title }}{% endblock %}
 {% block page_title %}<i class="bi bi-pen me-2"></i>{{ project.title }}{% endblock %}
 
@@ -16,21 +15,32 @@
 
 {% block content %}
 
-<!-- Kapitel-Daten für JS -->
 <script id="chapters-data" type="application/json">
 [
 {% for ch in chapters %}
   {
     "id": "{{ ch.id }}",
+    "order": {{ ch.order }},
     "title": "{{ ch.title|escapejs }}",
-    "description": {{ ch.description|default:""|tojson }},
+    "description": "{{ ch.description|escapejs }}",
     "beat_phase": "{{ ch.beat_phase|escapejs }}",
     "act": "{{ ch.act|escapejs }}",
     "emotional_arc": "{{ ch.emotional_arc|escapejs }}",
     "target_words": {{ ch.target_words|default:"null" }},
     "word_count": {{ ch.word_count|default:0 }},
-    "save_url": "{% url 'projects:node_content' ch.id %}"
+    "writing_style_id": "{% if ch.writing_style %}{{ ch.writing_style.pk }}{% endif %}",
+    "writing_style_name": "{% if ch.writing_style %}{{ ch.writing_style|escapejs }}{% elif project.writing_style %}{{ project.writing_style|escapejs }}{% endif %}",
+    "save_url": "{% url 'projects:node_content' ch.id %}",
+    "style_url": "{% url 'projects:node_style' ch.id %}"
   }{% if not forloop.last %},{% endif %}
+{% endfor %}
+]
+</script>
+
+<script id="project-styles-data" type="application/json">
+[
+{% for s in project_styles %}
+  {"id": "{{ s.pk }}", "name": "{{ s|escapejs }}", "author": "{{ s.author.name|escapejs }}", "prompt": "{{ s.style_prompt|escapejs }}"}{% if not forloop.last %},{% endif %}
 {% endfor %}
 ]
 </script>
@@ -38,7 +48,7 @@
 <div class="row g-0" style="height: calc(100vh - 80px);">
 
     <!-- Kapitel-Liste links -->
-    <div class="col-md-2 border-end d-flex flex-column" style="overflow:hidden; background:#0d1117;">
+    <div class="col-md-2 border-end d-flex flex-column" style="overflow:hidden;background:#0d1117;">
         <div class="p-2 border-bottom d-flex align-items-center justify-content-between" style="border-color:#2d3748!important;">
             <span class="fw-semibold small text-muted">KAPITEL</span>
             <span class="badge" style="background:#1e2235;color:#6366f1;font-size:.65rem;">{{ chapter_count }}</span>
@@ -53,9 +63,7 @@
                 <div class="d-flex align-items-start justify-content-between gap-1">
                     <div style="min-width:0;">
                         <span class="text-muted" style="font-size:.68rem;">{{ chapter.order }}.</span>
-                        <span class="small text-light d-block" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                            {{ chapter.title|truncatechars:22 }}
-                        </span>
+                        <span class="small text-light d-block" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ chapter.title|truncatechars:22 }}</span>
                         {% if chapter.word_count %}
                         <span style="font-size:.6rem;color:#22c55e;">{{ chapter.word_count }}W</span>
                         {% else %}
@@ -72,9 +80,7 @@
             {% empty %}
             <div class="p-3 text-center">
                 <div class="text-muted small mb-2">Keine Kapitel</div>
-                <a href="{% url 'projects:detail' project.pk %}" class="btn btn-sm btn-outline-secondary">
-                    Outline anlegen
-                </a>
+                <a href="{% url 'projects:detail' project.pk %}" class="btn btn-sm btn-outline-secondary">Outline anlegen</a>
             </div>
             {% endfor %}
         </div>
@@ -82,43 +88,41 @@
 
     <!-- Editor Mitte -->
     <div class="col-md-7 d-flex flex-column" style="background:#0f1117;">
-        <!-- Editor-Header -->
         <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom" style="min-height:48px;border-color:#2d3748!important;">
             <div>
                 <span class="fw-semibold" id="chapter-title-display" style="color:#e2e8f0;">Kapitel wählen</span>
-                <span class="text-muted small ms-2" id="chapter-meta-badge"></span>
+                <span class="ms-2" id="chapter-meta-badge"></span>
             </div>
             <div class="d-flex align-items-center gap-2">
                 <span class="text-muted small" id="word-count">0 Wörter</span>
                 <span style="font-size:.72rem;color:#94a3b8;" id="save-status"></span>
-                <button class="btn btn-sm" style="background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3;" id="btn-generate-main" onclick="startGenerationCurrent()" disabled>
-                    <i class="bi bi-stars me-1"></i> Mit KI generieren
+                <button class="btn btn-sm" style="background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3;"
+                        id="btn-generate-main" onclick="startGenerationCurrent()" disabled>
+                    <i class="bi bi-stars me-1"></i>Mit KI generieren
                 </button>
                 <button class="btn btn-success btn-sm" id="btn-save" onclick="saveContent()" disabled>
-                    <i class="bi bi-check-lg me-1"></i> Speichern
+                    <i class="bi bi-check-lg me-1"></i>Speichern
                 </button>
             </div>
         </div>
 
-        <!-- Generierungs-Status -->
         <div id="gen-status" class="d-none px-3 py-2 border-bottom d-flex align-items-center gap-2" style="background:#1a2332;border-color:#2d3748!important;">
             <div class="spinner-border spinner-border-sm text-primary" id="gen-spinner"></div>
             <span class="small" id="gen-status-text" style="color:#a5b4fc;">Generierung läuft...</span>
         </div>
 
-        <!-- Outline-Kontext für dieses Kapitel -->
-        <div id="chapter-outline-panel" class="d-none px-3 pt-2 pb-1 border-bottom" style="background:#0d1117;border-color:#2d3748!important;">
-            <div class="d-flex align-items-center gap-2 mb-1" style="font-size:.72rem;">
-                <span style="color:#f59e0b;"><i class="bi bi-lightbulb-fill me-1"></i>Outline für dieses Kapitel:</span>
+        <!-- Outline-Panel -->
+        <div id="chapter-outline-panel" class="d-none px-3 pt-2 pb-1 border-bottom" style="background:#0d1117;border-color:#1e2235!important;">
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span style="color:#f59e0b;font-size:.72rem;"><i class="bi bi-lightbulb-fill me-1"></i>Outline für dieses Kapitel:</span>
                 <button class="btn btn-link p-0 ms-auto" style="font-size:.68rem;color:#64748b;" onclick="toggleOutlinePanel()">ein-/ausklappen</button>
             </div>
             <div id="outline-panel-body">
-                <div class="d-flex flex-wrap gap-2 mb-1" id="outline-meta-row"></div>
-                <div id="outline-description-text" class="text-muted" style="font-size:.8rem;white-space:pre-wrap;line-height:1.5;max-height:120px;overflow-y:auto;"></div>
+                <div class="d-flex flex-wrap gap-1 mb-1" id="outline-meta-row"></div>
+                <div id="outline-description-text" style="font-size:.8rem;color:#94a3b8;white-space:pre-wrap;line-height:1.5;max-height:100px;overflow-y:auto;"></div>
             </div>
         </div>
 
-        <!-- Textarea -->
         <div class="flex-grow-1 d-flex flex-column p-3" style="overflow:hidden;">
             <textarea id="chapter-content"
                 class="flex-grow-1 border-0 w-100"
@@ -134,16 +138,25 @@
     <div class="col-md-3 border-start d-flex flex-column" style="overflow-y:auto;background:#0d1117;border-color:#2d3748!important;">
         <div class="p-3">
 
-            <!-- Autor / Schreibstil -->
-            {% if project.writing_style %}
-            <div class="mb-3 p-2 rounded" style="background:#1e1b4b;border:1px solid #3730a3;">
-                <div class="text-muted small fw-semibold mb-1"><i class="bi bi-person-badge me-1"></i>SCHREIBSTIL</div>
-                <div style="color:#a5b4fc;font-size:.8rem;">{{ project.writing_style }}</div>
-                {% if project.writing_style.style_prompt %}
-                <div style="color:#6366f1;font-size:.72rem;font-style:italic;margin-top:.25rem;">{{ project.writing_style.style_prompt|truncatechars:100 }}</div>
+            <!-- Schreibstil für dieses Kapitel -->
+            <div class="mb-3">
+                <div class="small text-muted fw-semibold mb-1"><i class="bi bi-person-badge me-1"></i>SCHREIBSTIL</div>
+                {% if project_styles %}
+                <select id="chapter-style-select" class="form-select form-select-sm"
+                        style="background:#1a1f2e;color:#e2e8f0;border-color:#2d3748;"
+                        onchange="setChapterStyle(this.value)">
+                    <option value="">&#8212; Projekt-Standard</option>
+                    {% for s in project_styles %}
+                    <option value="{{ s.pk }}">{{ s.author.name }}: {{ s.name }}</option>
+                    {% endfor %}
+                </select>
+                <div id="style-prompt-preview" class="mt-1" style="font-size:.7rem;color:#6366f1;font-style:italic;"></div>
+                {% else %}
+                <div class="small text-muted">Keine Stile am Projekt.<br>
+                    <a href="{% url 'authors:list' %}" class="text-primary">Stile anlegen</a> und Projekt bearbeiten.
+                </div>
                 {% endif %}
             </div>
-            {% endif %}
 
             <!-- Ziel-Wortanzahl -->
             <div class="mb-3">
@@ -153,28 +166,25 @@
                     style="background:#1a1f2e;color:#e2e8f0;border-color:#2d3748;"
                     value="3000" min="500" max="20000" step="500">
                 <div class="d-flex gap-1 mt-1 flex-wrap">
-                    {% for v in "2000,5000,7000,10000"|cut:" "|split:"," %}
-                    <button class="btn btn-outline-secondary py-0 px-1" style="font-size:.63rem;"
-                            onclick="document.getElementById('target-words').value='{{ v }}'">{{ v|floatformat:"0g" }}</button>
-                    {% endfor %}
+                    <button class="btn btn-outline-secondary py-0 px-1" style="font-size:.63rem;" onclick="document.getElementById('target-words').value='2000'">2k</button>
+                    <button class="btn btn-outline-secondary py-0 px-1" style="font-size:.63rem;" onclick="document.getElementById('target-words').value='5000'">5k</button>
+                    <button class="btn btn-outline-secondary py-0 px-1" style="font-size:.63rem;" onclick="document.getElementById('target-words').value='7000'">7k</button>
+                    <button class="btn btn-outline-secondary py-0 px-1" style="font-size:.63rem;" onclick="document.getElementById('target-words').value='10000'">10k</button>
                 </div>
             </div>
 
             <!-- Beat / Szenen-Notiz -->
             <div class="mb-3">
                 <label class="form-label small text-muted fw-semibold">BEAT / SZENEN-NOTIZ</label>
-                <textarea id="chapter-beat"
-                    class="form-control form-control-sm"
+                <textarea id="chapter-beat" class="form-control form-control-sm"
                     style="background:#1a1f2e;color:#e2e8f0;border-color:#2d3748;"
-                    rows="5"
-                    placeholder="Was passiert in diesem Kapitel?"></textarea>
+                    rows="5" placeholder="Was passiert in diesem Kapitel?"></textarea>
             </div>
 
             <!-- Emotionaler Bogen -->
             <div class="mb-3">
                 <label class="form-label small text-muted fw-semibold"><i class="bi bi-heart me-1"></i>EMOTIONALER BOGEN</label>
-                <input type="text" id="emotional-arc"
-                    class="form-control form-control-sm"
+                <input type="text" id="emotional-arc" class="form-control form-control-sm"
                     style="background:#1a1f2e;color:#e2e8f0;border-color:#2d3748;"
                     placeholder="z.B. Hoffnung → Zweifel → Entschluss">
             </div>
@@ -186,13 +196,12 @@
                 <ul class="list-unstyled mb-0">
                     {% for char in characters %}
                     <li class="small py-1" style="color:#94a3b8;border-bottom:1px solid #1e2235;">
-                        <i class="bi bi-person-circle me-1" style="color:#6366f1;"></i>
-                        {{ char.project_role|default:char.notes|default:"Charakter" }}
+                        <i class="bi bi-person-circle me-1" style="color:#6366f1;"></i>{{ char.project_role|default:char.notes|default:"Charakter" }}
                     </li>
                     {% endfor %}
                 </ul>
                 {% else %}
-                <div class="small text-muted py-1">Keine Charaktere</div>
+                <div class="small text-muted">Keine Charaktere</div>
                 {% endif %}
             </div>
 
@@ -201,12 +210,10 @@
                 <div class="small text-muted fw-semibold mb-1"><i class="bi bi-globe2 me-1"></i>WELT</div>
                 {% if world_links %}
                 {% for wl in world_links %}
-                <div class="small py-1" style="color:#94a3b8;">
-                    <i class="bi bi-geo-alt me-1" style="color:#6366f1;"></i>{{ wl }}
-                </div>
+                <div class="small py-1" style="color:#94a3b8;"><i class="bi bi-geo-alt me-1" style="color:#6366f1;"></i>{{ wl }}</div>
                 {% endfor %}
                 {% else %}
-                <div class="small text-muted py-1">Keine Welt definiert</div>
+                <div class="small text-muted">Keine Welt definiert</div>
                 {% endif %}
             </div>
 
@@ -214,13 +221,10 @@
             <div class="mb-3">
                 <div class="small text-muted fw-semibold mb-2"><i class="bi bi-stars me-1"></i>KI-AKTIONEN</div>
                 <button class="btn w-100 mb-2" style="background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3;"
-                        onclick="generateAll()"
-                        id="btn-gen-all">
+                        onclick="generateAll()" id="btn-gen-all">
                     <i class="bi bi-lightning-fill me-1"></i>Alle Kapitel generieren
                 </button>
-                <div class="text-muted" style="font-size:.7rem;">
-                    Generiert KI-Inhalte für alle Kapitel basierend auf Outline, Charakteren und Welten.
-                </div>
+                <div class="text-muted" style="font-size:.7rem;">Generiert KI-Inhalte für alle Kapitel basierend auf Outline, Charakteren und Welten.</div>
             </div>
 
             <!-- Tipps -->
@@ -243,100 +247,116 @@
 {% block extra_js %}
 <script>
 const PROJECT_ID = "{{ project.pk }}";
+const CSRF = () => { const v = document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)'); return v ? v[2] : ''; };
 const CHAPTERS = JSON.parse(document.getElementById('chapters-data').textContent);
+const PROJECT_STYLES = JSON.parse(document.getElementById('project-styles-data').textContent);
+const STYLES_MAP = {};
+PROJECT_STYLES.forEach(s => STYLES_MAP[s.id] = s);
 const CHAPTER_MAP = {};
 CHAPTERS.forEach(c => CHAPTER_MAP[c.id] = c);
 
 let currentChapterId = null;
 let currentSaveUrl = null;
+let currentStyleUrl = null;
 let pollInterval = null;
 let autoSaveTimer = null;
 let genAllQueue = [];
-let genAllRunning = false;
 
 function selectChapter(id) {
     const ch = CHAPTER_MAP[id];
     if (!ch) return;
     currentChapterId = id;
     currentSaveUrl = ch.save_url;
+    currentStyleUrl = ch.style_url;
 
     document.getElementById('chapter-title-display').textContent = ch.title;
 
-    // Meta-Badge: Beat-Phase + Akt
-    const metaBadge = document.getElementById('chapter-meta-badge');
-    if (ch.beat_phase || ch.act) {
-        metaBadge.innerHTML = (ch.beat_phase ? `<span class="badge" style="background:#1e1b4b;color:#a5b4fc;font-size:.65rem;">${ch.beat_phase}</span> ` : '')
-            + (ch.act ? `<span class="badge" style="background:#1e2a1e;color:#86efac;font-size:.65rem;">${ch.act}</span>` : '');
-    } else {
-        metaBadge.innerHTML = '';
-    }
+    // Meta-Badge
+    const mb = document.getElementById('chapter-meta-badge');
+    mb.innerHTML = (ch.beat_phase ? `<span class="badge" style="background:#1e1b4b;color:#a5b4fc;font-size:.63rem;">${ch.beat_phase}</span> ` : '')
+        + (ch.act ? `<span class="badge" style="background:#1e2a1e;color:#86efac;font-size:.63rem;">${ch.act}</span>` : '');
 
-    // Outline-Panel füllen
+    // Outline-Panel
     const panel = document.getElementById('chapter-outline-panel');
-    const metaRow = document.getElementById('outline-meta-row');
-    const descEl = document.getElementById('outline-description-text');
     if (ch.description || ch.beat_phase || ch.act || ch.emotional_arc) {
         panel.classList.remove('d-none');
         let meta = '';
-        if (ch.beat_phase) meta += `<span class="badge" style="background:#1e1b4b;color:#a5b4fc;font-size:.65rem;"><i class="bi bi-bookmark me-1"></i>${ch.beat_phase}</span>`;
-        if (ch.act) meta += ` <span class="badge" style="background:#1e2a1e;color:#86efac;font-size:.65rem;"><i class="bi bi-layers me-1"></i>${ch.act}</span>`;
-        if (ch.target_words) meta += ` <span class="badge" style="background:#1e2235;color:#94a3b8;font-size:.65rem;"><i class="bi bi-123 me-1"></i>${ch.target_words} W</span>`;
-        metaRow.innerHTML = meta;
-        if (ch.emotional_arc) {
-            metaRow.innerHTML += ` <span style="font-size:.7rem;color:#fcd34d;"><i class="bi bi-heart me-1"></i>${ch.emotional_arc}</span>`;
-        }
-        descEl.textContent = ch.description || '';
+        if (ch.beat_phase) meta += `<span class="badge" style="background:#1e1b4b;color:#a5b4fc;font-size:.65rem;">${ch.beat_phase}</span>`;
+        if (ch.act) meta += ` <span class="badge" style="background:#1e2a1e;color:#86efac;font-size:.65rem;">${ch.act}</span>`;
+        if (ch.target_words) meta += ` <span class="badge" style="background:#1e2235;color:#94a3b8;font-size:.65rem;">${ch.target_words} W</span>`;
+        if (ch.emotional_arc) meta += ` <span style="font-size:.7rem;color:#fcd34d;"><i class="bi bi-heart"></i> ${ch.emotional_arc}</span>`;
+        document.getElementById('outline-meta-row').innerHTML = meta;
+        document.getElementById('outline-description-text').textContent = ch.description || '';
     } else {
         panel.classList.add('d-none');
     }
 
-    // Beat + EmotArc in Sidebar setzen
+    // Sidebar-Felder
     document.getElementById('chapter-beat').value = ch.description || '';
     document.getElementById('emotional-arc').value = ch.emotional_arc || '';
     if (ch.target_words) document.getElementById('target-words').value = ch.target_words;
 
-    // Kapitel-Liste highlighting
+    // Stil-Auswahl aktualisieren
+    const styleSelect = document.getElementById('chapter-style-select');
+    if (styleSelect) {
+        styleSelect.value = ch.writing_style_id || '';
+        updateStylePromptPreview(ch.writing_style_id || '');
+    }
+
+    // Highlighting
     document.querySelectorAll('.chapter-item').forEach(el => {
         el.style.background = '';
         el.style.borderLeft = '3px solid transparent';
     });
     const item = document.getElementById('chapter-item-' + id);
-    if (item) {
-        item.style.background = '#1e2a3a';
-        item.style.borderLeft = '3px solid #6366f1';
-        item.scrollIntoView({block: 'nearest'});
-    }
+    if (item) { item.style.background = '#1e2a3a'; item.style.borderLeft = '3px solid #6366f1'; item.scrollIntoView({block: 'nearest'}); }
 
     document.getElementById('btn-generate-main').disabled = false;
     document.getElementById('btn-save').disabled = false;
 
-    // Inhalt aus DB laden
     setSaveStatus('Lade...');
     fetch(currentSaveUrl)
         .then(r => r.json())
         .then(data => {
             document.getElementById('chapter-content').value = data.content || '';
             updateWordCount(data.content || '');
-            if (data.updated_at) {
-                setSaveStatus('Gespeichert ' + new Date(data.updated_at).toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'}));
-            } else setSaveStatus('');
+            if (data.updated_at) setSaveStatus('Gespeichert ' + new Date(data.updated_at).toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'}));
+            else setSaveStatus('');
         })
         .catch(() => setSaveStatus(''));
 }
 
-function toggleOutlinePanel() {
-    const body = document.getElementById('outline-panel-body');
-    body.style.display = body.style.display === 'none' ? '' : 'none';
+function updateStylePromptPreview(styleId) {
+    const el = document.getElementById('style-prompt-preview');
+    if (!el) return;
+    const s = STYLES_MAP[styleId];
+    el.textContent = s ? (s.prompt ? s.prompt.substring(0, 120) + (s.prompt.length > 120 ? '...' : '') : '') : '';
 }
 
-function setSaveStatus(msg) {
-    const el = document.getElementById('save-status');
-    if (el) el.textContent = msg;
+function setChapterStyle(styleId) {
+    updateStylePromptPreview(styleId);
+    if (!currentStyleUrl) return;
+    const fd = new FormData();
+    fd.append('writing_style', styleId);
+    fd.append('csrfmiddlewaretoken', CSRF());
+    fetch(currentStyleUrl, {method: 'POST', body: fd})
+        .then(r => r.json())
+        .then(() => {
+            if (currentChapterId && CHAPTER_MAP[currentChapterId]) {
+                CHAPTER_MAP[currentChapterId].writing_style_id = styleId;
+            }
+        });
 }
+
+function toggleOutlinePanel() {
+    const b = document.getElementById('outline-panel-body');
+    b.style.display = b.style.display === 'none' ? '' : 'none';
+}
+
+function setSaveStatus(msg) { const el = document.getElementById('save-status'); if (el) el.textContent = msg; }
 
 function onContentChange() {
-    const content = document.getElementById('chapter-content').value;
-    updateWordCount(content);
+    updateWordCount(document.getElementById('chapter-content').value);
     clearTimeout(autoSaveTimer);
     autoSaveTimer = setTimeout(() => saveContent(true), 2000);
 }
@@ -351,30 +371,29 @@ function startGeneration(chapterId) {
     const btn = document.getElementById('btn-generate-main');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Läuft...';
-    const statusEl = document.getElementById('gen-status');
-    statusEl.classList.remove('d-none');
+    document.getElementById('gen-status').classList.remove('d-none');
     document.getElementById('gen-status-text').textContent = 'Schritt 1/2: Generiere Kapitel-Struktur...';
 
     const ch = CHAPTER_MAP[chapterId];
+    const styleId = document.getElementById('chapter-style-select')?.value || (ch ? ch.writing_style_id : '');
+    const styleName = STYLES_MAP[styleId]?.name || ch?.writing_style_name || '';
+
     fetch(`/api/v1/authoring/projects/${PROJECT_ID}/chapters/${chapterId}/write/`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF()},
         body: JSON.stringify({
             target_word_count: parseInt(document.getElementById('target-words').value),
             chapter_beat: document.getElementById('chapter-beat').value || (ch ? ch.description : ''),
             emotional_arc: document.getElementById('emotional-arc').value || (ch ? ch.emotional_arc : ''),
             beat_phase: ch ? ch.beat_phase : '',
             act: ch ? ch.act : '',
+            writing_style: styleName,
         })
     })
     .then(r => r.json())
     .then(data => {
-        if (data.job_id) {
-            pollJobStatus(data.job_id, chapterId);
-        } else {
-            showGenError(data.error || 'Unbekannter Fehler');
-            resetBtn();
-        }
+        if (data.job_id) pollJobStatus(data.job_id, chapterId);
+        else { showGenError(data.error || 'Fehler'); resetBtn(); }
     })
     .catch(err => { showGenError(err.toString()); resetBtn(); });
 }
@@ -382,36 +401,29 @@ function startGeneration(chapterId) {
 function pollJobStatus(jobId, chapterId) {
     let step = 1;
     pollInterval = setInterval(() => {
-        fetch(`/api/v1/authoring/jobs/${jobId}/status/`)
-        .then(r => r.json())
-        .then(data => {
+        fetch(`/api/v1/authoring/jobs/${jobId}/status/`).then(r => r.json()).then(data => {
             if (step === 1 && data.status !== 'pending') step = 2;
-            document.getElementById('gen-status-text').textContent =
-                `Schritt ${step}/2: Generiere Details für Kapitel...`;
+            document.getElementById('gen-status-text').textContent = `Schritt ${step}/2: Generiere Details für Kapitel...`;
             if (data.status === 'done') {
                 clearInterval(pollInterval);
-                const content = data.content || '';
-                document.getElementById('chapter-content').value = content;
-                updateWordCount(content);
+                document.getElementById('chapter-content').value = data.content || '';
+                updateWordCount(data.content || '');
                 document.getElementById('gen-status').classList.add('d-none');
-                const badge = document.querySelector(`#chapter-item-${chapterId} [style*='color:#22c55e']`) ||
-                              document.querySelector(`#chapter-item-${chapterId} span:last-child`);
                 resetBtn();
-                saveContentDirect(content);
-                // nächstes in Queue
-                if (genAllQueue.length > 0) processGenAllQueue();
+                saveContentDirect(data.content || '');
+                if (genAllQueue.length > 0) setTimeout(processGenAllQueue, 500);
             } else if (data.status === 'failed') {
                 clearInterval(pollInterval);
-                showGenError(data.error || 'Generierung fehlgeschlagen');
+                showGenError(data.error || 'Fehlgeschlagen');
                 resetBtn();
-                if (genAllQueue.length > 0) processGenAllQueue();
+                if (genAllQueue.length > 0) setTimeout(processGenAllQueue, 500);
             }
         });
     }, 2500);
 }
 
 function generateAll() {
-    if (!confirm(`Alle ${CHAPTERS.length} Kapitel mit KI generieren? Das kann einige Minuten dauern.`)) return;
+    if (!confirm(`Alle ${CHAPTERS.length} Kapitel mit KI generieren?`)) return;
     genAllQueue = CHAPTERS.map(c => c.id);
     document.getElementById('btn-gen-all').disabled = true;
     document.getElementById('btn-gen-all').innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Generiert...';
@@ -420,77 +432,48 @@ function generateAll() {
 
 function processGenAllQueue() {
     if (genAllQueue.length === 0) {
-        document.getElementById('btn-gen-all').disabled = false;
-        document.getElementById('btn-gen-all').innerHTML = '<i class="bi bi-lightning-fill me-1"></i>Alle Kapitel generieren';
+        const btn = document.getElementById('btn-gen-all');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-lightning-fill me-1"></i>Alle Kapitel generieren';
         return;
     }
     const nextId = genAllQueue.shift();
     selectChapter(nextId);
-    setTimeout(() => startGeneration(nextId), 500);
+    setTimeout(() => startGeneration(nextId), 600);
 }
 
-function saveContent(silent) {
-    saveContentDirect(document.getElementById('chapter-content').value, silent);
-}
+function saveContent(silent) { saveContentDirect(document.getElementById('chapter-content').value, silent); }
 
 function saveContentDirect(content, silent) {
     if (!currentSaveUrl) return;
     fetch(currentSaveUrl, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF()},
         body: JSON.stringify({content})
     })
     .then(r => r.json())
     .then(data => {
         if (data.ok) {
-            const time = new Date(data.updated_at).toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'});
-            setSaveStatus('Gespeichert ' + time);
+            setSaveStatus('Gespeichert ' + new Date(data.updated_at).toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'}));
             const item = document.getElementById('chapter-item-' + currentChapterId);
             if (item) {
-                const wc = data.word_count || 0;
-                const span = item.querySelector('span[style*="color:#22c55e"], span[style*="color:#f59e0b"]');
-                if (span) {
-                    span.textContent = wc > 0 ? wc + 'W' : '0 W';
-                    span.style.color = wc > 0 ? '#22c55e' : '#f59e0b';
-                }
+                const sp = item.querySelector('span[style*="color:#22c55e"], span[style*="color:#f59e0b"]');
+                if (sp) { sp.textContent = (data.word_count || 0) > 0 ? data.word_count + 'W' : '0 W'; sp.style.color = data.word_count > 0 ? '#22c55e' : '#f59e0b'; }
             }
-            if (!silent) {
-                const btn = document.getElementById('btn-save');
-                btn.innerHTML = '<i class="bi bi-check"></i> Gespeichert';
-                setTimeout(() => { btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Speichern'; }, 1500);
-            }
+            if (!silent) { const btn = document.getElementById('btn-save'); btn.innerHTML = '<i class="bi bi-check"></i> Gespeichert'; setTimeout(() => { btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Speichern'; }, 1500); }
         }
-    })
-    .catch(() => setSaveStatus('Fehler beim Speichern'));
+    }).catch(() => setSaveStatus('Fehler beim Speichern'));
 }
 
-function showGenError(msg) {
-    document.getElementById('gen-status-text').textContent = 'Fehler: ' + msg;
-    document.getElementById('gen-spinner').classList.add('d-none');
-}
-
-function updateWordCount(text) {
-    const count = text.trim() ? text.trim().split(/\s+/).length : 0;
-    document.getElementById('word-count').textContent = count.toLocaleString('de-DE') + ' Wörter';
-}
-
-function resetBtn() {
-    const btn = document.getElementById('btn-generate-main');
-    btn.disabled = false;
-    btn.innerHTML = '<i class="bi bi-stars me-1"></i> Mit KI generieren';
-}
-
-function getCookie(name) {
-    const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
-    return v ? v[2] : null;
-}
+function showGenError(msg) { document.getElementById('gen-status-text').textContent = 'Fehler: ' + msg; document.getElementById('gen-spinner').classList.add('d-none'); }
+function updateWordCount(t) { const c = t.trim() ? t.trim().split(/\s+/).length : 0; document.getElementById('word-count').textContent = c.toLocaleString('de-DE') + ' Wörter'; }
+function resetBtn() { const btn = document.getElementById('btn-generate-main'); btn.disabled = false; btn.innerHTML = '<i class="bi bi-stars me-1"></i>Mit KI generieren'; }
 
 window.addEventListener('DOMContentLoaded', () => {
-    if (CHAPTERS.length > 0) selectChapter(CHAPTERS[0].id);
-    // URL-Param ?chapter=<id> untersützen
     const params = new URLSearchParams(window.location.search);
     const cId = params.get('chapter');
     if (cId && CHAPTER_MAP[cId]) selectChapter(cId);
+    else if (CHAPTERS.length > 0) selectChapter(CHAPTERS[0].id);
 });
 </script>
 {% endblock %}

@@ -84,6 +84,19 @@ def _get_authors(user):
         return []
 
 
+def _get_all_styles(user):
+    """Alle WritingStyles des Users, mit Author-Info."""
+    try:
+        from apps.authors.models import WritingStyle
+        return list(
+            WritingStyle.objects.filter(
+                author__owner=user, is_active=True
+            ).select_related("author").order_by("author__name", "name")
+        )
+    except Exception:
+        return []
+
+
 class ProjectListView(LoginRequiredMixin, ListView):
     model = BookProject
     template_name = "projects/project_list.html"
@@ -133,6 +146,7 @@ class ProjectCreateView(LoginRequiredMixin, View):
             "genres": GenreLookup.objects.all().order_by("order", "name"),
             "audiences": AudienceLookup.objects.all().order_by("order", "name"),
             "authors": _get_authors(user),
+            "all_styles": _get_all_styles(user),
             "series_options": BookSeries.objects.filter(owner=user).order_by("title"),
             "post": post_data or {},
             "is_edit": False,
@@ -150,7 +164,6 @@ class ProjectCreateView(LoginRequiredMixin, View):
         ct_id = request.POST.get("content_type_lookup") or None
         genre_id = request.POST.get("genre_lookup") or None
         audience_id = request.POST.get("audience_lookup") or None
-        writing_style_id = request.POST.get("writing_style") or None
         series_id = request.POST.get("series") or None
         target_word_count = request.POST.get("target_word_count") or None
         if target_word_count:
@@ -168,14 +181,17 @@ class ProjectCreateView(LoginRequiredMixin, View):
             series_id=series_id,
             target_word_count=target_word_count,
         )
-        if writing_style_id:
+        style_ids = request.POST.getlist("writing_styles")
+        if style_ids:
             try:
                 from apps.authors.models import WritingStyle
-                ws = WritingStyle.objects.get(
-                    pk=writing_style_id, author__owner=request.user,
+                styles = WritingStyle.objects.filter(
+                    pk__in=style_ids, author__owner=request.user
                 )
-                project.writing_style_id = ws.pk
-                project.save(update_fields=["writing_style_id"])
+                project.writing_styles.set(styles)
+                if styles:
+                    project.writing_style = styles.first()
+                    project.save(update_fields=["writing_style"])
             except Exception:
                 pass
         messages.success(request, f'Projekt „{project.title}“ angelegt.')
@@ -240,6 +256,7 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
         ctx["chapter_progress_pct"] = (
             min(100, round(written_chapters / total_chapters * 100)) if total_chapters > 0 else 0
         )
+        ctx["project_styles"] = project.get_all_styles()
         return ctx
 
 
@@ -269,7 +286,28 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
         ctx["is_edit"] = True
         ctx["audiences"] = AudienceLookup.objects.all().order_by("order", "name")
         ctx["authors"] = _get_authors(self.request.user)
+        ctx["all_styles"] = _get_all_styles(self.request.user)
+        ctx["selected_style_ids"] = list(
+            self.object.writing_styles.values_list("pk", flat=True)
+        )
         return ctx
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        style_ids = self.request.POST.getlist("writing_styles")
+        try:
+            from apps.authors.models import WritingStyle
+            styles = WritingStyle.objects.filter(
+                pk__in=style_ids, author__owner=self.request.user
+            )
+            self.object.writing_styles.set(styles)
+            first = styles.first()
+            if first:
+                self.object.writing_style = first
+                self.object.save(update_fields=["writing_style"])
+        except Exception:
+            pass
+        return response
 
     def get_success_url(self):
         return reverse_lazy("projects:detail", kwargs={"pk": self.object.pk})
@@ -398,7 +436,10 @@ class ChapterWriterView(LoginRequiredMixin, DetailView):
         active_outline = OutlineVersion.objects.filter(
             project=self.object, is_active=True
         ).order_by("-created_at").first()
-        chapters = list(active_outline.nodes.order_by("order")) if active_outline else []
+        chapters = list(
+            active_outline.nodes.select_related("writing_style", "writing_style__author")
+            .order_by("order")
+        ) if active_outline else []
         ctx["chapters"] = chapters
         ctx["chapter_count"] = len(chapters)
         ctx["active_outline"] = active_outline
@@ -408,7 +449,21 @@ class ChapterWriterView(LoginRequiredMixin, DetailView):
         ctx["world_links"] = ProjectWorldLink.objects.filter(
             project=self.object
         ).select_related()
+        ctx["project_styles"] = self.object.get_all_styles()
         return ctx
+
+
+class ChapterNodeStyleView(LoginRequiredMixin, View):
+    """Setzt den Schreibstil für ein einzelnes Kapitel."""
+
+    def post(self, request, node_pk):
+        node = get_object_or_404(
+            OutlineNode, pk=node_pk, outline_version__project__owner=request.user
+        )
+        style_id = request.POST.get("writing_style") or None
+        node.writing_style_id = style_id
+        node.save(update_fields=["writing_style"])
+        return JsonResponse({"ok": True, "style_id": str(style_id) if style_id else None})
 
 
 class ChapterContentView(LoginRequiredMixin, View):
@@ -421,10 +476,14 @@ class ChapterContentView(LoginRequiredMixin, View):
 
     def get(self, request, node_pk):
         node = self._get_node(request, node_pk)
+        style = node.get_effective_style()
         return JsonResponse({
             "content": node.content,
             "word_count": node.word_count,
             "updated_at": node.content_updated_at.isoformat() if node.content_updated_at else None,
+            "writing_style_id": str(node.writing_style_id) if node.writing_style_id else None,
+            "writing_style_name": str(style) if style else None,
+            "style_prompt": style.style_prompt if style else "",
         })
 
     def post(self, request, node_pk):

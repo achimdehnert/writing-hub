@@ -1,33 +1,35 @@
 {% extends "base.html" %}
-
 {% block title %}{% if is_edit %}Projekt bearbeiten{% else %}Neues Schreibprojekt{% endif %} — Writing Hub{% endblock %}
 {% block nav_projects %}active{% endblock %}
 
 {% block extra_head %}
 <style>
 .wh-form .form-label { color: #cbd5e1 !important; font-weight: 500; margin-bottom: .35rem; }
-.wh-form .form-control,
-.wh-form .form-select {
-    background-color: #131929 !important;
-    color: #f1f5f9 !important;
-    border: 1px solid #475569 !important;
-    border-radius: .4rem;
+.wh-form .form-control, .wh-form .form-select {
+    background-color: #131929 !important; color: #f1f5f9 !important;
+    border: 1px solid #475569 !important; border-radius: .4rem;
 }
 .wh-form .form-control::placeholder { color: #64748b !important; }
-.wh-form .form-control:focus,
-.wh-form .form-select:focus {
+.wh-form .form-control:focus, .wh-form .form-select:focus {
     border-color: #6366f1 !important;
     box-shadow: 0 0 0 2px rgba(99,102,241,.25) !important;
-    background-color: #131929 !important;
-    color: #f1f5f9 !important;
+    background-color: #131929 !important; color: #f1f5f9 !important;
 }
 .wh-form .form-select option { background: #1e2235; color: #f1f5f9; }
 .wh-form .form-text { color: #94a3b8 !important; }
 .wh-form .ct-tile { transition: border-color .15s, background .15s; }
 .wh-form .ct-tile:hover { border-color: #6366f1 !important; background: #1a1f3a !important; }
 .wh-form .btn-check:checked + .ct-tile { border-color: #6366f1 !important; background: #1e1b4b !important; }
-.wh-form .genre-tag.active,
-.wh-form .btn-check:checked + .genre-tag { background: #4f46e5 !important; color: #fff !important; border-color: #4f46e5 !important; }
+.wh-form .genre-tag.active, .wh-form .btn-check:checked + .genre-tag {
+    background: #4f46e5 !important; color: #fff !important; border-color: #4f46e5 !important;
+}
+.style-card { border: 2px solid #2d3748; border-radius: .5rem; padding: .75rem 1rem;
+    background: #131929; cursor: pointer; transition: border-color .15s, background .15s; }
+.style-card:hover { border-color: #6366f1; background: #1a1f3a; }
+.style-card.selected { border-color: #6366f1 !important; background: #1e1b4b !important; }
+.style-card .style-name { color: #e2e8f0; font-weight: 600; font-size: .9rem; }
+.style-card .author-name { color: #a5b4fc; font-size: .75rem; }
+.style-card .style-status { font-size: .65rem; }
 </style>
 {% endblock %}
 
@@ -131,31 +133,55 @@
            class="form-control" placeholder="50000" min="1000" step="1000">
 </div>
 
-<!-- Autor & Schreibstil aus authors-App -->
+<!-- Autoren & Schreibstile — Mehrfachauswahl -->
 <div class="mb-4">
-    <label class="form-label"><i class="bi bi-person-badge me-1"></i>Autor &amp; Schreibstil</label>
-    {% if authors %}
-    <div class="row g-2">
-        <div class="col-md-5">
-            <select id="author-select" class="form-select" onchange="updateStyleSelect(this.value)">
-                <option value="">— Autor wählen —</option>
-                {% for a in authors %}
-                <option value="{{ a.pk }}">{{ a.name }}</option>
-                {% endfor %}
-            </select>
+    <label class="form-label">
+        <i class="bi bi-person-badge me-1"></i>Autoren &amp; Schreibstile
+        <span class="text-muted small ms-2">(mehrere wählbar — z.B. zwei Autoren oder verschiedene Ich-Perspektiven)</span>
+    </label>
+    {% if all_styles %}
+    <div class="row g-2" id="style-grid">
+        {% for style in all_styles %}
+        <div class="col-md-6">
+            <label class="style-card w-100 d-block {% if is_edit and style.pk|stringformat:'s' in selected_style_ids|stringformat:'s' %}selected{% endif %}"
+                   id="style-label-{{ style.pk }}"
+                   onclick="toggleStyle('{{ style.pk }}', this)">
+                <input type="checkbox" name="writing_styles" value="{{ style.pk }}"
+                       id="style-cb-{{ style.pk }}" class="d-none"
+                       {% if is_edit and style.pk|stringformat:'s' in selected_style_ids|join:',' %}checked{% endif %}>
+                <div class="d-flex align-items-start gap-2">
+                    <div class="flex-grow-1">
+                        <div class="style-name">{{ style.name }}</div>
+                        <div class="author-name"><i class="bi bi-person-circle me-1"></i>{{ style.author.name }}</div>
+                    </div>
+                    <div>
+                        {% if style.status == 'ready' %}
+                        <span class="style-status badge" style="background:#1a3a1a;color:#22c55e;"><i class="bi bi-check-circle"></i> Bereit</span>
+                        {% elif style.status == 'analyzing' %}
+                        <span class="style-status badge" style="background:#1a2a3a;color:#60a5fa;">Analyse...</span>
+                        {% else %}
+                        <span class="style-status badge" style="background:#1e2235;color:#94a3b8;">Entwurf</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if style.description %}
+                <div class="mt-1" style="font-size:.72rem;color:#64748b;">{{ style.description|truncatechars:80 }}</div>
+                {% endif %}
+            </label>
         </div>
-        <div class="col-md-7">
-            <select name="writing_style" id="style-select" class="form-select">
-                <option value="">— zuerst Autor wählen —</option>
-            </select>
-        </div>
+        {% endfor %}
     </div>
-    <div class="form-text mt-1" id="style-desc"></div>
+    <div class="mt-2">
+        <span class="text-muted small" id="style-count-hint">0 Stile ausgewählt</span>
+        <a href="{% url 'authors:list' %}" class="btn btn-link btn-sm text-primary p-0 ms-3" target="_blank">
+            <i class="bi bi-plus-circle me-1"></i>Stile verwalten
+        </a>
+    </div>
     {% else %}
     <div class="p-3 rounded" style="background:#131929;border:1px solid #475569;">
         <span class="text-muted small">
             <i class="bi bi-info-circle me-1"></i>
-            Noch keine Autoren angelegt.
+            Noch keine Schreibstile angelegt.
             <a href="{% url 'authors:create' %}" class="text-primary" target="_blank">Jetzt anlegen</a>
         </span>
     </div>
@@ -212,35 +238,19 @@
 
 {% block extra_js %}
 <script>
-const AUTHOR_STYLES = {
-    {% for a in authors %}
-    "{{ a.pk }}": [
-        {% for s in a.writing_styles.all %}
-        {"pk": "{{ s.pk }}", "name": "{{ s.name|escapejs }}", "desc": "{{ s.description|escapejs }}", "status": "{{ s.status }}"},
-        {% endfor %}
-    ],
-    {% endfor %}
-};
-
-function updateStyleSelect(authorPk) {
-    const styleSelect = document.getElementById('style-select');
-    const desc = document.getElementById('style-desc');
-    styleSelect.innerHTML = '<option value="">— Schreibstil wählen —</option>';
-    desc.textContent = '';
-    const styles = AUTHOR_STYLES[authorPk] || [];
-    styles.forEach(s => {
-        const opt = document.createElement('option');
-        opt.value = s.pk;
-        opt.textContent = s.name + (s.status === 'ready' ? ' ✓' : ' (Entwurf)');
-        styleSelect.appendChild(opt);
-    });
+function toggleStyle(pk, label) {
+    const cb = document.getElementById('style-cb-' + pk);
+    cb.checked = !cb.checked;
+    label.classList.toggle('selected', cb.checked);
+    updateStyleCount();
 }
 
-document.getElementById('style-select')?.addEventListener('change', function() {
-    const authorPk = document.getElementById('author-select').value;
-    const styles = AUTHOR_STYLES[authorPk] || [];
-    const sel = styles.find(s => s.pk === this.value);
-    document.getElementById('style-desc').textContent = sel?.desc || '';
-});
+function updateStyleCount() {
+    const count = document.querySelectorAll('input[name="writing_styles"]:checked').length;
+    const hint = document.getElementById('style-count-hint');
+    if (hint) hint.textContent = count + ' Stil' + (count !== 1 ? 'e' : '') + ' ausgewählt';
+}
+
+document.addEventListener('DOMContentLoaded', updateStyleCount);
 </script>
 {% endblock %}

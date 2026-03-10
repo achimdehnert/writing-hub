@@ -145,7 +145,14 @@ class BookProject(models.Model):
     )
     writing_style = models.ForeignKey(
         "authors.WritingStyle", on_delete=models.SET_NULL, null=True, blank=True,
-        verbose_name="Schreibstil", related_name="projects",
+        verbose_name="Primärer Schreibstil",
+        related_name="projects",
+    )
+    writing_styles = models.ManyToManyField(
+        "authors.WritingStyle",
+        blank=True,
+        verbose_name="Schreibstile (mehrere möglich)",
+        related_name="projects_m2m",
     )
 
     class ContentType(models.TextChoices):
@@ -173,6 +180,13 @@ class BookProject(models.Model):
 
     def __str__(self):
         return self.title
+
+    def get_all_styles(self):
+        """Alle zugeordneten Schreibstile (primär + M2M), dedupliziert."""
+        styles = list(self.writing_styles.select_related("author").all())
+        if self.writing_style and self.writing_style not in styles:
+            styles.insert(0, self.writing_style)
+        return styles
 
 
 class OutlineVersion(models.Model):
@@ -206,7 +220,6 @@ class OutlineVersion(models.Model):
         return f"{self.project.title} — {self.name}"
 
     def save_as_new_version(self, name=None, label=None, user=None):
-        """Erstellt eine Kopie dieser Version mit neuem Namen."""
         new = OutlineVersion.objects.create(
             project=self.project,
             created_by=user,
@@ -226,6 +239,7 @@ class OutlineVersion(models.Model):
                 act=node.act,
                 target_words=node.target_words,
                 emotional_arc=node.emotional_arc,
+                writing_style=node.writing_style,
                 order=node.order,
                 notes=node.notes,
             )
@@ -248,21 +262,16 @@ class OutlineNode(models.Model):
         ("part", "Teil"),
     ]
     beat_type = models.CharField(max_length=20, choices=BEAT_TYPES, default="chapter")
-    beat_phase = models.CharField(
-        max_length=100, blank=True, default="",
-        help_text="Beat/Phase des Frameworks, z.B. 'Opening Image'",
-    )
-    act = models.CharField(
-        max_length=100, blank=True, default="",
-        help_text="Akt/Teil, z.B. 'Akt 1 - Setup'",
-    )
-    target_words = models.PositiveIntegerField(
+    beat_phase = models.CharField(max_length=100, blank=True, default="")
+    act = models.CharField(max_length=100, blank=True, default="")
+    target_words = models.PositiveIntegerField(null=True, blank=True)
+    emotional_arc = models.CharField(max_length=300, blank=True, default="")
+    writing_style = models.ForeignKey(
+        "authors.WritingStyle",
+        on_delete=models.SET_NULL,
         null=True, blank=True,
-        help_text="Ziel-Wortanzahl für dieses Kapitel",
-    )
-    emotional_arc = models.CharField(
-        max_length=300, blank=True, default="",
-        help_text="Emotionaler Bogen des Kapitels",
+        verbose_name="Schreibstil für dieses Kapitel",
+        related_name="outline_nodes",
     )
     order = models.PositiveIntegerField(default=0)
     notes = models.TextField(blank=True)
@@ -285,3 +294,9 @@ class OutlineNode(models.Model):
         else:
             self.word_count = 0
         super().save(*args, **kwargs)
+
+    def get_effective_style(self):
+        """Effektiver Stil: Kapitel-Stil > Projekt-Primärstil."""
+        if self.writing_style:
+            return self.writing_style
+        return self.outline_version.project.writing_style
