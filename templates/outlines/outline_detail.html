@@ -36,7 +36,7 @@
 
 <!-- Projekt-Header Banner -->
 <div class="rounded-3 p-4 mb-4" style="background: linear-gradient(135deg, #3730a3 0%, #6366f1 100%);">
-    <div class="d-flex align-items-start justify-content-between">
+    <div class="d-flex align-items-start justify-content-between flex-wrap gap-2">
         <div>
             <h4 class="fw-bold text-white mb-1">
                 <i class="bi bi-book me-2"></i>{{ project.title }}
@@ -47,7 +47,7 @@
                 {% if project.target_word_count %}<i class="bi bi-pencil ms-3 me-1"></i>{{ project.target_word_count|floatformat:0 }} Wörter Ziel{% endif %}
             </div>
         </div>
-        <div class="d-flex gap-2">
+        <div>
             {% if not outline.is_active %}
             <form method="post" action="{% url 'outlines:set_active' outline.pk %}">
                 {% csrf_token %}
@@ -121,17 +121,18 @@
             </div>
         </div>
 
-        <!-- Alle Versionen -->
         {% if all_versions.count > 1 %}
         <details>
-            <summary class="text-muted small" style="cursor:pointer;"><i class="bi bi-list-ul me-1"></i> Alle Versionen anzeigen ({{ all_versions.count }})</summary>
+            <summary class="text-muted small" style="cursor:pointer;">
+                <i class="bi bi-list-ul me-1"></i> Alle Versionen ({{ all_versions.count }})
+            </summary>
             <div class="mt-2">
             {% for v in all_versions %}
             <div class="d-flex align-items-center justify-content-between py-1 border-bottom" style="border-color:#2d3748 !important;">
                 <div class="small">
                     <span style="color:#e2e8f0;">{{ v.name }}</span>
                     <span class="text-muted ms-2">{{ v.created_at|date:"d.m.Y H:i" }}</span>
-                    {% if v.is_active %}<span class="badge ms-2" style="background:#1a3a1a;color:#22c55e;font-size:.6rem;">Aktiv</span>{% endif %}
+                    {% if v.is_active %}<span class="badge ms-1" style="background:#1a3a1a;color:#22c55e;font-size:.6rem;">Aktiv</span>{% endif %}
                 </div>
                 <div class="d-flex gap-1">
                     {% if v.pk != outline.pk %}
@@ -150,12 +151,11 @@
         </details>
         {% endif %}
 
-        <!-- Workflow-Fortschritt -->
+        <!-- Workflow-Badges -->
         <div class="mt-3">
             <div class="text-muted small mb-2">Workflow-Fortschritt:</div>
             <div class="d-flex align-items-center gap-2 flex-wrap">
-                <span class="badge px-3 py-2"
-                      style="background:{% if workflow_status != 'leer' %}#1e3a8a{% else %}#1e2235{% endif %};color:#a5b4fc;">
+                <span class="badge px-3 py-2" style="background:#1e3a8a;color:#a5b4fc;">
                     <i class="bi bi-check-circle-fill me-1"></i> Entwurf
                 </span>
                 <i class="bi bi-arrow-right text-muted"></i>
@@ -174,89 +174,76 @@
     </div>
 </div>
 
-<!-- Struktur wählen -->
+<!-- Struktur / Framework -->
 <div class="card mb-4" style="background:#0d1117;border-color:#2d3748;">
     <div class="card-header py-2" style="border-color:#2d3748;">
         <span class="fw-semibold"><i class="bi bi-diagram-3 me-2"></i>Struktur wählen</span>
     </div>
     <div class="card-body">
-        <!-- Framework-Kacheln -->
-        <div class="row g-2 mb-3">
-            {% for fw_id, fw in all_frameworks.items %}
-            <div class="col-md-4 col-6">
-                <div class="p-2 rounded text-center fw-tile"
-                     style="border: 1px solid {% if fw_key == fw_id %}#6366f1{% else %}#2d3748{% endif %};
-                            background: {% if fw_key == fw_id %}#1e1b4b{% else %}#0d1117{% endif %};
-                            cursor: pointer;"
-                     onclick="selectFramework('{{ fw_id }}')">
-                    <i class="{{ fw.icon }} d-block mb-1" style="color:#6366f1;"></i>
-                    <div class="small fw-semibold" style="color:#e2e8f0;">{{ fw.label }}</div>
-                    <div class="text-muted" style="font-size:.65rem;">{{ fw.subtitle }}</div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
+        <div class="row g-4">
 
-        <!-- Beats-Preview für aktives Framework -->
-        {% if fw_info %}
-        <div class="rounded p-3" style="background:#1e1b4b; border: 1px solid #3730a3;">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-                <div>
-                    <span class="fw-semibold" style="color:#a5b4fc;">
-                        <i class="bi bi-star me-1"></i>{{ fw_info.label }}
-                    </span>
-                    <span class="text-muted small ms-2">{{ fw_info.subtitle }}</span>
+            <!-- Linke Spalte: Listbox -->
+            <div class="col-md-5">
+                <label class="form-label small text-muted">Framework ({{ frameworks|length }} verfügbar)</label>
+                <select id="fw-listbox" size="8"
+                        class="form-select bg-dark text-light border-secondary"
+                        style="height: auto;"
+                        onchange="onFrameworkSelect(this.value)">
+                    {% for fw in frameworks %}
+                    <option value="{{ fw.key }}"
+                            data-beats="{{ fw.beat_count }}"
+                            data-subtitle="{{ fw.subtitle|escapejs }}"
+                            data-icon="{{ fw.icon }}"
+                            {% if active_fw and active_fw.key == fw.key %}selected{% endif %}>
+                        <i class="{{ fw.icon }}"></i> {{ fw.name }} ({{ fw.beat_count }} Beats)
+                    </option>
+                    {% endfor %}
+                </select>
+                <div class="mt-2 d-flex gap-2">
+                    <button class="btn btn-primary btn-sm" id="btn-gen-fw"
+                            onclick="openGenerateWithFw()">
+                        <i class="bi bi-stars me-1"></i> KI generieren
+                    </button>
+                    <form method="post" action="{% url 'projects:outline_create' project.pk %}" id="fw-apply-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="framework_template" id="fw-apply-key" value="{% if active_fw %}{{ active_fw.key }}{% endif %}">
+                        <input type="hidden" name="chapter_count" id="fw-apply-count" value="0">
+                        <button type="submit" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-layout-text-sidebar me-1"></i> Anwenden
+                        </button>
+                    </form>
                 </div>
-                <div class="text-muted small">Anzahl Kapitel: <strong style="color:#e2e8f0;">{{ node_count }}</strong></div>
             </div>
-            <div class="row g-1">
-                {% for beat_name, start, end in fw_info.beats %}
-                <div class="col-auto">
-                    <span class="badge" style="background:#2d3a7a; color:#a5b4fc; font-size:.68rem;">
-                        {{ forloop.counter }}. {{ beat_name|truncatechars:25 }}
-                        <span class="ms-1" style="color:#6366f1;">({{ start }}-{{ end }}%)</span>
-                    </span>
-                </div>
-                {% endfor %}
-            </div>
-            <div class="mt-2">
-                <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#changeFwModal">
-                    <i class="bi bi-arrow-repeat me-1"></i> Framework wechseln
-                </button>
-            </div>
-        </div>
-        {% else %}
-        <div class="text-center py-3">
-            <p class="text-muted small mb-2">Kein Framework ausgewählt</p>
-            <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#changeFwModal">
-                <i class="bi bi-diagram-3 me-1"></i> Framework wählen
-            </button>
-        </div>
-        {% endif %}
 
-        <!-- Aktions-Buttons -->
-        <div class="d-flex flex-wrap gap-2 mt-3">
-            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#generateModal">
-                <i class="bi bi-stars me-1"></i> AI Outline generieren
-            </button>
-            <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#generateModal">
-                <i class="bi bi-lightning me-1"></i> Vollständiges Outline generieren
-            </button>
-            <form method="post" action="{% url 'outlines:node_add' outline.pk %}" class="d-inline">
-                {% csrf_token %}
-                <input type="hidden" name="title" value="Neues Kapitel">
-                <button class="btn btn-outline-success btn-sm">
-                    <i class="bi bi-plus-circle me-1"></i> Kapitel hinzufügen
-                </button>
-            </form>
-            {% if not outline.is_active %}
-            <form method="post" action="{% url 'outlines:set_active' outline.pk %}" class="d-inline">
-                {% csrf_token %}
-                <button class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-check-circle me-1"></i> Speichern &amp; aktivieren
-                </button>
-            </form>
-            {% endif %}
+            <!-- Rechte Spalte: Beats-Preview -->
+            <div class="col-md-7">
+                {% if active_fw %}
+                <div id="beats-preview">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <i class="{{ active_fw.icon }} fs-4" style="color:#6366f1;"></i>
+                        <div>
+                            <div class="fw-semibold" style="color:#e2e8f0;">{{ active_fw.name }}</div>
+                            <div class="text-muted small">{{ active_fw.subtitle }}</div>
+                        </div>
+                        <span class="badge ms-auto" style="background:#1e2235;color:#6366f1;">{{ active_fw.beat_count }} Beats</span>
+                    </div>
+                    <div class="d-flex flex-wrap gap-1">
+                        {% for beat in active_fw.beats.all %}
+                        <span class="badge" style="background:#1a2035;color:#a5b4fc;font-size:.72rem;border:1px solid #2d3a7a;">
+                            <span style="color:#6366f1;">{{ beat.order }}.</span>
+                            {{ beat.name }}
+                            <span class="ms-1" style="color:#475569;">{{ beat.position_start }}-{{ beat.position_end }}%</span>
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% else %}
+                <div id="beats-preview" class="text-center py-4">
+                    <i class="bi bi-diagram-3 d-block mb-2 text-muted" style="font-size:2rem;"></i>
+                    <p class="text-muted small">Framework auswählen um Beats anzuzeigen</p>
+                </div>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>
@@ -275,12 +262,10 @@
             <div class="d-flex align-items-start justify-content-between gap-3">
                 <div class="flex-grow-1">
                     <div class="d-flex align-items-center gap-2 mb-1">
-                        <span class="text-muted small fw-semibold" style="min-width:2rem;color:#6366f1;">{{ node.order }}.</span>
+                        <span class="fw-semibold" style="min-width:2rem;color:#6366f1;">{{ node.order }}.</span>
                         <span class="fw-semibold" style="color:#e2e8f0;">{{ node.title }}</span>
                         {% if node.word_count > 0 %}
-                        <span class="badge" style="background:#1a3a1a;color:#22c55e;font-size:.62rem;">
-                            {{ node.word_count }}W
-                        </span>
+                        <span class="badge" style="background:#1a3a1a;color:#22c55e;font-size:.62rem;">{{ node.word_count }}W</span>
                         {% endif %}
                         <span class="badge border" style="background:transparent;border-color:#2d3748 !important;color:#64748b;font-size:.62rem;">{{ node.beat_type }}</span>
                     </div>
@@ -288,9 +273,7 @@
                     <div class="ms-4 text-muted small" style="white-space:pre-wrap;line-height:1.6;max-height:80px;overflow:hidden;" id="desc-{{ node.pk }}">{{ node.description }}</div>
                     {% if node.description|length > 200 %}
                     <button class="btn btn-link btn-sm ms-4 p-0 text-muted" style="font-size:.72rem;"
-                            onclick="toggleDesc('{{ node.pk }}')" id="toggle-{{ node.pk }}">
-                        mehr anzeigen
-                    </button>
+                            onclick="toggleDesc('{{ node.pk }}')" id="toggle-{{ node.pk }}">mehr anzeigen</button>
                     {% endif %}
                     {% endif %}
                 </div>
@@ -305,14 +288,12 @@
                         </button>
                     </form>
                     <button class="btn btn-outline-secondary btn-sm"
-                            data-bs-toggle="collapse"
-                            data-bs-target="#edit-{{ node.pk }}"
+                            data-bs-toggle="collapse" data-bs-target="#edit-{{ node.pk }}"
                             title="Bearbeiten">
                         <i class="bi bi-pencil"></i>
                     </button>
                     <form method="post" action="{% url 'outlines:node_delete' node.pk %}"
-                          style="display:inline;"
-                          onsubmit="return confirm('Kapitel löschen?')">
+                          style="display:inline;" onsubmit="return confirm('Kapitel löschen?')">
                         {% csrf_token %}
                         <button class="btn btn-outline-danger btn-sm" title="Löschen">
                             <i class="bi bi-trash"></i>
@@ -320,8 +301,6 @@
                     </form>
                 </div>
             </div>
-
-            <!-- Edit-Form (ausgeklappt) -->
             <div class="collapse mt-2" id="edit-{{ node.pk }}">
                 <form method="post" action="{% url 'outlines:node_update' node.pk %}" class="ms-4 p-3 rounded" style="background:#1a1f2e;">
                     {% csrf_token %}
@@ -346,8 +325,7 @@
                             <i class="bi bi-floppy me-1"></i>Speichern
                         </button>
                         <button type="button" class="btn btn-outline-secondary btn-sm"
-                                data-bs-toggle="collapse"
-                                data-bs-target="#edit-{{ node.pk }}">Abbrechen</button>
+                                data-bs-toggle="collapse" data-bs-target="#edit-{{ node.pk }}">Abbrechen</button>
                     </div>
                 </form>
             </div>
@@ -356,10 +334,10 @@
         {% else %}
         <div class="p-5 text-center">
             <i class="bi bi-list-ol d-block mb-2 text-muted" style="font-size:3rem;"></i>
-            <p class="text-muted mb-3">Noch keine Kapitel vorhanden</p>
-            <p class="text-muted small mb-3">Wähle ein Framework und klicke auf "AI Outline generieren" um zu starten.</p>
+            <p class="text-muted mb-1">Noch keine Kapitel vorhanden</p>
+            <p class="text-muted small mb-3">Wähle ein Framework und klicke auf "KI generieren".</p>
             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#generateModal">
-                <i class="bi bi-stars me-1"></i> AI Outline generieren
+                <i class="bi bi-stars me-1"></i> KI-Outline generieren
             </button>
         </div>
         {% endif %}
@@ -368,7 +346,8 @@
     <div class="card-footer py-2" style="border-color:#2d3748;background:#0a0d14;">
         <form method="post" action="{% url 'outlines:node_add' outline.pk %}" class="d-flex gap-2">
             {% csrf_token %}
-            <input type="text" name="title" class="form-control form-control-sm bg-dark text-light border-secondary"
+            <input type="text" name="title"
+                   class="form-control form-control-sm bg-dark text-light border-secondary"
                    placeholder="Titel des neuen Kapitels...">
             <button class="btn btn-outline-success btn-sm px-3">
                 <i class="bi bi-plus-circle me-1"></i> Hinzufügen
@@ -378,14 +357,14 @@
     {% endif %}
 </div>
 
-<!-- Gefährliche Zone -->
+<!-- Aktionen -->
 <div class="card" style="background:#0d1117;border-color:#3a1a1a;">
     <div class="card-header py-2" style="border-color:#3a1a1a;">
         <span class="fw-semibold small text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Aktionen</span>
     </div>
     <div class="card-body d-flex gap-2">
         <form method="post" action="{% url 'outlines:delete' outline.pk %}"
-              onsubmit="return confirm('Outline wirklich löschen? Alle Kapitel werden entfernt.')">
+              onsubmit="return confirm('Outline wirklich löschen?')">
             {% csrf_token %}
             <button class="btn btn-outline-danger btn-sm">
                 <i class="bi bi-trash me-1"></i> Outline löschen
@@ -395,6 +374,25 @@
 </div>
 
 </div><!-- /max-width -->
+
+<!-- Beats-Daten für JS -->
+<script id="fw-data" type="application/json">
+{
+    {% for fw in frameworks %}
+    "{{ fw.key }}": {
+        "name": "{{ fw.name|escapejs }}",
+        "subtitle": "{{ fw.subtitle|escapejs }}",
+        "icon": "{{ fw.icon|escapejs }}",
+        "beat_count": {{ fw.beat_count }},
+        "beats": [
+            {% for beat in fw.beats.all %}
+            {"order": {{ beat.order }}, "name": "{{ beat.name|escapejs }}", "start": {{ beat.position_start }}, "end": {{ beat.position_end }}}{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ]
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+}
+</script>
 
 <!-- Modal: KI-Outline generieren -->
 <div class="modal fade" id="generateModal" tabindex="-1">
@@ -412,20 +410,18 @@
             <select id="genFwSelect" name="framework"
                     class="form-select bg-dark text-light border-secondary"
                     onchange="updateGenInfo(this.value)">
-              {% for fw_id, fw in all_frameworks.items %}
-              <option value="{{ fw_id }}" {% if fw_key == fw_id %}selected{% endif %}>{{ fw.label }} ({{ fw.beats|length }} Beats)</option>
+              {% for fw in frameworks %}
+              <option value="{{ fw.key }}" {% if active_fw and active_fw.key == fw.key %}selected{% endif %}>
+                  {{ fw.name }} ({{ fw.beat_count }} Beats)
+              </option>
               {% endfor %}
             </select>
           </div>
-          <div class="mb-2 rounded p-2" style="background:#1e2235;border:1px solid #2d3148;">
+          <div class="rounded p-2 mb-2" style="background:#1e2235;border:1px solid #2d3148;">
             <i class="bi bi-list-ol me-1" style="color:#6366f1;"></i>
             <span id="genInfoText" style="color:#6366f1;font-weight:600;"></span>
           </div>
-          <input type="hidden" name="chapter_count" id="genChapterCount" value="6">
-          <div class="mt-3 alert py-2 px-3" style="background:#1e2235;border:1px solid #2d3148;font-size:.8rem;color:#94a3b8;">
-            <i class="bi bi-info-circle me-1"></i>
-            Die KI nutzt Titel, Genre, Framework und Beschreibung als Kontext. 10–30 Sekunden.
-          </div>
+          <input type="hidden" name="chapter_count" id="genChapterCount" value="">
         </div>
         <div class="modal-footer border-secondary py-2">
           <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Abbrechen</button>
@@ -438,51 +434,62 @@
   </div>
 </div>
 
-<!-- Modal: Framework wechseln -->
-<div class="modal fade" id="changeFwModal" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content" style="background:#1a1d27;border:1px solid #2d3148;color:#e2e8f0;">
-      <div class="modal-header border-secondary py-2">
-        <h6 class="modal-title"><i class="bi bi-diagram-3 me-2"></i>Framework wählen</h6>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <p class="text-muted small mb-3">Wähle ein Framework und generiere anschließend das KI-Outline:</p>
-        <div class="row g-3">
-            {% for fw_id, fw in all_frameworks.items %}
-            <div class="col-md-4">
-                <div class="p-3 rounded text-center"
-                     style="border: 1px solid {% if fw_key == fw_id %}#6366f1{% else %}#2d3748{% endif %};
-                            background: {% if fw_key == fw_id %}#1e1b4b{% else %}#0d1117{% endif %};
-                            cursor: pointer;"
-                     onclick="document.getElementById('genFwSelect').value='{{ fw_id }}'; updateGenInfo('{{ fw_id }}'); bootstrap.Modal.getInstance(document.getElementById('changeFwModal')).hide(); bootstrap.Modal.getOrCreateInstance(document.getElementById('generateModal')).show();">
-                    <i class="{{ fw.icon }} d-block mb-2 fs-3" style="color:#6366f1;"></i>
-                    <div class="fw-semibold mb-1" style="color:#e2e8f0;">{{ fw.label }}</div>
-                    <div class="text-muted small">{{ fw.subtitle }}</div>
-                    <div class="badge mt-2" style="background:#1e2235;color:#6366f1;">{{ fw.beats|length }} Beats</div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
-const FW_BEATS = {
-    {% for fw_id, fw in all_frameworks.items %}
-    '{{ fw_id }}': {{ fw.beats|length }},
-    {% endfor %}
-};
+const FW_DATA = JSON.parse(document.getElementById('fw-data').textContent);
 
-function updateGenInfo(val) {
-    const count = FW_BEATS[val] || 0;
-    document.getElementById('genInfoText').textContent = count + ' Kapitel werden generiert';
-    document.getElementById('genChapterCount').value = count;
+function updateGenInfo(key) {
+    const fw = FW_DATA[key];
+    if (!fw) return;
+    document.getElementById('genInfoText').textContent = fw.beat_count + ' Kapitel werden generiert';
+    document.getElementById('genChapterCount').value = fw.beat_count;
+}
+
+function onFrameworkSelect(key) {
+    const fw = FW_DATA[key];
+    if (!fw) return;
+
+    // Listbox-Wert für Apply-Form synchronisieren
+    document.getElementById('fw-apply-key').value = key;
+    document.getElementById('fw-apply-count').value = fw.beat_count || 0;
+
+    // Beats-Preview dynamisch aktualisieren
+    const preview = document.getElementById('beats-preview');
+    let html = `
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="${fw.icon} fs-4" style="color:#6366f1;"></i>
+            <div>
+                <div class="fw-semibold" style="color:#e2e8f0;">${fw.name}</div>
+                <div class="text-muted small">${fw.subtitle}</div>
+            </div>
+            <span class="badge ms-auto" style="background:#1e2235;color:#6366f1;">${fw.beat_count} Beats</span>
+        </div>
+        <div class="d-flex flex-wrap gap-1">`;
+
+    fw.beats.forEach(b => {
+        html += `<span class="badge" style="background:#1a2035;color:#a5b4fc;font-size:.72rem;border:1px solid #2d3a7a;">
+            <span style="color:#6366f1;">${b.order}.</span>
+            ${b.name}
+            <span style="color:#475569;">${b.start}-${b.end}%</span>
+        </span>`;
+    });
+    html += '</div>';
+    preview.innerHTML = html;
+
+    // KI-Modal-Framework synchronisieren
+    const genSelect = document.getElementById('genFwSelect');
+    if (genSelect) genSelect.value = key;
+    updateGenInfo(key);
+}
+
+function openGenerateWithFw() {
+    const key = document.getElementById('fw-listbox').value;
+    if (key) {
+        onFrameworkSelect(key);
+    }
+    new bootstrap.Modal(document.getElementById('generateModal')).show();
 }
 
 function toggleDesc(nodeId) {
@@ -497,21 +504,14 @@ function toggleDesc(nodeId) {
     }
 }
 
-function selectFramework(fwId) {
-    // Framework-Wahl -> Modal öffnen
-    document.getElementById('genFwSelect').value = fwId;
-    updateGenInfo(fwId);
-    new bootstrap.Modal(document.getElementById('generateModal')).show();
-}
-
 document.getElementById('genForm')?.addEventListener('submit', function() {
     const btn = document.getElementById('btn-gen-submit');
     if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Generiert...'; }
 });
 
 // Init
-const initFw = document.getElementById('genFwSelect')?.value;
-if (initFw) updateGenInfo(initFw);
+const initKey = document.getElementById('genFwSelect')?.value;
+if (initKey) updateGenInfo(initKey);
 
 document.querySelectorAll('.toast').forEach(el => setTimeout(() => el.classList.remove('show'), 5000));
 </script>

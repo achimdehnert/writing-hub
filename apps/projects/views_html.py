@@ -16,38 +16,19 @@ from django.views.generic import DetailView, ListView, UpdateView
 from apps.series.models import BookSeries
 from .models import (
     AudienceLookup, AuthorStyleLookup, BookProject,
-    ContentTypeLookup, GenreLookup, OutlineNode, OutlineVersion,
+    ContentTypeLookup, GenreLookup, OutlineFramework,
+    OutlineNode, OutlineVersion,
 )
 
 logger = logging.getLogger(__name__)
 
-OUTLINE_FRAMEWORKS = {
-    "three_act": [
-        "Akt I: Einführung", "Wendepunkt 1", "Akt II: Konfrontation",
-        "Mittelpunkt", "Wendepunkt 2", "Akt III: Auflösung",
-    ],
-    "save_the_cat": [
-        "Opening Image", "Theme Stated", "Set-Up", "Catalyst", "Debate",
-        "Break into Two", "B Story", "Fun and Games", "Midpoint", "Bad Guys Close In",
-        "All Is Lost", "Dark Night of the Soul", "Break into Three", "Finale", "Final Image",
-    ],
-    "heros_journey": [
-        "Gewöhnliche Welt", "Ruf zum Abenteuer", "Weigerung", "Mentor",
-        "Überschreiten der Schwelle", "Prüfungen & Verbündete", "Die innerste Höhle",
-        "Die große Prüfung", "Belohnung", "Der Rückweg", "Auferstehung", "Rückkehr mit dem Elixier",
-    ],
-    "five_act": [
-        "Akt I: Exposition", "Akt II: Steigende Handlung", "Akt III: Höhepunkt",
-        "Akt IV: Fallende Handlung", "Akt V: Katastrophe / Auflösung",
-    ],
-    "dan_harmon": [
-        "You (Held in Komfortzone)", "Need (Etwas fehlt)", "Go (Unbekannte Zone betreten)",
-        "Search (Anpassung / Suche)", "Find (Was gesucht wurde finden)",
-        "Take (Preis zahlen)", "Return (Zurückkehren)", "Change (Veränderung)",
-    ],
+# Fallback-Beats wenn DB leer (nur für KI-Generierung)
+FW_BEATS_FALLBACK = {
+    "three_act": 6, "save_the_cat": 15, "heros_journey": 12,
+    "five_act": 5, "dan_harmon": 8, "blank": 0,
 }
 
-FW_LABELS = {
+FW_LABELS_FALLBACK = {
     "three_act": "Drei-Akt-Struktur",
     "save_the_cat": "Save the Cat",
     "heros_journey": "Heldenreise",
@@ -55,8 +36,6 @@ FW_LABELS = {
     "dan_harmon": "Dan Harmon Story Circle",
     "blank": "Leere Kapitel",
 }
-
-KNOWN_FRAMEWORKS = set(OUTLINE_FRAMEWORKS.keys()) | {"blank"}
 
 DEFAULT_CONTENT_TYPES = [
     {"slug": "roman", "name": "Roman", "icon": "bi-book",
@@ -69,6 +48,30 @@ DEFAULT_CONTENT_TYPES = [
      "subtitle": "Argumentativer Text zu einem Thema",
      "workflow_hint": "These → Recherche → Gliederung → Schreiben"},
 ]
+
+
+def _get_frameworks():
+    """Frameworks aus DB laden; Fallback auf leere Liste wenn DB leer."""
+    return list(
+        OutlineFramework.objects
+        .filter(is_active=True)
+        .prefetch_related("beats")
+        .order_by("order", "name")
+    )
+
+
+def _fw_label(fw_key, frameworks):
+    for fw in frameworks:
+        if fw.key == fw_key:
+            return fw.name
+    return FW_LABELS_FALLBACK.get(fw_key, fw_key)
+
+
+def _fw_beat_count(fw_key, frameworks):
+    for fw in frameworks:
+        if fw.key == fw_key:
+            return fw.beat_count
+    return FW_BEATS_FALLBACK.get(fw_key, 12)
 
 
 class ProjectListView(LoginRequiredMixin, ListView):
@@ -111,8 +114,6 @@ class ProjectListView(LoginRequiredMixin, ListView):
 
 
 class ProjectCreateView(LoginRequiredMixin, View):
-    """Neues Projekt anlegen — BFAgent-style Formular."""
-
     template_name = "projects/project_form.html"
 
     def _context(self, post_data=None):
@@ -140,7 +141,6 @@ class ProjectCreateView(LoginRequiredMixin, View):
             ctx = self._context(request.POST)
             ctx["error"] = "Bitte einen Arbeitstitel eingeben."
             return render(request, self.template_name, ctx)
-
         ct_id = request.POST.get("content_type_lookup") or None
         genre_id = request.POST.get("genre_lookup") or None
         audience_id = request.POST.get("audience_lookup") or None
@@ -152,7 +152,6 @@ class ProjectCreateView(LoginRequiredMixin, View):
                 target_word_count = int(target_word_count)
             except ValueError:
                 target_word_count = None
-
         project = BookProject.objects.create(
             owner=request.user,
             title=title,
@@ -180,10 +179,7 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
         ctx = super().get_context_data(**kwargs)
         project = self.object
 
-        # Outlines
-        outlines = OutlineVersion.objects.filter(
-            project=project
-        ).order_by("-created_at")
+        outlines = OutlineVersion.objects.filter(project=project).order_by("-created_at")
         ctx["outlines"] = outlines
         selected_id = self.request.GET.get("outline")
         if selected_id:
@@ -195,30 +191,25 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
             selected = outlines.filter(is_active=True).first() or outlines.first()
         ctx["selected_outline"] = selected
         ctx["outline_nodes"] = selected.nodes.order_by("order") if selected else []
-        ctx["outline_frameworks"] = list(OUTLINE_FRAMEWORKS.keys())
-        if selected and selected.source in KNOWN_FRAMEWORKS:
-            ctx["selected_outline_framework"] = selected.source
-        else:
-            ctx["selected_outline_framework"] = "three_act"
 
-        # Ideen
+        # Framework aus DB
+        frameworks = _get_frameworks()
+        ctx["frameworks"] = frameworks
+        active_fw_key = selected.source if selected else "three_act"
+        ctx["selected_outline_framework"] = active_fw_key
+        ctx["selected_fw_beat_count"] = _fw_beat_count(active_fw_key, frameworks)
+
         from apps.idea_import.models import IdeaImportDraft
         ctx["idea_drafts"] = IdeaImportDraft.objects.filter(
             project=project
-        ).exclude(
-            status=IdeaImportDraft.Status.DISCARDED
-        ).order_by("-created_at")[:10]
+        ).exclude(status=IdeaImportDraft.Status.DISCARDED).order_by("-created_at")[:10]
 
-        # Welten
         from apps.worlds.models import ProjectWorldLink, ProjectCharacterLink
         ctx["world_links"] = ProjectWorldLink.objects.filter(project=project)
-
-        # Charaktere
         characters = ProjectCharacterLink.objects.filter(project=project).select_related()
         ctx["characters"] = characters
         ctx["character_count"] = characters.count()
 
-        # Statistiken für Dashboard
         all_nodes = OutlineNode.objects.filter(
             outline_version__project=project,
             outline_version__is_active=True,
@@ -231,19 +222,11 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
         ctx["stat_chapters_total"] = total_chapters
         ctx["stat_characters"] = characters.count()
         ctx["stat_worlds"] = ctx["world_links"].count()
-
-        # Fortschritt
         target = project.target_word_count or 0
-        if target > 0 and total_words > 0:
-            ctx["progress_pct"] = min(100, round(total_words / target * 100))
-        else:
-            ctx["progress_pct"] = 0
-
-        if total_chapters > 0 and written_chapters > 0:
-            ctx["chapter_progress_pct"] = min(100, round(written_chapters / total_chapters * 100))
-        else:
-            ctx["chapter_progress_pct"] = 0
-
+        ctx["progress_pct"] = min(100, round(total_words / target * 100)) if target > 0 else 0
+        ctx["chapter_progress_pct"] = (
+            min(100, round(written_chapters / total_chapters * 100)) if total_chapters > 0 else 0
+        )
         return ctx
 
 
@@ -281,8 +264,6 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
 
 
 class OutlineCreateView(LoginRequiredMixin, View):
-    """Manuell Outline via Framework anlegen."""
-
     def get(self, request, pk):
         return redirect("projects:detail", pk=pk)
 
@@ -291,38 +272,42 @@ class OutlineCreateView(LoginRequiredMixin, View):
         name = request.POST.get("name", "").strip()
         notes = request.POST.get("notes", "")
         chapter_count = int(request.POST.get("chapter_count", 0) or 0)
-        framework_template = request.POST.get("framework_template", "").strip()
-        logger.info(
-            "OutlineCreateView.post pk=%s framework=%s chapter_count=%s user=%s",
-            pk, framework_template, chapter_count, request.user,
-        )
-        if not framework_template:
+        framework_key = request.POST.get("framework_template", "").strip()
+        logger.info("OutlineCreateView.post pk=%s fw=%s user=%s", pk, framework_key, request.user)
+
+        if not framework_key:
             messages.warning(request, "Bitte ein Framework auswählen.")
             return redirect("projects:detail", pk=pk)
+
+        # Framework aus DB laden
+        frameworks = _get_frameworks()
+        fw_obj = next((f for f in frameworks if f.key == framework_key), None)
+        fw_label = fw_obj.name if fw_obj else FW_LABELS_FALLBACK.get(framework_key, framework_key)
         if not name:
-            name = FW_LABELS.get(framework_template, framework_template)
+            name = fw_label
+
         try:
             OutlineVersion.objects.filter(project=project, is_active=True).update(is_active=False)
             version = OutlineVersion.objects.create(
                 project=project,
                 created_by=request.user,
                 name=name,
-                source=framework_template,
+                source=framework_key,
                 notes=notes,
                 is_active=True,
             )
-            beats = OUTLINE_FRAMEWORKS.get(framework_template, [])
+            beats = list(fw_obj.beats.order_by("order")) if fw_obj else []
             if beats:
                 OutlineNode.objects.bulk_create([
                     OutlineNode(
                         outline_version=version,
-                        title=beat,
+                        title=b.name,
                         beat_type="chapter",
-                        order=i + 1,
+                        order=b.order,
                     )
-                    for i, beat in enumerate(beats)
+                    for b in beats
                 ])
-                messages.success(request, f'Outline „{name}" mit {len(beats)} Kapiteln angelegt.')
+                messages.success(request, f'Outline „{name}" mit {len(beats)} Beats angelegt.')
             elif chapter_count > 0:
                 OutlineNode.objects.bulk_create([
                     OutlineNode(
@@ -335,7 +320,7 @@ class OutlineCreateView(LoginRequiredMixin, View):
                 ])
                 messages.success(request, f'Outline „{name}" mit {chapter_count} leeren Kapiteln angelegt.')
             else:
-                messages.success(request, f'Outline-Struktur „{name}" angelegt.')
+                messages.success(request, f'Outline „{name}" angelegt.')
             url = reverse("projects:detail", kwargs={"pk": pk}) + f"?outline={version.pk}"
             return redirect(url)
         except Exception as exc:
@@ -345,8 +330,6 @@ class OutlineCreateView(LoginRequiredMixin, View):
 
 
 class OutlineGenerateView(LoginRequiredMixin, View):
-    """KI-Outline generieren."""
-
     def get(self, request, pk):
         return redirect("projects:detail", pk=pk)
 
@@ -355,10 +338,7 @@ class OutlineGenerateView(LoginRequiredMixin, View):
         project = get_object_or_404(BookProject, pk=pk, owner=request.user)
         framework = request.POST.get("framework", "three_act").strip()
         chapter_count = int(request.POST.get("chapter_count", 12) or 12)
-        logger.info(
-            "OutlineGenerateView.post pk=%s framework=%s chapter_count=%s user=%s",
-            pk, framework, chapter_count, request.user,
-        )
+        logger.info("OutlineGenerateView.post pk=%s fw=%s user=%s", pk, framework, request.user)
         try:
             svc = OutlineGeneratorService()
             result = svc.generate_outline(
@@ -368,16 +348,18 @@ class OutlineGenerateView(LoginRequiredMixin, View):
             )
             if result.success and result.nodes:
                 OutlineVersion.objects.filter(project=project, is_active=True).update(is_active=False)
+                frameworks = _get_frameworks()
+                fw_label = _fw_label(framework, frameworks)
                 version_id = svc.save_outline(
                     project_id=str(project.pk),
                     nodes=result.nodes,
-                    name=f"KI: {FW_LABELS.get(framework, framework)}",
+                    name=f"KI: {fw_label}",
                     framework=framework,
                     user=request.user,
                 )
                 messages.success(
                     request,
-                    f"KI-Outline ({FW_LABELS.get(framework, framework)}, {len(result.nodes)} Beats) generiert."
+                    f"KI-Outline ({fw_label}, {len(result.nodes)} Beats) generiert."
                 )
                 url = reverse("projects:detail", kwargs={"pk": pk})
                 if version_id:

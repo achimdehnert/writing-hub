@@ -2,7 +2,7 @@
 Outlines — HTML Views
 
 Eigenständiger Outline-Bereich: Liste, Detail/Editor, Node-Edit, Delete.
-Nutzt apps.projects.models (OutlineVersion, OutlineNode).
+Nutzt apps.projects.models (OutlineVersion, OutlineNode, OutlineFramework).
 """
 import logging
 
@@ -12,93 +12,9 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.views.generic import DetailView, ListView
 
-from apps.projects.models import OutlineNode, OutlineVersion
+from apps.projects.models import OutlineFramework, OutlineNode, OutlineVersion
 
 logger = logging.getLogger(__name__)
-
-OUTLINE_FRAMEWORKS = {
-    "three_act": {
-        "label": "Drei-Akt-Struktur",
-        "subtitle": "Klassische dramatische Struktur",
-        "icon": "bi-layers",
-        "beats": [
-            ("Akt I: Einführung", 1, 10),
-            ("Wendepunkt 1", 10, 25),
-            ("Akt II: Konfrontation", 25, 50),
-            ("Mittelpunkt", 50, 50),
-            ("Wendepunkt 2", 75, 75),
-            ("Akt III: Auflösung", 75, 100),
-        ],
-    },
-    "save_the_cat": {
-        "label": "Save the Cat",
-        "subtitle": "15 Beats für emotionale Spannung",
-        "icon": "bi-star",
-        "beats": [
-            ("Opening Image", 0, 1),
-            ("Theme Stated", 1, 5),
-            ("Set-Up", 1, 10),
-            ("Catalyst", 10, 10),
-            ("Debate", 10, 25),
-            ("Break into Two", 25, 25),
-            ("B Story", 25, 30),
-            ("Fun and Games", 30, 50),
-            ("Midpoint", 50, 50),
-            ("Bad Guys Close In", 50, 75),
-            ("All Is Lost", 75, 75),
-            ("Dark Night of the Soul", 75, 80),
-            ("Break into Three", 80, 80),
-            ("Finale", 80, 99),
-            ("Final Image", 99, 100),
-        ],
-    },
-    "heros_journey": {
-        "label": "Heldenreise",
-        "subtitle": "12 Schritte nach Campbell",
-        "icon": "bi-compass",
-        "beats": [
-            ("Gewöhnliche Welt", 0, 8),
-            ("Ruf zum Abenteuer", 8, 15),
-            ("Weigerung", 15, 20),
-            ("Mentor", 20, 28),
-            ("Überschreiten der Schwelle", 28, 35),
-            ("Prüfungen & Verbündete", 35, 50),
-            ("Die innerste Höhle", 50, 60),
-            ("Die große Prüfung", 60, 70),
-            ("Belohnung", 70, 75),
-            ("Der Rückweg", 75, 85),
-            ("Auferstehung", 85, 95),
-            ("Rückkehr mit dem Elixier", 95, 100),
-        ],
-    },
-    "five_act": {
-        "label": "Fünf-Akt-Struktur",
-        "subtitle": "Shakespeares dramatisches Modell",
-        "icon": "bi-bar-chart-steps",
-        "beats": [
-            ("Akt I: Exposition", 0, 20),
-            ("Akt II: Steigende Handlung", 20, 40),
-            ("Akt III: Höhepunkt", 40, 60),
-            ("Akt IV: Fallende Handlung", 60, 80),
-            ("Akt V: Katastrophe / Auflösung", 80, 100),
-        ],
-    },
-    "dan_harmon": {
-        "label": "Dan Harmon Story Circle",
-        "subtitle": "8 Schritte des Story Circle",
-        "icon": "bi-arrow-repeat",
-        "beats": [
-            ("You (Held in Komfortzone)", 0, 12),
-            ("Need (Etwas fehlt)", 12, 25),
-            ("Go (Unbekannte Zone betreten)", 25, 37),
-            ("Search (Anpassung / Suche)", 37, 50),
-            ("Find (Was gesucht wurde finden)", 50, 62),
-            ("Take (Preis zahlen)", 62, 75),
-            ("Return (Zurückkehren)", 75, 87),
-            ("Change (Veränderung)", 87, 100),
-        ],
-    },
-}
 
 
 class OutlineListView(LoginRequiredMixin, ListView):
@@ -117,7 +33,7 @@ class OutlineListView(LoginRequiredMixin, ListView):
 
 
 class OutlineDetailView(LoginRequiredMixin, DetailView):
-    """Outline Editor — BFAgent-style mit Framework-Wahl, Beats, Versionen."""
+    """Outline Editor — BFAgent-style mit DB-Frameworks, Listbox, Beats-Preview."""
     template_name = "outlines/outline_detail.html"
     context_object_name = "outline"
 
@@ -138,12 +54,25 @@ class OutlineDetailView(LoginRequiredMixin, DetailView):
         ctx["all_versions"] = OutlineVersion.objects.filter(
             project=project
         ).order_by("-created_at")
-        ctx["all_frameworks"] = OUTLINE_FRAMEWORKS
 
-        fw_key = outline.source if outline.source in OUTLINE_FRAMEWORKS else None
-        ctx["fw_key"] = fw_key
-        ctx["fw_info"] = OUTLINE_FRAMEWORKS.get(fw_key) if fw_key else None
+        # Frameworks aus DB
+        frameworks = list(
+            OutlineFramework.objects
+            .filter(is_active=True)
+            .prefetch_related("beats")
+            .order_by("order", "name")
+        )
+        ctx["frameworks"] = frameworks
 
+        # Aktives Framework anhand outline.source
+        active_fw = None
+        for fw in frameworks:
+            if fw.key == outline.source:
+                active_fw = fw
+                break
+        ctx["active_fw"] = active_fw
+
+        # Statistiken
         total_words = sum(n.word_count for n in nodes if n.word_count)
         written = sum(1 for n in nodes if n.word_count and n.word_count > 0)
         ctx["stat_words"] = total_words
@@ -255,7 +184,6 @@ class OutlineNodeEnrichView(LoginRequiredMixin, View):
             ctx = ctx_svc.get_context(str(project.pk))
             context_block = ctx.to_prompt_block()
             existing = node.description.strip() or "(noch kein Inhalt)"
-
             system_prompt = (
                 "Du bist ein erfahrener Romanautor und Story-Entwickler.\n"
                 "Du erweiterst kurze Kapitel-Outlines zu detaillierten Szenenplanungen.\n"
