@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, views_html, views_review, views_lektorat
+from . import views, views_export, views_html, views_review, views_lektorat
 
 app_name = "projects"
 
@@ -14,6 +14,8 @@ urlpatterns = [
     path("<uuid:pk>/outline/generate/", views_html.OutlineGenerateView.as_view(), name="outline_generate"),
     path("node/<uuid:node_pk>/content/", views_html.ChapterContentView.as_view(), name="node_content"),
     path("node/<uuid:node_pk>/style/", views_html.ChapterNodeStyleView.as_view(), name="node_style"),
+    # Export
+    path("<uuid:pk>/export/", views_export.ProjectExportView.as_view(), name="export"),
     # Review
     path("<uuid:pk>/review/", views_review.ProjectReviewView.as_view(), name="review"),
     path("<uuid:pk>/review/<uuid:node_pk>/", views_review.ProjectReviewChapterView.as_view(), name="review_chapter"),

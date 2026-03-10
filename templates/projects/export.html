@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}Export — {{ project.title }} — Writing Hub{% endblock %}
+{% block nav_projects %}active{% endblock %}
+{% block page_title %}<i class="bi bi-download me-2"></i>Manuskript exportieren{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'projects:detail' project.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Zurück zum Projekt
+</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .format-card {
+        background: #1e2235;
+        border: 2px solid #2d3148;
+        border-radius: .75rem;
+        padding: 1.5rem 1rem;
+        text-align: center;
+        cursor: pointer;
+        transition: border-color .15s, background .15s;
+        user-select: none;
+    }
+    .format-card:hover { border-color: #6366f1; background: #232740; }
+    .format-card.selected { border-color: #6366f1; background: #2d3060; }
+    .format-card i { font-size: 2rem; color: #6366f1; display: block; margin-bottom: .5rem; }
+    .format-card .fmt-label { font-weight: 600; color: #e2e8f0; font-size: .95rem; }
+    .format-card .fmt-ext { color: #64748b; font-size: .78rem; }
+    .format-card.disabled { opacity: .4; cursor: not-allowed; }
+    .stat-val { font-size: 1.8rem; font-weight: 700; color: #6366f1; }
+    .option-row { display: flex; align-items: center; gap: .75rem; padding: .6rem 0;
+                  border-bottom: 1px solid #2d3148; }
+    .option-row:last-child { border-bottom: none; }
+    .option-row label { color: #cbd5e1; font-size: .9rem; margin: 0; cursor: pointer; flex-grow: 1; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-lg-7">
+
+    <!-- Title + Stats -->
+    <div class="card mb-4">
+        <div class="card-body text-center py-4">
+            <i class="bi bi-download d-block mb-2" style="font-size:2.2rem;color:#6366f1;"></i>
+            <h4 class="fw-bold mb-1" style="color:#e2e8f0;">Manuskript exportieren</h4>
+            <div class="text-muted small mb-3">{{ project.title }}</div>
+            <div class="d-flex justify-content-center gap-5">
+                <div>
+                    <div class="stat-val">{{ word_count|default:"0" }}</div>
+                    <div class="text-muted small">Wörter</div>
+                </div>
+                <div>
+                    <div class="stat-val">{{ chapter_count }}</div>
+                    <div class="text-muted small">Kapitel</div>
+                </div>
+                <div>
+                    <div class="stat-val">~{{ page_count }}</div>
+                    <div class="text-muted small">~Seiten</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" action="{% url 'projects:export' project.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="format" id="selectedFormat" value="markdown">
+
+        <!-- Format-Auswahl -->
+        <div class="card mb-4">
+            <div class="card-header py-2">
+                <span class="fw-semibold small"><i class="bi bi-grid me-1"></i>Format wählen</span>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-4">
+                        <div class="format-card disabled" data-fmt="pdf" title="PDF (demnächst verfügbar)">
+                            <i class="bi bi-file-earmark-pdf"></i>
+                            <div class="fmt-label">PDF</div>
+                            <div class="fmt-ext">.pdf</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="format-card disabled" data-fmt="epub" title="EPUB (demnächst verfügbar)">
+                            <i class="bi bi-book"></i>
+                            <div class="fmt-label">EPUB</div>
+                            <div class="fmt-ext">.epub</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="format-card selected" data-fmt="markdown">
+                            <i class="bi bi-markdown"></i>
+                            <div class="fmt-label">Markdown</div>
+                            <div class="fmt-ext">.markdown</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="format-card" data-fmt="html">
+                            <i class="bi bi-file-earmark-code"></i>
+                            <div class="fmt-label">HTML</div>
+                            <div class="fmt-ext">.html</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="format-card" data-fmt="text">
+                            <i class="bi bi-file-earmark-text"></i>
+                            <div class="fmt-label">Text</div>
+                            <div class="fmt-ext">.txt</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export-Optionen -->
+        <div class="card mb-4">
+            <div class="card-header py-2">
+                <span class="fw-semibold small"><i class="bi bi-gear me-1"></i>Export-Optionen</span>
+            </div>
+            <div class="card-body py-2">
+                <div class="option-row">
+                    <input class="form-check-input m-0" type="checkbox" name="include_outline"
+                           id="opt_outline" checked style="flex-shrink:0;">
+                    <label for="opt_outline">Outline pro Kapitel einschließen</label>
+                </div>
+                <div class="option-row">
+                    <input class="form-check-input m-0" type="checkbox" name="include_title_page"
+                           id="opt_title" checked style="flex-shrink:0;">
+                    <label for="opt_title">Titelseite hinzufügen</label>
+                </div>
+                <div class="option-row">
+                    <input class="form-check-input m-0" type="checkbox" name="all_chapters"
+                           id="opt_all" checked style="flex-shrink:0;">
+                    <label for="opt_all">Alle Kapitel exportieren
+                        <span class="text-muted" style="font-size:.78rem;">
+                            (deaktiviert = nur Kapitel mit geschriebenem Text)
+                        </span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kapitel-Vorschau -->
+        <div class="card mb-4">
+            <div class="card-header py-2 d-flex align-items-center justify-content-between">
+                <span class="fw-semibold small"><i class="bi bi-list-ol me-1"></i>Kapitel</span>
+                <span class="badge bg-secondary">{{ chapter_count }}</span>
+            </div>
+            <div class="card-body p-0" style="max-height:260px;overflow-y:auto;">
+                {% if chapters %}
+                <ul class="list-group list-group-flush">
+                    {% for ch in chapters %}
+                    <li class="list-group-item border-0 py-2 px-3"
+                        style="background:transparent;color:#e2e8f0;border-bottom:1px solid #2d3148 !important;">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-muted small" style="min-width:1.5rem;">{{ ch.order }}.</span>
+                            <span class="small flex-grow-1">{{ ch.title }}</span>
+                            {% if ch.has_content %}
+                            <span class="badge" style="background:#14532d;color:#86efac;font-size:.65rem;">
+                                <i class="bi bi-check-lg"></i> Text
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary" style="font-size:.65rem;">leer</span>
+                            {% endif %}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="p-4 text-center text-muted small">
+                    <i class="bi bi-journal-text d-block mb-2" style="font-size:2rem;"></i>
+                    Kein aktives Outline — bitte zuerst ein Outline anlegen.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Export Button -->
+        <button type="submit" class="btn w-100 py-2 fw-semibold"
+                style="background:#22c55e;color:#fff;font-size:1rem;"
+                {% if not chapter_count %}disabled{% endif %}>
+            <i class="bi bi-download me-2"></i>Jetzt exportieren
+        </button>
+
+    </form>
+
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.format-card:not(.disabled)').forEach(function(card) {
+    card.addEventListener('click', function() {
+        document.querySelectorAll('.format-card').forEach(c => c.classList.remove('selected'));
+        this.classList.add('selected');
+        document.getElementById('selectedFormat').value = this.dataset.fmt;
+    });
+});
+</script>
+{% endblock %}
