@@ -2,95 +2,386 @@
 
 {% block title %}{{ project.title }} — Writing Hub{% endblock %}
 {% block nav_projects %}active{% endblock %}
-{% block page_title %}<i class="bi bi-folder2-open me-2"></i>{{ project.title }}{% endblock %}
-
-{% block topbar_actions %}
-<a href="{% url 'projects:edit' project.pk %}" class="btn btn-outline-secondary btn-sm">
-    <i class="bi bi-pencil"></i> Bearbeiten
-</a>
-<a href="{% url 'projects:chapter_writer' project.pk %}" class="btn btn-primary btn-sm">
-    <i class="bi bi-pen"></i> Schreiben
-</a>
-{% endblock %}
 
 {% block content %}
-<div class="row g-4">
+<div style="max-width: 1100px; margin: 0 auto;">
 
-    <!-- Projekt-Info -->
-    <div class="col-md-4">
-        <div class="card mb-3">
-            <div class="card-header py-2">
-                <span class="fw-semibold small"><i class="bi bi-info-circle me-1"></i>Projektinfos</span>
-            </div>
-            <div class="card-body">
-                <dl class="mb-0">
-                    {% if project.series %}
-                    <dt class="text-muted small mb-1">Serie</dt>
-                    <dd class="mb-3 fw-semibold" style="color:#a78bfa;">{{ project.series }}</dd>
-                    {% endif %}
-                    {% if project.content_type_lookup %}
-                    <dt class="text-muted small mb-1">Typ</dt>
-                    <dd class="mb-3 fw-semibold" style="color:#e2e8f0;">{{ project.content_type_lookup }}</dd>
-                    {% endif %}
-                    {% if project.genre_lookup %}
-                    <dt class="text-muted small mb-1">Genre</dt>
-                    <dd class="mb-3 fw-semibold" style="color:#e2e8f0;">{{ project.genre_lookup }}</dd>
-                    {% elif project.genre %}
-                    <dt class="text-muted small mb-1">Genre</dt>
-                    <dd class="mb-3 fw-semibold" style="color:#e2e8f0;">{{ project.genre }}</dd>
-                    {% endif %}
-                    {% if project.audience_lookup %}
-                    <dt class="text-muted small mb-1">Zielgruppe</dt>
-                    <dd class="mb-3" style="color:#cbd5e1;">{{ project.audience_lookup }}</dd>
-                    {% elif project.target_audience %}
-                    <dt class="text-muted small mb-1">Zielgruppe</dt>
-                    <dd class="mb-3" style="color:#cbd5e1;">{{ project.target_audience }}</dd>
-                    {% endif %}
-                    {% if project.target_word_count %}
-                    <dt class="text-muted small mb-1">Ziel-Wortanzahl</dt>
-                    <dd class="mb-3 fw-semibold" style="color:#e2e8f0;">{{ project.target_word_count|floatformat:0 }} Wörter</dd>
-                    {% endif %}
-                    <dt class="text-muted small mb-1">Erstellt</dt>
-                    <dd class="mb-0" style="color:#cbd5e1;">{{ project.created_at|date:"d.m.Y" }}</dd>
-                </dl>
+<!-- Zurück -->
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <a href="{% url 'projects:list' %}" class="btn btn-link text-muted ps-0">
+        <i class="bi bi-arrow-left me-1"></i> Alle Projekte
+    </a>
+    <div class="d-flex gap-2">
+        <a href="{% url 'projects:edit' project.pk %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-pencil me-1"></i> Bearbeiten
+        </a>
+    </div>
+</div>
+
+<!-- Projekt-Header -->
+<div class="mb-4">
+    <h2 class="fw-bold mb-1" style="color: #e2e8f0;">
+        <i class="bi bi-book me-2 text-primary"></i>{{ project.title }}
+    </h2>
+    <div class="text-muted small mb-3">
+        {% if project.genre_lookup %}{{ project.genre_lookup }}{% elif project.genre %}{{ project.genre }}{% endif %}
+        {% if project.content_type_lookup %}• {{ project.content_type_lookup }}{% endif %}
+        {% if project.author_style %}• {{ project.author_style }}{% endif %}
+    </div>
+
+    <!-- Quick-Action Badges -->
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <a href="{% url 'projects:chapter_writer' project.pk %}" class="btn btn-sm"
+           style="background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3;font-size:.75rem;">
+            <i class="bi bi-pen me-1"></i> Schreiben
+        </a>
+        <a href="{% url 'projects:chapter_writer' project.pk %}" class="btn btn-sm"
+           style="background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3;font-size:.75rem;">
+            <i class="bi bi-stars me-1"></i> KI-Schreiben
+        </a>
+        {% if selected_outline %}
+        <a href="{% url 'outlines:detail' selected_outline.pk %}" class="btn btn-sm"
+           style="background:#1e2235;color:#94a3b8;border:1px solid #2d3748;font-size:.75rem;">
+            <i class="bi bi-list-ol me-1"></i> Outline
+        </a>
+        {% endif %}
+        <button class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#generateModal"
+           style="background:#1e2235;color:#94a3b8;border:1px solid #2d3748;font-size:.75rem;">
+            <i class="bi bi-magic me-1"></i> KI-Outline
+        </button>
+        <a href="{% url 'projects:edit' project.pk %}" class="btn btn-sm"
+           style="background:#1e2235;color:#94a3b8;border:1px solid #2d3748;font-size:.75rem;">
+            <i class="bi bi-gear me-1"></i> Einstellungen
+        </a>
+    </div>
+
+    <!-- Stat-Kästchen -->
+    <div class="row g-3 mb-4">
+        <div class="col-4 col-md-2">
+            <div class="card text-center py-3" style="background:#0d1117;border-color:#2d3748;">
+                <div class="fw-bold fs-4" style="color:#6366f1;">{{ stat_words|default:0 }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Wörter</div>
             </div>
         </div>
-
-        <div class="card">
-            <div class="card-header py-2">
-                <span class="fw-semibold small"><i class="bi bi-grid me-1"></i>Aktionen</span>
+        <div class="col-4 col-md-2">
+            <div class="card text-center py-3" style="background:#0d1117;border-color:#2d3748;">
+                <div class="fw-bold fs-4" style="color:#6366f1;">{{ stat_chapters_total|default:0 }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Kapitel</div>
             </div>
-            <div class="card-body d-grid gap-2">
-                <a href="{% url 'projects:chapter_writer' project.pk %}" class="btn btn-primary btn-sm">
-                    <i class="bi bi-pen me-1"></i> KI-Kapitelschreiber
-                </a>
-                <a href="{% url 'projects:edit' project.pk %}" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-pencil me-1"></i> Projekt bearbeiten
-                </a>
-                <a href="{% url 'projects:list' %}" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-arrow-left me-1"></i> Zur Projektliste
-                </a>
+        </div>
+        <div class="col-4 col-md-2">
+            <div class="card text-center py-3" style="background:#0d1117;border-color:#2d3748;">
+                <div class="fw-bold fs-4" style="color:#6366f1;">{{ stat_characters|default:0 }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Charaktere</div>
+            </div>
+        </div>
+        <div class="col-4 col-md-2">
+            <div class="card text-center py-3" style="background:#0d1117;border-color:#2d3748;">
+                <div class="fw-bold fs-4" style="color:#6366f1;">{{ stat_worlds|default:0 }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Welten</div>
+            </div>
+        </div>
+        <div class="col-4 col-md-2">
+            <div class="card text-center py-3" style="background:#0d1117;border-color:#2d3748;">
+                <div class="fw-bold fs-4" style="color:#6366f1;">{{ stat_chapters_written|default:0 }}</div>
+                <div class="text-muted" style="font-size:.7rem;">Geschrieben</div>
+            </div>
+        </div>
+        <div class="col-4 col-md-2">
+            <div class="card text-center py-3" style="background:#0d1117;border-color:#2d3748;">
+                <div class="fw-bold fs-4" style="color:#6366f1;">{{ progress_pct|default:0 }}%</div>
+                <div class="text-muted" style="font-size:.7rem;">Fortschritt</div>
             </div>
         </div>
     </div>
 
-    <!-- Beschreibung + Outlines + Ideen + Welten -->
-    <div class="col-md-8">
-        {% if project.description %}
-        <div class="card mb-3">
-            <div class="card-header py-2">
-                <span class="fw-semibold small"><i class="bi bi-text-paragraph me-1"></i>Prämisse / Beschreibung</span>
+    <!-- Gesamtfortschritt -->
+    <div class="card mb-4" style="background:#0d1117;border-color:#2d3748;">
+        <div class="card-body py-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="fw-semibold small">Gesamtfortschritt</span>
+                <span class="text-primary fw-bold small">{{ progress_pct|default:0 }}%</span>
             </div>
+            <div class="progress mb-2" style="height:6px;background:#1e2235;">
+                <div class="progress-bar" style="width:{{ progress_pct|default:0 }}%;background:#6366f1;"></div>
+            </div>
+            <div class="d-flex justify-content-between text-muted" style="font-size:.75rem;">
+                <span><i class="bi bi-pen me-1"></i>{{ stat_words|default:0 }} / {{ project.target_word_count|default:0 }} Wörter</span>
+                <span>{{ progress_pct|default:0 }}%</span>
+            </div>
+            {% if stat_chapters_total > 0 %}
+            <div class="progress mt-2" style="height:4px;background:#1e2235;">
+                <div class="progress-bar" style="width:{{ chapter_progress_pct|default:0 }}%;background:#22c55e;"></div>
+            </div>
+            <div class="text-muted mt-1" style="font-size:.72rem;">
+                <i class="bi bi-check-circle me-1 text-success"></i>
+                {{ stat_chapters_written|default:0 }} / {{ stat_chapters_total|default:0 }} Kapitel geschrieben
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Workflow-Phasen -->
+<h5 class="fw-bold mb-3" style="color:#e2e8f0;">Workflow-Phasen</h5>
+<div class="row g-3 mb-4">
+
+    <!-- Konzept -->
+    <div class="col-md-4">
+        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
+             onclick="location.href='{% url 'projects:edit' project.pk %}'">
             <div class="card-body">
-                <p class="mb-0" style="line-height: 1.8;">{{ project.description }}</p>
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-lightbulb me-2" style="color:#6366f1;font-size:1.2rem;"></i>
+                    <div>
+                        <div class="fw-semibold small" style="color:#e2e8f0;">Konzept</div>
+                        <div class="text-muted" style="font-size:.72rem;">Prämisse &amp; Themen</div>
+                    </div>
+                </div>
+                <div class="progress mb-1" style="height:3px;background:#1e2235;">
+                    <div class="progress-bar" style="width:{% if project.description %}100{% else %}0{% endif %}%;background:#6366f1;"></div>
+                </div>
+                <div class="d-flex justify-content-between" style="font-size:.7rem;">
+                    <span class="text-primary">{% if project.description %}100%{% else %}0%{% endif %}</span>
+                    <span class="text-muted">{% if project.description %}Fertig{% else %}Ausstehend{% endif %}</span>
+                </div>
             </div>
         </div>
-        {% endif %}
+    </div>
 
-        <!-- Outline -->
-        <div class="card">
-            <div class="card-header d-flex align-items-center justify-content-between py-2">
-                <span class="fw-semibold small"><i class="bi bi-list-ol me-1"></i>Outline</span>
+    <!-- Charaktere -->
+    <div class="col-md-4">
+        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-people me-2" style="color:#6366f1;font-size:1.2rem;"></i>
+                    <div>
+                        <div class="fw-semibold small" style="color:#e2e8f0;">Charaktere</div>
+                        <div class="text-muted" style="font-size:.72rem;">{{ stat_characters }} Charaktere</div>
+                    </div>
+                </div>
+                <div class="progress mb-1" style="height:3px;background:#1e2235;">
+                    <div class="progress-bar" style="width:{% if stat_characters > 0 %}100{% else %}0{% endif %}%;background:#6366f1;"></div>
+                </div>
+                <div class="d-flex justify-content-between" style="font-size:.7rem;">
+                    <span class="text-primary">{% if stat_characters > 0 %}100%{% else %}0%{% endif %}</span>
+                    <span class="text-muted">{% if stat_characters > 0 %}Vorhanden{% else %}Ausstehend{% endif %}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Weltenbau -->
+    <div class="col-md-4">
+        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-globe me-2" style="color:#6366f1;font-size:1.2rem;"></i>
+                    <div>
+                        <div class="fw-semibold small" style="color:#e2e8f0;">Weltenbau</div>
+                        <div class="text-muted" style="font-size:.72rem;">{{ stat_worlds }} Welt{{ stat_worlds|pluralize:"en" }}</div>
+                    </div>
+                </div>
+                <div class="progress mb-1" style="height:3px;background:#1e2235;">
+                    <div class="progress-bar" style="width:{% if stat_worlds > 0 %}100{% else %}0{% endif %}%;background:#6366f1;"></div>
+                </div>
+                <div class="d-flex justify-content-between" style="font-size:.7rem;">
+                    <span class="text-primary">{% if stat_worlds > 0 %}100%{% else %}0%{% endif %}</span>
+                    <span class="text-muted">{% if stat_worlds > 0 %}Vorhanden{% else %}Ausstehend{% endif %}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Outline -->
+    <div class="col-md-4">
+        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
+             data-bs-toggle="modal" data-bs-target="#outlineModal">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-list-ol me-2" style="color:#6366f1;font-size:1.2rem;"></i>
+                    <div>
+                        <div class="fw-semibold small" style="color:#e2e8f0;">Outline</div>
+                        <div class="text-muted" style="font-size:.72rem;">{{ stat_chapters_total }}/{{ stat_chapters_total }} Kapitel</div>
+                    </div>
+                </div>
+                <div class="progress mb-1" style="height:3px;background:#1e2235;">
+                    <div class="progress-bar" style="width:{% if stat_chapters_total > 0 %}100{% else %}0{% endif %}%;background:#6366f1;"></div>
+                </div>
+                <div class="d-flex justify-content-between" style="font-size:.7rem;">
+                    <span class="text-primary">{% if stat_chapters_total > 0 %}100%{% else %}0%{% endif %}</span>
+                    <span class="text-muted">{% if stat_chapters_total > 0 %}Angelegt{% else %}Ausstehend{% endif %}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schreiben -->
+    <div class="col-md-4">
+        <a href="{% url 'projects:chapter_writer' project.pk %}" style="text-decoration:none;">
+        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-pen me-2" style="color:#6366f1;font-size:1.2rem;"></i>
+                    <div>
+                        <div class="fw-semibold small" style="color:#e2e8f0;">Schreiben</div>
+                        <div class="text-muted" style="font-size:.72rem;">{{ stat_chapters_written }}/{{ stat_chapters_total }} geschrieben</div>
+                    </div>
+                </div>
+                <div class="progress mb-1" style="height:3px;background:#1e2235;">
+                    <div class="progress-bar" style="width:{{ chapter_progress_pct|default:0 }}%;background:#22c55e;"></div>
+                </div>
+                <div class="d-flex justify-content-between" style="font-size:.7rem;">
+                    <span style="color:#22c55e;">{{ chapter_progress_pct|default:0 }}%</span>
+                    <span class="text-muted">{% if chapter_progress_pct > 0 %}In Arbeit{% else %}Ausstehend{% endif %}</span>
+                </div>
+            </div>
+        </div>
+        </a>
+    </div>
+
+    <!-- Redaktion -->
+    <div class="col-md-4">
+        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;opacity:.6;">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-pencil-square me-2" style="color:#6366f1;font-size:1.2rem;"></i>
+                    <div>
+                        <div class="fw-semibold small" style="color:#e2e8f0;">Redaktion</div>
+                        <div class="text-muted" style="font-size:.72rem;">Textverbesserungen</div>
+                    </div>
+                </div>
+                <div class="progress mb-1" style="height:3px;background:#1e2235;">
+                    <div class="progress-bar" style="width:0%;background:#6366f1;"></div>
+                </div>
+                <div class="d-flex justify-content-between" style="font-size:.7rem;">
+                    <span class="text-primary">0%</span>
+                    <span class="text-muted">Ausstehend</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lektorat -->
+    <div class="col-md-4">
+        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;opacity:.6;">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-check-square me-2" style="color:#6366f1;font-size:1.2rem;"></i>
+                    <div>
+                        <div class="fw-semibold small" style="color:#e2e8f0;">Lektorat</div>
+                        <div class="text-muted" style="font-size:.72rem;">Konsistenzprüfung</div>
+                    </div>
+                </div>
+                <div class="progress mb-1" style="height:3px;background:#1e2235;">
+                    <div class="progress-bar" style="width:0%;background:#6366f1;"></div>
+                </div>
+                <div class="d-flex justify-content-between" style="font-size:.7rem;">
+                    <span class="text-primary">0%</span>
+                    <span class="text-muted">Ausstehend</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Review -->
+    <div class="col-md-4">
+        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;opacity:.6;">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-shield-check me-2" style="color:#6366f1;font-size:1.2rem;"></i>
+                    <div>
+                        <div class="fw-semibold small" style="color:#e2e8f0;">Review</div>
+                        <div class="text-muted" style="font-size:.72rem;">Qualitätsprüfung</div>
+                    </div>
+                </div>
+                <div class="progress mb-1" style="height:3px;background:#1e2235;">
+                    <div class="progress-bar" style="width:0%;background:#6366f1;"></div>
+                </div>
+                <div class="d-flex justify-content-between" style="font-size:.7rem;">
+                    <span class="text-primary">0%</span>
+                    <span class="text-muted">Ausstehend</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Illustration -->
+    <div class="col-md-4">
+        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;opacity:.6;">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-image me-2" style="color:#6366f1;font-size:1.2rem;"></i>
+                    <div>
+                        <div class="fw-semibold small" style="color:#e2e8f0;">Illustration</div>
+                        <div class="text-muted" style="font-size:.72rem;">Bilder generieren</div>
+                    </div>
+                </div>
+                <div class="progress mb-1" style="height:3px;background:#1e2235;">
+                    <div class="progress-bar" style="width:0%;background:#6366f1;"></div>
+                </div>
+                <div class="d-flex justify-content-between" style="font-size:.7rem;">
+                    <span class="text-primary">0%</span>
+                    <span class="text-muted">Ausstehend</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Publishing -->
+    <div class="col-md-4">
+        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;opacity:.6;">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-bookmark-star me-2" style="color:#6366f1;font-size:1.2rem;"></i>
+                    <div>
+                        <div class="fw-semibold small" style="color:#e2e8f0;">Publishing</div>
+                        <div class="text-muted" style="font-size:.72rem;">Metadaten &amp; Cover</div>
+                    </div>
+                </div>
+                <div class="progress mb-1" style="height:3px;background:#1e2235;">
+                    <div class="progress-bar" style="width:0%;background:#6366f1;"></div>
+                </div>
+                <div class="d-flex justify-content-between" style="font-size:.7rem;">
+                    <span class="text-primary">0%</span>
+                    <span class="text-muted">Ausstehend</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export -->
+    <div class="col-md-4">
+        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;opacity:.6;">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-download me-2" style="color:#6366f1;font-size:1.2rem;"></i>
+                    <div>
+                        <div class="fw-semibold small" style="color:#e2e8f0;">Export</div>
+                        <div class="text-muted" style="font-size:.72rem;">Manuskript exportieren</div>
+                    </div>
+                </div>
+                <div class="progress mb-1" style="height:3px;background:#1e2235;">
+                    <div class="progress-bar" style="width:0%;background:#6366f1;"></div>
+                </div>
+                <div class="d-flex justify-content-between" style="font-size:.7rem;">
+                    <span class="text-primary">0%</span>
+                    <span class="text-muted">Ausstehend</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /workflow row -->
+
+<!-- Detail-Bereich: Outline + Ideen + Welten -->
+<div class="row g-4">
+    <div class="col-md-8">
+
+        <!-- Outline Detail -->
+        <div class="card mb-3" style="background:#0d1117;border-color:#2d3748;">
+            <div class="card-header d-flex align-items-center justify-content-between py-2" style="border-color:#2d3748;">
+                <span class="fw-semibold small"><i class="bi bi-list-ol me-1"></i>Aktives Outline</span>
                 {% if outlines %}
                 <div class="d-flex align-items-center gap-2">
                     <select class="form-select form-select-sm bg-dark text-light border-secondary w-auto"
@@ -103,39 +394,39 @@
                     </select>
                     {% if selected_outline %}
                     <a href="{% url 'outlines:detail' selected_outline.pk %}"
-                       class="btn btn-outline-secondary btn-sm py-0 px-2" title="Outline-Detail öffnen">
+                       class="btn btn-outline-secondary btn-sm py-0 px-2">
                         <i class="bi bi-box-arrow-up-right"></i>
                     </a>
                     {% endif %}
                 </div>
-                {% else %}
-                <span class="badge bg-secondary">0</span>
                 {% endif %}
             </div>
             <div class="card-body p-0">
                 {% if outline_nodes %}
-                <ul class="list-group list-group-flush" style="max-height:320px;overflow-y:auto;">
+                <ul class="list-group list-group-flush" style="max-height:280px;overflow-y:auto;">
                     {% for node in outline_nodes %}
                     <li class="list-group-item border-0 py-2 px-3"
-                        style="background:transparent;color:#e2e8f0;border-bottom:1px solid #2d3148 !important;">
+                        style="background:transparent;color:#e2e8f0;border-bottom:1px solid #1e2235 !important;">
                         <div class="d-flex align-items-start gap-2">
                             <span class="text-muted small mt-1" style="min-width:1.5rem;">{{ node.order }}.</span>
                             <div class="flex-grow-1">
                                 <div class="small fw-semibold">{{ node.title }}</div>
                                 {% if node.description %}
-                                <div class="text-muted" style="font-size:.78rem;line-height:1.4;">{{ node.description|truncatechars:120 }}</div>
+                                <div class="text-muted" style="font-size:.75rem;">{{ node.description|truncatechars:100 }}</div>
                                 {% endif %}
                             </div>
-                            <span class="badge bg-dark border border-secondary text-muted" style="font-size:.65rem;">{{ node.beat_type }}</span>
+                            <div class="d-flex align-items-center gap-1">
+                                {% if node.word_count > 0 %}
+                                <span class="badge" style="background:#1a3a1a;color:#22c55e;font-size:.65rem;">
+                                    {{ node.word_count }}W
+                                </span>
+                                {% endif %}
+                                <span class="badge bg-dark border border-secondary text-muted" style="font-size:.65rem;">{{ node.beat_type }}</span>
+                            </div>
                         </div>
                     </li>
                     {% endfor %}
                 </ul>
-                {% elif selected_outline %}
-                <div class="p-4 text-center text-muted small">
-                    <i class="bi bi-journal-text d-block mb-2" style="font-size:2rem;"></i>
-                    Outline ohne Kapitel — KI-Generator nutzen
-                </div>
                 {% else %}
                 <div class="p-4 text-center text-muted small">
                     <i class="bi bi-list-ol d-block mb-2" style="font-size:2rem;"></i>
@@ -143,7 +434,7 @@
                 </div>
                 {% endif %}
             </div>
-            <div class="card-footer d-flex gap-2 py-2">
+            <div class="card-footer d-flex gap-2 py-2" style="border-color:#2d3748;background:#0a0d14;">
                 <button class="btn btn-sm btn-outline-light flex-grow-1"
                         data-bs-toggle="modal" data-bs-target="#outlineModal">
                     <i class="bi bi-layout-text-sidebar me-1"></i> Outline anwenden
@@ -155,103 +446,145 @@
             </div>
         </div>
 
+        <!-- Prämisse -->
+        {% if project.description %}
+        <div class="card mb-3" style="background:#0d1117;border-color:#2d3748;">
+            <div class="card-header py-2" style="border-color:#2d3748;">
+                <span class="fw-semibold small"><i class="bi bi-text-paragraph me-1"></i>Prämisse</span>
+            </div>
+            <div class="card-body">
+                <p class="mb-0 small" style="line-height:1.8;color:#cbd5e1;">{{ project.description }}</p>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Ideen -->
-        <div class="card mt-3">
-            <div class="card-header d-flex align-items-center justify-content-between py-2">
+        {% if idea_drafts %}
+        <div class="card mb-3" style="background:#0d1117;border-color:#2d3748;">
+            <div class="card-header d-flex align-items-center justify-content-between py-2" style="border-color:#2d3748;">
                 <span class="fw-semibold small"><i class="bi bi-lightbulb me-1"></i>Ideen-Imports</span>
-                <span class="badge bg-secondary">{{ idea_drafts|length }}</span>
+                <span class="badge" style="background:#1e2235;color:#94a3b8;">{{ idea_drafts|length }}</span>
             </div>
             <div class="card-body p-0">
-                {% if idea_drafts %}
                 <ul class="list-group list-group-flush">
                     {% for draft in idea_drafts %}
                     <li class="list-group-item border-0 py-2 px-3"
-                        style="background:transparent;color:#e2e8f0;border-bottom:1px solid #2d3148 !important;">
+                        style="background:transparent;color:#e2e8f0;border-bottom:1px solid #1e2235 !important;">
                         <div class="d-flex align-items-center justify-content-between gap-2">
-                            <div class="small">
-                                <span class="fw-semibold">{{ draft.source_filename|default:"Freitext" }}</span>
-                                <span class="text-muted ms-2" style="font-size:.75rem;">{{ draft.created_at|date:"d.m.Y H:i" }}</span>
-                            </div>
-                            <div class="d-flex align-items-center gap-1">
-                                <span class="badge
-                                    {% if draft.status == 'committed' %}bg-success
-                                    {% elif draft.status == 'pending_review' %}bg-warning text-dark
-                                    {% elif draft.status == 'processing' %}bg-info text-dark
-                                    {% else %}bg-secondary{% endif %}"
-                                    style="font-size:.65rem;">
-                                    {{ draft.get_status_display }}
-                                </span>
-                                <a href="{% url 'ideas:review' draft.pk %}"
-                                   class="btn btn-outline-secondary btn-sm py-0 px-1" style="font-size:.7rem;">
-                                    <i class="bi bi-eye"></i>
-                                </a>
-                            </div>
+                            <span class="small">{{ draft.source_filename|default:"Freitext" }}</span>
+                            <span class="badge" style="background:#1e2235;color:#94a3b8;font-size:.65rem;">{{ draft.created_at|date:"d.m.Y" }}</span>
                         </div>
                     </li>
                     {% endfor %}
                 </ul>
-                {% else %}
-                <div class="p-3 text-center">
-                    <i class="bi bi-lightbulb d-block mb-2 text-muted" style="font-size:1.5rem;"></i>
-                    <p class="text-muted small mb-1">Noch keine Ideen importiert</p>
-                    <p class="text-muted" style="font-size:.75rem;">
-                        <i class="bi bi-info-circle me-1"></i>Ideen-Import über bfagent-Integration verfügbar.
-                    </p>
-                </div>
-                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar: Info + Welten + Charaktere -->
+    <div class="col-md-4">
+
+        <!-- Projektinfos -->
+        <div class="card mb-3" style="background:#0d1117;border-color:#2d3748;">
+            <div class="card-header py-2" style="border-color:#2d3748;">
+                <span class="fw-semibold small"><i class="bi bi-info-circle me-1"></i>Projektinfos</span>
+            </div>
+            <div class="card-body">
+                <dl class="mb-0 small">
+                    {% if project.series %}
+                    <dt class="text-muted mb-1">Serie</dt>
+                    <dd class="mb-2" style="color:#a78bfa;">{{ project.series }}</dd>
+                    {% endif %}
+                    {% if project.content_type_lookup %}
+                    <dt class="text-muted mb-1">Typ</dt>
+                    <dd class="mb-2" style="color:#e2e8f0;">{{ project.content_type_lookup }}</dd>
+                    {% endif %}
+                    {% if project.genre_lookup %}
+                    <dt class="text-muted mb-1">Genre</dt>
+                    <dd class="mb-2" style="color:#e2e8f0;">{{ project.genre_lookup }}</dd>
+                    {% endif %}
+                    {% if project.audience_lookup %}
+                    <dt class="text-muted mb-1">Zielgruppe</dt>
+                    <dd class="mb-2" style="color:#cbd5e1;">{{ project.audience_lookup }}</dd>
+                    {% endif %}
+                    {% if project.author_style %}
+                    <dt class="text-muted mb-1">Schreibstil</dt>
+                    <dd class="mb-2" style="color:#a5b4fc;">{{ project.author_style }}</dd>
+                    {% endif %}
+                    {% if project.target_word_count %}
+                    <dt class="text-muted mb-1">Ziel-Wortanzahl</dt>
+                    <dd class="mb-2" style="color:#e2e8f0;">{{ project.target_word_count|floatformat:0 }} Wörter</dd>
+                    {% endif %}
+                    <dt class="text-muted mb-1">Erstellt</dt>
+                    <dd class="mb-0" style="color:#cbd5e1;">{{ project.created_at|date:"d.m.Y" }}</dd>
+                </dl>
             </div>
         </div>
 
         <!-- Welten -->
-        <div class="card mt-3">
-            <div class="card-header d-flex align-items-center justify-content-between py-2">
-                <span class="fw-semibold small"><i class="bi bi-globe me-1"></i>Verknüpfte Welten</span>
-                <span class="badge bg-secondary">{{ world_links|length }}</span>
+        <div class="card mb-3" style="background:#0d1117;border-color:#2d3748;">
+            <div class="card-header d-flex align-items-center justify-content-between py-2" style="border-color:#2d3748;">
+                <span class="fw-semibold small"><i class="bi bi-globe me-1"></i>Welten</span>
+                <span class="badge" style="background:#1e2235;color:#94a3b8;">{{ stat_worlds }}</span>
             </div>
             <div class="card-body p-0">
                 {% if world_links %}
                 <ul class="list-group list-group-flush">
                     {% for link in world_links %}
-                    <li class="list-group-item border-0 py-2 px-3"
-                        style="background:transparent;color:#e2e8f0;border-bottom:1px solid #2d3148 !important;">
-                        <div class="d-flex align-items-center justify-content-between gap-2">
-                            <div class="small">
-                                <a href="https://weltenforger.com/worlds/{{ link.weltenhub_world_id }}/"
-                                   target="_blank" rel="noopener"
-                                   class="fw-semibold text-decoration-none" style="color:#7dd3fc;">
-                                    <i class="bi bi-box-arrow-up-right me-1" style="font-size:.7rem;"></i>
-                                    {{ link.weltenhub_world_id }}
-                                </a>
-                                <span class="badge bg-dark border border-secondary text-muted ms-2" style="font-size:.65rem;">{{ link.role }}</span>
-                            </div>
-                            {% if link.notes %}
-                            <span class="text-muted" style="font-size:.75rem;">{{ link.notes|truncatechars:40 }}</span>
-                            {% endif %}
-                        </div>
+                    <li class="list-group-item border-0 py-2 px-3 small"
+                        style="background:transparent;color:#e2e8f0;border-bottom:1px solid #1e2235 !important;">
+                        {{ link.world.name }}
+                        {% if link.role %}<span class="text-muted ms-1">— {{ link.role }}</span>{% endif %}
                     </li>
                     {% endfor %}
                 </ul>
                 {% else %}
-                <div class="p-3 text-center">
-                    <i class="bi bi-globe d-block mb-2 text-muted" style="font-size:1.5rem;"></i>
-                    <p class="text-muted small mb-2">Keine Welten verknüpft</p>
-                    <a href="https://weltenforger.com" target="_blank" rel="noopener"
-                       class="btn btn-sm btn-outline-secondary">
-                        <i class="bi bi-box-arrow-up-right me-1"></i> WeltenHub öffnen
-                    </a>
+                <div class="p-3 text-center text-muted small">
+                    <i class="bi bi-globe d-block mb-1" style="font-size:1.3rem;"></i>
+                    Keine Welten verknüpft
                 </div>
                 {% endif %}
             </div>
         </div>
 
-    </div><!-- /col-md-8 -->
-</div><!-- /row -->
+        <!-- Charaktere -->
+        <div class="card" style="background:#0d1117;border-color:#2d3748;">
+            <div class="card-header d-flex align-items-center justify-content-between py-2" style="border-color:#2d3748;">
+                <span class="fw-semibold small"><i class="bi bi-people me-1"></i>Charaktere</span>
+                <span class="badge" style="background:#1e2235;color:#94a3b8;">{{ stat_characters }}</span>
+            </div>
+            <div class="card-body p-0">
+                {% if characters %}
+                <ul class="list-group list-group-flush">
+                    {% for char in characters %}
+                    <li class="list-group-item border-0 py-2 px-3 small"
+                        style="background:transparent;color:#e2e8f0;border-bottom:1px solid #1e2235 !important;">
+                        <i class="bi bi-person me-1 text-muted"></i>
+                        {{ char.project_role|default:char.notes|default:"Charakter" }}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="p-3 text-center text-muted small">
+                    <i class="bi bi-people d-block mb-1" style="font-size:1.3rem;"></i>
+                    Keine Charaktere
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+</div><!-- /max-width container -->
 
 {% if messages %}
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index:1100;">
     {% for msg in messages %}
-    <div class="toast show align-items-center text-white {% if msg.tags == 'error' %}bg-danger{% elif msg.tags == 'warning' %}bg-warning text-dark{% else %}bg-success{% endif %} border-0 mb-2"
-         role="alert">
+    <div class="toast show align-items-center text-white
+        {% if msg.tags == 'error' %}bg-danger
+        {% elif msg.tags == 'warning' %}bg-warning text-dark
+        {% else %}bg-success{% endif %} border-0 mb-2" role="alert">
         <div class="d-flex">
             <div class="toast-body small">{{ msg }}</div>
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
@@ -299,11 +632,6 @@
                    class="form-control bg-dark text-light border-secondary"
                    placeholder="wird automatisch gesetzt">
           </div>
-          <div class="mb-3">
-            <label class="form-label small text-muted">Notizen</label>
-            <textarea name="notes" rows="2" class="form-control bg-dark text-light border-secondary"
-                      placeholder="Struktur-Ideen, Akt-Aufteilung ..."></textarea>
-          </div>
         </div>
         <div class="modal-footer border-secondary py-2">
           <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Abbrechen</button>
@@ -332,16 +660,16 @@
             <select id="kiFrameworkSelect" name="framework"
                     class="form-select bg-dark text-light border-secondary"
                     onchange="onKiFrameworkChange(this.value)">
-              <option value="three_act">Drei-Akt-Struktur (6 Beats)</option>
-              <option value="save_the_cat">Save the Cat (15 Beats)</option>
-              <option value="heros_journey">Heldenreise (12 Beats)</option>
-              <option value="five_act">Fünf-Akt-Struktur (5 Beats)</option>
-              <option value="dan_harmon">Dan Harmon Story Circle (8 Beats)</option>
+              <option value="three_act" {% if selected_outline_framework == 'three_act' %}selected{% endif %}>Drei-Akt-Struktur (6 Beats)</option>
+              <option value="save_the_cat" {% if selected_outline_framework == 'save_the_cat' %}selected{% endif %}>Save the Cat (15 Beats)</option>
+              <option value="heros_journey" {% if selected_outline_framework == 'heros_journey' %}selected{% endif %}>Heldenreise (12 Beats)</option>
+              <option value="five_act" {% if selected_outline_framework == 'five_act' %}selected{% endif %}>Fünf-Akt-Struktur (5 Beats)</option>
+              <option value="dan_harmon" {% if selected_outline_framework == 'dan_harmon' %}selected{% endif %}>Dan Harmon Story Circle (8 Beats)</option>
             </select>
           </div>
           <div class="mb-2" id="kiChapterInfo"
-               style="font-size:.85rem; color:#6366f1; font-weight:600; padding: 8px 12px;
-                      background:#1e2235; border-radius:6px; border:1px solid #2d3148;">
+               style="font-size:.85rem;color:#6366f1;font-weight:600;padding:8px 12px;
+                      background:#1e2235;border-radius:6px;border:1px solid #2d3148;">
             <i class="bi bi-list-ol me-1"></i><span id="kiChapterInfoText">6 Kapitel werden generiert</span>
           </div>
           <input type="hidden" name="chapter_count" id="kiChapterCount" value="6">
@@ -365,69 +693,46 @@
 {% endblock %}
 
 {% block extra_js %}
+<style>
+.workflow-card { transition: border-color .15s, background .15s; }
+.workflow-card:hover { border-color: #6366f1 !important; background: #0f1225 !important; }
+</style>
 <script>
 const FW_BEATS = {
-    'three_act': 6,
-    'save_the_cat': 15,
-    'heros_journey': 12,
-    'five_act': 5,
-    'dan_harmon': 8,
-    'blank': null,
+    'three_act': 6, 'save_the_cat': 15, 'heros_journey': 12,
+    'five_act': 5, 'dan_harmon': 8, 'blank': null,
 };
 const FW_LABELS = {
-    'three_act': 'Drei-Akt-Struktur',
-    'save_the_cat': 'Save the Cat',
-    'heros_journey': 'Heldenreise',
-    'five_act': 'Fünf-Akt-Struktur',
-    'dan_harmon': 'Dan Harmon Story Circle',
-    'blank': 'Leere Kapitel',
+    'three_act': 'Drei-Akt-Struktur', 'save_the_cat': 'Save the Cat',
+    'heros_journey': 'Heldenreise', 'five_act': 'Fünf-Akt-Struktur',
+    'dan_harmon': 'Dan Harmon Story Circle', 'blank': 'Leere Kapitel',
 };
-
 function onKiFrameworkChange(val) {
     const count = FW_BEATS[val];
-    const infoText = document.getElementById('kiChapterInfoText');
-    const hiddenInput = document.getElementById('kiChapterCount');
     if (count) {
-        infoText.textContent = count + ' Kapitel werden generiert';
-        hiddenInput.value = count;
+        document.getElementById('kiChapterInfoText').textContent = count + ' Kapitel werden generiert';
+        document.getElementById('kiChapterCount').value = count;
     }
 }
-
 function onOutlineFrameworkChange(val) {
     const count = FW_BEATS[val];
     const nameInput = document.getElementById('outlineNameInput');
     const infoEl = document.getElementById('outlineChapterInfo');
     const countRow = document.getElementById('outlineChapterCountRow');
-
-    if (!nameInput.value) {
-        nameInput.placeholder = FW_LABELS[val] || 'wird automatisch gesetzt';
-    }
-
+    if (!nameInput.value) nameInput.placeholder = FW_LABELS[val] || 'wird automatisch gesetzt';
     if (val === 'blank') {
         infoEl.textContent = '';
         countRow.style.display = '';
     } else if (count) {
         infoEl.innerHTML = '<i class="bi bi-list-ol me-1"></i><strong>' + count + ' Beats</strong> werden aus dem Framework übernommen';
         countRow.style.display = 'none';
-    } else {
-        infoEl.textContent = '';
-        countRow.style.display = 'none';
     }
 }
-
 document.getElementById('generateForm')?.addEventListener('submit', function() {
     const btn = document.getElementById('btn-ki-submit');
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Generiert...';
-    }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Generiert...'; }
 });
-
-// Init: KI-Framework-Info beim Laden setzen
 onKiFrameworkChange(document.getElementById('kiFrameworkSelect')?.value || 'three_act');
-
-document.querySelectorAll('.toast').forEach(function(el) {
-    setTimeout(function() { el.classList.remove('show'); }, 5000);
-});
+document.querySelectorAll('.toast').forEach(el => setTimeout(() => el.classList.remove('show'), 5000));
 </script>
 {% endblock %}

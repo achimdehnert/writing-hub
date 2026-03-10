@@ -58,7 +58,6 @@ FW_LABELS = {
 
 KNOWN_FRAMEWORKS = set(OUTLINE_FRAMEWORKS.keys()) | {"blank"}
 
-# Fallback-Kacheln falls ContentTypeLookup leer ist
 DEFAULT_CONTENT_TYPES = [
     {"slug": "roman", "name": "Roman", "icon": "bi-book",
      "subtitle": "Erzählung mit Charakteren & Weltenbau",
@@ -117,9 +116,8 @@ class ProjectCreateView(LoginRequiredMixin, View):
     template_name = "projects/project_form.html"
 
     def _context(self, post_data=None):
-        ct_qs = ContentTypeLookup.objects.all().order_by("order", "name")
         return {
-            "content_types": ct_qs,
+            "content_types": ContentTypeLookup.objects.all().order_by("order", "name"),
             "default_content_types": DEFAULT_CONTENT_TYPES,
             "genres": GenreLookup.objects.all().order_by("order", "name"),
             "audiences": AudienceLookup.objects.all().order_by("order", "name"),
@@ -180,8 +178,11 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        project = self.object
+
+        # Outlines
         outlines = OutlineVersion.objects.filter(
-            project=self.object
+            project=project
         ).order_by("-created_at")
         ctx["outlines"] = outlines
         selected_id = self.request.GET.get("outline")
@@ -199,14 +200,50 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
             ctx["selected_outline_framework"] = selected.source
         else:
             ctx["selected_outline_framework"] = "three_act"
+
+        # Ideen
         from apps.idea_import.models import IdeaImportDraft
-        from apps.worlds.models import ProjectWorldLink
         ctx["idea_drafts"] = IdeaImportDraft.objects.filter(
-            project=self.object
+            project=project
         ).exclude(
             status=IdeaImportDraft.Status.DISCARDED
         ).order_by("-created_at")[:10]
-        ctx["world_links"] = ProjectWorldLink.objects.filter(project=self.object)
+
+        # Welten
+        from apps.worlds.models import ProjectWorldLink, ProjectCharacterLink
+        ctx["world_links"] = ProjectWorldLink.objects.filter(project=project)
+
+        # Charaktere
+        characters = ProjectCharacterLink.objects.filter(project=project).select_related()
+        ctx["characters"] = characters
+        ctx["character_count"] = characters.count()
+
+        # Statistiken für Dashboard
+        all_nodes = OutlineNode.objects.filter(
+            outline_version__project=project,
+            outline_version__is_active=True,
+        )
+        total_words = sum(n.word_count for n in all_nodes if n.word_count)
+        written_chapters = all_nodes.filter(word_count__gt=0).count()
+        total_chapters = all_nodes.count()
+        ctx["stat_words"] = total_words
+        ctx["stat_chapters_written"] = written_chapters
+        ctx["stat_chapters_total"] = total_chapters
+        ctx["stat_characters"] = characters.count()
+        ctx["stat_worlds"] = ctx["world_links"].count()
+
+        # Fortschritt
+        target = project.target_word_count or 0
+        if target > 0 and total_words > 0:
+            ctx["progress_pct"] = min(100, round(total_words / target * 100))
+        else:
+            ctx["progress_pct"] = 0
+
+        if total_chapters > 0 and written_chapters > 0:
+            ctx["chapter_progress_pct"] = min(100, round(written_chapters / total_chapters * 100))
+        else:
+            ctx["chapter_progress_pct"] = 0
+
         return ctx
 
 
@@ -235,6 +272,8 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["is_edit"] = True
+        ctx["author_styles"] = AuthorStyleLookup.objects.filter(is_active=True).order_by("order", "name")
+        ctx["audiences"] = AudienceLookup.objects.all().order_by("order", "name")
         return ctx
 
     def get_success_url(self):
