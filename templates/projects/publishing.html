@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+
+{% block title %}Publikation — {{ project.title }} — Writing Hub{% endblock %}
+{% block nav_projects %}active{% endblock %}
+{% block page_title %}<i class="bi bi-book me-2"></i>Publikation{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'projects:detail' project.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Zurück
+</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pub-section { background: #fff; border-radius: .6rem; border: 1px solid #e5e7eb; padding: 1.5rem; margin-bottom: 1.25rem; }
+    .pub-section h5 { font-size: .95rem; font-weight: 700; color: #111; border-bottom: 2px solid #0d9488; padding-bottom: .5rem; margin-bottom: 1.25rem; }
+    .pub-section label { font-size: .78rem; color: #6b7280; font-weight: 600; margin-bottom: .25rem; display: block; }
+    .pub-section .form-control, .pub-section .form-select { background: #f9fafb; border: 1px solid #e5e7eb; color: #111; font-size: .88rem; }
+    .pub-section .form-control:focus, .pub-section .form-select:focus { border-color: #0d9488; box-shadow: 0 0 0 .2rem rgba(13,148,136,.15); }
+    .pub-section .form-text { font-size: .72rem; color: #9ca3af; }
+    .nav-tabs .nav-link { color: #6b7280; font-size: .85rem; }
+    .nav-tabs .nav-link.active { color: #0d9488; font-weight: 600; border-bottom-color: #0d9488; }
+    .pub-header { background: #f0fdf4; border: 1px solid #d1fae5; border-radius: .6rem; padding: 1rem 1.5rem; margin-bottom: 1.5rem; }
+    .status-badge { display: inline-flex; align-items: center; gap: .35rem; padding: .25rem .75rem; border-radius: 999px; font-size: .78rem; font-weight: 600; }
+    .btn-ai { background: #0d9488; color: #fff; border: none; border-radius: .4rem; font-size: .82rem; padding: .4rem 1rem; cursor: pointer; }
+    .btn-ai:hover { background: #0f766e; color: #fff; }
+    .pub-section textarea { min-height: 120px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 880px; margin: 0 auto;">
+
+<!-- Header -->
+<div class="pub-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div>
+        <div style="font-size:1.3rem;font-weight:800;color:#111;">
+            <i class="bi bi-book me-2" style="color:#0d9488;"></i>Publikation
+        </div>
+        <div style="color:#6b7280;font-size:.85rem;">{{ project.title }}</div>
+    </div>
+    <span class="status-badge" style="background:{{ status_color }}22;color:{{ status_color }};border:1px solid {{ status_color }}44;">
+        <i class="bi bi-circle-fill" style="font-size:.5rem;"></i>
+        {{ profile.get_status_display }}
+    </span>
+</div>
+
+<!-- Tabs -->
+<ul class="nav nav-tabs mb-4" id="pubTabs">
+    <li class="nav-item">
+        <a class="nav-link {% if active_tab == 'metadata' %}active{% endif %}"
+           href="?tab=metadata"><i class="bi bi-info-circle me-1"></i>Metadaten</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if active_tab == 'cover' %}active{% endif %}"
+           href="?tab=cover"><i class="bi bi-image me-1"></i>Cover</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if active_tab == 'frontmatter' %}active{% endif %}"
+           href="?tab=frontmatter"><i class="bi bi-file-earmark-text me-1"></i>Frontmatter</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if active_tab == 'backmatter' %}active{% endif %}"
+           href="?tab=backmatter"><i class="bi bi-file-earmark-text-fill me-1"></i>Backmatter</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if active_tab == 'export' %}active{% endif %}"
+           href="?tab=export"><i class="bi bi-download me-1"></i>Export</a>
+    </li>
+</ul>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-success alert-dismissible py-2 mb-3" style="font-size:.85rem;">
+    {{ msg }} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+{% if active_tab == 'metadata' %}
+<form method="post" action="{% url 'projects:publishing' project.pk %}?tab=metadata">
+{% csrf_token %}
+<input type="hidden" name="tab" value="metadata">
+
+<div class="pub-section">
+    <h5><i class="bi bi-upc me-2"></i>Identifikatoren</h5>
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label>ISBN</label>
+            <input type="text" name="isbn" class="form-control" value="{{ profile.isbn }}" placeholder="978-3-12-345678-9">
+            <div class="form-text">ISBN-10 oder ISBN-13</div>
+        </div>
+        <div class="col-md-6">
+            <label>ASIN (Amazon)</label>
+            <input type="text" name="asin" class="form-control" value="{{ profile.asin }}" placeholder="B0XXXXXXXXX">
+            <div class="form-text">Wird nach Amazon-Upload vergeben</div>
+        </div>
+    </div>
+</div>
+
+<div class="pub-section">
+    <h5><i class="bi bi-building me-2"></i>Verlag &amp; Copyright</h5>
+    <div class="row g-3">
+        <div class="col-md-4">
+            <label>Verlagsname</label>
+            <input type="text" name="publisher_name" class="form-control" value="{{ profile.publisher_name }}">
+        </div>
+        <div class="col-md-4">
+            <label>Imprint</label>
+            <input type="text" name="imprint" class="form-control" value="{{ profile.imprint }}">
+        </div>
+        <div class="col-md-4">
+            <label>Copyright-Jahr</label>
+            <input type="text" name="copyright_year" class="form-control" value="{{ profile.copyright_year }}" placeholder="2026">
+        </div>
+        <div class="col-md-6">
+            <label>Copyright-Inhaber</label>
+            <input type="text" name="copyright_holder" class="form-control" value="{{ profile.copyright_holder }}">
+        </div>
+    </div>
+</div>
+
+<div class="pub-section">
+    <h5><i class="bi bi-globe me-2"></i>Sprache &amp; Kategorien</h5>
+    <div class="row g-3">
+        <div class="col-md-4">
+            <label>Sprache</label>
+            <select name="language" class="form-select">
+                {% for val, lbl in language_choices %}
+                <option value="{{ val }}" {% if profile.language == val %}selected{% endif %}>{{ lbl }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label>Altersfreigabe</label>
+            <select name="age_rating" class="form-select">
+                {% for val, lbl in age_choices %}
+                <option value="{{ val }}" {% if profile.age_rating == val %}selected{% endif %}>{{ lbl }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label>Primäre BISAC-Kategorie</label>
+            <select name="bisac_category" class="form-select">
+                <option value="">-- Auswählen --</option>
+                {% for val, lbl in bisac_choices %}
+                <option value="{{ val }}" {% if profile.bisac_category == val %}selected{% endif %}>{{ lbl }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+</div>
+
+<div class="pub-section">
+    <h5><i class="bi bi-search me-2"></i>Keywords für Discoverability</h5>
+    <label>Keywords (max. 7, komma-getrennt)</label>
+    <textarea name="keywords" class="form-control mb-2" id="keywordsField" rows="3"
+              placeholder="Fantasy, Abenteuer, Kinderbuch, Magie, ...">{{ profile.keywords }}</textarea>
+    <div class="form-text mb-3">Diese Keywords helfen Lesern, Ihr Buch zu finden</div>
+    <button type="button" class="btn-ai" id="btnGenerateKeywords">
+        <i class="bi bi-stars me-1"></i> Keywords mit KI generieren
+    </button>
+    <span id="kwSpinner" class="ms-2 text-muted small" style="display:none;">
+        <span class="spinner-border spinner-border-sm"></span> Generiere...
+    </span>
+</div>
+
+<div class="pub-section">
+    <h5><i class="bi bi-calendar me-2"></i>Veröffentlichungsdaten</h5>
+    <div class="row g-3">
+        <div class="col-md-4">
+            <label>Erstveröffentlichung</label>
+            <input type="date" name="first_published" class="form-control"
+                   value="{{ profile.first_published|date:'Y-m-d'|default:'' }}">
+        </div>
+        <div class="col-md-4">
+            <label>Diese Ausgabe</label>
+            <input type="date" name="this_edition" class="form-control"
+                   value="{{ profile.this_edition|date:'Y-m-d'|default:'' }}">
+        </div>
+        <div class="col-md-4">
+            <label>Status</label>
+            <select name="status" class="form-select">
+                {% for val, lbl in status_choices %}
+                <option value="{{ val }}" {% if profile.status == val %}selected{% endif %}>{{ lbl }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+</div>
+
+<button type="submit" class="btn btn-primary px-4">
+    <i class="bi bi-check-lg me-1"></i> Metadaten speichern
+</button>
+</form>
+
+{% elif active_tab == 'cover' %}
+<form method="post" action="{% url 'projects:publishing' project.pk %}?tab=cover">
+{% csrf_token %}
+<input type="hidden" name="tab" value="cover">
+<div class="pub-section">
+    <h5><i class="bi bi-image me-2"></i>Cover</h5>
+    <div class="row g-4">
+        <div class="col-md-4 text-center">
+            {% if profile.cover_image_url %}
+            <img src="{{ profile.cover_image_url }}" class="img-fluid rounded mb-2"
+                 style="max-height:260px;border:1px solid #e5e7eb;" alt="Cover">
+            {% else %}
+            <div class="d-flex align-items-center justify-content-center rounded"
+                 style="height:220px;background:#f3f4f6;border:2px dashed #d1d5db;color:#9ca3af;">
+                <div class="text-center">
+                    <i class="bi bi-image d-block mb-1" style="font-size:2.5rem;"></i>
+                    <span style="font-size:.8rem;">Kein Cover</span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        <div class="col-md-8">
+            <label>Cover-Bild URL</label>
+            <input type="url" name="cover_image_url" class="form-control mb-3"
+                   value="{{ profile.cover_image_url }}" placeholder="https://...">
+            <div class="form-text mb-3">Direktlink zu einem Cover-Bild (JPG/PNG)</div>
+            <label>Notizen zum Cover-Design</label>
+            <textarea name="cover_notes" class="form-control" rows="5"
+                      placeholder="Farbpalette, Stil, Designer-Briefing ...">{{ profile.cover_notes }}</textarea>
+        </div>
+    </div>
+</div>
+<button type="submit" class="btn btn-primary px-4">
+    <i class="bi bi-check-lg me-1"></i> Cover speichern
+</button>
+</form>
+
+{% elif active_tab == 'frontmatter' %}
+<form method="post" action="{% url 'projects:publishing' project.pk %}?tab=frontmatter">
+{% csrf_token %}
+<input type="hidden" name="tab" value="frontmatter">
+<div class="pub-section">
+    <h5><i class="bi bi-file-earmark-text me-2"></i>Widmung</h5>
+    <textarea name="dedication" class="form-control" rows="4" placeholder="Für ...">{{ profile.dedication }}</textarea>
+</div>
+<div class="pub-section">
+    <h5><i class="bi bi-file-earmark-text me-2"></i>Vorwort (Foreword)</h5>
+    <textarea name="foreword" class="form-control" rows="6" placeholder="Vorwort von einem Gastautor ...">{{ profile.foreword }}</textarea>
+</div>
+<div class="pub-section">
+    <h5><i class="bi bi-file-earmark-text me-2"></i>Präambel / Einleitung (Preface)</h5>
+    <textarea name="preface" class="form-control" rows="6" placeholder="Eigene Einleitung ...">{{ profile.preface }}</textarea>
+</div>
+<button type="submit" class="btn btn-primary px-4">
+    <i class="bi bi-check-lg me-1"></i> Frontmatter speichern
+</button>
+</form>
+
+{% elif active_tab == 'backmatter' %}
+<form method="post" action="{% url 'projects:publishing' project.pk %}?tab=backmatter">
+{% csrf_token %}
+<input type="hidden" name="tab" value="backmatter">
+<div class="pub-section">
+    <h5><i class="bi bi-file-earmark-text-fill me-2"></i>Nachwort (Afterword)</h5>
+    <textarea name="afterword" class="form-control" rows="6" placeholder="Nachwort ...">{{ profile.afterword }}</textarea>
+</div>
+<div class="pub-section">
+    <h5><i class="bi bi-file-earmark-text-fill me-2"></i>Danksagung</h5>
+    <textarea name="acknowledgements" class="form-control" rows="5" placeholder="Danksagungen ...">{{ profile.acknowledgements }}</textarea>
+</div>
+<div class="pub-section">
+    <h5><i class="bi bi-file-earmark-text-fill me-2"></i>Über den Autor</h5>
+    <textarea name="about_author" class="form-control" rows="5" placeholder="Kurzvita ...">{{ profile.about_author }}</textarea>
+</div>
+<div class="pub-section">
+    <h5><i class="bi bi-file-earmark-text-fill me-2"></i>Literaturverzeichnis / Quellen</h5>
+    <textarea name="bibliography" class="form-control" rows="5" placeholder="Quellen ...">{{ profile.bibliography }}</textarea>
+</div>
+<button type="submit" class="btn btn-primary px-4">
+    <i class="bi bi-check-lg me-1"></i> Backmatter speichern
+</button>
+</form>
+
+{% elif active_tab == 'export' %}
+<div class="pub-section">
+    <h5><i class="bi bi-download me-2"></i>Manuskript exportieren</h5>
+    <p class="text-muted small mb-4">Exportiert das Manuskript inkl. Frontmatter und Backmatter aus diesem Publishing-Profil.</p>
+    <div class="d-flex gap-3 flex-wrap">
+        <a href="{% url 'projects:export' project.pk %}" class="btn btn-primary">
+            <i class="bi bi-download me-1"></i> Export-Optionen
+        </a>
+        <a href="{% url 'projects:manuscript' project.pk %}" class="btn btn-outline-secondary">
+            <i class="bi bi-book-half me-1"></i> Manuskript ansehen
+        </a>
+    </div>
+</div>
+<div class="pub-section">
+    <h5><i class="bi bi-info-circle me-2"></i>Zusammenfassung</h5>
+    <div class="row g-2" style="font-size:.85rem;color:#111;">
+        <div class="col-md-4"><span class="text-muted">ISBN:</span> {{ profile.isbn|default:"—" }}</div>
+        <div class="col-md-4"><span class="text-muted">ASIN:</span> {{ profile.asin|default:"—" }}</div>
+        <div class="col-md-4"><span class="text-muted">Verlag:</span> {{ profile.publisher_name|default:"—" }}</div>
+        <div class="col-md-4"><span class="text-muted">Sprache:</span> {{ profile.language|upper }}</div>
+        <div class="col-md-4"><span class="text-muted">Status:</span> {{ profile.get_status_display }}</div>
+        <div class="col-md-4"><span class="text-muted">Copyright:</span> &copy; {{ profile.copyright_year }} {{ profile.copyright_holder }}</div>
+        {% if profile.keywords %}
+        <div class="col-12 mt-2">
+            <span class="text-muted d-block mb-1">Keywords:</span>
+            {% for kw in profile.keywords.split %}
+            <span class="badge bg-secondary me-1">{{ kw|cut:"," }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('btnGenerateKeywords')?.addEventListener('click', function() {
+    const btn = this;
+    const spinner = document.getElementById('kwSpinner');
+    const field = document.getElementById('keywordsField');
+    btn.disabled = true;
+    spinner.style.display = 'inline';
+    fetch("{% url 'projects:publishing_keywords_ai' project.pk %}", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) { field.value = data.keywords; }
+        else { alert('Fehler: ' + (data.error || 'Unbekannt')); }
+    })
+    .catch(() => alert('Netzwerkfehler'))
+    .finally(() => { btn.disabled = false; spinner.style.display = 'none'; });
+});
+setTimeout(() => document.querySelectorAll('.alert-dismissible').forEach(el => el.remove()), 4000);
+</script>
+{% endblock %}

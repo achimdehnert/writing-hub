@@ -1,5 +1,5 @@
 """
-Projects App — Buchprojekte, Outline, Kapitel, Review, Editing, Lektorat, Snapshots (ADR-083)
+Projects App — Buchprojekte, Outline, Kapitel, Review, Editing, Lektorat, Snapshots, Publishing (ADR-083)
 """
 from __future__ import annotations
 
@@ -145,13 +145,13 @@ class BookProject(models.Model):
     )
     writing_style = models.ForeignKey(
         "authors.WritingStyle", on_delete=models.SET_NULL, null=True, blank=True,
-        verbose_name="Primärer Schreibstil",
+        verbose_name="Prim\u00e4rer Schreibstil",
         related_name="projects",
     )
     writing_styles = models.ManyToManyField(
         "authors.WritingStyle",
         blank=True,
-        verbose_name="Schreibstile (mehrere möglich)",
+        verbose_name="Schreibstile (mehrere m\u00f6glich)",
         related_name="projects_m2m",
     )
 
@@ -263,7 +263,7 @@ class OutlineNode(models.Model):
         "authors.WritingStyle",
         on_delete=models.SET_NULL,
         null=True, blank=True,
-        verbose_name="Schreibstil für dieses Kapitel",
+        verbose_name="Schreibstil f\u00fcr dieses Kapitel",
         related_name="outline_nodes",
     )
     order = models.PositiveIntegerField(default=0)
@@ -343,7 +343,7 @@ class ChapterEditing(models.Model):
     )
     SUGGESTION_TYPES = [
         ("style", "Stil"),
-        ("clarity", "Klärung"),
+        ("clarity", "Kl\u00e4rung"),
         ("consistency", "Konsistenz"),
         ("grammar", "Grammatik"),
         ("pacing", "Pacing"),
@@ -381,7 +381,7 @@ class LektoratSession(models.Model):
     name = models.CharField(max_length=200, default="Lektorat")
     STATUS = [
         ("pending", "Ausstehend"),
-        ("running", "Wird geprüft"),
+        ("running", "Wird gepr\u00fcft"),
         ("done", "Abgeschlossen"),
         ("error", "Fehler"),
     ]
@@ -468,3 +468,66 @@ class ManuscriptSnapshot(models.Model):
 
     def __str__(self):
         return f"{self.project.title} — {self.name}"
+
+
+class PublishingProfile(models.Model):
+    """
+    Publishing-Profil eines Buchprojekts:
+    ISBN/ASIN, Verlag, Sprache, Keywords, Cover, Front-/Backmatter.
+    """
+
+    STATUS_CHOICES = [
+        ("draft", "Entwurf"),
+        ("review", "In Review"),
+        ("ready", "Druckfertig"),
+        ("published", "Ver\u00f6ffentlicht"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.OneToOneField(
+        BookProject, on_delete=models.CASCADE, related_name="publishing_profile",
+    )
+    # Identifiers
+    isbn = models.CharField(max_length=20, blank=True)
+    asin = models.CharField(max_length=20, blank=True)
+    # Publisher
+    publisher_name = models.CharField(max_length=200, blank=True, default="Selbstverlag")
+    imprint = models.CharField(max_length=200, blank=True)
+    copyright_year = models.CharField(max_length=4, blank=True)
+    copyright_holder = models.CharField(max_length=200, blank=True)
+    # Language & Categories
+    language = models.CharField(max_length=10, blank=True, default="de")
+    age_rating = models.CharField(max_length=30, blank=True, default="0")
+    bisac_category = models.CharField(max_length=200, blank=True)
+    # Keywords
+    keywords = models.TextField(blank=True, help_text="Komma-getrennt, max. 7")
+    # Publication dates & status
+    first_published = models.DateField(null=True, blank=True)
+    this_edition = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
+    # Cover
+    cover_image_url = models.URLField(blank=True)
+    cover_notes = models.TextField(blank=True)
+    # Frontmatter
+    dedication = models.TextField(blank=True)
+    foreword = models.TextField(blank=True)
+    preface = models.TextField(blank=True)
+    # Backmatter
+    afterword = models.TextField(blank=True)
+    acknowledgements = models.TextField(blank=True)
+    about_author = models.TextField(blank=True)
+    bibliography = models.TextField(blank=True)
+    # Meta
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "wh_publishing_profiles"
+        verbose_name = "Publishing Profile"
+        verbose_name_plural = "Publishing Profiles"
+
+    def __str__(self):
+        return f"{self.project.title} — Publishing"
+
+    def get_status_display(self):
+        return dict(self.STATUS_CHOICES).get(self.status, self.status)

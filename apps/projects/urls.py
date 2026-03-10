@@ -6,6 +6,7 @@ from . import (
     views_html,
     views_lektorat,
     views_manuscript,
+    views_publishing,
     views_review,
     views_versions,
 )
@@ -24,6 +25,9 @@ urlpatterns = [
     path("node/<uuid:node_pk>/style/", views_html.ChapterNodeStyleView.as_view(), name="node_style"),
     # Manuskript
     path("<uuid:pk>/manuscript/", views_manuscript.ProjectManuscriptView.as_view(), name="manuscript"),
+    # Publishing
+    path("<uuid:pk>/publishing/", views_publishing.ProjectPublishingView.as_view(), name="publishing"),
+    path("<uuid:pk>/publishing/keywords-ai/", views_publishing.PublishingKeywordsAIView.as_view(), name="publishing_keywords_ai"),
     # Export
     path("<uuid:pk>/export/", views_export.ProjectExportView.as_view(), name="export"),
     # Versionen / Snapshots
