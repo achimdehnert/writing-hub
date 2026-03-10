@@ -38,7 +38,7 @@
         </h5>
         <div class="text-muted small mt-1">für <span style="color:#a5b4fc;">{{ author.name }}</span></div>
     </div>
-    {% if is_edit and style.source_text %}
+    {% if is_edit and style and style.source_text %}
     <button type="button" class="ai-btn" id="btnExtractRules" onclick="extractRules()">
         <i class="bi bi-stars"></i> DO/DONT aus Text extrahieren
     </button>
@@ -50,7 +50,6 @@
 <form method="post" enctype="multipart/form-data" id="styleForm">
     {% csrf_token %}
 
-    <!-- Meta -->
     <div class="lab-section">
         <h6><i class="bi bi-info-circle me-2" style="color:#6366f1;"></i>Basis-Info</h6>
         <div class="row g-3">
@@ -58,20 +57,19 @@
                 <label class="section-label">Name des Stils *</label>
                 <input type="text" name="name"
                        class="form-control" style="background:#131929;color:#f1f5f9;border-color:#475569;"
-                       value="{{ style.name|default:post.name|default:'' }}"
+                       value="{% if style %}{{ style.name }}{% elif post %}{{ post.name }}{% endif %}"
                        placeholder="z.B. Thriller-Stil, Lyrisch, Sachlich" required>
             </div>
             <div class="col-md-6">
                 <label class="section-label">Beschreibung</label>
                 <input type="text" name="description"
                        class="form-control" style="background:#131929;color:#f1f5f9;border-color:#475569;"
-                       value="{{ style.description|default:'' }}"
+                       value="{% if style %}{{ style.description }}{% endif %}"
                        placeholder="Kurze Beschreibung des Stils">
             </div>
         </div>
     </div>
 
-    <!-- Quelltext -->
     <div class="lab-section">
         <h6><i class="bi bi-file-text me-2" style="color:#6366f1;"></i>Quelltext
             <span class="text-muted fw-normal" style="font-size:.75rem;">(Beispieltext des Autors, wird per LLM analysiert)</span>
@@ -83,7 +81,7 @@
         <div id="panel-text">
             <textarea name="source_text" rows="8"
                       class="form-control" style="background:#131929;color:#f1f5f9;border-color:#475569;font-family:monospace;font-size:.82rem;"
-                      placeholder="Füge hier einen repräsentativen Textausschnitt des Autors ein (mind. 200 Wörter empfohlen)...">{{ style.source_text|default:'' }}</textarea>
+                      placeholder="Füge hier einen repräsentativen Textausschnitt des Autors ein (mind. 200 Wörter empfohlen)...">{% if style %}{{ style.source_text }}{% endif %}</textarea>
         </div>
         <div id="panel-file" style="display:none;">
             <input type="file" name="source_file" accept=".txt,.md"
@@ -92,52 +90,45 @@
         <div class="form-text" style="color:#64748b;">Empfehlung: 200–2000 Wörter für beste Analyseergebnisse.</div>
     </div>
 
-    <!-- Style Lab Builder: DO / DON'T / TABOO / SIGNATURE -->
     <div class="lab-section">
         <h6><i class="bi bi-sliders me-2" style="color:#6366f1;"></i>Style Lab Builder
             <span class="text-muted fw-normal" style="font-size:.75rem;">DO / DON'T / TABOO / Signature Moves</span>
         </h6>
-
         <div id="extractMsg" class="mb-3" style="display:none;"></div>
-
         <div class="row g-3">
 
-            <!-- DO -->
             <div class="col-md-6">
-                <label class="section-label"><i class="bi bi-check-circle-fill me-1" style="color:#22c55e;"></i>DO &mdash; Erlaubt & empfohlen</label>
+                <label class="section-label"><i class="bi bi-check-circle-fill me-1" style="color:#22c55e;"></i>DO &mdash; Erlaubt &amp; empfohlen</label>
                 <div class="tag-area" id="area-do" onclick="focusInput('input-do')">
-                    {% for item in style.do_list %}<span class="tag tag-do">{{ item }}<button type="button" class="tag-remove" onclick="removeTag(this)"><i class="bi bi-x"></i></button></span>{% endfor %}
-                    <input class="tag-input" id="input-do" placeholder="Stilmittel hinzufügen..." onkeydown="handleTagInput(event, 'do-list', 'area-do', 'input-do', 'tag-do')">
+                    {% if style %}{% for item in style.do_list %}<span class="tag tag-do">{{ item }}<button type="button" class="tag-remove" onclick="removeTag(this)"><i class="bi bi-x"></i></button></span>{% endfor %}{% endif %}
+                    <input class="tag-input" id="input-do" placeholder="Stilmittel hinzufügen..." onkeydown="handleTagInput(event,'do-list','area-do','input-do','tag-do')">
                 </div>
                 <textarea name="do_list" id="do-list" style="display:none;">{{ do_list_str|default:'' }}</textarea>
             </div>
 
-            <!-- DON'T -->
             <div class="col-md-6">
                 <label class="section-label"><i class="bi bi-x-circle-fill me-1" style="color:#f87171;"></i>DON'T &mdash; Vermeiden</label>
                 <div class="tag-area" id="area-dont" onclick="focusInput('input-dont')">
-                    {% for item in style.dont_list %}<span class="tag tag-dont">{{ item }}<button type="button" class="tag-remove" onclick="removeTag(this)"><i class="bi bi-x"></i></button></span>{% endfor %}
-                    <input class="tag-input" id="input-dont" placeholder="Zu vermeidendes hinzufügen..." onkeydown="handleTagInput(event, 'dont-list', 'area-dont', 'input-dont', 'tag-dont')">
+                    {% if style %}{% for item in style.dont_list %}<span class="tag tag-dont">{{ item }}<button type="button" class="tag-remove" onclick="removeTag(this)"><i class="bi bi-x"></i></button></span>{% endfor %}{% endif %}
+                    <input class="tag-input" id="input-dont" placeholder="Zu vermeidendes hinzufügen..." onkeydown="handleTagInput(event,'dont-list','area-dont','input-dont','tag-dont')">
                 </div>
                 <textarea name="dont_list" id="dont-list" style="display:none;">{{ dont_list_str|default:'' }}</textarea>
             </div>
 
-            <!-- TABOO -->
             <div class="col-md-6">
                 <label class="section-label"><i class="bi bi-slash-circle-fill me-1" style="color:#fb923c;"></i>TABOO &mdash; Niemals verwenden</label>
                 <div class="tag-area" id="area-taboo" onclick="focusInput('input-taboo')">
-                    {% for item in style.taboo_list %}<span class="tag tag-taboo">{{ item }}<button type="button" class="tag-remove" onclick="removeTag(this)"><i class="bi bi-x"></i></button></span>{% endfor %}
-                    <input class="tag-input" id="input-taboo" placeholder="Tabu-Wort hinzufügen..." onkeydown="handleTagInput(event, 'taboo-list', 'area-taboo', 'input-taboo', 'tag-taboo')">
+                    {% if style %}{% for item in style.taboo_list %}<span class="tag tag-taboo">{{ item }}<button type="button" class="tag-remove" onclick="removeTag(this)"><i class="bi bi-x"></i></button></span>{% endfor %}{% endif %}
+                    <input class="tag-input" id="input-taboo" placeholder="Tabu-Wort hinzufügen..." onkeydown="handleTagInput(event,'taboo-list','area-taboo','input-taboo','tag-taboo')">
                 </div>
                 <textarea name="taboo_list" id="taboo-list" style="display:none;">{{ taboo_list_str|default:'' }}</textarea>
             </div>
 
-            <!-- SIGNATURE MOVES -->
             <div class="col-md-6">
                 <label class="section-label"><i class="bi bi-stars me-1" style="color:#a5b4fc;"></i>Signature Moves &mdash; Charakteristisch</label>
                 <div class="tag-area" id="area-sig" onclick="focusInput('input-sig')">
-                    {% for item in style.signature_moves %}<span class="tag tag-sig">{{ item }}<button type="button" class="tag-remove" onclick="removeTag(this)"><i class="bi bi-x"></i></button></span>{% endfor %}
-                    <input class="tag-input" id="input-sig" placeholder="Charakteristisches Stilmittel..." onkeydown="handleTagInput(event, 'signature-moves', 'area-sig', 'input-sig', 'tag-sig')">
+                    {% if style %}{% for item in style.signature_moves %}<span class="tag tag-sig">{{ item }}<button type="button" class="tag-remove" onclick="removeTag(this)"><i class="bi bi-x"></i></button></span>{% endfor %}{% endif %}
+                    <input class="tag-input" id="input-sig" placeholder="Charakteristisches Stilmittel..." onkeydown="handleTagInput(event,'signature-moves','area-sig','input-sig','tag-sig')">
                 </div>
                 <textarea name="signature_moves" id="signature-moves" style="display:none;">{{ signature_moves_str|default:'' }}</textarea>
             </div>
@@ -148,11 +139,9 @@
     {% if not is_edit %}
     <div class="mb-4">
         <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="auto_analyze"
-                   id="auto_analyze" value="1" checked>
+            <input class="form-check-input" type="checkbox" name="auto_analyze" id="auto_analyze" value="1" checked>
             <label class="form-check-label" for="auto_analyze" style="color:#cbd5e1;">
-                <i class="bi bi-stars me-1 text-primary"></i>
-                Nach Erstellen direkt per LLM analysieren
+                <i class="bi bi-stars me-1 text-primary"></i> Nach Erstellen direkt per LLM analysieren
             </label>
         </div>
     </div>
@@ -170,16 +159,13 @@
 
 {% block extra_js %}
 <script>
-function switchTab(tab) {
-    document.getElementById('panel-text').style.display = tab === 'text' ? '' : 'none';
-    document.getElementById('panel-file').style.display = tab === 'file' ? '' : 'none';
-    document.getElementById('tab-text').classList.toggle('active', tab === 'text');
-    document.getElementById('tab-file').classList.toggle('active', tab === 'file');
+function switchTab(t) {
+    document.getElementById('panel-text').style.display = t==='text' ? '' : 'none';
+    document.getElementById('panel-file').style.display = t==='file' ? '' : 'none';
+    document.getElementById('tab-text').classList.toggle('active', t==='text');
+    document.getElementById('tab-file').classList.toggle('active', t==='file');
 }
-
-function focusInput(id) {
-    document.getElementById(id).focus();
-}
+function focusInput(id) { document.getElementById(id).focus(); }
 
 function handleTagInput(event, textareaId, areaId, inputId, tagClass) {
     const input = document.getElementById(inputId);
@@ -189,9 +175,8 @@ function handleTagInput(event, textareaId, areaId, inputId, tagClass) {
         input.value = '';
     }
     if (event.key === 'Backspace' && !input.value) {
-        const area = document.getElementById(areaId);
-        const tags = area.querySelectorAll('.tag');
-        if (tags.length) tags[tags.length - 1].remove();
+        const tags = document.getElementById(areaId).querySelectorAll('.tag');
+        if (tags.length) tags[tags.length-1].remove();
         syncTextarea(textareaId, areaId);
     }
 }
@@ -209,34 +194,29 @@ function addTag(text, textareaId, areaId, inputId, tagClass) {
 function removeTag(btn) {
     const tag = btn.closest('.tag');
     const area = tag.closest('.tag-area');
-    const textareaId = area.id.replace('area-', '') === 'do' ? 'do-list'
-        : area.id.replace('area-', '') === 'dont' ? 'dont-list'
-        : area.id.replace('area-', '') === 'taboo' ? 'taboo-list'
-        : 'signature-moves';
+    const key = area.id.replace('area-','');
+    const taId = key==='do' ? 'do-list' : key==='dont' ? 'dont-list' : key==='taboo' ? 'taboo-list' : 'signature-moves';
     tag.remove();
-    syncTextarea(textareaId, area.id);
+    syncTextarea(taId, area.id);
 }
 
 function syncTextarea(textareaId, areaId) {
     const area = document.getElementById(areaId);
     const tags = Array.from(area.querySelectorAll('.tag')).map(t => {
-        const clone = t.cloneNode(true);
-        clone.querySelector('.tag-remove')?.remove();
-        return clone.textContent.trim();
+        const c = t.cloneNode(true);
+        c.querySelector('.tag-remove')?.remove();
+        return c.textContent.trim();
     });
     document.getElementById(textareaId).value = tags.join('\n');
 }
 
-// Sync all textareas before submit
 document.getElementById('styleForm').addEventListener('submit', function() {
-    ['do', 'dont', 'taboo', 'sig'].forEach(key => {
-        const areaId = `area-${key}`;
-        const taId = key === 'do' ? 'do-list' : key === 'dont' ? 'dont-list' : key === 'taboo' ? 'taboo-list' : 'signature-moves';
-        syncTextarea(taId, areaId);
+    [['do','do-list'],['dont','dont-list'],['taboo','taboo-list'],['sig','signature-moves']].forEach(([k,ta]) => {
+        syncTextarea(ta, 'area-'+k);
     });
 });
 
-{% if is_edit and style.source_text %}
+{% if is_edit and style and style.source_text %}
 async function extractRules() {
     const btn = document.getElementById('btnExtractRules');
     const msg = document.getElementById('extractMsg');
@@ -246,18 +226,18 @@ async function extractRules() {
     try {
         const fd = new FormData();
         fd.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
-        const r = await fetch('{% url "authors:style_extract_rules" style.pk %}', { method: 'POST', body: fd });
+        const r = await fetch('{% url "authors:style_extract_rules" style.pk %}', {method:'POST', body:fd});
         const data = await r.json();
         if (data.ok) {
-            applyExtracted('do', data.do_list || [], 'do-list', 'area-do', 'input-do', 'tag-do');
-            applyExtracted('dont', data.dont_list || [], 'dont-list', 'area-dont', 'input-dont', 'tag-dont');
-            applyExtracted('taboo', data.taboo_list || [], 'taboo-list', 'area-taboo', 'input-taboo', 'tag-taboo');
-            applyExtracted('sig', data.signature_moves || [], 'signature-moves', 'area-sig', 'input-sig', 'tag-sig');
+            applyExtracted('do', data.do_list||[], 'do-list','area-do','input-do','tag-do');
+            applyExtracted('dont', data.dont_list||[], 'dont-list','area-dont','input-dont','tag-dont');
+            applyExtracted('taboo', data.taboo_list||[], 'taboo-list','area-taboo','input-taboo','tag-taboo');
+            applyExtracted('sig', data.signature_moves||[], 'signature-moves','area-sig','input-sig','tag-sig');
             msg.innerHTML = '<div class="alert alert-success py-2 small"><i class="bi bi-check-circle me-1"></i>Regeln extrahiert! Überprüfe und passe sie an, dann speichere.</div>';
         } else {
             msg.innerHTML = `<div class="alert alert-danger py-2 small">${data.error}</div>`;
         }
-    } catch (err) {
+    } catch(err) {
         msg.innerHTML = `<div class="alert alert-danger py-2 small">Fehler: ${err.message}</div>`;
     } finally {
         btn.disabled = false;
@@ -265,10 +245,8 @@ async function extractRules() {
         msg.style.display = '';
     }
 }
-
 function applyExtracted(key, items, taId, areaId, inputId, tagClass) {
     const area = document.getElementById(areaId);
-    const input = document.getElementById(inputId);
     area.querySelectorAll('.tag').forEach(t => t.remove());
     items.forEach(item => addTag(item, taId, areaId, inputId, tagClass));
 }

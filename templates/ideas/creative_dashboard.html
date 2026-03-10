@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}Ideen-Studio — Writing Hub{% endblock %}
+{% block nav_studio %}active{% endblock %}
+{% block page_title %}<i class="bi bi-lightbulb me-2" style="color:#fbbf24;"></i>Ideen-Studio{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'ideas:creative_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-grid me-1"></i> Dashboard
+</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .studio-hero { background: linear-gradient(135deg, #1e1b4b 0%, #1a1d27 100%); border: 1px solid #3730a3; border-radius: .75rem; padding: 1.5rem 2rem; margin-bottom: 1.5rem; }
+    .phase-badge { display: inline-block; font-size: .7rem; padding: .25rem .6rem; border-radius: 999px; font-weight: 700; }
+    .phase-brainstorming { background: #1d4ed8; color: #bfdbfe; }
+    .phase-refining { background: #065f46; color: #a7f3d0; }
+    .phase-premise { background: #7c3aed; color: #ddd6fe; }
+    .phase-done { background: #374151; color: #9ca3af; }
+    .session-card { background: #1a1d27; border: 1px solid #2d3148; border-radius: .5rem; padding: 1rem 1.25rem; margin-bottom: .5rem; display: flex; align-items: center; gap: 1rem; transition: border-color .15s; }
+    .session-card:hover { border-color: #6366f1; }
+    .how-step { display: flex; gap: .75rem; padding: .5rem 0; border-bottom: 1px solid #2d3148; }
+    .how-step:last-child { border-bottom: none; }
+    .how-num { width: 1.5rem; height: 1.5rem; border-radius: 50%; background: #6366f1; color: #fff; font-size: .72rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: .1rem; }
+    .dna-item { display: flex; align-items: center; gap: .5rem; padding: .3rem 0; font-size: .85rem; }
+    .start-card { background: #0d1117; border: 1px solid #2d3148; border-radius: .75rem; padding: 1.5rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:1100px;margin:0 auto;">
+
+<div class="studio-hero">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div>
+            <h4 style="color:#e2e8f0;font-weight:800;margin-bottom:.25rem;">
+                <i class="bi bi-lightbulb me-2" style="color:#fbbf24;"></i>Kreativagent
+            </h4>
+            <p style="color:#94a3b8;font-size:.9rem;margin:0;">Finde und entwickle deine nächste Buchidee</p>
+        </div>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNewSession">
+            <i class="bi bi-plus-circle me-1"></i> Neue Session starten
+        </button>
+    </div>
+</div>
+
+{% if active_session %}
+<div class="card mb-4" style="border-color:#6366f1;">
+    <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div>
+                <h6 style="color:#e2e8f0;font-weight:700;margin-bottom:.3rem;">{{ active_session.title }}</h6>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="phase-badge phase-{{ active_session.phase }}">{{ active_session.get_phase_display }}</span>
+                    <span style="color:#64748b;font-size:.8rem;">{{ active_session.idea_count }} Ideen</span>
+                </div>
+            </div>
+            <a href="{% url 'ideas:creative_session' active_session.pk %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-arrow-right me-1"></i> Weiter brainstormen
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-4">
+
+    <div class="col-md-7">
+
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <h6 style="color:#94a3b8;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;margin:0;">
+                <i class="bi bi-clock-history me-1"></i> Letzte Sessions
+            </h6>
+        </div>
+
+        {% if recent_sessions %}
+        {% for s in recent_sessions %}
+        <a href="{% url 'ideas:creative_session' s.pk %}" style="text-decoration:none;">
+            <div class="session-card">
+                <div style="flex:1;">
+                    <div style="font-weight:600;color:#e2e8f0;font-size:.9rem;">{{ s.title }}</div>
+                    <div style="font-size:.75rem;color:#64748b;margin-top:.15rem;">
+                        {{ s.updated_at|date:"d.m.Y H:i" }} &middot; {{ s.idea_count }} Ideen
+                    </div>
+                </div>
+                <span class="phase-badge phase-{{ s.phase }}">{{ s.get_phase_display }}</span>
+            </div>
+        </a>
+        {% endfor %}
+        {% else %}
+        <div style="color:#64748b;font-size:.85rem;padding:1.5rem 0;text-align:center;">
+            <i class="bi bi-lightbulb d-block mb-2" style="font-size:2rem;"></i>
+            Noch keine Sessions. Starte deine erste Brainstorming-Session!
+        </div>
+        {% endif %}
+
+    </div>
+
+    <div class="col-md-5">
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <div style="font-size:.8rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem;">
+                    <i class="bi bi-info-circle me-1"></i> So funktioniert's
+                </div>
+                <div class="how-step">
+                    <div class="how-num">1</div>
+                    <div><strong style="color:#e2e8f0;font-size:.85rem;">Session starten</strong><br><span style="color:#64748b;font-size:.78rem;">Teile deine vage Idee oder Genre-Wünsche</span></div>
+                </div>
+                <div class="how-step">
+                    <div class="how-num">2</div>
+                    <div><strong style="color:#e2e8f0;font-size:.85rem;">Ideen erkunden</strong><br><span style="color:#64748b;font-size:.78rem;">Der Agent generiert 3-5 Buchideen</span></div>
+                </div>
+                <div class="how-step">
+                    <div class="how-num">3</div>
+                    <div><strong style="color:#e2e8f0;font-size:.85rem;">Verfeinern</strong><br><span style="color:#64748b;font-size:.78rem;">Bewerte und verfeinere die besten Ideen</span></div>
+                </div>
+                <div class="how-step">
+                    <div class="how-num">4</div>
+                    <div><strong style="color:#e2e8f0;font-size:.85rem;">Premise erstellen</strong><br><span style="color:#64748b;font-size:.78rem;">Lass eine vollständige Premise generieren</span></div>
+                </div>
+                <div class="how-step">
+                    <div class="how-num">5</div>
+                    <div><strong style="color:#e2e8f0;font-size:.85rem;">Projekt anlegen</strong><br><span style="color:#64748b;font-size:.78rem;">Erstelle dein Buchprojekt mit einem Klick</span></div>
+                </div>
+            </div>
+        </div>
+
+        {% if style_dnas %}
+        <div class="card">
+            <div class="card-body">
+                <div style="font-size:.8rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem;">
+                    <i class="bi bi-palette me-1"></i> Deine Style DNAs
+                </div>
+                {% for style in style_dnas %}
+                <div class="dna-item">
+                    <i class="bi bi-check-circle-fill" style="color:#22c55e;font-size:.8rem;"></i>
+                    <span style="color:#e2e8f0;">{{ style.name }}</span>
+                    <span style="color:#64748b;font-size:.75rem;">{{ style.author.name }}</span>
+                </div>
+                {% endfor %}
+                <div style="font-size:.75rem;color:#64748b;margin-top:.5rem;">
+                    Style DNA hilft dem Agent, passende Ideen zu generieren.
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+
+</div>
+
+<!-- Modal: Neue Session -->
+<div class="modal fade" id="modalNewSession" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background:#1a1d27;border:1px solid #2d3148;">
+            <div class="modal-header" style="border-color:#2d3148;">
+                <h5 class="modal-title" style="color:#e2e8f0;"><i class="bi bi-lightbulb me-2" style="color:#fbbf24;"></i>Neue Session starten</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'ideas:creative_start' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small" style="color:#94a3b8;">Arbeitstitel *</label>
+                        <input type="text" name="title" class="form-control" style="background:#0d1117;color:#f1f5f9;border-color:#475569;" placeholder="z.B. 'Sci-Fi Thriller' oder Romanname" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small" style="color:#94a3b8;">Genre</label>
+                        <input type="text" name="genre" class="form-control" style="background:#0d1117;color:#f1f5f9;border-color:#475569;" placeholder="z.B. Science Fiction, Thriller, Romance">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small" style="color:#94a3b8;">Inspiration / erste Idee</label>
+                        <textarea name="inspiration" rows="3" class="form-control" style="background:#0d1117;color:#f1f5f9;border-color:#475569;" placeholder="Was treibt dich an? Ein Thema, ein Bild, ein Gefühl, eine Frage..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-color:#2d3148;">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-stars me-1"></i> Session starten</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

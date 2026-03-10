@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% block title %}{{ session.title }} — Ideen-Studio — Writing Hub{% endblock %}
+{% block nav_studio %}active{% endblock %}
+{% block page_title %}<i class="bi bi-lightbulb me-2" style="color:#fbbf24;"></i>{{ session.title }}{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'ideas:creative_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Dashboard
+</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .idea-card { background: #1a1d27; border: 1px solid #2d3148; border-radius: .75rem; padding: 1.25rem; height: 100%; transition: border-color .15s; }
+    .idea-card:hover { border-color: #4f46e5; }
+    .idea-card.selected { border-color: #6366f1; background: #1e1b4b20; }
+    .idea-title { font-weight: 700; color: #e2e8f0; font-size: .95rem; margin-bottom: .4rem; }
+    .idea-logline { color: #94a3b8; font-size: .82rem; line-height: 1.5; }
+    .idea-hook { color: #a5b4fc; font-size: .78rem; margin-top: .5rem; font-style: italic; }
+    .star-btn { background: none; border: none; font-size: 1rem; cursor: pointer; padding: .1rem .15rem; opacity: .4; transition: opacity .15s; }
+    .star-btn.active { opacity: 1; }
+    .action-btn { font-size: .78rem; padding: .3rem .7rem; border-radius: .375rem; }
+    .phase-badge { display: inline-block; font-size: .7rem; padding: .25rem .6rem; border-radius: 999px; font-weight: 700; }
+    .phase-brainstorming { background: #1d4ed8; color: #bfdbfe; }
+    .phase-refining { background: #065f46; color: #a7f3d0; }
+    .phase-premise { background: #7c3aed; color: #ddd6fe; }
+    .phase-done { background: #374151; color: #9ca3af; }
+    .side-card { background: #1a1d27; border: 1px solid #2d3148; border-radius: .5rem; padding: 1rem; margin-bottom: .75rem; }
+    .side-card-title { font-size: .75rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .5rem; }
+    .premise-box { background: #0d1117; border: 1px solid #3730a3; border-radius: .5rem; padding: 1rem; font-size: .83rem; color: #c7d2fe; line-height: 1.6; white-space: pre-wrap; max-height: 250px; overflow-y: auto; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;">
+
+<div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+    <a href="{% url 'ideas:creative_dashboard' %}" style="color:#64748b;font-size:.85rem;">
+        <i class="bi bi-arrow-left me-1"></i> Zurück
+    </a>
+    <h5 style="margin:0;color:#e2e8f0;font-weight:700;">{{ session.title }}</h5>
+    <span class="phase-badge phase-{{ session.phase }}">{{ session.get_phase_display }}</span>
+    <span style="color:#64748b;font-size:.8rem;">{{ ideas|length }} Ideen</span>
+</div>
+
+<div class="row g-4">
+
+    <!-- Ideas Grid -->
+    <div class="col-lg-8">
+
+        <!-- Brainstorm bar -->
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+            <h6 style="color:#94a3b8;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;margin:0;">
+                <i class="bi bi-book me-1"></i> Buchideen ({{ ideas|length }})
+            </h6>
+            <form method="post" action="{% url 'ideas:creative_brainstorm' session.pk %}" class="d-flex gap-2 align-items-center">
+                {% csrf_token %}
+                <select name="count" class="form-select form-select-sm" style="background:#131929;color:#f1f5f9;border-color:#475569;width:auto;">
+                    <option value="3">3 Ideen</option>
+                    <option value="5" selected>5 Ideen</option>
+                </select>
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-stars me-1"></i> {% if ideas %}Mehr Ideen{% else %}Ideen generieren{% endif %}
+                </button>
+            </form>
+        </div>
+
+        {% if ideas %}
+        <div class="row g-3">
+            {% for idea in ideas %}
+            <div class="col-md-6">
+                <div class="idea-card {% if session.selected_idea and session.selected_idea.pk == idea.pk %}selected{% endif %}">
+                    <div class="idea-title">{{ idea.title }}</div>
+                    <div class="idea-logline">{{ idea.refined_logline|default:idea.logline }}</div>
+                    {% if idea.hook %}<div class="idea-hook">{{ idea.hook }}</div>{% endif %}
+
+                    <!-- Rating stars -->
+                    <div class="d-flex gap-1 mt-2 mb-2" id="stars-{{ idea.pk }}">
+                        {% for i in "1234" %}
+                        <button class="star-btn {% if idea.rating >= forloop.counter %}active{% endif %}"
+                                onclick="rateIdea('{{ idea.pk }}', {{ forloop.counter }}, this)"
+                                title="{{ forloop.counter }} Stern{% if forloop.counter > 1 %}e{% endif %}">
+                            &#9829;
+                        </button>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="d-flex gap-1 flex-wrap mt-2">
+                        <form method="post" action="{% url 'ideas:creative_refine' session.pk idea.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-secondary action-btn">
+                                <i class="bi bi-pencil me-1"></i>Verfeinern
+                            </button>
+                        </form>
+                        <form method="post" action="{% url 'ideas:creative_premise' session.pk idea.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-primary action-btn">
+                                <i class="bi bi-file-text me-1"></i>Premise
+                            </button>
+                        </form>
+                        {% if not session.created_project %}
+                        <button type="button" class="btn btn-success action-btn"
+                                onclick="selectAndCreate('{{ idea.pk }}', '{{ idea.title|escapejs }}')"
+                                title="Direkt als Projekt anlegen">
+                            <i class="bi bi-check me-1"></i>Auswählen
+                        </button>
+                        {% endif %}
+                    </div>
+
+                    <form method="post" action="{% url 'ideas:creative_refine' session.pk idea.pk %}" style="display:none;" id="del-{{ idea.pk }}">
+                        {% csrf_token %}
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:3rem 0;color:#64748b;">
+            <i class="bi bi-lightbulb d-block mb-2" style="font-size:2.5rem;color:#fbbf24;"></i>
+            <div style="font-size:.9rem;">Noch keine Ideen — klick auf "Ideen generieren"!</div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+
+        <div class="side-card">
+            <div class="side-card-title"><i class="bi bi-info-circle me-1"></i>Session-Info</div>
+            <div style="font-size:.82rem;color:#94a3b8;">
+                <div>Erstellt: {{ session.created_at|date:"d.m.Y H:i" }}</div>
+                {% if session.genre %}<div>Genre: <strong style="color:#e2e8f0;">{{ session.genre }}</strong></div>{% endif %}
+                {% if session.style_dna_hint %}<div class="mt-1">Stil: <em style="color:#a5b4fc;">{{ session.style_dna_hint|truncatechars:80 }}</em></div>{% endif %}
+                {% if session.inspiration %}<div class="mt-1">Inspiration:<br><em style="color:#94a3b8;">{{ session.inspiration|truncatechars:120 }}</em></div>{% endif %}
+            </div>
+        </div>
+
+        {% if session.premise %}
+        <div class="side-card">
+            <div class="side-card-title"><i class="bi bi-file-text me-1"></i>Premise</div>
+            <div class="premise-box">{{ session.premise }}</div>
+            {% if not session.created_project %}
+            <form method="post" action="{% url 'ideas:creative_create_project' session.pk %}" class="mt-2">
+                {% csrf_token %}
+                <div class="mb-2">
+                    <input type="text" name="title" class="form-control form-control-sm"
+                           style="background:#0d1117;color:#f1f5f9;border-color:#475569;"
+                           value="{% if session.selected_idea %}{{ session.selected_idea.title }}{% endif %}"
+                           placeholder="Projekttitel">
+                </div>
+                <button type="submit" class="btn btn-success btn-sm w-100">
+                    <i class="bi bi-plus-circle me-1"></i> Projekt anlegen
+                </button>
+            </form>
+            {% else %}
+            <a href="{% url 'projects:detail' session.created_project.pk %}" class="btn btn-outline-primary btn-sm mt-2 w-100">
+                <i class="bi bi-arrow-right me-1"></i> Zum Projekt
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="side-card">
+            <div class="side-card-title"><i class="bi bi-lightning me-1"></i>Schnellaktionen</div>
+            <div class="d-flex flex-column gap-1">
+                <form method="post" action="{% url 'ideas:creative_brainstorm' session.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="count" value="5">
+                    <button type="submit" class="btn btn-link p-0" style="color:#a5b4fc;font-size:.83rem;text-decoration:none;">
+                        <i class="bi bi-plus-circle me-1"></i> Mehr Ideen generieren
+                    </button>
+                </form>
+                <a href="{% url 'ideas:creative_dashboard' %}" style="color:#94a3b8;font-size:.83rem;">
+                    <i class="bi bi-grid me-1"></i> Zum Dashboard
+                </a>
+                <form method="post" action="{% url 'ideas:creative_delete' session.pk %}"
+                      onsubmit="return confirm('Session wirklich löschen?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-link p-0" style="color:#f87171;font-size:.83rem;text-decoration:none;">
+                        <i class="bi bi-trash me-1"></i> Session löschen
+                    </button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+</div>
+
+<!-- Create Project Modal -->
+<div class="modal fade" id="modalCreateProject" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background:#1a1d27;border:1px solid #2d3148;">
+            <div class="modal-header" style="border-color:#2d3148;">
+                <h5 class="modal-title" style="color:#e2e8f0;"><i class="bi bi-plus-circle me-2"></i>Projekt anlegen</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'ideas:creative_create_project' session.pk %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <label class="form-label small" style="color:#94a3b8;">Projekttitel</label>
+                    <input type="text" name="title" id="modalProjectTitle"
+                           class="form-control" style="background:#0d1117;color:#f1f5f9;border-color:#475569;"
+                           placeholder="Romantitel">
+                    <div class="form-text" style="color:#64748b;">Premise und Ideen-Details werden übernommen.</div>
+                </div>
+                <div class="modal-footer" style="border-color:#2d3148;">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-check me-1"></i> Anlegen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function rateIdea(ideaPk, rating, btn) {
+    const container = btn.closest('[id^="stars-"]') || btn.parentElement;
+    const stars = container.querySelectorAll('.star-btn');
+    try {
+        const fd = new FormData();
+        fd.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        fd.append('rating', rating);
+        const r = await fetch(`/ideen/studio/{{ session.pk }}/idee/${ideaPk}/bewerten/`, {method:'POST', body:fd});
+        const data = await r.json();
+        if (data.ok) {
+            stars.forEach((s, i) => s.classList.toggle('active', i < data.rating));
+        }
+    } catch(e) { console.error(e); }
+}
+
+function selectAndCreate(ideaPk, ideaTitle) {
+    document.getElementById('modalProjectTitle').value = ideaTitle;
+    new bootstrap.Modal(document.getElementById('modalCreateProject')).show();
+}
+</script>
+{% endblock %}
