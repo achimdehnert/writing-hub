@@ -42,6 +42,84 @@ class _OutlineLLMRouterAdapter:
         raise last_exc
 
 
+def _build_project_context(ctx):
+    """
+    Versucht outlinefw.ProjectContext aus dem lokalen ProjectContext zu bauen.
+    Füllt alle Pflichtfelder mit Fallback-Werten wenn nicht vorhanden.
+    Probiert verschiedene Signaturen um verschiedene outlinefw-Versionen zu unterstützen.
+    """
+    if ProjectContext is None:
+        return None
+
+    title = ctx.title or "Unbekanntes Projekt"
+    genre = ctx.genre or ""
+    description = ctx.description or ""
+
+    # Logline aus description ableiten wenn nicht vorhanden
+    logline = ctx.logline if ctx.logline else (description[:200] if description else title)
+
+    # Protagonist aus characters ableiten
+    protagonist = ""
+    if ctx.characters:
+        first = ctx.characters[0]
+        protagonist = first.get("name", "") or first.get("role", "") or ""
+    if not protagonist:
+        protagonist = "Protagonist"
+
+    # Setting aus worlds ableiten
+    setting = ""
+    if ctx.worlds:
+        setting = ctx.worlds[0].get("name", "") or ctx.worlds[0].get("description", "")[:100]
+    if not setting:
+        setting = genre or "Unbekannte Welt"
+
+    # Versuche verschiedene Signaturen (outlinefw kann unterschiedliche Versionen haben)
+    attempts = [
+        # Vollständig mit allen bekannten Feldern
+        lambda: ProjectContext(
+            title=title,
+            genre=genre,
+            description=description,
+            logline=logline,
+            protagonist=protagonist,
+            setting=setting,
+        ),
+        # Ohne optionale Felder
+        lambda: ProjectContext(
+            title=title,
+            genre=genre,
+            description=description,
+            logline=logline,
+            protagonist=protagonist,
+            setting=setting,
+            themes=[],
+            characters=[],
+        ),
+        # Minimale Signatur
+        lambda: ProjectContext(
+            title=title,
+            logline=logline,
+            protagonist=protagonist,
+            setting=setting,
+        ),
+        # Nur title + description als letzter Fallback
+        lambda: ProjectContext(
+            title=title,
+            description=description,
+        ),
+    ]
+
+    for attempt in attempts:
+        try:
+            return attempt()
+        except Exception as exc:
+            logger.debug("ProjectContext attempt failed: %s", exc)
+            continue
+
+    logger.error("Alle ProjectContext-Signaturen fehlgeschlagen für Projekt %s", ctx.title)
+    return None
+
+
 def _project_context_from_db(project_id: str):
     """Baut outlinefw.ProjectContext aus der writing-hub DB."""
     if not _OUTLINEFW_AVAILABLE:
@@ -50,12 +128,7 @@ def _project_context_from_db(project_id: str):
     from apps.authoring.services.project_context_service import ProjectContextService
     svc = ProjectContextService()
     ctx = svc.get_context(project_id)
-
-    return ProjectContext(
-        title=ctx.title or "",
-        genre=ctx.genre or "",
-        description=ctx.description or "",
-    )
+    return _build_project_context(ctx)
 
 
 def _save_outline_to_db(
@@ -80,16 +153,26 @@ def _save_outline_to_db(
             notes=f"Framework: {framework}" if framework else "",
             is_active=True,
         )
-        DBOutlineNode.objects.bulk_create([
-            DBOutlineNode(
+        db_nodes = []
+        for i, node in enumerate(nodes):
+            beat = ""
+            try:
+                beat = node.act.value if hasattr(node.act, "value") else str(node.act)
+            except Exception:
+                beat = "chapter"
+            summary = ""
+            try:
+                summary = node.summary or node.description or ""
+            except Exception:
+                pass
+            db_nodes.append(DBOutlineNode(
                 outline_version=version,
                 title=node.title,
-                description=node.summary,
-                beat_type=node.act.value if hasattr(node.act, "value") else str(node.act),
+                description=summary,
+                beat_type=beat or "chapter",
                 order=i + 1,
-            )
-            for i, node in enumerate(nodes)
-        ])
+            ))
+        DBOutlineNode.objects.bulk_create(db_nodes)
         return str(version.pk)
     except Exception:
         logger.exception("save_outline_to_db failed for project %s", project_id)
@@ -123,7 +206,10 @@ class OutlineGeneratorService:
 
         ctx = _project_context_from_db(project_id)
         if ctx is None:
-            return _FallbackResult(success=False, error_message="Project not found")
+            return _FallbackResult(
+                success=False,
+                error_message="Projektkontext konnte nicht erstellt werden. Bitte Projektbeschreibung ergänzen."
+            )
 
         try:
             generator = OutlineGenerator(llm_router=self._adapter)
