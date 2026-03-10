@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{% block title %}{{ style.name }} — Schreibstil — Writing Hub{% endblock %}
+{% block nav_authors %}active{% endblock %}
+
+{% block content %}
+<div style="max-width:900px;margin:0 auto;">
+
+{% if messages %}
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:1100;">
+    {% for msg in messages %}
+    <div class="toast show align-items-center text-white
+        {% if msg.tags == 'error' %}bg-danger{% elif msg.tags == 'warning' %}bg-warning text-dark{% else %}bg-success{% endif %}
+        border-0 mb-2" role="alert">
+        <div class="d-flex">
+            <div class="toast-body small">{{ msg }}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <a href="{% url 'authors:detail' style.author.pk %}" class="btn btn-link text-muted ps-0">
+        <i class="bi bi-arrow-left me-1"></i> {{ style.author.name }}
+    </a>
+    <div class="d-flex gap-2">
+        <a href="{% url 'authors:style_update' style.pk %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-pencil me-1"></i>Bearbeiten
+        </a>
+        <form method="post" action="{% url 'authors:style_delete' style.pk %}"
+              onsubmit="return confirm('Schreibstil löschen?')">
+            {% csrf_token %}
+            <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+        </form>
+    </div>
+</div>
+
+<!-- Header -->
+<div class="rounded-3 p-4 mb-4" style="background:linear-gradient(135deg,#1e1b4b 0%,#312e81 100%);">
+    <div class="d-flex align-items-start justify-content-between">
+        <div>
+            <h4 class="fw-bold text-white mb-1"><i class="bi bi-palette me-2"></i>{{ style.name }}</h4>
+            <div style="color:#a5b4fc;font-size:.85rem;">
+                <i class="bi bi-person-circle me-1"></i>{{ style.author.name }}
+                {% if style.description %} &mdash; {{ style.description }}{% endif %}
+            </div>
+        </div>
+        <span class="badge px-3 py-2"
+              style="background:{% if style.status == 'ready' %}#1a3a1a{% elif style.status == 'error' %}#3a1a1a{% elif style.status == 'analyzing' %}#1a2a3a{% else %}#1e2235{% endif %};
+                     color:{% if style.status == 'ready' %}#22c55e{% elif style.status == 'error' %}#f87171{% elif style.status == 'analyzing' %}#60a5fa{% else %}#94a3b8{% endif %};
+                     font-size:.8rem;">
+            {% if style.status == 'analyzing' %}<span class="spinner-border spinner-border-sm me-1"></span>{% endif %}
+            {{ style.get_status_display }}
+        </span>
+    </div>
+</div>
+
+<!-- Workflow-Schritte -->
+<div class="card mb-4" style="background:#0d1117;border-color:#2d3748;">
+    <div class="card-body">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+
+            <!-- Schritt 1: Text -->
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge rounded-pill px-2 py-1"
+                      style="background:{% if style.source_text %}#1a3a1a{% else %}#1e2235{% endif %};
+                             color:{% if style.source_text %}#22c55e{% else %}#94a3b8{% endif %};">
+                    {% if style.source_text %}<i class="bi bi-check-circle-fill"></i>{% else %}1{% endif %}
+                </span>
+                <span style="color:#e2e8f0;font-size:.85rem;">Text hochgeladen</span>
+            </div>
+
+            <i class="bi bi-arrow-right text-muted"></i>
+
+            <!-- Schritt 2: Analyse -->
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge rounded-pill px-2 py-1"
+                      style="background:{% if style.status == 'ready' %}#1a3a1a{% else %}#1e2235{% endif %};
+                             color:{% if style.status == 'ready' %}#22c55e{% else %}#94a3b8{% endif %};">
+                    {% if style.status == 'ready' %}<i class="bi bi-check-circle-fill"></i>{% else %}2{% endif %}
+                </span>
+                <span style="color:#e2e8f0;font-size:.85rem;">LLM analysiert</span>
+            </div>
+
+            <i class="bi bi-arrow-right text-muted"></i>
+
+            <!-- Schritt 3: Beispiele -->
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge rounded-pill px-2 py-1"
+                      style="background:{% if style.sample_count > 0 %}#1a3a1a{% else %}#1e2235{% endif %};
+                             color:{% if style.sample_count > 0 %}#22c55e{% else %}#94a3b8{% endif %};">
+                    {% if style.sample_count > 0 %}<i class="bi bi-check-circle-fill"></i>{% else %}3{% endif %}
+                </span>
+                <span style="color:#e2e8f0;font-size:.85rem;">Beispieltexte ({{ style.sample_count }}/8)</span>
+            </div>
+
+            <i class="bi bi-arrow-right text-muted"></i>
+
+            <span style="color:{% if style.status == 'ready' %}#6366f1{% else %}#475569{% endif %};font-size:.85rem;">
+                <i class="bi bi-check2-all me-1"></i>Bereit fürs Schreiben
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Aktions-Buttons -->
+<div class="d-flex flex-wrap gap-2 mb-4">
+    {% if style.status == 'draft' or style.status == 'error' %}
+    <form method="post" action="{% url 'authors:style_analyze' style.pk %}">
+        {% csrf_token %}
+        <button class="btn btn-primary"
+                onclick="this.disabled=true;this.innerHTML='<span class=\'spinner-border spinner-border-sm me-1\'></span>Analysiert...'">
+            <i class="bi bi-stars me-1"></i>Jetzt analysieren
+        </button>
+    </form>
+    {% elif style.status == 'ready' %}
+    <form method="post" action="{% url 'authors:style_analyze' style.pk %}">
+        {% csrf_token %}
+        <button class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-arrow-repeat me-1"></i>Neu analysieren
+        </button>
+    </form>
+    {% endif %}
+
+    {% if style.status == 'ready' %}
+    <form method="post" action="{% url 'authors:style_samples' style.pk %}">
+        {% csrf_token %}
+        <button class="btn btn-outline-primary btn-sm"
+                onclick="this.disabled=true;this.innerHTML='<span class=\'spinner-border spinner-border-sm me-1\'></span>Generiert...'">
+            <i class="bi bi-text-paragraph me-1"></i>Alle Beispiele generieren
+        </button>
+    </form>
+    {% endif %}
+</div>
+
+<!-- Stil-Profil -->
+{% if style.style_profile %}
+<div class="card mb-4" style="background:#0d1117;border-color:#2d3748;">
+    <div class="card-header py-2 d-flex align-items-center justify-content-between" style="border-color:#2d3748;">
+        <span class="fw-semibold small" style="color:#e2e8f0;">
+            <i class="bi bi-clipboard-data me-1"></i>Stil-Profil (LLM-Analyse)
+        </span>
+        <button class="btn btn-link btn-sm text-muted p-0" data-bs-toggle="collapse" data-bs-target="#collapseProfile">
+            Ein-/Ausklappen
+        </button>
+    </div>
+    <div class="collapse show" id="collapseProfile">
+        <div class="card-body">
+            <div class="p-3 rounded" style="background:#0a0d14;font-size:.85rem;color:#cbd5e1;white-space:pre-wrap;line-height:1.7;">{{ style.style_profile }}</div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if style.style_prompt %}
+<div class="card mb-4" style="background:#0d1117;border-color:#3730a3;">
+    <div class="card-header py-2" style="border-color:#3730a3;">
+        <span class="fw-semibold small" style="color:#a5b4fc;">
+            <i class="bi bi-cpu me-1"></i>Stil-Prompt (wird beim Schreiben verwendet)
+        </span>
+    </div>
+    <div class="card-body">
+        <div class="p-3 rounded" style="background:#1e1b4b;font-size:.85rem;color:#c7d2fe;font-style:italic;line-height:1.6;">{{ style.style_prompt }}</div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Beispieltexte -->
+<div class="card mb-4" style="background:#0d1117;border-color:#2d3748;">
+    <div class="card-header py-2" style="border-color:#2d3748;">
+        <span class="fw-semibold small" style="color:#e2e8f0;">
+            <i class="bi bi-text-paragraph me-1"></i>Beispieltexte ({{ style.sample_count }}/8 Situationen)
+        </span>
+    </div>
+    <div class="card-body p-0">
+        {% for situation_key, situation_label in situations %}
+        {% with sample=None %}
+        {% for s in samples %}{% if s.situation == situation_key %}{% with sample=s %}{% endwith %}{% endif %}{% endfor %}
+        {% endwith %}
+        <div class="border-bottom p-3" style="border-color:#1e2235 !important;">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge" style="background:#1e2235;color:#6366f1;font-size:.7rem;">{{ situation_label }}</span>
+                    {% for s in samples %}{% if s.situation == situation_key %}
+                    <span class="badge" style="background:#1a3a1a;color:#22c55e;font-size:.65rem;"><i class="bi bi-check"></i> vorhanden</span>
+                    {% endif %}{% endfor %}
+                </div>
+                <div class="d-flex gap-1">
+                    <button class="btn btn-outline-secondary btn-sm"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#sample-{{ situation_key }}"
+                            style="font-size:.72rem;">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    {% if style.status == 'ready' %}
+                    <form method="post" action="{% url 'authors:sample_update' style.pk situation_key %}" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="regenerate">
+                        <button class="btn btn-sm" style="background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3;font-size:.72rem;">
+                            <i class="bi bi-stars"></i>
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% for s in samples %}{% if s.situation == situation_key %}
+            <div class="text-muted small" style="white-space:pre-wrap;line-height:1.6;font-size:.8rem;">{{ s.text|truncatechars:300 }}</div>
+            {% endfor %}
+
+            <div class="collapse mt-2" id="sample-{{ situation_key }}">
+                <form method="post" action="{% url 'authors:sample_update' style.pk situation_key %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="save">
+                    <div class="mb-2">
+                        <textarea name="text" rows="8"
+                                  class="form-control form-control-sm" style="background:#131929;color:#f1f5f9;border-color:#475569;font-size:.82rem;"
+                                  placeholder="Beispieltext für {{ situation_label }}...">{% for s in samples %}{% if s.situation == situation_key %}{{ s.text }}{% endif %}{% endfor %}</textarea>
+                    </div>
+                    <div class="mb-2">
+                        <input type="text" name="notes"
+                               class="form-control form-control-sm" style="background:#131929;color:#f1f5f9;border-color:#475569;font-size:.78rem;"
+                               placeholder="Notizen (optional)..."
+                               value="{% for s in samples %}{% if s.situation == situation_key %}{{ s.notes }}{% endif %}{% endfor %}">
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-floppy me-1"></i>Speichern
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                data-bs-toggle="collapse" data-bs-target="#sample-{{ situation_key }}">Abbrechen</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.toast').forEach(el => setTimeout(() => el.classList.remove('show'), 5000));
+</script>
+{% endblock %}

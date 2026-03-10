@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}{% if is_edit %}Schreibstil bearbeiten{% else %}Neuer Schreibstil{% endif %} — Writing Hub{% endblock %}
+{% block nav_authors %}active{% endblock %}
+
+{% block content %}
+<div style="max-width:700px;margin:0 auto;">
+<a href="{% url 'authors:detail' author.pk %}" class="btn btn-link text-muted ps-0 mb-3">
+    <i class="bi bi-arrow-left me-1"></i> {{ author.name }}
+</a>
+<div class="card" style="background:#0d1117;border-color:#2d3748;">
+<div class="card-body p-4">
+    <h5 class="mb-1" style="color:#e2e8f0;">
+        <i class="bi bi-palette me-2 text-primary"></i>
+        {% if is_edit %}Schreibstil bearbeiten{% else %}Neuer Schreibstil{% endif %}
+    </h5>
+    <p class="text-muted small mb-4">für <span style="color:#a5b4fc;">{{ author.name }}</span></p>
+
+    {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label class="form-label" style="color:#cbd5e1;">Name des Stils *</label>
+            <input type="text" name="name"
+                   class="form-control" style="background:#131929;color:#f1f5f9;border-color:#475569;"
+                   value="{{ style.name|default:post.name|default:'' }}"
+                   placeholder="z.B. Thriller-Stil, Lyrisch, Sachlich" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" style="color:#cbd5e1;">Beschreibung</label>
+            <input type="text" name="description"
+                   class="form-control" style="background:#131929;color:#f1f5f9;border-color:#475569;"
+                   value="{{ style.description|default:'' }}"
+                   placeholder="Kurze Beschreibung des Stils">
+        </div>
+
+        <!-- Text-Eingabe -->
+        <div class="mb-3">
+            <label class="form-label" style="color:#cbd5e1;">
+                <i class="bi bi-file-text me-1"></i>Quelltext
+                <span class="text-muted small ms-2">(Beispieltext des Autors, wird per LLM analysiert)</span>
+            </label>
+
+            <!-- Upload-Tab oder Texteingabe -->
+            <ul class="nav nav-tabs mb-2" style="border-color:#2d3748;">
+                <li class="nav-item">
+                    <button type="button" class="nav-link {% if not is_edit %}active{% endif %}"
+                            id="tab-text" onclick="switchTab('text')"
+                            style="color:#94a3b8;border:none;background:none;">
+                        <i class="bi bi-keyboard me-1"></i>Text eingeben
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button type="button" class="nav-link"
+                            id="tab-file" onclick="switchTab('file')"
+                            style="color:#94a3b8;border:none;background:none;">
+                        <i class="bi bi-upload me-1"></i>Datei hochladen
+                    </button>
+                </li>
+            </ul>
+
+            <div id="panel-text">
+                <textarea name="source_text" rows="10"
+                          class="form-control" style="background:#131929;color:#f1f5f9;border-color:#475569;font-family:monospace;font-size:.85rem;"
+                          placeholder="Füge hier einen repräsentativen Textausschnitt des Autors ein (mind. 200 Wörter empfohlen)...">{{ style.source_text|default:'' }}</textarea>
+                <div class="form-text" style="color:#64748b;">Empfehlung: 200–2000 Wörter für beste Analyseergebnisse.</div>
+            </div>
+
+            <div id="panel-file" style="display:none;">
+                <input type="file" name="source_file" accept=".txt,.md"
+                       class="form-control" style="background:#131929;color:#f1f5f9;border-color:#475569;">
+                <div class="form-text" style="color:#64748b;">Akzeptiert: .txt und .md Dateien</div>
+            </div>
+        </div>
+
+        {% if not is_edit %}
+        <div class="mb-4">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="auto_analyze"
+                       id="auto_analyze" value="1" checked>
+                <label class="form-check-label" for="auto_analyze" style="color:#cbd5e1;">
+                    <i class="bi bi-stars me-1 text-primary"></i>
+                    Nach Erstellen direkt per LLM analysieren
+                </label>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="d-flex gap-2 justify-content-end">
+            <a href="{% url 'authors:detail' author.pk %}" class="btn btn-outline-secondary">Abbrechen</a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check me-1"></i>{% if is_edit %}Speichern{% else %}Anlegen{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function switchTab(tab) {
+    document.getElementById('panel-text').style.display = tab === 'text' ? '' : 'none';
+    document.getElementById('panel-file').style.display = tab === 'file' ? '' : 'none';
+    document.getElementById('tab-text').classList.toggle('active', tab === 'text');
+    document.getElementById('tab-file').classList.toggle('active', tab === 'file');
+    document.getElementById('tab-text').style.color = tab === 'text' ? '#a5b4fc' : '#94a3b8';
+    document.getElementById('tab-file').style.color = tab === 'file' ? '#a5b4fc' : '#94a3b8';
+}
+</script>
+{% endblock %}
