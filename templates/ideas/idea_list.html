@@ -2,15 +2,32 @@
 
 {% block title %}Ideen-Imports — Writing Hub{% endblock %}
 {% block nav_ideas %}active{% endblock %}
-{% block page_title %}<i class="bi bi-lightbulb me-2"></i>Ideen-Imports{% endblock %}
+{% block page_title %}<i class="bi bi-lightbulb me-2"></i>Ideen{% endblock %}
 
 {% block topbar_actions %}
-<a href="{% url 'ideas:upload' %}" class="btn btn-primary btn-sm">
-    <i class="bi bi-cloud-upload me-1"></i> Datei hochladen
+<a href="{% url 'ideas:creative_dashboard' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-stars me-1"></i> Ideen-Studio
+</a>
+<a href="{% url 'ideas:upload' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-cloud-upload me-1"></i> Datei importieren
 </a>
 {% endblock %}
 
 {% block content %}
+
+<!-- Studio Banner -->
+<div style="background:linear-gradient(135deg,#1e1b4b 0%,#1a1d27 100%);border:1px solid #3730a3;border-radius:.75rem;padding:1.25rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+    <div>
+        <div style="font-weight:800;color:#e2e8f0;font-size:1rem;margin-bottom:.2rem;">
+            <i class="bi bi-lightbulb me-2" style="color:#fbbf24;"></i>Kreativagent &mdash; Ideen-Studio
+        </div>
+        <div style="color:#94a3b8;font-size:.85rem;">Buchideen brainstormen, verfeinern &amp; als Projekt anlegen</div>
+    </div>
+    <a href="{% url 'ideas:creative_dashboard' %}" class="btn btn-primary">
+        <i class="bi bi-stars me-1"></i> Ideen generieren
+    </a>
+</div>
+
 <div class="row g-3 mb-4">
     <div class="col-md-4">
         <div class="card text-center py-3">
@@ -34,8 +51,8 @@
 
 <div class="card">
     <div class="card-header py-2 d-flex align-items-center justify-content-between">
-        <span class="fw-semibold small"><i class="bi bi-lightbulb me-1"></i>Alle Ideen-Imports</span>
-        <a href="{% url 'ideas:upload' %}" class="btn btn-primary btn-sm">
+        <span class="fw-semibold small"><i class="bi bi-cloud-upload me-1"></i>Datei-Imports</span>
+        <a href="{% url 'ideas:upload' %}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-cloud-upload me-1"></i> Neu importieren
         </a>
     </div>
@@ -79,9 +96,9 @@
         </ul>
         {% else %}
         <div class="p-5 text-center">
-            <i class="bi bi-lightbulb d-block mb-3 text-muted" style="font-size:3rem;"></i>
-            <p class="text-muted mb-3">Noch keine Ideen-Imports vorhanden</p>
-            <a href="{% url 'ideas:upload' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-cloud-upload d-block mb-3 text-muted" style="font-size:2.5rem;"></i>
+            <p class="text-muted mb-3">Noch keine Datei-Imports vorhanden</p>
+            <a href="{% url 'ideas:upload' %}" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-cloud-upload me-1"></i> Ersten Import starten
             </a>
         </div>
