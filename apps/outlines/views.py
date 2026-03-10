@@ -8,7 +8,6 @@ import logging
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.views.generic import DetailView, ListView
@@ -136,19 +135,15 @@ class OutlineDetailView(LoginRequiredMixin, DetailView):
         ctx["nodes"] = nodes
         ctx["node_count"] = len(nodes)
         ctx["project"] = project
-
-        # Alle Versionen des Projekts für Versions-Panel
         ctx["all_versions"] = OutlineVersion.objects.filter(
             project=project
         ).order_by("-created_at")
+        ctx["all_frameworks"] = OUTLINE_FRAMEWORKS
 
-        # Framework-Info für aktuelle Outline
         fw_key = outline.source if outline.source in OUTLINE_FRAMEWORKS else None
         ctx["fw_key"] = fw_key
         ctx["fw_info"] = OUTLINE_FRAMEWORKS.get(fw_key) if fw_key else None
-        ctx["all_frameworks"] = OUTLINE_FRAMEWORKS
 
-        # Statistiken
         total_words = sum(n.word_count for n in nodes if n.word_count)
         written = sum(1 for n in nodes if n.word_count and n.word_count > 0)
         ctx["stat_words"] = total_words
@@ -157,7 +152,6 @@ class OutlineDetailView(LoginRequiredMixin, DetailView):
         target = project.target_word_count or 0
         ctx["progress_pct"] = min(100, round(total_words / target * 100)) if target > 0 else 0
 
-        # Workflow-Status (einfach: Entwurf -> Fertig)
         if written == len(nodes) and len(nodes) > 0:
             ctx["workflow_status"] = "fertig"
             ctx["next_step"] = "Kapitel schreiben"
@@ -214,7 +208,6 @@ class OutlineNodeUpdateView(LoginRequiredMixin, View):
 
 
 class OutlineNodeAddView(LoginRequiredMixin, View):
-    """Neues Kapitel am Ende hinzufügen."""
     def post(self, request, pk):
         outline = get_object_or_404(
             OutlineVersion, pk=pk, project__owner=request.user
@@ -246,9 +239,6 @@ class OutlineNodeDeleteView(LoginRequiredMixin, View):
 
 
 class OutlineNodeEnrichView(LoginRequiredMixin, View):
-    """
-    KI-Verfeinerung eines einzelnen Outline-Nodes.
-    """
     def post(self, request, pk):
         from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
         from apps.authoring.services.project_context_service import ProjectContextService
