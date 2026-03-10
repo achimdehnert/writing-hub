@@ -13,13 +13,9 @@ class ContentTypeLookup(models.Model):
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=50, unique=True)
     order = models.PositiveSmallIntegerField(default=0)
-    icon = models.CharField(max_length=50, blank=True, default="",
-        help_text="Bootstrap-Icon-Klasse, z.B. 'bi-book'")
-    subtitle = models.CharField(max_length=200, blank=True, default="",
-        help_text="Kurzbeschreibung unter dem Namen")
-    workflow_hint = models.CharField(max_length=300, blank=True, default="",
-        help_text="Workflow-Schritte z.B. 'Konzept → Struktur → Schreiben'")
-
+    icon = models.CharField(max_length=50, blank=True, default="")
+    subtitle = models.CharField(max_length=200, blank=True, default="")
+    workflow_hint = models.CharField(max_length=300, blank=True, default="")
     planning_action_code = models.CharField(max_length=100, blank=True, default="")
     planning_prompt_template = models.CharField(max_length=128, blank=True, default="")
     planning_system_prompt = models.TextField(blank=True, default="")
@@ -64,16 +60,9 @@ class AudienceLookup(models.Model):
 
 
 class AuthorStyleLookup(models.Model):
-    """
-    Autor / Schreibstil-Profile — via Django Admin pflegbar.
-    Entspricht bfagent.AuthorStyleProfile.
-    """
-    name = models.CharField(max_length=200, unique=True,
-        help_text="Name des Autors / Stils, z.B. 'Hugo Buko'")
-    description = models.TextField(blank=True,
-        help_text="Beschreibung des Schreibstils")
-    style_prompt = models.TextField(blank=True,
-        help_text="LLM-Prompt-Zusatz für diesen Stil")
+    name = models.CharField(max_length=200, unique=True)
+    description = models.TextField(blank=True)
+    style_prompt = models.TextField(blank=True)
     order = models.PositiveSmallIntegerField(default=0)
     is_active = models.BooleanField(default=True)
 
@@ -85,6 +74,70 @@ class AuthorStyleLookup(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class OutlineFramework(models.Model):
+    """
+    Story-Framework (Drei-Akt, Save the Cat, etc.) — DB-driven, via Admin pflegbar.
+    Beliebig erweiterbar ohne Codeänderungen.
+    """
+    key = models.SlugField(
+        max_length=80, unique=True,
+        help_text="Eindeutiger Schlüssel, z.B. 'save_the_cat' (wird in OutlineVersion.source gespeichert)",
+    )
+    name = models.CharField(max_length=200)
+    subtitle = models.CharField(max_length=300, blank=True)
+    icon = models.CharField(
+        max_length=60, blank=True, default="bi-list-ol",
+        help_text="Bootstrap-Icon-Klasse, z.B. 'bi-star'",
+    )
+    description = models.TextField(blank=True)
+    order = models.PositiveSmallIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "wh_outline_framework"
+        ordering = ["order", "name"]
+        verbose_name = "Outline-Framework"
+        verbose_name_plural = "Outline-Frameworks"
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def beat_count(self):
+        return self.beats.count()
+
+
+class OutlineFrameworkBeat(models.Model):
+    """
+    Einzelner Beat innerhalb eines OutlineFramework.
+    """
+    framework = models.ForeignKey(
+        OutlineFramework,
+        on_delete=models.CASCADE,
+        related_name="beats",
+    )
+    order = models.PositiveSmallIntegerField(default=0)
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    position_start = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Prozent-Position im Manuskript (Anfang), 0-100",
+    )
+    position_end = models.PositiveSmallIntegerField(
+        default=100,
+        help_text="Prozent-Position im Manuskript (Ende), 0-100",
+    )
+
+    class Meta:
+        db_table = "wh_outline_framework_beat"
+        ordering = ["framework", "order"]
+        verbose_name = "Framework Beat"
+        verbose_name_plural = "Framework Beats"
+
+    def __str__(self):
+        return f"{self.framework.name} — {self.order}. {self.name}"
 
 
 class BookProject(models.Model):
@@ -172,8 +225,8 @@ class OutlineVersion(models.Model):
     )
     name = models.CharField(max_length=200)
     source = models.CharField(
-        max_length=50, default="manual",
-        help_text="Framework-Key z.B. 'save_the_cat', 'three_act' oder 'manual'/'ai'",
+        max_length=80, default="manual",
+        help_text="Framework-Key (OutlineFramework.key) oder 'manual'/'ai'",
     )
     is_active = models.BooleanField(default=True)
     notes = models.TextField(blank=True)
@@ -192,9 +245,7 @@ class OutlineVersion(models.Model):
 class OutlineNode(models.Model):
     """
     Einzelner Beat/Kapitel innerhalb einer OutlineVersion.
-    content: Vom Autor oder KI geschriebener Kapiteltext.
     """
-
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     outline_version = models.ForeignKey(
         "OutlineVersion", on_delete=models.CASCADE, related_name="nodes"

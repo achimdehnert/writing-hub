@@ -2,7 +2,8 @@ from django.contrib import admin
 
 from .models import (
     AudienceLookup, AuthorStyleLookup, BookProject,
-    ContentTypeLookup, GenreLookup, OutlineNode, OutlineVersion,
+    ContentTypeLookup, GenreLookup, OutlineFramework,
+    OutlineFrameworkBeat, OutlineNode, OutlineVersion,
 )
 
 
@@ -30,6 +31,24 @@ class AuthorStyleLookupAdmin(admin.ModelAdmin):
     list_display = ["name", "order", "is_active"]
     list_editable = ["order", "is_active"]
     fields = ["name", "description", "style_prompt", "order", "is_active"]
+
+
+class OutlineFrameworkBeatInline(admin.TabularInline):
+    model = OutlineFrameworkBeat
+    extra = 1
+    fields = ["order", "name", "position_start", "position_end", "description"]
+
+
+@admin.register(OutlineFramework)
+class OutlineFrameworkAdmin(admin.ModelAdmin):
+    list_display = ["name", "key", "subtitle", "beat_count", "order", "is_active"]
+    list_editable = ["order", "is_active"]
+    prepopulated_fields = {"key": ["name"]}
+    inlines = [OutlineFrameworkBeatInline]
+
+    def beat_count(self, obj):
+        return obj.beats.count()
+    beat_count.short_description = "Beats"
 
 
 @admin.register(BookProject)
