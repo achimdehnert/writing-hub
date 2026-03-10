@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Lektorat — {{ project.title }}{% endblock %}
+{% block nav_projects %}active{% endblock %}
+
+{% block content %}
+<div style="max-width:1100px;margin:0 auto;">
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb" style="background:transparent;font-size:.85rem;">
+        <li class="breadcrumb-item"><a href="{% url 'projects:list' %}">Writing Hub</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'projects:detail' project.pk %}">{{ project.title }}</a></li>
+        <li class="breadcrumb-item active">Lektorat</li>
+    </ol>
+</nav>
+
+<div class="mb-4">
+    <h3 class="fw-bold mb-1" style="color:#e2e8f0;">
+        <i class="bi bi-check2-all me-2" style="color:#6366f1;"></i>Lektorats-Framework
+    </h3>
+    <div class="text-muted small">Systematische Qualitätssicherung für „{{ project.title }}“</div>
+</div>
+
+{% if sessions %}
+<!-- Sessions-Liste -->
+<div class="row g-3 mb-4">
+    {% for session in sessions %}
+    <div class="col-md-4">
+        <a href="{% url 'projects:lektorat_session' project.pk session.pk %}" class="text-decoration-none">
+            <div class="card h-100" style="background:#0d1117;border-color:#2d3748;transition:border-color .15s;"
+                 onmouseover="this.style.borderColor='#6366f1'" onmouseout="this.style.borderColor='#2d3748'">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="fw-semibold" style="color:#e2e8f0;">{{ session.name }}</span>
+                        {% if session.status == 'done' %}
+                        <span class="badge" style="background:#1a3a1a;color:#22c55e;font-size:.65rem;">Abgeschlossen</span>
+                        {% elif session.status == 'running' %}
+                        <span class="badge" style="background:#1e1b4b;color:#a5b4fc;font-size:.65rem;">Läuft...</span>
+                        {% elif session.status == 'error' %}
+                        <span class="badge" style="background:#3a1a1a;color:#f87171;font-size:.65rem;">Fehler</span>
+                        {% else %}
+                        <span class="badge" style="background:#1e2235;color:#64748b;font-size:.65rem;">Ausstehend</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-muted small mb-1">{{ session.created_at|date:"d.m.Y H:i" }}</div>
+                    <div class="d-flex gap-3 mt-2">
+                        <div class="text-center">
+                            <div class="fw-bold" style="color:#f59e0b;">{{ session.issues_found }}</div>
+                            <div style="font-size:.65rem;color:#64748b;">Probleme</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="fw-bold" style="color:#60a5fa;">{{ session.chapter_count }}</div>
+                            <div style="font-size:.65rem;color:#64748b;">Kapitel</div>
+                        </div>
+                    </div>
+                    {% if session.summary %}
+                    <div class="mt-2 text-muted" style="font-size:.72rem;">{{ session.summary|truncatechars:80 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="text-center mb-4">
+    <button class="btn" style="background:#6366f1;color:#fff;border:none;"
+            data-bs-toggle="modal" data-bs-target="#startModal">
+        <i class="bi bi-plus-circle me-1"></i>Neue Prüfung starten
+    </button>
+</div>
+
+{% else %}
+<!-- Leer-Zustand -->
+<div class="text-center py-5">
+    <div style="font-size:4rem;">&#x1F4CB;</div>
+    <h5 class="fw-bold mt-3 mb-2" style="color:#e2e8f0;">Lektorat starten</h5>
+    <p class="text-muted mb-1">Starte eine neue Lektorats-Prüfung, um dein Manuskript systematisch<br>auf Konsistenz, Logik und Stil zu überprüfen.</p>
+    <div class="text-muted small mb-4">{{ chapters_with_content }} Kapitel bereit zur Prüfung</div>
+    <button class="btn" style="background:#6366f1;color:#fff;border:none;padding:.6rem 2rem;"
+            data-bs-toggle="modal" data-bs-target="#startModal"
+            {% if chapters_with_content == 0 %}disabled{% endif %}>
+        <i class="bi bi-play-fill me-1"></i>Prüfung starten
+    </button>
+    {% if chapters_with_content == 0 %}
+    <div class="text-muted mt-2 small">Zuerst Kapitel schreiben.</div>
+    {% endif %}
+</div>
+{% endif %}
+
+</div>
+
+<!-- Modal: Neue Prüfung -->
+<div class="modal fade" id="startModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background:#1a1d27;border:1px solid #2d3148;color:#e2e8f0;">
+      <div class="modal-header border-secondary">
+        <h6 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Neue Lektorats-Prüfung</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'projects:lektorat_start' project.pk %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label small text-muted">Name der Prüfung</label>
+            <input type="text" name="name" value="{{ next_session_name }}"
+                   class="form-control"
+                   style="background:#131929;color:#e2e8f0;border-color:#2d3748;"
+                   placeholder="z.B. Lektorat 1">
+            <div class="form-text text-muted" style="font-size:.75rem;">Vergib einen Namen, um verschiedene Prüfungen zu unterscheiden.</div>
+          </div>
+          <div class="p-3 rounded mb-2" style="background:#0d1117;border:1px solid #2d3748;font-size:.85rem;">
+            <i class="bi bi-info-circle me-1" style="color:#6366f1;"></i>
+            <strong style="color:#6366f1;">{{ chapters_with_content }} Kapitel</strong>
+            <span class="text-muted"> werden analysiert.</span>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+          <button type="submit" class="btn" style="background:#6366f1;color:#fff;border:none;">
+            <i class="bi bi-play-fill me-1"></i>Prüfung starten
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% if messages %}
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:1100;">
+    {% for msg in messages %}
+    <div class="toast show align-items-center text-white
+        {% if msg.tags == 'error' %}bg-danger{% elif msg.tags == 'warning' %}bg-warning text-dark{% else %}bg-success{% endif %} border-0 mb-2">
+        <div class="d-flex"><div class="toast-body small">{{ msg }}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
+{% block extra_js %}
+<script>document.querySelectorAll('.toast').forEach(el => setTimeout(() => el.classList.remove('show'), 5000));</script>
+{% endblock %}

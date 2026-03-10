@@ -1,5 +1,5 @@
 """
-Projects App — Buchprojekte, Outline, Kapitel, Review, Editing (ADR-083)
+Projects App — Buchprojekte, Outline, Kapitel, Review, Editing, Lektorat (ADR-083)
 """
 from __future__ import annotations
 
@@ -116,7 +116,7 @@ class OutlineFrameworkBeat(models.Model):
         verbose_name_plural = "Framework Beats"
 
     def __str__(self):
-        return f"{self.framework.name} — {self.order}. {self.name}"
+        return f"{self.framework.name} \u2014 {self.order}. {self.name}"
 
 
 class BookProject(models.Model):
@@ -145,13 +145,13 @@ class BookProject(models.Model):
     )
     writing_style = models.ForeignKey(
         "authors.WritingStyle", on_delete=models.SET_NULL, null=True, blank=True,
-        verbose_name="Primärer Schreibstil",
+        verbose_name="Prim\u00e4rer Schreibstil",
         related_name="projects",
     )
     writing_styles = models.ManyToManyField(
         "authors.WritingStyle",
         blank=True,
-        verbose_name="Schreibstile (mehrere möglich)",
+        verbose_name="Schreibstile (mehrere m\u00f6glich)",
         related_name="projects_m2m",
     )
 
@@ -210,7 +210,7 @@ class OutlineVersion(models.Model):
         verbose_name_plural = "Outline Versions"
 
     def __str__(self):
-        return f"{self.project.title} — {self.name}"
+        return f"{self.project.title} \u2014 {self.name}"
 
     def save_as_new_version(self, name=None, label=None, user=None):
         new = OutlineVersion.objects.create(
@@ -263,7 +263,7 @@ class OutlineNode(models.Model):
         "authors.WritingStyle",
         on_delete=models.SET_NULL,
         null=True, blank=True,
-        verbose_name="Schreibstil für dieses Kapitel",
+        verbose_name="Schreibstil f\u00fcr dieses Kapitel",
         related_name="outline_nodes",
     )
     order = models.PositiveIntegerField(default=0)
@@ -279,7 +279,7 @@ class OutlineNode(models.Model):
         verbose_name_plural = "Outline Nodes"
 
     def __str__(self):
-        return f"{self.outline_version} — {self.order}. {self.title}"
+        return f"{self.outline_version} \u2014 {self.order}. {self.title}"
 
     def save(self, *args, **kwargs):
         if self.content:
@@ -328,7 +328,7 @@ class ChapterReview(models.Model):
         verbose_name_plural = "Kapitel-Reviews"
 
     def __str__(self):
-        return f"{self.node.title} — {self.reviewer}"
+        return f"{self.node.title} \u2014 {self.reviewer}"
 
 
 class ChapterEditing(models.Model):
@@ -343,7 +343,7 @@ class ChapterEditing(models.Model):
     )
     SUGGESTION_TYPES = [
         ("style", "Stil"),
-        ("clarity", "Klärung"),
+        ("clarity", "Kl\u00e4rung"),
         ("consistency", "Konsistenz"),
         ("grammar", "Grammatik"),
         ("pacing", "Pacing"),
@@ -367,4 +367,74 @@ class ChapterEditing(models.Model):
         verbose_name_plural = "Kapitel-Editings"
 
     def __str__(self):
-        return f"{self.node.title} — {self.suggestion_type}"
+        return f"{self.node.title} \u2014 {self.suggestion_type}"
+
+
+class LektoratSession(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        BookProject, on_delete=models.CASCADE, related_name="lektorat_sessions",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+    )
+    name = models.CharField(max_length=200, default="Lektorat")
+    STATUS = [
+        ("pending", "Ausstehend"),
+        ("running", "Wird gepr\u00fcft"),
+        ("done", "Abgeschlossen"),
+        ("error", "Fehler"),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS, default="pending")
+    chapter_count = models.PositiveIntegerField(default=0)
+    issues_found = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    summary = models.TextField(blank=True)
+
+    class Meta:
+        db_table = "wh_lektorat_sessions"
+        ordering = ["-created_at"]
+        verbose_name = "Lektorats-Session"
+        verbose_name_plural = "Lektorats-Sessions"
+
+    def __str__(self):
+        return f"{self.project.title} \u2014 {self.name}"
+
+
+class LektoratIssue(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    session = models.ForeignKey(
+        LektoratSession, on_delete=models.CASCADE, related_name="issues",
+    )
+    node = models.ForeignKey(
+        OutlineNode, on_delete=models.CASCADE, related_name="lektorat_issues",
+    )
+    ISSUE_TYPES = [
+        ("consistency", "Konsistenz"),
+        ("logic", "Logik"),
+        ("style", "Stil"),
+        ("character", "Charakter"),
+        ("timeline", "Zeitlinie"),
+        ("pacing", "Pacing"),
+    ]
+    issue_type = models.CharField(max_length=30, choices=ISSUE_TYPES, default="consistency")
+    SEVERITY = [
+        ("info", "Info"),
+        ("warning", "Warnung"),
+        ("error", "Fehler"),
+    ]
+    severity = models.CharField(max_length=10, choices=SEVERITY, default="warning")
+    description = models.TextField()
+    suggestion = models.TextField(blank=True)
+    is_resolved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "wh_lektorat_issues"
+        ordering = ["session", "node__order", "-severity"]
+        verbose_name = "Lektorats-Problem"
+        verbose_name_plural = "Lektorats-Probleme"
+
+    def __str__(self):
+        return f"{self.session.name} \u2014 {self.node.title}: {self.issue_type}"

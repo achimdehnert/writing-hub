@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}{{ session.name }} — Lektorat{% endblock %}
+{% block nav_projects %}active{% endblock %}
+
+{% block content %}
+<div style="max-width:1100px;margin:0 auto;">
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb" style="background:transparent;font-size:.85rem;">
+        <li class="breadcrumb-item"><a href="{% url 'projects:list' %}">Writing Hub</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'projects:detail' project.pk %}">{{ project.title }}</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'projects:lektorat' project.pk %}">Lektorat</a></li>
+        <li class="breadcrumb-item active">{{ session.name }}</li>
+    </ol>
+</nav>
+
+<!-- Header -->
+<div class="rounded-3 p-4 mb-4 d-flex align-items-center justify-content-between"
+     style="background:linear-gradient(135deg,#4338ca,#3730a3);">
+    <div>
+        <h4 class="fw-bold mb-1 text-white"><i class="bi bi-check2-all me-2"></i>{{ session.name }}</h4>
+        <div class="text-white opacity-75 small">{{ project.title }}</div>
+        {% if session.summary %}
+        <div class="text-white opacity-75 small mt-1">{{ session.summary }}</div>
+        {% endif %}
+    </div>
+    <div class="text-end">
+        {% if session.status == 'done' %}
+        <span class="badge fs-6" style="background:rgba(255,255,255,.15);color:#fff;">Abgeschlossen</span>
+        {% elif session.status == 'running' %}
+        <span class="badge fs-6" style="background:rgba(255,255,255,.15);color:#fff;">Läuft...</span>
+        {% elif session.status == 'error' %}
+        <span class="badge fs-6" style="background:rgba(220,38,38,.4);color:#fff;">Fehler</span>
+        {% endif %}
+        <div class="text-white opacity-75 small mt-1">{{ session.created_at|date:"d.m.Y H:i" }}</div>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-3">
+        <div class="card text-center py-3" style="background:#0d1117;border-color:#2d3748;">
+            <div class="fw-bold fs-3" style="color:#6366f1;">{{ session.chapter_count }}</div>
+            <div class="text-muted small">Kapitel geprüft</div>
+        </div>
+    </div>
+    <div class="col-3">
+        <div class="card text-center py-3" style="background:#0d1117;border-color:#2d3748;">
+            <div class="fw-bold fs-3" style="color:#f59e0b;">{{ session.issues_found }}</div>
+            <div class="text-muted small">Probleme gesamt</div>
+        </div>
+    </div>
+    <div class="col-3">
+        <div class="card text-center py-3" style="background:#0d1117;border-color:#2d3748;">
+            <div class="fw-bold fs-3" style="color:#f87171;">{{ open_issues|length }}</div>
+            <div class="text-muted small">Offen</div>
+        </div>
+    </div>
+    <div class="col-3">
+        <div class="card text-center py-3" style="background:#0d1117;border-color:#2d3748;">
+            <div class="fw-bold fs-3" style="color:#22c55e;">{{ resolved_issues|length }}</div>
+            <div class="text-muted small">Erledigt</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter-Tabs -->
+<div class="d-flex gap-2 mb-3">
+    <button class="btn btn-sm filter-btn active" data-filter="all"
+            style="background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3;">
+        Alle ({{ issues|length }})
+    </button>
+    <button class="btn btn-sm filter-btn" data-filter="error"
+            style="background:#1e2235;color:#f87171;border:1px solid #2d3748;">
+        <i class="bi bi-exclamation-circle me-1"></i>Fehler
+    </button>
+    <button class="btn btn-sm filter-btn" data-filter="warning"
+            style="background:#1e2235;color:#fbbf24;border:1px solid #2d3748;">
+        <i class="bi bi-exclamation-triangle me-1"></i>Warnungen
+    </button>
+    <button class="btn btn-sm filter-btn" data-filter="info"
+            style="background:#1e2235;color:#60a5fa;border:1px solid #2d3748;">
+        <i class="bi bi-info-circle me-1"></i>Hinweise
+    </button>
+    <button class="btn btn-sm filter-btn" data-filter="open"
+            style="background:#1e2235;color:#94a3b8;border:1px solid #2d3748;">
+        Offen
+    </button>
+</div>
+
+<!-- Issues-Liste -->
+{% if issues %}
+<div id="issues-list">
+{% for issue in issues %}
+<div class="card mb-2 issue-item" data-severity="{{ issue.severity }}" data-resolved="{{ issue.is_resolved|yesno:'true,false' }}"
+     id="issue-{{ issue.id }}" style="background:#0d1117;border-color:#2d3748;{% if issue.is_resolved %}opacity:.5;{% endif %}">
+    <div class="card-body py-2 px-3">
+        <div class="d-flex align-items-start gap-3">
+            <!-- Severity-Icon -->
+            <div class="flex-shrink-0 mt-1">
+                {% if issue.severity == 'error' %}
+                <i class="bi bi-exclamation-circle-fill" style="color:#f87171;font-size:1.1rem;"></i>
+                {% elif issue.severity == 'warning' %}
+                <i class="bi bi-exclamation-triangle-fill" style="color:#fbbf24;font-size:1.1rem;"></i>
+                {% else %}
+                <i class="bi bi-info-circle-fill" style="color:#60a5fa;font-size:1.1rem;"></i>
+                {% endif %}
+            </div>
+            <!-- Content -->
+            <div class="flex-grow-1">
+                <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                    <span class="small text-muted">Kap. {{ issue.node.order }}: {{ issue.node.title|truncatechars:40 }}</span>
+                    <!-- Issue-Typ-Badge -->
+                    {% if issue.issue_type == 'consistency' %}
+                    <span class="badge" style="background:#1e1b4b;color:#a5b4fc;font-size:.6rem;">Konsistenz</span>
+                    {% elif issue.issue_type == 'logic' %}
+                    <span class="badge" style="background:#1a2a3a;color:#60a5fa;font-size:.6rem;">Logik</span>
+                    {% elif issue.issue_type == 'style' %}
+                    <span class="badge" style="background:#2a1a3a;color:#c084fc;font-size:.6rem;">Stil</span>
+                    {% elif issue.issue_type == 'character' %}
+                    <span class="badge" style="background:#1a3a2a;color:#34d399;font-size:.6rem;">Charakter</span>
+                    {% elif issue.issue_type == 'timeline' %}
+                    <span class="badge" style="background:#3a2a1a;color:#fbbf24;font-size:.6rem;">Zeitlinie</span>
+                    {% else %}
+                    <span class="badge" style="background:#1e2235;color:#94a3b8;font-size:.6rem;">{{ issue.get_issue_type_display }}</span>
+                    {% endif %}
+                </div>
+                <div class="small" style="color:#cbd5e1;">{{ issue.description }}</div>
+                {% if issue.suggestion %}
+                <div class="mt-1 small" style="color:#6366f1;">
+                    <i class="bi bi-lightbulb me-1"></i>{{ issue.suggestion }}
+                </div>
+                {% endif %}
+            </div>
+            <!-- Resolve-Button -->
+            <button class="btn btn-sm py-0 px-1 flex-shrink-0 mt-1"
+                    style="{% if issue.is_resolved %}color:#22c55e;{% else %}color:#64748b;{% endif %}font-size:.8rem;"
+                    onclick="resolveIssue('{{ issue.id }}', this)"
+                    title="{% if issue.is_resolved %}Wiederöffnen{% else %}Als erledigt markieren{% endif %}">
+                <i class="bi {% if issue.is_resolved %}bi-check-circle-fill{% else %}bi-circle{% endif %}"></i>
+            </button>
+        </div>
+    </div>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-check2-all d-block mb-2" style="font-size:3rem;color:#22c55e;"></i>
+    Keine Probleme gefunden — ausgezeichnet!
+</div>
+{% endif %}
+
+</div>
+
+{% if messages %}
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:1100;">
+    {% for msg in messages %}
+    <div class="toast show align-items-center text-white
+        {% if msg.tags == 'error' %}bg-danger{% elif msg.tags == 'warning' %}bg-warning text-dark{% else %}bg-success{% endif %} border-0 mb-2">
+        <div class="d-flex"><div class="toast-body small">{{ msg }}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = () => document.cookie.match('csrftoken=([^;]+)')?.[1] || '';
+
+function resolveIssue(id, btn) {
+    const url = '{% url "projects:lektorat_resolve" project.pk "00000000-0000-0000-0000-000000000000" %}'.replace('00000000-0000-0000-0000-000000000000', id);
+    fetch(url, {
+        method: 'POST',
+        headers: {'X-CSRFToken': CSRF()}
+    }).then(r => r.json()).then(data => {
+        const card = document.getElementById('issue-' + id);
+        if (data.is_resolved) {
+            card.style.opacity = '.5';
+            card.dataset.resolved = 'true';
+            btn.style.color = '#22c55e';
+            btn.querySelector('i').className = 'bi bi-check-circle-fill';
+        } else {
+            card.style.opacity = '1';
+            card.dataset.resolved = 'false';
+            btn.style.color = '#64748b';
+            btn.querySelector('i').className = 'bi bi-circle';
+        }
+    });
+}
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.filter-btn').forEach(b => {
+            b.style.background = '#1e2235';
+            b.style.borderColor = '#2d3748';
+        });
+        this.style.background = '#1e1b4b';
+        this.style.borderColor = '#6366f1';
+        const filter = this.dataset.filter;
+        document.querySelectorAll('.issue-item').forEach(item => {
+            if (filter === 'all') item.style.display = '';
+            else if (filter === 'open') item.style.display = item.dataset.resolved === 'false' ? '' : 'none';
+            else item.style.display = item.dataset.severity === filter ? '' : 'none';
+        });
+    });
+});
+
+document.querySelectorAll('.toast').forEach(el => setTimeout(() => el.classList.remove('show'), 5000));
+</script>
+{% endblock %}

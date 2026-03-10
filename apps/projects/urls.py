@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, views_html, views_review
+from . import views, views_html, views_review, views_lektorat
 
 app_name = "projects"
 
@@ -25,6 +25,11 @@ urlpatterns = [
     path("<uuid:pk>/editing/<uuid:node_pk>/", views_review.ChapterEditingView.as_view(), name="editing_chapter"),
     path("<uuid:pk>/editing/<uuid:node_pk>/ai/", views_review.ChapterAIEditingView.as_view(), name="editing_ai"),
     path("<uuid:pk>/editing/suggest/<uuid:editing_pk>/", views_review.ChapterEditingSuggestionView.as_view(), name="editing_suggest"),
+    # Lektorat
+    path("<uuid:pk>/lektorat/", views_lektorat.ProjectLektoratView.as_view(), name="lektorat"),
+    path("<uuid:pk>/lektorat/start/", views_lektorat.LektoratSessionStartView.as_view(), name="lektorat_start"),
+    path("<uuid:pk>/lektorat/<uuid:session_pk>/", views_lektorat.LektoratSessionDetailView.as_view(), name="lektorat_session"),
+    path("<uuid:pk>/lektorat/issue/<uuid:issue_pk>/resolve/", views_lektorat.LektoratIssueResolveView.as_view(), name="lektorat_resolve"),
     # REST API
     path("api/", views.BookProjectListView.as_view(), name="api_list"),
     path("api/<uuid:pk>/", views.BookProjectDetailView.as_view(), name="api_detail"),
