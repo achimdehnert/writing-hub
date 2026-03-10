@@ -3,8 +3,8 @@ Authors App — Autor-Profile und Schreibstile
 
 Struktur:
   Author (1 User → N Authors)
-  WritingStyle (1 Author → N Styles)
-  WritingStyleSample (1 Style → N Beispieltexte in verschiedenen Situationen)
+  WritingStyle (1 Author → N Styles, mit DO/DONT/Taboo Style Lab Feldern)
+  WritingStyleSample (1 Style → N Beispieltexte)
 """
 import uuid
 
@@ -41,7 +41,7 @@ class Author(models.Model):
 
 
 class WritingStyle(models.Model):
-    """Schreibstil eines Autors — per LLM analysiert und gespeichert."""
+    """Schreibstil eines Autors — Style Lab Builder mit DO/DONT/Taboo."""
 
     class Status(models.TextChoices):
         DRAFT = "draft", "Entwurf"
@@ -69,11 +69,28 @@ class WritingStyle(models.Model):
     )
     style_profile = models.TextField(
         blank=True,
-        help_text="LLM-generiertes Stil-Profil (Satzbau, Rhythmus, Tonalität, etc.)",
+        help_text="LLM-generiertes Stil-Profil",
     )
     style_prompt = models.TextField(
         blank=True,
-        help_text="Kondensierter Prompt-Baustein für LLM-Generierung in diesem Stil",
+        help_text="Kondensierter Prompt-Baustein für LLM-Generierung",
+    )
+    # Style Lab Builder Felder (bfagent-kompatibel)
+    do_list = models.JSONField(
+        default=list,
+        help_text="Erlaubte/empfohlene Stilmittel (Style Lab DO-Liste)",
+    )
+    dont_list = models.JSONField(
+        default=list,
+        help_text="Verbotene Stilmittel (Style Lab DONT-Liste)",
+    )
+    taboo_list = models.JSONField(
+        default=list,
+        help_text="Tabu-Wörter (niemals verwenden)",
+    )
+    signature_moves = models.JSONField(
+        default=list,
+        help_text="Charakteristische Stilmittel dieses Autors",
     )
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.DRAFT
@@ -95,6 +112,10 @@ class WritingStyle(models.Model):
     @property
     def sample_count(self):
         return self.samples.count()
+
+    @property
+    def has_style_lab_data(self):
+        return bool(self.do_list or self.dont_list or self.taboo_list or self.signature_moves)
 
 
 class WritingStyleSample(models.Model):

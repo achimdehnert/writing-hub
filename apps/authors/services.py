@@ -1,6 +1,7 @@
 """
-Authors — LLM-Service für Stil-Analyse und Beispieltext-Generierung.
+Authors — LLM-Service für Stil-Analyse, Regel-Extraktion und Beispieltext-Generierung.
 """
+import json
 import logging
 
 from .models import WritingStyle, WritingStyleSample
@@ -23,7 +24,6 @@ def analyze_style(style: WritingStyle) -> bool:
     """
     Analysiert den Quelltext eines WritingStyle per LLM.
     Speichert style_profile und style_prompt.
-    Gibt True bei Erfolg zurück.
     """
     from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
 
@@ -64,7 +64,6 @@ def analyze_style(style: WritingStyle) -> bool:
             ],
         )
 
-        # Style-Prompt extrahieren (letzter Abschnitt)
         style_prompt = ""
         if "## Stil-Prompt" in result:
             parts = result.split("## Stil-Prompt")
@@ -91,6 +90,66 @@ def analyze_style(style: WritingStyle) -> bool:
         return False
 
 
+def extract_style_rules(style: WritingStyle) -> tuple[bool, dict]:
+    """
+    Extrahiert DO/DONT/Taboo/Signature-Moves aus dem Quelltext per LLM.
+    Gibt (True, {do_list, dont_list, taboo_list, signature_moves}) oder
+    (False, {error}) zurück.
+    """
+    from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
+
+    text = (style.source_text or "").strip()
+    profile = (style.style_profile or "").strip()
+
+    if not text and not profile:
+        return False, {"error": "Kein Quelltext oder Stil-Profil vorhanden."}
+
+    source = text[:3000] if text else profile[:2000]
+
+    system = (
+        "Du bist ein Schreibcoach und Stilanalyst.\n"
+        "Analysiere den Text und extrahiere präzise Stil-Regeln.\n"
+        "Antworte NUR mit gültigem JSON, keine Erklärungen davor oder danach."
+    )
+    user = (
+        f"Text:\n{source}\n\n"
+        "Extrahiere Stil-Regeln als JSON mit dieser Struktur:\n"
+        "{\n"
+        '  "signature_moves": ["charakteristisches Stilmittel 1", ...],\n'
+        '  "do_list": ["Was dieser Autor macht / erlaubt ist", ...],\n'
+        '  "dont_list": ["Was dieser Autor vermeidet", ...],\n'
+        '  "taboo_list": ["absolut verbotene Wörter oder Konstrukte", ...]\n'
+        "}\n"
+        "Gib 4-8 Einträge pro Liste. Nur JSON, kein Markdown."
+    )
+
+    try:
+        router = LLMRouter()
+        raw = router.completion(
+            action_code="style_check",
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+        )
+        # Strip possible markdown code fences
+        clean = raw.strip().lstrip("`").removeprefix("json").strip().rstrip("`")
+        data = json.loads(clean)
+
+        # Persist extracted rules
+        style.do_list = data.get("do_list", [])
+        style.dont_list = data.get("dont_list", [])
+        style.taboo_list = data.get("taboo_list", [])
+        style.signature_moves = data.get("signature_moves", [])
+        style.save(update_fields=["do_list", "dont_list", "taboo_list", "signature_moves"])
+
+        return True, data
+
+    except (json.JSONDecodeError, LLMRoutingError, Exception) as exc:
+        logger.warning("extract_style_rules error style=%s: %s", style.pk, exc)
+        return False, {"error": str(exc)}
+
+
 def generate_samples(style: WritingStyle) -> int:
     """
     Generiert Beispieltexte für alle Situationen.
@@ -112,7 +171,6 @@ def generate_samples(style: WritingStyle) -> int:
     )
 
     for situation_key, situation_label in SITUATIONS:
-        # Nur generieren wenn noch kein Sample für diese Situation
         if style.samples.filter(situation=situation_key).exists():
             continue
         try:
@@ -144,10 +202,17 @@ def generate_samples(style: WritingStyle) -> int:
 def get_style_prompt_for_writing(style: WritingStyle) -> str:
     """
     Gibt den Stil-Prompt-Baustein zurück der beim Schreiben verwendet wird.
-    Präferenz: style_prompt > style_profile[:300]
+    Enthält DO/DONT/Taboo wenn vorhanden.
     """
+    parts = []
     if style.style_prompt:
-        return style.style_prompt
-    if style.style_profile:
-        return style.style_profile[:300]
-    return ""
+        parts.append(style.style_prompt)
+    elif style.style_profile:
+        parts.append(style.style_profile[:300])
+    if style.do_list:
+        parts.append("DO: " + "; ".join(style.do_list[:5]))
+    if style.dont_list:
+        parts.append("DONT: " + "; ".join(style.dont_list[:5]))
+    if style.taboo_list:
+        parts.append("TABOO (niemals): " + "; ".join(style.taboo_list[:5]))
+    return "\n".join(parts)

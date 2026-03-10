@@ -1,102 +1,170 @@
 {% extends "base.html" %}
-{% block title %}{% if is_edit %}Schreibstil bearbeiten{% else %}Neuer Schreibstil{% endif %} — Writing Hub{% endblock %}
+{% block title %}{% if is_edit %}Schreibstil bearbeiten{% else %}Neuer Schreibstil{% endif %} — Style Lab — Writing Hub{% endblock %}
 {% block nav_authors %}active{% endblock %}
 
+{% block extra_css %}
+<style>
+    .lab-section { background: #0d1117; border: 1px solid #2d3748; border-radius: .75rem; padding: 1.25rem; margin-bottom: 1rem; }
+    .lab-section h6 { color: #e2e8f0; font-size: .85rem; font-weight: 700; margin-bottom: .75rem; }
+    .tag-area { min-height: 80px; background: #131929; border: 1px solid #475569; border-radius: .375rem; padding: .5rem; display: flex; flex-wrap: wrap; gap: .4rem; align-content: flex-start; cursor: text; }
+    .tag { display: inline-flex; align-items: center; gap: .3rem; padding: .2rem .6rem; border-radius: 999px; font-size: .75rem; font-weight: 600; }
+    .tag-do { background: #1a3a1a; color: #22c55e; border: 1px solid #166534; }
+    .tag-dont { background: #3a1a1a; color: #f87171; border: 1px solid #991b1b; }
+    .tag-taboo { background: #2d1a00; color: #fb923c; border: 1px solid #92400e; }
+    .tag-sig { background: #1e1b4b; color: #a5b4fc; border: 1px solid #3730a3; }
+    .tag-remove { cursor: pointer; opacity: .7; line-height: 1; border: none; background: none; padding: 0; color: inherit; }
+    .tag-remove:hover { opacity: 1; }
+    .tag-input { border: none; background: transparent; outline: none; color: #f1f5f9; font-size: .82rem; min-width: 120px; flex: 1; }
+    .section-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: #64748b; margin-bottom: .4rem; display: block; }
+    .tab-btn { background: none; border: none; padding: .4rem .75rem; border-radius: .375rem; font-size: .82rem; color: #94a3b8; cursor: pointer; transition: all .15s; }
+    .tab-btn.active { background: #1e2235; color: #a5b4fc; }
+    .ai-btn { background: #1e1b4b; color: #a5b4fc; border: 1px solid #3730a3; padding: .35rem .85rem; border-radius: .375rem; font-size: .8rem; cursor: pointer; display: inline-flex; align-items: center; gap: .35rem; }
+    .ai-btn:hover { background: #312e81; }
+    .ai-btn:disabled { opacity: .5; cursor: not-allowed; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div style="max-width:700px;margin:0 auto;">
+<div style="max-width:860px;margin:0 auto;">
 <a href="{% url 'authors:detail' author.pk %}" class="btn btn-link text-muted ps-0 mb-3">
     <i class="bi bi-arrow-left me-1"></i> {{ author.name }}
 </a>
-<div class="card" style="background:#0d1117;border-color:#2d3748;">
-<div class="card-body p-4">
-    <h5 class="mb-1" style="color:#e2e8f0;">
-        <i class="bi bi-palette me-2 text-primary"></i>
-        {% if is_edit %}Schreibstil bearbeiten{% else %}Neuer Schreibstil{% endif %}
-    </h5>
-    <p class="text-muted small mb-4">für <span style="color:#a5b4fc;">{{ author.name }}</span></p>
 
-    {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+        <h5 class="mb-0" style="color:#e2e8f0;">
+            <i class="bi bi-palette me-2 text-primary"></i>
+            {% if is_edit %}Style Lab Builder{% else %}Neuer Schreibstil{% endif %}
+        </h5>
+        <div class="text-muted small mt-1">für <span style="color:#a5b4fc;">{{ author.name }}</span></div>
+    </div>
+    {% if is_edit and style.source_text %}
+    <button type="button" class="ai-btn" id="btnExtractRules" onclick="extractRules()">
+        <i class="bi bi-stars"></i> DO/DONT aus Text extrahieren
+    </button>
+    {% endif %}
+</div>
 
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
+{% if error %}<div class="alert alert-danger py-2 small">{{ error }}</div>{% endif %}
 
-        <div class="mb-3">
-            <label class="form-label" style="color:#cbd5e1;">Name des Stils *</label>
-            <input type="text" name="name"
-                   class="form-control" style="background:#131929;color:#f1f5f9;border-color:#475569;"
-                   value="{{ style.name|default:post.name|default:'' }}"
-                   placeholder="z.B. Thriller-Stil, Lyrisch, Sachlich" required>
+<form method="post" enctype="multipart/form-data" id="styleForm">
+    {% csrf_token %}
+
+    <!-- Meta -->
+    <div class="lab-section">
+        <h6><i class="bi bi-info-circle me-2" style="color:#6366f1;"></i>Basis-Info</h6>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="section-label">Name des Stils *</label>
+                <input type="text" name="name"
+                       class="form-control" style="background:#131929;color:#f1f5f9;border-color:#475569;"
+                       value="{{ style.name|default:post.name|default:'' }}"
+                       placeholder="z.B. Thriller-Stil, Lyrisch, Sachlich" required>
+            </div>
+            <div class="col-md-6">
+                <label class="section-label">Beschreibung</label>
+                <input type="text" name="description"
+                       class="form-control" style="background:#131929;color:#f1f5f9;border-color:#475569;"
+                       value="{{ style.description|default:'' }}"
+                       placeholder="Kurze Beschreibung des Stils">
+            </div>
         </div>
+    </div>
 
-        <div class="mb-3">
-            <label class="form-label" style="color:#cbd5e1;">Beschreibung</label>
-            <input type="text" name="description"
-                   class="form-control" style="background:#131929;color:#f1f5f9;border-color:#475569;"
-                   value="{{ style.description|default:'' }}"
-                   placeholder="Kurze Beschreibung des Stils">
+    <!-- Quelltext -->
+    <div class="lab-section">
+        <h6><i class="bi bi-file-text me-2" style="color:#6366f1;"></i>Quelltext
+            <span class="text-muted fw-normal" style="font-size:.75rem;">(Beispieltext des Autors, wird per LLM analysiert)</span>
+        </h6>
+        <div class="mb-2" style="display:flex;gap:.5rem;">
+            <button type="button" class="tab-btn active" id="tab-text" onclick="switchTab('text')">Text eingeben</button>
+            <button type="button" class="tab-btn" id="tab-file" onclick="switchTab('file')">Datei hochladen</button>
         </div>
+        <div id="panel-text">
+            <textarea name="source_text" rows="8"
+                      class="form-control" style="background:#131929;color:#f1f5f9;border-color:#475569;font-family:monospace;font-size:.82rem;"
+                      placeholder="Füge hier einen repräsentativen Textausschnitt des Autors ein (mind. 200 Wörter empfohlen)...">{{ style.source_text|default:'' }}</textarea>
+        </div>
+        <div id="panel-file" style="display:none;">
+            <input type="file" name="source_file" accept=".txt,.md"
+                   class="form-control" style="background:#131929;color:#f1f5f9;border-color:#475569;">
+        </div>
+        <div class="form-text" style="color:#64748b;">Empfehlung: 200–2000 Wörter für beste Analyseergebnisse.</div>
+    </div>
 
-        <!-- Text-Eingabe -->
-        <div class="mb-3">
-            <label class="form-label" style="color:#cbd5e1;">
-                <i class="bi bi-file-text me-1"></i>Quelltext
-                <span class="text-muted small ms-2">(Beispieltext des Autors, wird per LLM analysiert)</span>
+    <!-- Style Lab Builder: DO / DON'T / TABOO / SIGNATURE -->
+    <div class="lab-section">
+        <h6><i class="bi bi-sliders me-2" style="color:#6366f1;"></i>Style Lab Builder
+            <span class="text-muted fw-normal" style="font-size:.75rem;">DO / DON'T / TABOO / Signature Moves</span>
+        </h6>
+
+        <div id="extractMsg" class="mb-3" style="display:none;"></div>
+
+        <div class="row g-3">
+
+            <!-- DO -->
+            <div class="col-md-6">
+                <label class="section-label"><i class="bi bi-check-circle-fill me-1" style="color:#22c55e;"></i>DO &mdash; Erlaubt & empfohlen</label>
+                <div class="tag-area" id="area-do" onclick="focusInput('input-do')">
+                    {% for item in style.do_list %}<span class="tag tag-do">{{ item }}<button type="button" class="tag-remove" onclick="removeTag(this)"><i class="bi bi-x"></i></button></span>{% endfor %}
+                    <input class="tag-input" id="input-do" placeholder="Stilmittel hinzufügen..." onkeydown="handleTagInput(event, 'do-list', 'area-do', 'input-do', 'tag-do')">
+                </div>
+                <textarea name="do_list" id="do-list" style="display:none;">{{ do_list_str|default:'' }}</textarea>
+            </div>
+
+            <!-- DON'T -->
+            <div class="col-md-6">
+                <label class="section-label"><i class="bi bi-x-circle-fill me-1" style="color:#f87171;"></i>DON'T &mdash; Vermeiden</label>
+                <div class="tag-area" id="area-dont" onclick="focusInput('input-dont')">
+                    {% for item in style.dont_list %}<span class="tag tag-dont">{{ item }}<button type="button" class="tag-remove" onclick="removeTag(this)"><i class="bi bi-x"></i></button></span>{% endfor %}
+                    <input class="tag-input" id="input-dont" placeholder="Zu vermeidendes hinzufügen..." onkeydown="handleTagInput(event, 'dont-list', 'area-dont', 'input-dont', 'tag-dont')">
+                </div>
+                <textarea name="dont_list" id="dont-list" style="display:none;">{{ dont_list_str|default:'' }}</textarea>
+            </div>
+
+            <!-- TABOO -->
+            <div class="col-md-6">
+                <label class="section-label"><i class="bi bi-slash-circle-fill me-1" style="color:#fb923c;"></i>TABOO &mdash; Niemals verwenden</label>
+                <div class="tag-area" id="area-taboo" onclick="focusInput('input-taboo')">
+                    {% for item in style.taboo_list %}<span class="tag tag-taboo">{{ item }}<button type="button" class="tag-remove" onclick="removeTag(this)"><i class="bi bi-x"></i></button></span>{% endfor %}
+                    <input class="tag-input" id="input-taboo" placeholder="Tabu-Wort hinzufügen..." onkeydown="handleTagInput(event, 'taboo-list', 'area-taboo', 'input-taboo', 'tag-taboo')">
+                </div>
+                <textarea name="taboo_list" id="taboo-list" style="display:none;">{{ taboo_list_str|default:'' }}</textarea>
+            </div>
+
+            <!-- SIGNATURE MOVES -->
+            <div class="col-md-6">
+                <label class="section-label"><i class="bi bi-stars me-1" style="color:#a5b4fc;"></i>Signature Moves &mdash; Charakteristisch</label>
+                <div class="tag-area" id="area-sig" onclick="focusInput('input-sig')">
+                    {% for item in style.signature_moves %}<span class="tag tag-sig">{{ item }}<button type="button" class="tag-remove" onclick="removeTag(this)"><i class="bi bi-x"></i></button></span>{% endfor %}
+                    <input class="tag-input" id="input-sig" placeholder="Charakteristisches Stilmittel..." onkeydown="handleTagInput(event, 'signature-moves', 'area-sig', 'input-sig', 'tag-sig')">
+                </div>
+                <textarea name="signature_moves" id="signature-moves" style="display:none;">{{ signature_moves_str|default:'' }}</textarea>
+            </div>
+
+        </div>
+    </div>
+
+    {% if not is_edit %}
+    <div class="mb-4">
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="auto_analyze"
+                   id="auto_analyze" value="1" checked>
+            <label class="form-check-label" for="auto_analyze" style="color:#cbd5e1;">
+                <i class="bi bi-stars me-1 text-primary"></i>
+                Nach Erstellen direkt per LLM analysieren
             </label>
-
-            <!-- Upload-Tab oder Texteingabe -->
-            <ul class="nav nav-tabs mb-2" style="border-color:#2d3748;">
-                <li class="nav-item">
-                    <button type="button" class="nav-link {% if not is_edit %}active{% endif %}"
-                            id="tab-text" onclick="switchTab('text')"
-                            style="color:#94a3b8;border:none;background:none;">
-                        <i class="bi bi-keyboard me-1"></i>Text eingeben
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button type="button" class="nav-link"
-                            id="tab-file" onclick="switchTab('file')"
-                            style="color:#94a3b8;border:none;background:none;">
-                        <i class="bi bi-upload me-1"></i>Datei hochladen
-                    </button>
-                </li>
-            </ul>
-
-            <div id="panel-text">
-                <textarea name="source_text" rows="10"
-                          class="form-control" style="background:#131929;color:#f1f5f9;border-color:#475569;font-family:monospace;font-size:.85rem;"
-                          placeholder="Füge hier einen repräsentativen Textausschnitt des Autors ein (mind. 200 Wörter empfohlen)...">{{ style.source_text|default:'' }}</textarea>
-                <div class="form-text" style="color:#64748b;">Empfehlung: 200–2000 Wörter für beste Analyseergebnisse.</div>
-            </div>
-
-            <div id="panel-file" style="display:none;">
-                <input type="file" name="source_file" accept=".txt,.md"
-                       class="form-control" style="background:#131929;color:#f1f5f9;border-color:#475569;">
-                <div class="form-text" style="color:#64748b;">Akzeptiert: .txt und .md Dateien</div>
-            </div>
         </div>
+    </div>
+    {% endif %}
 
-        {% if not is_edit %}
-        <div class="mb-4">
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" name="auto_analyze"
-                       id="auto_analyze" value="1" checked>
-                <label class="form-check-label" for="auto_analyze" style="color:#cbd5e1;">
-                    <i class="bi bi-stars me-1 text-primary"></i>
-                    Nach Erstellen direkt per LLM analysieren
-                </label>
-            </div>
-        </div>
-        {% endif %}
-
-        <div class="d-flex gap-2 justify-content-end">
-            <a href="{% url 'authors:detail' author.pk %}" class="btn btn-outline-secondary">Abbrechen</a>
-            <button type="submit" class="btn btn-primary">
-                <i class="bi bi-check me-1"></i>{% if is_edit %}Speichern{% else %}Anlegen{% endif %}
-            </button>
-        </div>
-    </form>
-</div>
-</div>
+    <div class="d-flex gap-2 justify-content-end">
+        <a href="{% url 'authors:detail' author.pk %}" class="btn btn-outline-secondary">Abbrechen</a>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check me-1"></i>{% if is_edit %}Speichern{% else %}Anlegen{% endif %}
+        </button>
+    </div>
+</form>
 </div>
 {% endblock %}
 
@@ -107,8 +175,103 @@ function switchTab(tab) {
     document.getElementById('panel-file').style.display = tab === 'file' ? '' : 'none';
     document.getElementById('tab-text').classList.toggle('active', tab === 'text');
     document.getElementById('tab-file').classList.toggle('active', tab === 'file');
-    document.getElementById('tab-text').style.color = tab === 'text' ? '#a5b4fc' : '#94a3b8';
-    document.getElementById('tab-file').style.color = tab === 'file' ? '#a5b4fc' : '#94a3b8';
 }
+
+function focusInput(id) {
+    document.getElementById(id).focus();
+}
+
+function handleTagInput(event, textareaId, areaId, inputId, tagClass) {
+    const input = document.getElementById(inputId);
+    if ((event.key === 'Enter' || event.key === ',') && input.value.trim()) {
+        event.preventDefault();
+        addTag(input.value.trim(), textareaId, areaId, inputId, tagClass);
+        input.value = '';
+    }
+    if (event.key === 'Backspace' && !input.value) {
+        const area = document.getElementById(areaId);
+        const tags = area.querySelectorAll('.tag');
+        if (tags.length) tags[tags.length - 1].remove();
+        syncTextarea(textareaId, areaId);
+    }
+}
+
+function addTag(text, textareaId, areaId, inputId, tagClass) {
+    const area = document.getElementById(areaId);
+    const input = document.getElementById(inputId);
+    const span = document.createElement('span');
+    span.className = `tag ${tagClass}`;
+    span.innerHTML = `${text}<button type="button" class="tag-remove" onclick="removeTag(this)"><i class="bi bi-x"></i></button>`;
+    area.insertBefore(span, input);
+    syncTextarea(textareaId, areaId);
+}
+
+function removeTag(btn) {
+    const tag = btn.closest('.tag');
+    const area = tag.closest('.tag-area');
+    const textareaId = area.id.replace('area-', '') === 'do' ? 'do-list'
+        : area.id.replace('area-', '') === 'dont' ? 'dont-list'
+        : area.id.replace('area-', '') === 'taboo' ? 'taboo-list'
+        : 'signature-moves';
+    tag.remove();
+    syncTextarea(textareaId, area.id);
+}
+
+function syncTextarea(textareaId, areaId) {
+    const area = document.getElementById(areaId);
+    const tags = Array.from(area.querySelectorAll('.tag')).map(t => {
+        const clone = t.cloneNode(true);
+        clone.querySelector('.tag-remove')?.remove();
+        return clone.textContent.trim();
+    });
+    document.getElementById(textareaId).value = tags.join('\n');
+}
+
+// Sync all textareas before submit
+document.getElementById('styleForm').addEventListener('submit', function() {
+    ['do', 'dont', 'taboo', 'sig'].forEach(key => {
+        const areaId = `area-${key}`;
+        const taId = key === 'do' ? 'do-list' : key === 'dont' ? 'dont-list' : key === 'taboo' ? 'taboo-list' : 'signature-moves';
+        syncTextarea(taId, areaId);
+    });
+});
+
+{% if is_edit and style.source_text %}
+async function extractRules() {
+    const btn = document.getElementById('btnExtractRules');
+    const msg = document.getElementById('extractMsg');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Extrahiere...';
+    msg.style.display = 'none';
+    try {
+        const fd = new FormData();
+        fd.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        const r = await fetch('{% url "authors:style_extract_rules" style.pk %}', { method: 'POST', body: fd });
+        const data = await r.json();
+        if (data.ok) {
+            applyExtracted('do', data.do_list || [], 'do-list', 'area-do', 'input-do', 'tag-do');
+            applyExtracted('dont', data.dont_list || [], 'dont-list', 'area-dont', 'input-dont', 'tag-dont');
+            applyExtracted('taboo', data.taboo_list || [], 'taboo-list', 'area-taboo', 'input-taboo', 'tag-taboo');
+            applyExtracted('sig', data.signature_moves || [], 'signature-moves', 'area-sig', 'input-sig', 'tag-sig');
+            msg.innerHTML = '<div class="alert alert-success py-2 small"><i class="bi bi-check-circle me-1"></i>Regeln extrahiert! Überprüfe und passe sie an, dann speichere.</div>';
+        } else {
+            msg.innerHTML = `<div class="alert alert-danger py-2 small">${data.error}</div>`;
+        }
+    } catch (err) {
+        msg.innerHTML = `<div class="alert alert-danger py-2 small">Fehler: ${err.message}</div>`;
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-stars"></i> DO/DONT aus Text extrahieren';
+        msg.style.display = '';
+    }
+}
+
+function applyExtracted(key, items, taId, areaId, inputId, tagClass) {
+    const area = document.getElementById(areaId);
+    const input = document.getElementById(inputId);
+    area.querySelectorAll('.tag').forEach(t => t.remove());
+    items.forEach(item => addTag(item, taId, areaId, inputId, tagClass));
+}
+{% endif %}
 </script>
 {% endblock %}

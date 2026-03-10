@@ -1,10 +1,12 @@
 """
-Authors — Views für Autor-Profile und Schreibstile.
+Authors — Views für Autor-Profile und Schreibstile (Style Lab Builder).
 """
+import json
 import logging
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 from django.views.generic import DetailView, ListView
@@ -40,7 +42,7 @@ class AuthorCreateView(LoginRequiredMixin, View):
             name=name,
             bio=request.POST.get("bio", ""),
         )
-        messages.success(request, f'Autor „{author.name}“ angelegt.')
+        messages.success(request, f'Autor \u201e{author.name}\u201c angelegt.')
         return redirect("authors:detail", pk=author.pk)
 
 
@@ -71,7 +73,7 @@ class AuthorUpdateView(LoginRequiredMixin, View):
         author.name = request.POST.get("name", author.name).strip() or author.name
         author.bio = request.POST.get("bio", author.bio)
         author.save(update_fields=["name", "bio"])
-        messages.success(request, f'Autor „{author.name}“ aktualisiert.')
+        messages.success(request, f'Autor \u201e{author.name}\u201c aktualisiert.')
         return redirect("authors:detail", pk=author.pk)
 
 
@@ -87,7 +89,6 @@ class WritingStyleCreateView(LoginRequiredMixin, View):
         name = request.POST.get("name", "").strip()
         source_text = request.POST.get("source_text", "").strip()
 
-        # File-Upload Support
         if not source_text and request.FILES.get("source_file"):
             f = request.FILES["source_file"]
             try:
@@ -107,10 +108,13 @@ class WritingStyleCreateView(LoginRequiredMixin, View):
             name=name,
             description=request.POST.get("description", ""),
             source_text=source_text,
+            do_list=_parse_list_input(request.POST.get("do_list", "")),
+            dont_list=_parse_list_input(request.POST.get("dont_list", "")),
+            taboo_list=_parse_list_input(request.POST.get("taboo_list", "")),
+            signature_moves=_parse_list_input(request.POST.get("signature_moves", "")),
         )
-        messages.success(request, f'Schreibstil „{style.name}“ angelegt.')
+        messages.success(request, f'Schreibstil \u201e{style.name}\u201c angelegt.')
 
-        # Direkt analysieren wenn Text vorhanden
         if source_text and request.POST.get("auto_analyze"):
             return redirect("authors:style_analyze", pk=style.pk)
         return redirect("authors:style_detail", pk=style.pk)
@@ -143,6 +147,10 @@ class WritingStyleUpdateView(LoginRequiredMixin, View):
             "style": style,
             "author": style.author,
             "is_edit": True,
+            "do_list_str": "\n".join(style.do_list or []),
+            "dont_list_str": "\n".join(style.dont_list or []),
+            "taboo_list_str": "\n".join(style.taboo_list or []),
+            "signature_moves_str": "\n".join(style.signature_moves or []),
         })
 
     def post(self, request, pk):
@@ -151,22 +159,25 @@ class WritingStyleUpdateView(LoginRequiredMixin, View):
         )
         style.name = request.POST.get("name", style.name).strip() or style.name
         style.description = request.POST.get("description", style.description)
-        new_text = request.POST.get("source_text", "").strip()
+        style.do_list = _parse_list_input(request.POST.get("do_list", ""))
+        style.dont_list = _parse_list_input(request.POST.get("dont_list", ""))
+        style.taboo_list = _parse_list_input(request.POST.get("taboo_list", ""))
+        style.signature_moves = _parse_list_input(request.POST.get("signature_moves", ""))
 
+        new_text = request.POST.get("source_text", "").strip()
         if not new_text and request.FILES.get("source_file"):
             f = request.FILES["source_file"]
             try:
                 new_text = f.read().decode("utf-8", errors="replace")
             except Exception:
                 new_text = ""
-
         if new_text:
             style.source_text = new_text
             style.status = WritingStyle.Status.DRAFT
             style.style_profile = ""
             style.style_prompt = ""
         style.save()
-        messages.success(request, f'Schreibstil „{style.name}“ aktualisiert.')
+        messages.success(request, f'Schreibstil \u201e{style.name}\u201c aktualisiert.')
         return redirect("authors:style_detail", pk=style.pk)
 
 
@@ -181,7 +192,7 @@ class WritingStyleAnalyzeView(LoginRequiredMixin, View):
         if ok:
             messages.success(
                 request,
-                f'Stil „{style.name}“ erfolgreich analysiert. Jetzt Beispieltexte generieren.'
+                f'Stil \u201e{style.name}\u201c erfolgreich analysiert.'
             )
         else:
             messages.error(
@@ -189,6 +200,28 @@ class WritingStyleAnalyzeView(LoginRequiredMixin, View):
                 f'Analyse fehlgeschlagen: {style.error_message}'
             )
         return redirect("authors:style_detail", pk=style.pk)
+
+    def get(self, request, pk):
+        return redirect("authors:style_detail", pk=pk)
+
+
+class WritingStyleExtractRulesView(LoginRequiredMixin, View):
+    """Extrahiert DO/DONT/Taboo-Regeln aus dem Quelltext per LLM."""
+
+    def post(self, request, pk):
+        style = get_object_or_404(
+            WritingStyle, pk=pk, author__owner=request.user
+        )
+        ok, result = services.extract_style_rules(style)
+        if ok:
+            return JsonResponse({
+                "ok": True,
+                "do_list": result.get("do_list", []),
+                "dont_list": result.get("dont_list", []),
+                "taboo_list": result.get("taboo_list", []),
+                "signature_moves": result.get("signature_moves", []),
+            })
+        return JsonResponse({"ok": False, "error": result.get("error", "Unbekannter Fehler")})
 
     def get(self, request, pk):
         return redirect("authors:style_detail", pk=pk)
@@ -245,7 +278,7 @@ class SampleUpdateView(LoginRequiredMixin, View):
                         )},
                     ],
                 )
-                sample, _ = WritingStyleSample.objects.update_or_create(
+                WritingStyleSample.objects.update_or_create(
                     style=style, situation=situation,
                     defaults={"text": result},
                 )
@@ -273,5 +306,21 @@ class WritingStyleDeleteView(LoginRequiredMixin, View):
         author_pk = style.author.pk
         name = style.name
         style.delete()
-        messages.success(request, f'Schreibstil „{name}“ gelöscht.')
+        messages.success(request, f'Schreibstil \u201e{name}\u201c gelöscht.')
         return redirect("authors:detail", pk=author_pk)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _parse_list_input(raw: str) -> list[str]:
+    """Parses newline or comma-separated list input into a clean list."""
+    if not raw:
+        return []
+    # Try newline split first, then comma
+    items = [line.strip().lstrip("-•◦").strip() for line in raw.splitlines()]
+    items = [i for i in items if i]
+    if not items:
+        items = [i.strip() for i in raw.split(",") if i.strip()]
+    return items
