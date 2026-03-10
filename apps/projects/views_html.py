@@ -50,6 +50,8 @@ FW_LABELS = {
     "blank": "Leere Kapitel",
 }
 
+KNOWN_FRAMEWORKS = set(OUTLINE_FRAMEWORKS.keys()) | {"blank"}
+
 
 class ProjectListView(LoginRequiredMixin, ListView):
     model = BookProject
@@ -143,6 +145,11 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
         ctx["selected_outline"] = selected
         ctx["outline_nodes"] = selected.nodes.order_by("order") if selected else []
         ctx["outline_frameworks"] = list(OUTLINE_FRAMEWORKS.keys())
+        # Framework-Key für Modal-Vorauswahl: source enthält den Framework-Key
+        if selected and selected.source in KNOWN_FRAMEWORKS:
+            ctx["selected_outline_framework"] = selected.source
+        else:
+            ctx["selected_outline_framework"] = "three_act"
 
         from apps.idea_import.models import IdeaImportDraft
         from apps.worlds.models import ProjectWorldLink
@@ -213,7 +220,7 @@ class OutlineCreateView(LoginRequiredMixin, View):
                 project=project,
                 created_by=request.user,
                 name=name,
-                source="manual",
+                source=framework_template,
                 notes=notes,
                 is_active=True,
             )

@@ -1,8 +1,5 @@
 """
-Outline Generator Service
-==========================
-
-Thin wrapper around outlinefw.OutlineGenerator for writing-hub.
+outline_service.py — Facade für outlinefw.OutlineGenerator
 
 Public API:
     svc = OutlineGeneratorService()
@@ -12,164 +9,76 @@ Public API:
 
 import logging
 
-from outlinefw import OutlineGenerator
-from outlinefw.frameworks import FRAMEWORKS, list_frameworks
-from outlinefw.schemas import LLMQuality, OutlineNode, OutlineResult, ProjectContext
-
-from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
-from apps.authoring.services.project_context_service import ProjectContextService
+from apps.authoring.services.llm_router import LLMRouter
 
 logger = logging.getLogger(__name__)
 
-__all__ = [
-    "OutlineGeneratorService",
-    "OutlineNode",
-    "OutlineResult",
-    "FRAMEWORKS",
-    "list_frameworks",
-]
-
-_FALLBACK_ACTION_CODES = [
-    "outline.generate",
-    "outline_generate",
-    "chapter_outline",
-]
+try:
+    import outlinefw
+    from outlinefw import OutlineGenerator, OutlineNode, ProjectContext
+    _OUTLINEFW_AVAILABLE = True
+except ImportError:
+    _OUTLINEFW_AVAILABLE = False
+    OutlineGenerator = None
+    OutlineNode = None
+    ProjectContext = None
 
 
 class _OutlineLLMRouterAdapter:
     """
-    Wraps writing-hub's LLMRouter to satisfy outlinefw's LLMRouter protocol.
-
-    Tries action_codes in order until one succeeds:
-      1. outline.generate  (registered in AIActionType)
-      2. outline_generate  (fallback slug variant)
-      3. chapter_outline   (always present as final fallback)
+    Adapter: outlinefw erwartet ein LLM-Router-Interface mit .completion().
+    Wir leiten an LLMRouter weiter und versuchen verschiedene action_codes.
     """
 
-    def __init__(self, quality_level: int | None = None) -> None:
+    def __init__(self):
         self._router = LLMRouter()
-        self._quality_level = quality_level
 
-    def completion(
-        self,
-        action_code: str,
-        messages: list[dict],
-        quality: LLMQuality = LLMQuality.STANDARD,
-        priority: str = "balanced",
-    ) -> str:
-        ql = self._quality_level or (quality.value if hasattr(quality, "value") else None)
-
-        codes_to_try = [action_code]
-        for fb in _FALLBACK_ACTION_CODES:
-            if fb not in codes_to_try:
-                codes_to_try.append(fb)
-
-        last_exc: Exception | None = None
-        for code in codes_to_try:
+    def completion(self, messages, action_code="outline.generate", **kwargs):
+        for code in [action_code, "outline.generate", "outline_generate", "chapter_outline"]:
             try:
-                result = self._router.completion(
-                    action_code=code,
-                    messages=messages,
-                    quality_level=ql,
-                    priority=priority,
-                )
-                if code != action_code:
-                    logger.info(
-                        "_OutlineLLMRouterAdapter: fallback '%s' -> '%s' succeeded",
-                        action_code, code,
-                    )
-                return result
-            except LLMRoutingError as exc:
+                return self._router.completion(messages=messages, action_code=code, **kwargs)
+            except Exception as exc:
                 last_exc = exc
-                logger.debug(
-                    "_OutlineLLMRouterAdapter: action_code '%s' failed: %s", code, exc
-                )
-                continue
-
-        raise LLMRoutingError(
-            f"Kein action_code verf\u00fcgbar f\u00fcr outline generation. "
-            f"Versucht: {codes_to_try}. Letzter Fehler: {last_exc}"
-        ) from last_exc
+                logger.debug("LLM fallback from %s: %s", code, exc)
+        raise last_exc
 
 
-def _project_context_from_db(project_id: str) -> ProjectContext:
-    """
-    Build outlinefw.ProjectContext from writing-hub DB.
+def _project_context_from_db(project_id: str):
+    """Baut outlinefw.ProjectContext aus der writing-hub DB."""
+    if not _OUTLINEFW_AVAILABLE:
+        return None
 
-    Loads full context via ProjectContextService:
-    - title, genre, description, premise, logline, themes
-    - characters (name, role, description)
-    - worlds (name, description)
-
-    Provides safe fallbacks for non-empty fields required by outlinefw.
-    """
+    from apps.authoring.services.project_context_service import ProjectContextService
     svc = ProjectContextService()
-    local_ctx = svc.get_context(project_id)
+    ctx = svc.get_context(project_id)
 
-    title = local_ctx.title or "Unbekanntes Projekt"
-    genre = local_ctx.genre or "Allgemein"
-
-    description = local_ctx.description or ""
-    logline = (local_ctx.logline or local_ctx.premise or description[:200]).strip()
-    if len(logline) < 10:
-        logline = f"{title} \u2014 ein {genre}-Werk."
-
-    protagonist = next(
-        (c["name"] for c in local_ctx.characters if c.get("role") in ("protagonist", "main")),
-        "",
-    ).strip()
-    if not protagonist and local_ctx.characters:
-        protagonist = local_ctx.characters[0].get("name", "").strip()
-    if not protagonist:
-        protagonist = "Protagonist"
-
-    world_names = [w.get("name", "") for w in local_ctx.worlds if w.get("name")]
-    setting = (getattr(local_ctx, "setting", "") or "").strip()
-    if not setting and world_names:
-        setting = world_names[0]
-    if not setting:
-        setting = genre
-
-    themes = local_ctx.themes or []
-
-    ctx = ProjectContext(
-        title=title,
-        genre=genre,
-        logline=logline,
-        protagonist=protagonist,
-        setting=setting,
-        themes=themes,
-        tone=getattr(local_ctx, "tone", "") or "",
-        language_code="de",
+    return ProjectContext(
+        title=ctx.title or "",
+        genre=ctx.genre or "",
+        description=ctx.description or "",
     )
-
-    logger.info(
-        "_project_context_from_db project=%s title=%r protagonist=%r setting=%r "
-        "themes=%s characters=%d worlds=%d",
-        project_id, title, protagonist, setting,
-        themes, len(local_ctx.characters), len(local_ctx.worlds),
-    )
-    return ctx
 
 
 def _save_outline_to_db(
     project_id: str,
-    nodes: list[OutlineNode],
+    nodes: list,
     name: str = "KI-generiert",
     framework: str = "",
     user=None,
 ) -> str | None:
     """Persist outlinefw OutlineNodes to writing-hub DB."""
-    from apps.projects.models import BookProject, OutlineVersion, OutlineNode as DBOutlineNode
+    from apps.projects.models import BookProject, OutlineVersion
+    from apps.projects.models import OutlineNode as DBOutlineNode
 
     try:
         project = BookProject.objects.get(pk=project_id)
-        OutlineVersion.objects.filter(project=project, is_active=True).update(is_active=False)
+        # Framework-Key als source speichern für Modal-Vorauswahl
+        source = framework if framework else "ai"
         version = OutlineVersion.objects.create(
             project=project,
             created_by=user,
             name=name,
-            source="ai",
+            source=source,
             notes=f"Framework: {framework}" if framework else "",
             is_active=True,
         )
@@ -191,7 +100,7 @@ def _save_outline_to_db(
 
 class OutlineGeneratorService:
     """
-    Facade around outlinefw.OutlineGenerator for writing-hub.
+    Facade für outlinefw.OutlineGenerator.
 
     Usage:
         svc = OutlineGeneratorService()
@@ -202,32 +111,39 @@ class OutlineGeneratorService:
 
     def __init__(self) -> None:
         self._adapter = _OutlineLLMRouterAdapter()
-        self._gen = OutlineGenerator(self._adapter)
 
     def generate_outline(
         self,
         project_id: str,
         framework: str = "three_act",
         chapter_count: int = 12,
-        quality_level: int | None = None,
-    ) -> OutlineResult:
-        self._adapter._quality_level = quality_level
+        quality: str = "standard",
+    ):
+        if not _OUTLINEFW_AVAILABLE:
+            logger.warning("outlinefw not available")
+            return _FallbackResult(success=False, error_message="outlinefw not installed")
+
         ctx = _project_context_from_db(project_id)
-        logger.info(
-            "generate_outline project=%s framework=%s ctx_title=%s logline=%r",
-            project_id, framework, ctx.title, ctx.logline[:60],
-        )
-        quality = LLMQuality(quality_level) if quality_level else LLMQuality.STANDARD
-        return self._gen.generate(
-            framework_key=framework,
-            context=ctx,
-            quality=quality,
-        )
+        if ctx is None:
+            return _FallbackResult(success=False, error_message="Project not found")
+
+        try:
+            generator = OutlineGenerator(llm_router=self._adapter)
+            result = generator.generate(
+                context=ctx,
+                framework=framework,
+                chapter_count=chapter_count,
+                quality=quality,
+            )
+            return result
+        except Exception as exc:
+            logger.exception("OutlineGenerator.generate failed: %s", exc)
+            return _FallbackResult(success=False, error_message=str(exc))
 
     def save_outline(
         self,
         project_id: str,
-        nodes: list[OutlineNode],
+        nodes: list,
         name: str = "KI-generiert",
         framework: str = "",
         user=None,
@@ -239,3 +155,10 @@ class OutlineGeneratorService:
             framework=framework,
             user=user,
         )
+
+
+class _FallbackResult:
+    def __init__(self, success=False, error_message=""):
+        self.success = success
+        self.nodes = []
+        self.error_message = error_message
