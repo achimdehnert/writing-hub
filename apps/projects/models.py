@@ -1,5 +1,5 @@
 """
-Projects App — Buchprojekte, Outline, Kapitel, Review, Editing, Lektorat (ADR-083)
+Projects App — Buchprojekte, Outline, Kapitel, Review, Editing, Lektorat, Snapshots (ADR-083)
 """
 from __future__ import annotations
 
@@ -116,7 +116,7 @@ class OutlineFrameworkBeat(models.Model):
         verbose_name_plural = "Framework Beats"
 
     def __str__(self):
-        return f"{self.framework.name} \u2014 {self.order}. {self.name}"
+        return f"{self.framework.name} — {self.order}. {self.name}"
 
 
 class BookProject(models.Model):
@@ -145,13 +145,13 @@ class BookProject(models.Model):
     )
     writing_style = models.ForeignKey(
         "authors.WritingStyle", on_delete=models.SET_NULL, null=True, blank=True,
-        verbose_name="Prim\u00e4rer Schreibstil",
+        verbose_name="Primärer Schreibstil",
         related_name="projects",
     )
     writing_styles = models.ManyToManyField(
         "authors.WritingStyle",
         blank=True,
-        verbose_name="Schreibstile (mehrere m\u00f6glich)",
+        verbose_name="Schreibstile (mehrere möglich)",
         related_name="projects_m2m",
     )
 
@@ -210,7 +210,7 @@ class OutlineVersion(models.Model):
         verbose_name_plural = "Outline Versions"
 
     def __str__(self):
-        return f"{self.project.title} \u2014 {self.name}"
+        return f"{self.project.title} — {self.name}"
 
     def save_as_new_version(self, name=None, label=None, user=None):
         new = OutlineVersion.objects.create(
@@ -263,7 +263,7 @@ class OutlineNode(models.Model):
         "authors.WritingStyle",
         on_delete=models.SET_NULL,
         null=True, blank=True,
-        verbose_name="Schreibstil f\u00fcr dieses Kapitel",
+        verbose_name="Schreibstil für dieses Kapitel",
         related_name="outline_nodes",
     )
     order = models.PositiveIntegerField(default=0)
@@ -279,7 +279,7 @@ class OutlineNode(models.Model):
         verbose_name_plural = "Outline Nodes"
 
     def __str__(self):
-        return f"{self.outline_version} \u2014 {self.order}. {self.title}"
+        return f"{self.outline_version} — {self.order}. {self.title}"
 
     def save(self, *args, **kwargs):
         if self.content:
@@ -328,7 +328,7 @@ class ChapterReview(models.Model):
         verbose_name_plural = "Kapitel-Reviews"
 
     def __str__(self):
-        return f"{self.node.title} \u2014 {self.reviewer}"
+        return f"{self.node.title} — {self.reviewer}"
 
 
 class ChapterEditing(models.Model):
@@ -343,7 +343,7 @@ class ChapterEditing(models.Model):
     )
     SUGGESTION_TYPES = [
         ("style", "Stil"),
-        ("clarity", "Kl\u00e4rung"),
+        ("clarity", "Klärung"),
         ("consistency", "Konsistenz"),
         ("grammar", "Grammatik"),
         ("pacing", "Pacing"),
@@ -367,7 +367,7 @@ class ChapterEditing(models.Model):
         verbose_name_plural = "Kapitel-Editings"
 
     def __str__(self):
-        return f"{self.node.title} \u2014 {self.suggestion_type}"
+        return f"{self.node.title} — {self.suggestion_type}"
 
 
 class LektoratSession(models.Model):
@@ -381,7 +381,7 @@ class LektoratSession(models.Model):
     name = models.CharField(max_length=200, default="Lektorat")
     STATUS = [
         ("pending", "Ausstehend"),
-        ("running", "Wird gepr\u00fcft"),
+        ("running", "Wird geprüft"),
         ("done", "Abgeschlossen"),
         ("error", "Fehler"),
     ]
@@ -399,7 +399,7 @@ class LektoratSession(models.Model):
         verbose_name_plural = "Lektorats-Sessions"
 
     def __str__(self):
-        return f"{self.project.title} \u2014 {self.name}"
+        return f"{self.project.title} — {self.name}"
 
 
 class LektoratIssue(models.Model):
@@ -437,4 +437,34 @@ class LektoratIssue(models.Model):
         verbose_name_plural = "Lektorats-Probleme"
 
     def __str__(self):
-        return f"{self.session.name} \u2014 {self.node.title}: {self.issue_type}"
+        return f"{self.session.name} — {self.node.title}: {self.issue_type}"
+
+
+class ManuscriptSnapshot(models.Model):
+    """
+    Snapshot des kompletten Manuskript-Stands zu einem Zeitpunkt.
+    Speichert alle Kapitel-Inhalte als JSON (FIFO, max. 10 pro Projekt).
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        BookProject, on_delete=models.CASCADE, related_name="snapshots",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+    )
+    name = models.CharField(max_length=200)
+    notes = models.TextField(blank=True)
+    chapter_count = models.PositiveIntegerField(default=0)
+    word_count = models.PositiveIntegerField(default=0)
+    data = models.JSONField(default=dict, help_text="Serialisierter Stand aller Kapitel")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "wh_manuscript_snapshots"
+        ordering = ["-created_at"]
+        verbose_name = "Manuskript-Snapshot"
+        verbose_name_plural = "Manuskript-Snapshots"
+
+    def __str__(self):
+        return f"{self.project.title} — {self.name}"

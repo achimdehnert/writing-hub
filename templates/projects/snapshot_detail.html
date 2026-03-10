@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}{{ snapshot.name }} — Snapshot — Writing Hub{% endblock %}
+{% block nav_projects %}active{% endblock %}
+{% block page_title %}<i class="bi bi-archive me-2"></i>{{ snapshot.name }}{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'projects:versions' project.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Alle Versionen
+</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- Meta -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="text-muted small mb-1">Erstellt</div>
+                <div style="color:#e2e8f0;">{{ snapshot.created_at|date:"d.m.Y H:i" }}</div>
+            </div>
+            <div class="col-md-3 text-center">
+                <div style="font-size:1.5rem;font-weight:700;color:#6366f1;">{{ snapshot.chapter_count }}</div>
+                <div class="text-muted" style="font-size:.72rem;">Kapitel</div>
+            </div>
+            <div class="col-md-3 text-center">
+                <div style="font-size:1.5rem;font-weight:700;color:#6366f1;">{{ snapshot.word_count }}</div>
+                <div class="text-muted" style="font-size:.72rem;">Wörter</div>
+            </div>
+        </div>
+        {% if snapshot.notes %}
+        <div class="mt-3 pt-3 border-top" style="border-color:#2d3148 !important;">
+            <div class="text-muted small mb-1">Notizen</div>
+            <div style="color:#cbd5e1;">{{ snapshot.notes }}</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Kapitel-Liste -->
+<div class="card">
+    <div class="card-header py-2">
+        <span class="fw-semibold small"><i class="bi bi-list-ol me-1"></i>Kapitel in diesem Snapshot</span>
+    </div>
+    <div class="card-body p-0">
+        {% if chapters %}
+        <div class="accordion accordion-flush" id="chaptersAccordion">
+            {% for ch in chapters %}
+            <div class="accordion-item" style="background:#1a1d27;border-color:#2d3148;">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed py-2 px-3 small"
+                            style="background:#1a1d27;color:#e2e8f0;border-bottom:1px solid #2d3148;"
+                            type="button" data-bs-toggle="collapse"
+                            data-bs-target="#ch{{ forloop.counter }}">
+                        <span class="text-muted me-2" style="min-width:1.5rem;">{{ ch.order }}.</span>
+                        <span class="fw-semibold">{{ ch.title }}</span>
+                        <span class="ms-auto me-2 text-muted" style="font-size:.72rem;">{{ ch.word_count }} W.</span>
+                        {% if ch.content %}
+                        <span class="badge" style="background:#14532d;color:#86efac;font-size:.6rem;">Text</span>
+                        {% else %}
+                        <span class="badge bg-secondary" style="font-size:.6rem;">leer</span>
+                        {% endif %}
+                    </button>
+                </h2>
+                <div id="ch{{ forloop.counter }}" class="accordion-collapse collapse">
+                    <div class="accordion-body py-2 px-3" style="background:#0f1117;">
+                        {% if ch.description %}
+                        <div class="text-muted small mb-2" style="font-style:italic;">{{ ch.description }}</div>
+                        {% endif %}
+                        {% if ch.content %}
+                        <div style="color:#cbd5e1;font-size:.88rem;line-height:1.7;white-space:pre-wrap;">{{ ch.content }}</div>
+                        {% else %}
+                        <div class="text-muted small">[Kein Text in diesem Snapshot]</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="p-4 text-center text-muted small">
+            <i class="bi bi-journal-x d-block mb-2" style="font-size:2rem;"></i>
+            Keine Kapitel in diesem Snapshot
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

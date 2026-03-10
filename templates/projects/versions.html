@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Versionen — {{ project.title }} — Writing Hub{% endblock %}
+{% block nav_projects %}active{% endblock %}
+{% block page_title %}<i class="bi bi-clock-history me-2"></i>Versionierung{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'projects:detail' project.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Zurück zum Projekt
+</a>
+<button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#snapshotModal"
+        {% if not can_create %}disabled title="Limit von {{ max_snapshots }} Snapshots erreicht"{% endif %}>
+    <i class="bi bi-plus-circle me-1"></i> Version erstellen
+</button>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .snapshot-card { transition: border-color .15s; }
+    .snapshot-card:hover { border-color: #6366f1 !important; }
+    .stat-box { background: #1e2235; border: 1px solid #2d3148; border-radius: .5rem; padding: .75rem 1.25rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Header Card -->
+<div class="card mb-4" style="background: linear-gradient(135deg,#1e2235 0%,#16192b 100%); border-color:#3730a3;">
+    <div class="card-body py-3">
+        <div class="d-flex align-items-center gap-3">
+            <i class="bi bi-clock-history" style="font-size:2rem;color:#6366f1;"></i>
+            <div>
+                <div class="fw-bold" style="color:#e2e8f0;font-size:1.1rem;">Versionierung</div>
+                <div class="text-muted small">{{ project.title }} — Snapshots verwalten</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Aktueller Stand -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <div class="fw-semibold mb-1" style="color:#e2e8f0;font-size:1rem;">Aktueller Stand</div>
+                <div class="text-muted small">Erstelle einen Snapshot, um den aktuellen Stand zu sichern</div>
+            </div>
+            <div class="d-flex gap-4 align-items-center">
+                <div class="text-center">
+                    <div style="font-size:1.6rem;font-weight:700;color:#6366f1;">{{ current_chapter_count }}</div>
+                    <div class="text-muted" style="font-size:.72rem;">Kapitel</div>
+                </div>
+                <div class="text-center">
+                    <div style="font-size:1.6rem;font-weight:700;color:#6366f1;">{{ current_word_count }}</div>
+                    <div class="text-muted" style="font-size:.72rem;">Wörter</div>
+                </div>
+                <button class="btn btn-primary btn-sm"
+                        data-bs-toggle="modal" data-bs-target="#snapshotModal"
+                        {% if not can_create %}disabled{% endif %}>
+                    <i class="bi bi-plus-circle me-1"></i> Version erstellen
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gespeicherte Versionen -->
+<div class="card">
+    <div class="card-header py-2 d-flex align-items-center justify-content-between">
+        <span class="fw-semibold small">
+            <i class="bi bi-archive me-1"></i>
+            Gespeicherte Versionen ({{ snapshot_count }}/{{ max_snapshots }})
+        </span>
+        {% if snapshot_count >= max_snapshots %}
+        <span class="badge bg-warning text-dark" style="font-size:.7rem;">Limit erreicht — älteste wird überschrieben</span>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        {% if snapshots %}
+        <ul class="list-group list-group-flush">
+            {% for snap in snapshots %}
+            <li class="list-group-item border-0 py-3 px-3 snapshot-card"
+                style="background:transparent;border-bottom:1px solid #2d3148 !important;">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="mt-1" style="color:#6366f1;font-size:1.1rem;">
+                        <i class="bi bi-archive"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold mb-1" style="color:#e2e8f0;">{{ snap.name }}</div>
+                        {% if snap.notes %}
+                        <div class="text-muted small mb-1">{{ snap.notes }}</div>
+                        {% endif %}
+                        <div class="d-flex gap-3 small text-muted">
+                            <span><i class="bi bi-list-ol me-1"></i>{{ snap.chapter_count }} Kapitel</span>
+                            <span><i class="bi bi-fonts me-1"></i>{{ snap.word_count }} Wörter</span>
+                            <span><i class="bi bi-calendar me-1"></i>{{ snap.created_at|date:"d.m.Y H:i" }}</span>
+                            {% if snap.created_by %}
+                            <span><i class="bi bi-person me-1"></i>{{ snap.created_by.username }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 align-items-center">
+                        <a href="{% url 'projects:snapshot_detail' project.pk snap.pk %}"
+                           class="btn btn-outline-secondary btn-sm py-0 px-2">
+                            <i class="bi bi-eye me-1"></i>Ansehen
+                        </a>
+                        <button class="btn btn-outline-danger btn-sm py-0 px-2 btn-delete-snapshot"
+                                data-url="{% url 'projects:snapshot_delete' project.pk snap.pk %}"
+                                data-name="{{ snap.name }}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="p-5 text-center">
+            <i class="bi bi-archive d-block mb-3" style="font-size:2.5rem;color:#2d3148;"></i>
+            <div class="text-muted small mb-1">Noch keine Versionen gespeichert</div>
+            <div class="text-muted" style="font-size:.78rem;">
+                Erstelle deinen ersten Snapshot, um den aktuellen Stand zu sichern.
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal: Snapshot erstellen -->
+<div class="modal fade" id="snapshotModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background:#1a1d27;border:1px solid #2d3148;color:#e2e8f0;">
+      <div class="modal-header border-secondary py-2">
+        <h6 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Version erstellen</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'projects:snapshot_create' project.pk %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label small text-muted">Name *</label>
+            <input type="text" name="name" class="form-control bg-dark text-light border-secondary"
+                   placeholder="z.B. Vor dem Lektorat, Abgabe V1 …" autofocus>
+            <div class="form-text text-muted" style="font-size:.73rem;">
+                Leer lassen = automatisch mit Datum/Uhrzeit benennen
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small text-muted">Notizen</label>
+            <textarea name="notes" rows="2" class="form-control bg-dark text-light border-secondary"
+                      placeholder="Was wurde geändert, warum dieser Stand …"></textarea>
+          </div>
+          <div class="alert py-2 px-3 mb-0" style="background:#1e2235;border:1px solid #2d3148;font-size:.8rem;color:#94a3b8;">
+            <i class="bi bi-info-circle me-1"></i>
+            Speichert <strong>{{ current_chapter_count }} Kapitel</strong> mit
+            <strong>{{ current_word_count }} Wörtern</strong> als unveraenderten Snapshot.
+            {% if not can_create %}
+            <br><span style="color:#f59e0b;"><i class="bi bi-exclamation-triangle me-1"></i>Limit von {{ max_snapshots }} erreicht — der älteste Snapshot wird gelöscht.</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="modal-footer border-secondary py-2">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Abbrechen</button>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-archive me-1"></i>Snapshot erstellen
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Delete-Confirm Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content" style="background:#1a1d27;border:1px solid #2d3148;color:#e2e8f0;">
+      <div class="modal-header border-secondary py-2">
+        <h6 class="modal-title"><i class="bi bi-trash me-2"></i>Snapshot löschen?</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body small text-muted" id="deleteModalBody">Wirklich löschen?</div>
+      <div class="modal-footer border-secondary py-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Abbrechen</button>
+        <form id="deleteForm" method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-sm">
+            <i class="bi bi-trash me-1"></i>Löschen
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.btn-delete-snapshot').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        const name = this.dataset.name;
+        const url = this.dataset.url;
+        document.getElementById('deleteModalBody').textContent = '"' + name + '" wird permanent gel\u00f6scht.';
+        document.getElementById('deleteForm').action = url;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    });
+});
+</script>
+{% endblock %}
