@@ -13,45 +13,17 @@ class ContentTypeLookup(models.Model):
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=50, unique=True)
     order = models.PositiveSmallIntegerField(default=0)
+    icon = models.CharField(max_length=50, blank=True, default="",
+        help_text="Bootstrap-Icon-Klasse, z.B. 'bi-book'")
+    subtitle = models.CharField(max_length=200, blank=True, default="",
+        help_text="Kurzbeschreibung unter dem Namen")
+    workflow_hint = models.CharField(max_length=300, blank=True, default="",
+        help_text="Workflow-Schritte z.B. 'Konzept → Struktur → Schreiben'")
 
-    # Planning LLM Configuration (DB-driven, same pattern as bfagent Migration 0050)
-    planning_action_code = models.CharField(
-        max_length=100,
-        blank=True,
-        default="",
-        help_text=(
-            "aifw action_code for planning calls (premise/themes/logline). "
-            "e.g. 'planning_novel', 'planning_screenplay'. "
-            "Falls back to 'planning_novel' if empty."
-        ),
-    )
-    planning_prompt_template = models.CharField(
-        max_length=128,
-        blank=True,
-        default="",
-        help_text=(
-            "promptfw template key prefix for planning, e.g. 'roman' -> renders "
-            "'roman.system.planning' + 'roman.task.planning'. "
-            "Falls back to slug if empty, then to 'roman' if no match found."
-        ),
-    )
-    planning_system_prompt = models.TextField(
-        blank=True,
-        default="",
-        help_text=(
-            "Custom system prompt for planning LLM calls. "
-            "Overrides promptfw template system prompt when set."
-        ),
-    )
-    planning_user_template = models.TextField(
-        blank=True,
-        default="",
-        help_text=(
-            "Custom user prompt template for planning. "
-            "Variables: {title}, {genre}, {description}, {context}. "
-            "Overrides promptfw template when set."
-        ),
-    )
+    planning_action_code = models.CharField(max_length=100, blank=True, default="")
+    planning_prompt_template = models.CharField(max_length=128, blank=True, default="")
+    planning_system_prompt = models.TextField(blank=True, default="")
+    planning_user_template = models.TextField(blank=True, default="")
 
     class Meta:
         db_table = "wh_content_type_lookup"
@@ -86,6 +58,30 @@ class AudienceLookup(models.Model):
         ordering = ["order", "name"]
         verbose_name = "Zielgruppe"
         verbose_name_plural = "Zielgruppen"
+
+    def __str__(self):
+        return self.name
+
+
+class AuthorStyleLookup(models.Model):
+    """
+    Autor / Schreibstil-Profile — via Django Admin pflegbar.
+    Entspricht bfagent.AuthorStyleProfile.
+    """
+    name = models.CharField(max_length=200, unique=True,
+        help_text="Name des Autors / Stils, z.B. 'Hugo Buko'")
+    description = models.TextField(blank=True,
+        help_text="Beschreibung des Schreibstils")
+    style_prompt = models.TextField(blank=True,
+        help_text="LLM-Prompt-Zusatz für diesen Stil")
+    order = models.PositiveSmallIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "wh_author_style_lookup"
+        ordering = ["order", "name"]
+        verbose_name = "Autor / Schreibstil"
+        verbose_name_plural = "Autoren / Schreibstile"
 
     def __str__(self):
         return self.name
@@ -127,6 +123,13 @@ class BookProject(models.Model):
         on_delete=models.SET_NULL,
         null=True, blank=True,
         verbose_name="Zielgruppe",
+        related_name="projects",
+    )
+    author_style = models.ForeignKey(
+        AuthorStyleLookup,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        verbose_name="Autor / Schreibstil",
         related_name="projects",
     )
 

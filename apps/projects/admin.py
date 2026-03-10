@@ -1,76 +1,54 @@
 from django.contrib import admin
 
 from .models import (
-    AudienceLookup,
-    BookProject,
-    ContentTypeLookup,
-    GenreLookup,
-    OutlineNode,
-    OutlineVersion,
+    AudienceLookup, AuthorStyleLookup, BookProject,
+    ContentTypeLookup, GenreLookup, OutlineNode, OutlineVersion,
 )
 
 
 @admin.register(ContentTypeLookup)
 class ContentTypeLookupAdmin(admin.ModelAdmin):
-    list_display = ["name", "slug", "order"]
-    ordering = ["order", "name"]
-    prepopulated_fields = {"slug": ("name",)}
-
-    fieldsets = (
-        ("Grundinfo", {"fields": ("name", "slug", "order")}),
-        (
-            "Planning KI-Konfiguration (DB-driven)",
-            {
-                "fields": (
-                    "planning_action_code",
-                    "planning_prompt_template",
-                    "planning_system_prompt",
-                    "planning_user_template",
-                ),
-                "classes": ("collapse",),
-                "description": (
-                    "Steuert KI-Generierung fuer Praemisse, Themen und Logline. "
-                    "planning_action_code: aifw action_code (z.B. 'planning_novel'). "
-                    "planning_prompt_template: promptfw-Prefix (z.B. 'roman'). "
-                    "Benutzerdefinierte Prompts ueberschreiben promptfw-Templates."
-                ),
-            },
-        ),
-    )
+    list_display = ["name", "slug", "order", "icon", "subtitle"]
+    list_editable = ["order"]
+    prepopulated_fields = {"slug": ["name"]}
 
 
 @admin.register(GenreLookup)
 class GenreLookupAdmin(admin.ModelAdmin):
     list_display = ["name", "order"]
-    ordering = ["order", "name"]
+    list_editable = ["order"]
 
 
 @admin.register(AudienceLookup)
 class AudienceLookupAdmin(admin.ModelAdmin):
     list_display = ["name", "order"]
-    ordering = ["order", "name"]
+    list_editable = ["order"]
+
+
+@admin.register(AuthorStyleLookup)
+class AuthorStyleLookupAdmin(admin.ModelAdmin):
+    list_display = ["name", "order", "is_active"]
+    list_editable = ["order", "is_active"]
+    fields = ["name", "description", "style_prompt", "order", "is_active"]
 
 
 @admin.register(BookProject)
 class BookProjectAdmin(admin.ModelAdmin):
-    list_display = ["title", "owner", "series", "content_type_lookup", "genre_lookup", "is_active", "updated_at"]
-    list_filter = ["content_type_lookup", "genre_lookup", "is_active"]
-    search_fields = ["title", "description"]
-    readonly_fields = ["id", "created_at", "updated_at"]
-    autocomplete_fields = ["series"]
+    list_display = ["title", "owner", "content_type_lookup", "genre_lookup", "is_active", "created_at"]
+    list_filter = ["is_active", "content_type_lookup", "genre_lookup"]
+    search_fields = ["title", "owner__username"]
+    raw_id_fields = ["owner"]
 
 
 @admin.register(OutlineVersion)
 class OutlineVersionAdmin(admin.ModelAdmin):
     list_display = ["name", "project", "source", "is_active", "created_at"]
-    list_filter = ["source", "is_active"]
+    list_filter = ["is_active", "source"]
     search_fields = ["name", "project__title"]
-    readonly_fields = ["id", "created_at"]
 
 
 @admin.register(OutlineNode)
 class OutlineNodeAdmin(admin.ModelAdmin):
-    list_display = ["title", "outline_version", "beat_type", "order"]
+    list_display = ["title", "outline_version", "beat_type", "order", "word_count"]
     list_filter = ["beat_type"]
-    search_fields = ["title", "description"]
-    readonly_fields = ["id"]
+    search_fields = ["title"]
