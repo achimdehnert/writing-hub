@@ -1,7 +1,6 @@
 """
 Authors — Views für Autor-Profile und Schreibstile (Style Lab Builder).
 """
-import json
 import logging
 
 from django.contrib import messages
@@ -318,8 +317,7 @@ def _parse_list_input(raw: str) -> list[str]:
     """Parses newline or comma-separated list input into a clean list."""
     if not raw:
         return []
-    # Try newline split first, then comma
-    items = [line.strip().lstrip("-•◦").strip() for line in raw.splitlines()]
+    items = [line.strip().lstrip("-\u2022\u25e6").strip() for line in raw.splitlines()]
     items = [i for i in items if i]
     if not items:
         items = [i.strip() for i in raw.split(",") if i.strip()]
