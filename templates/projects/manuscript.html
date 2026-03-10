@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.title }} — Manuskript — Writing Hub{% endblock %}
+{% block nav_projects %}active{% endblock %}
+{% block page_title %}<i class="bi bi-book-half me-2"></i>Manuskript{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'projects:detail' project.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Zurück
+</a>
+<a href="{% url 'projects:chapter_writer' project.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-pen me-1"></i> Schreiben
+</a>
+<a href="{% url 'projects:export' project.pk %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-download me-1"></i> Exportieren
+</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .ms-hero {
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 60%, #6d28d9 100%);
+        border-radius: 1rem;
+        padding: 2.5rem 2rem;
+        text-align: center;
+        margin-bottom: 1.5rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .ms-hero::before {
+        content: "";
+        position: absolute; inset: 0;
+        background: radial-gradient(ellipse at 70% 30%, rgba(255,255,255,.08) 0%, transparent 60%);
+    }
+    .ms-hero h1 { color: #fff; font-size: 2.2rem; font-weight: 800; margin: 0 0 .5rem; letter-spacing: -.02em; }
+    .ms-genre {
+        display: inline-block;
+        background: rgba(255,255,255,.18);
+        color: #e0e7ff;
+        border-radius: 999px;
+        padding: .2rem .9rem;
+        font-size: .82rem;
+        font-weight: 600;
+    }
+    .ms-stat { text-align: center; }
+    .ms-stat-val { font-size: 2rem; font-weight: 800; color: #6366f1; line-height: 1; }
+    .ms-stat-label { font-size: .72rem; color: #64748b; margin-top: .2rem; }
+    .toc-item {
+        display: flex; align-items: center; gap: .75rem;
+        padding: .55rem .75rem;
+        border-radius: .4rem;
+        transition: background .12s;
+        text-decoration: none;
+        color: #e2e8f0;
+    }
+    .toc-item:hover { background: #1e2235; color: #e2e8f0; }
+    .toc-num {
+        min-width: 1.6rem; height: 1.6rem;
+        background: #1e2235; border: 1px solid #2d3148;
+        border-radius: .3rem;
+        display: flex; align-items: center; justify-content: center;
+        font-size: .75rem; color: #94a3b8; font-weight: 600;
+        flex-shrink: 0;
+    }
+    .toc-badge-ok { color: #22c55e; font-size: .8rem; }
+    .toc-badge-empty { color: #64748b; font-size: .72rem; }
+    .chapter-card {
+        background: #fff;
+        border-radius: .75rem;
+        box-shadow: 0 1px 4px rgba(0,0,0,.18);
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+        scroll-margin-top: 80px;
+    }
+    .chapter-card-header {
+        text-align: center;
+        padding: 2rem 2rem 1rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .chapter-label {
+        font-size: .72rem; font-weight: 700; letter-spacing: .12em;
+        color: #6366f1; text-transform: uppercase; margin-bottom: .35rem;
+    }
+    .chapter-title {
+        font-size: 1.6rem; font-weight: 800; color: #111;
+        font-family: Georgia, serif; margin: 0;
+    }
+    .chapter-body {
+        padding: 1.75rem 2.5rem;
+        font-family: Georgia, serif;
+        font-size: 1rem;
+        line-height: 1.9;
+        color: #1a1a2e;
+    }
+    .chapter-body p {
+        margin: 0 0 1rem;
+        text-indent: 1.5rem;
+    }
+    .chapter-body p:first-child { text-indent: 0; }
+    .chapter-empty {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: #9ca3af;
+    }
+    .chapter-empty i { font-size: 2.5rem; color: #d1d5db; display: block; margin-bottom: 1rem; }
+    .chapter-nav {
+        padding: .75rem 2rem;
+        border-top: 1px solid #e5e7eb;
+        font-size: .82rem;
+        color: #6b7280;
+    }
+    .btn-write-now {
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        color: #fff;
+        border: none;
+        border-radius: .5rem;
+        padding: .75rem 2rem;
+        font-size: 1rem;
+        font-weight: 600;
+        display: inline-flex; align-items: center; gap: .5rem;
+        text-decoration: none;
+        margin-top: 1rem;
+    }
+    .btn-write-now:hover { color: #fff; opacity: .9; }
+    .print-hidden { }
+    @media print {
+        .sidebar, .topbar, .print-hidden { display: none !important; }
+        .main-content { margin-left: 0 !important; }
+        .chapter-card { box-shadow: none; page-break-inside: avoid; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 860px; margin: 0 auto;">
+
+<!-- Hero -->
+<div class="ms-hero">
+    <h1>{{ project.title }}</h1>
+    {% if genre %}<span class="ms-genre">{{ genre }}</span>{% endif %}
+</div>
+
+<!-- Statistiken -->
+<div class="card mb-4">
+    <div class="card-body py-3">
+        <div class="d-flex justify-content-center gap-5 flex-wrap">
+            <div class="ms-stat">
+                <div class="ms-stat-val">{{ total_words }}</div>
+                <div class="ms-stat-label">Wörter</div>
+            </div>
+            <div class="ms-stat" style="border-left:1px solid #2d3148;padding-left:2rem;">
+                <div class="ms-stat-val" style="color:#94a3b8;font-size:1rem;margin-top:.3rem;">Kapitel</div>
+                <div class="ms-stat-val">{{ chapter_count }}</div>
+            </div>
+            <div class="ms-stat" style="border-left:1px solid #2d3148;padding-left:2rem;">
+                <div class="ms-stat-val">{{ pages }}</div>
+                <div class="ms-stat-label">~Seiten</div>
+            </div>
+            <div class="ms-stat" style="border-left:1px solid #2d3148;padding-left:2rem;">
+                <div class="ms-stat-val">{{ reading_minutes }}</div>
+                <div class="ms-stat-label">~Min. Lesezeit</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Aktionen -->
+<div class="d-flex gap-3 justify-content-center mb-4 print-hidden flex-wrap">
+    <a href="{% url 'projects:chapter_writer' project.pk %}" class="btn btn-outline-secondary">
+        <i class="bi bi-pen me-1"></i> Weiter schreiben
+    </a>
+    <a href="{% url 'projects:export' project.pk %}" class="btn btn-primary">
+        <i class="bi bi-download me-1"></i> Exportieren
+    </a>
+    <button class="btn btn-outline-secondary" onclick="window.print()">
+        <i class="bi bi-printer me-1"></i> Drucken
+    </button>
+    <a href="{% url 'projects:versions' project.pk %}" class="btn btn-outline-secondary">
+        <i class="bi bi-clock-history me-1"></i> Versionen
+    </a>
+</div>
+
+{% if chapters %}
+
+<!-- Inhaltsverzeichnis -->
+<div class="card mb-4 print-hidden">
+    <div class="card-header py-2">
+        <span class="fw-semibold small"><i class="bi bi-list-ol me-1"></i>Inhaltsverzeichnis</span>
+    </div>
+    <div class="card-body p-2">
+        {% for ch in chapters %}
+        <a href="#chapter-{{ ch.order }}" class="toc-item">
+            <span class="toc-num">{{ ch.order }}</span>
+            <span class="flex-grow-1 small fw-semibold">{{ ch.title }}</span>
+            {% if ch.has_content %}
+            <span class="toc-badge-ok"><i class="bi bi-check-circle-fill"></i></span>
+            <span style="color:#64748b;font-size:.72rem;">{{ ch.word_count }} Wörter</span>
+            {% else %}
+            <span class="toc-badge-empty"><i class="bi bi-circle me-1"></i>0 Wörter</span>
+            {% endif %}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Kapitel -->
+{% for ch in chapters %}
+<div class="chapter-card" id="chapter-{{ ch.order }}">
+    <div class="chapter-card-header">
+        <div class="chapter-label">Kapitel {{ ch.order }}</div>
+        <h2 class="chapter-title">{{ ch.title }}</h2>
+    </div>
+
+    {% if ch.has_content %}
+    <div class="chapter-body">
+        {% for para in ch.content.split %}
+        {% if para.strip %}
+        <p>{{ para }}</p>
+        {% endif %}
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="chapter-empty print-hidden">
+        <i class="bi bi-file-earmark-text"></i>
+        <div style="color:#6b7280;margin-bottom:.25rem;">Dieses Kapitel wurde noch nicht geschrieben.</div>
+        <a href="{% url 'projects:chapter_writer' project.pk %}" class="btn-write-now">
+            <i class="bi bi-pen"></i> Jetzt schreiben
+        </a>
+    </div>
+    {% endif %}
+
+    {% if not forloop.first %}
+    <div class="chapter-nav print-hidden">
+        <a href="#chapter-{{ ch.order|add:'-1' }}" style="color:#6366f1;text-decoration:none;">
+            ← Vorheriges Kapitel
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endfor %}
+
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-journal-text d-block mb-3" style="font-size:3rem;color:#2d3148;"></i>
+        <div class="text-muted mb-2">Noch kein aktives Outline</div>
+        <a href="{% url 'projects:detail' project.pk %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-list-ol me-1"></i> Outline anlegen
+        </a>
+    </div>
+</div>
+{% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.toc-item').forEach(function(a) {
+    a.addEventListener('click', function(e) {
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+            e.preventDefault();
+            target.scrollIntoView({behavior: 'smooth', block: 'start'});
+        }
+    });
+});
+</script>
+{% endblock %}
