@@ -20,16 +20,21 @@
         </div>
         <div id="chapter-list">
             {% for chapter in chapters %}
-            <div class="chapter-item border-bottom px-3 py-2 {% if forloop.first %}active{% endif %}"
+            <div class="chapter-item border-bottom px-3 py-2"
                  id="chapter-item-{{ chapter.id }}"
-                 style="cursor: pointer; {% if forloop.first %}background: #1e2a3a; border-left: 3px solid #6366f1;{% else %}border-left: 3px solid transparent;{% endif %}"
+                 data-save-url="{% url 'projects:node_content' chapter.id %}"
+                 data-description="{{ chapter.description|escapejs }}"
+                 style="cursor: pointer; border-left: 3px solid transparent;"
                  onclick="selectChapter('{{ chapter.id }}', '{{ chapter.title|escapejs }}', '{{ chapter.description|escapejs }}')">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
                         <span class="text-muted small me-1">{{ chapter.order }}.</span>
                         <span class="small text-light">{{ chapter.title|truncatechars:25 }}</span>
                     </div>
-                    <span class="badge ms-1" id="status-{{ chapter.id }}" style="font-size: 0.6rem;"></span>
+                    <span class="badge ms-1" id="status-{{ chapter.id }}"
+                          style="font-size: 0.6rem;">
+                        {% if chapter.word_count %}{{ chapter.word_count }}W{% endif %}
+                    </span>
                 </div>
                 <div class="mt-1">
                     <button class="btn btn-outline-primary py-0 px-1" style="font-size: 0.65rem;"
@@ -55,6 +60,7 @@
             <span class="fw-semibold" id="chapter-title-display" style="color: #e2e8f0;">Kapitel wählen</span>
             <div class="d-flex align-items-center gap-2">
                 <span class="text-muted small" id="word-count">0 Wörter</span>
+                <span class="text-muted small" id="save-status"></span>
                 <button class="btn btn-sm btn-outline-secondary" id="btn-regenerate" onclick="regenerate()" style="display:none;">
                     <i class="bi bi-arrow-clockwise"></i> Erneut
                 </button>
@@ -144,10 +150,15 @@
 <script>
 const PROJECT_ID = "{{ project.pk }}";
 let currentChapterId = null;
+let currentSaveUrl = null;
 let pollInterval = null;
+let autoSaveTimer = null;
 
 function selectChapter(id, title, description) {
     currentChapterId = id;
+    const item = document.getElementById("chapter-item-" + id);
+    currentSaveUrl = item ? item.dataset.saveUrl : null;
+
     document.getElementById("chapter-title-display").textContent = title;
     if (description) {
         document.getElementById("chapter-beat").value = description;
@@ -156,24 +167,34 @@ function selectChapter(id, title, description) {
         el.style.background = "";
         el.style.borderLeft = "3px solid transparent";
     });
-    const active = document.getElementById("chapter-item-" + id);
-    if (active) {
-        active.style.background = "#1e2a3a";
-        active.style.borderLeft = "3px solid #6366f1";
+    if (item) {
+        item.style.background = "#1e2a3a";
+        item.style.borderLeft = "3px solid #6366f1";
     }
     document.getElementById("btn-generate-main").disabled = false;
     document.getElementById("btn-save").disabled = false;
-    const saved = localStorage.getItem("chapter_" + id);
-    const textarea = document.getElementById("chapter-content");
-    if (saved) {
-        textarea.value = saved;
-        updateWordCount(saved);
-        showRegenerateBtn(true);
-    } else {
-        textarea.value = "";
-        updateWordCount("");
-        showRegenerateBtn(false);
-    }
+
+    // Inhalt aus DB laden
+    setSaveStatus("Lade...");
+    fetch(currentSaveUrl)
+        .then(r => r.json())
+        .then(data => {
+            const textarea = document.getElementById("chapter-content");
+            textarea.value = data.content || "";
+            updateWordCount(data.content || "");
+            showRegenerateBtn(!!data.content);
+            if (data.updated_at) {
+                setSaveStatus("Gespeichert " + new Date(data.updated_at).toLocaleTimeString("de-DE", {hour:"2-digit",minute:"2-digit"}));
+            } else {
+                setSaveStatus("");
+            }
+        })
+        .catch(() => setSaveStatus(""));
+}
+
+function setSaveStatus(msg) {
+    const el = document.getElementById("save-status");
+    if (el) el.textContent = msg;
 }
 
 function showRegenerateBtn(show) {
@@ -183,10 +204,10 @@ function showRegenerateBtn(show) {
 function onContentChange() {
     const content = document.getElementById("chapter-content").value;
     updateWordCount(content);
-    if (currentChapterId && content) {
-        localStorage.setItem("chapter_" + currentChapterId, content);
-        showRegenerateBtn(true);
-    }
+    showRegenerateBtn(!!content);
+    // Auto-Save nach 2 Sekunden Inaktivität
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => saveContent(true), 2000);
 }
 
 function regenerate() {
@@ -245,11 +266,12 @@ function pollJobStatus(jobId, chapterId) {
                 const content = data.content || "";
                 document.getElementById("chapter-content").value = content;
                 updateWordCount(content);
-                localStorage.setItem("chapter_" + chapterId, content);
                 document.getElementById("gen-status").classList.add("d-none");
                 document.getElementById("status-" + chapterId).textContent = "\u2705";
                 showRegenerateBtn(true);
                 resetBtn();
+                // Sofort in DB speichern
+                saveContentDirect(content);
             } else if (data.status === "failed") {
                 clearInterval(pollInterval);
                 showError(data.error || "Generierung fehlgeschlagen");
@@ -257,6 +279,37 @@ function pollJobStatus(jobId, chapterId) {
             }
         });
     }, 3000);
+}
+
+function saveContent(silent) {
+    const content = document.getElementById("chapter-content").value;
+    saveContentDirect(content, silent);
+}
+
+function saveContentDirect(content, silent) {
+    if (!currentSaveUrl) return;
+    fetch(currentSaveUrl, {
+        method: "POST",
+        headers: {"Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken")},
+        body: JSON.stringify({content: content})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) {
+            const wc = data.word_count || 0;
+            const time = new Date(data.updated_at).toLocaleTimeString("de-DE", {hour:"2-digit",minute:"2-digit"});
+            setSaveStatus("Gespeichert " + time);
+            // Wörterzähler in Kapitel-Liste aktualisieren
+            const badge = document.getElementById("status-" + currentChapterId);
+            if (badge) badge.textContent = wc > 0 ? wc + "W" : "";
+            if (!silent) {
+                const btn = document.getElementById("btn-save");
+                btn.innerHTML = '<i class="bi bi-check"></i> Gespeichert';
+                setTimeout(() => { btn.innerHTML = '<i class="bi bi-floppy"></i> Speichern'; }, 1500);
+            }
+        }
+    })
+    .catch(() => setSaveStatus("Fehler beim Speichern"));
 }
 
 function showError(msg) {
@@ -275,16 +328,6 @@ function resetBtn() {
     btn.innerHTML = '<i class="bi bi-stars"></i> KI-Schreiben';
 }
 
-function saveContent() {
-    const content = document.getElementById("chapter-content").value;
-    if (currentChapterId) {
-        localStorage.setItem("chapter_" + currentChapterId, content);
-        const btn = document.getElementById("btn-save");
-        btn.innerHTML = '<i class="bi bi-check"></i> Gespeichert';
-        setTimeout(() => { btn.innerHTML = '<i class="bi bi-floppy"></i> Speichern'; }, 1500);
-    }
-}
-
 function getCookie(name) {
     const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
     return v ? v[2] : null;
@@ -296,7 +339,8 @@ window.addEventListener("DOMContentLoaded", () => {
         const id = first.id.replace("chapter-item-", "");
         const titleEl = first.querySelector(".text-light");
         const title = titleEl ? titleEl.textContent.trim() : "";
-        selectChapter(id, title, "");
+        const desc = first.dataset.description || "";
+        selectChapter(id, title, desc);
     }
 });
 </script>
