@@ -73,7 +73,6 @@ def _fw_beat_count(fw_key, frameworks):
 
 
 def _get_authors(user):
-    """Autoren mit Schreibstilen für Dropdown."""
     try:
         from apps.authors.models import Author
         return list(
@@ -169,13 +168,11 @@ class ProjectCreateView(LoginRequiredMixin, View):
             series_id=series_id,
             target_word_count=target_word_count,
         )
-        # WritingStyle am Projekt speichern
         if writing_style_id:
             try:
                 from apps.authors.models import WritingStyle
                 ws = WritingStyle.objects.get(
-                    pk=writing_style_id,
-                    author__owner=request.user,
+                    pk=writing_style_id, author__owner=request.user,
                 )
                 project.writing_style_id = ws.pk
                 project.save(update_fields=["writing_style_id"])
@@ -228,8 +225,7 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
         ctx["character_count"] = characters.count()
 
         all_nodes = OutlineNode.objects.filter(
-            outline_version__project=project,
-            outline_version__is_active=True,
+            outline_version__project=project, outline_version__is_active=True,
         )
         total_words = sum(n.word_count for n in all_nodes if n.word_count)
         written_chapters = all_nodes.filter(word_count__gt=0).count()
@@ -289,7 +285,6 @@ class OutlineCreateView(LoginRequiredMixin, View):
         notes = request.POST.get("notes", "")
         chapter_count = int(request.POST.get("chapter_count", 0) or 0)
         framework_key = request.POST.get("framework_template", "").strip()
-        logger.info("OutlineCreateView.post pk=%s fw=%s user=%s", pk, framework_key, request.user)
 
         if not framework_key:
             messages.warning(request, "Bitte ein Framework auswählen.")
@@ -318,6 +313,7 @@ class OutlineCreateView(LoginRequiredMixin, View):
                         outline_version=version,
                         title=b.name,
                         beat_type="chapter",
+                        beat_phase=b.name,
                         order=b.order,
                     )
                     for b in beats
@@ -353,7 +349,6 @@ class OutlineGenerateView(LoginRequiredMixin, View):
         project = get_object_or_404(BookProject, pk=pk, owner=request.user)
         framework = request.POST.get("framework", "three_act").strip()
         chapter_count = int(request.POST.get("chapter_count", 12) or 12)
-        logger.info("OutlineGenerateView.post pk=%s fw=%s user=%s", pk, framework, request.user)
         try:
             svc = OutlineGeneratorService()
             result = svc.generate_outline(
@@ -399,7 +394,7 @@ class ChapterWriterView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        from apps.worlds.models import ProjectCharacterLink
+        from apps.worlds.models import ProjectCharacterLink, ProjectWorldLink
         active_outline = OutlineVersion.objects.filter(
             project=self.object, is_active=True
         ).order_by("-created_at").first()
@@ -408,6 +403,9 @@ class ChapterWriterView(LoginRequiredMixin, DetailView):
         ctx["chapter_count"] = len(chapters)
         ctx["active_outline"] = active_outline
         ctx["characters"] = ProjectCharacterLink.objects.filter(
+            project=self.object
+        ).select_related()
+        ctx["world_links"] = ProjectWorldLink.objects.filter(
             project=self.object
         ).select_related()
         return ctx

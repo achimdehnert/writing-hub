@@ -15,8 +15,6 @@ on:
         options: [production, staging]
 
 # ═══════════════════════════════════════════════════════════════════════════
-# STAGE 1: CI — Hardcoding Scan, Lint, Tests
-# ═══════════════════════════════════════════════════════════════════════════
 jobs:
   hardcode-scan:
     name: "Hardcoding Scan (Critical Gate)"
@@ -100,7 +98,6 @@ jobs:
 # ═══════════════════════════════════════════════════════════════════════════
 # STAGE 2a: Staging Deploy
 # Trigger: push to develop  OR  workflow_dispatch (environment=staging)
-# Image: :staging  |  Path: /opt/writing-hub-staging  |  Domain: staging.writing.iil.pet (Port 8098)
 # ═══════════════════════════════════════════════════════════════════════════
   deploy-staging:
     name: "Deploy → Staging (staging.writing.iil.pet)"
@@ -148,7 +145,7 @@ jobs:
             docker pull ghcr.io/achimdehnert/writing-hub:staging
             cd /opt/writing-hub-staging
             docker compose -f docker-compose.staging.yml up -d --remove-orphans
-            sleep 8
+            sleep 12
             docker compose -f docker-compose.staging.yml exec -T writing_hub_staging_web \
               python manage.py migrate --no-input
             docker compose -f docker-compose.staging.yml exec -T writing_hub_staging_web \
@@ -161,15 +158,20 @@ jobs:
 
       - name: Health check
         run: |
-          sleep 5
-          curl -sf --max-time 15 https://staging.writing.iil.pet/health/ \
-            && echo "✅ Staging health OK" \
-            || echo "⚠️ Staging health check failed"
+          sleep 15
+          for i in 1 2 3; do
+            if curl -sf --max-time 15 https://staging.writing.iil.pet/health/; then
+              echo "✅ Staging health OK"
+              exit 0
+            fi
+            echo "Retry $i/3..."
+            sleep 10
+          done
+          echo "⚠️ Staging health check failed after 3 retries"
+          exit 1
 
 # ═══════════════════════════════════════════════════════════════════════════
 # STAGE 2b: Production Deploy
-# Trigger: workflow_dispatch (environment=production)
-# Image: :latest  |  Path: /opt/writing-hub  |  Domain: writing.iil.pet (Port 8097)
 # ═══════════════════════════════════════════════════════════════════════════
   deploy-production:
     name: "Deploy → Production (writing.iil.pet)"
@@ -216,7 +218,7 @@ jobs:
             docker pull ghcr.io/achimdehnert/writing-hub:latest
             cd /opt/writing-hub
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
-            sleep 8
+            sleep 12
             docker compose -f docker-compose.prod.yml exec -T writing_hub_web \
               python manage.py migrate --no-input
             docker compose -f docker-compose.prod.yml exec -T writing_hub_web \
@@ -229,7 +231,14 @@ jobs:
 
       - name: Health check
         run: |
-          sleep 5
-          curl -sf --max-time 15 https://writing.iil.pet/health/ \
-            && echo "✅ Production health OK" \
-            || echo "⚠️ Production health check failed"
+          sleep 15
+          for i in 1 2 3; do
+            if curl -sf --max-time 15 https://writing.iil.pet/health/; then
+              echo "✅ Production health OK"
+              exit 0
+            fi
+            echo "Retry $i/3..."
+            sleep 10
+          done
+          echo "⚠️ Production health check failed after 3 retries"
+          exit 1
