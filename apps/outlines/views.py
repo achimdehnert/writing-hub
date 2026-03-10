@@ -1,21 +1,11 @@
 """
 Outlines — HTML Views
-
-Eigenständiger Outline-Bereich: Liste, Detail/Editor, Node-Edit, Delete.
-Nutzt apps.projects.models (OutlineVersion, OutlineNode, OutlineFramework).
-
-Generation-Flow:
-  POST /outlines/<pk>/generate-full/   → OutlineGenerateFullView
-    Schritt 1: Erzeugt Kapitel-Struktur (Titel + Beat-Phase)
-    Schritt 2: Pro Kapitel detailliertes Outline (description + emotional_arc)
-  POST /outlines/<pk>/save-version/    → OutlineSaveVersionView
-    Speichert aktuelle Version als benannte Kopie
 """
 import logging
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.views.generic import DetailView, ListView
 
@@ -182,12 +172,15 @@ class OutlineNodeDeleteView(LoginRequiredMixin, View):
 
 class OutlineGenerateFullView(LoginRequiredMixin, View):
     """
-    Vollständige 2-Schritt-Generierung mit templatefw:
-    Schritt 1: Kapitel-Struktur (Titel, Beat-Phase, Akt, Zielwörter)
+    Vollständige 2-Schritt-Generierung:
+    Schritt 1: Kapitel-Struktur (Beat-Phase, Akt, Zielwörter)
     Schritt 2: Pro Kapitel detailliertes Outline (description, emotional_arc)
     """
 
     def post(self, request, pk):
+        import json
+        import re
+
         from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
         from apps.authoring.services.project_context_service import ProjectContextService
 
@@ -212,7 +205,7 @@ class OutlineGenerateFullView(LoginRequiredMixin, View):
         total = len(nodes)
         updated = 0
 
-        # Schritt 1: Struktur-Pass — Beat-Phase, Akt, Zielwörter
+        # Schritt 1: Struktur-Pass
         try:
             target_per_chapter = (
                 round(project.target_word_count / total)
@@ -237,8 +230,6 @@ class OutlineGenerateFullView(LoginRequiredMixin, View):
                     {"role": "user", "content": structure_prompt},
                 ],
             )
-            import json
-            import re
             match = re.search(r'\[.*\]', raw, re.DOTALL)
             if match:
                 structure = json.loads(match.group())
@@ -252,7 +243,7 @@ class OutlineGenerateFullView(LoginRequiredMixin, View):
         except (LLMRoutingError, Exception) as exc:
             logger.warning("OutlineGenerateFull Step1 error: %s", exc)
 
-        # Schritt 2: Detail-Pass — description + emotional_arc pro Kapitel
+        # Schritt 2: Detail-Pass
         if detail_level in ("full", "detail"):
             for node in nodes:
                 try:
@@ -277,8 +268,6 @@ class OutlineGenerateFullView(LoginRequiredMixin, View):
                             {"role": "user", "content": node_prompt},
                         ],
                     )
-                    import json
-                    import re
                     match = re.search(r'\{.*\}', raw, re.DOTALL)
                     if match:
                         data = json.loads(match.group())
@@ -303,6 +292,9 @@ class OutlineNodeEnrichView(LoginRequiredMixin, View):
     """KI-Verfeinerung eines einzelnen Outline-Nodes."""
 
     def post(self, request, pk):
+        import json
+        import re
+
         from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
         from apps.authoring.services.project_context_service import ProjectContextService
 
@@ -339,8 +331,6 @@ class OutlineNodeEnrichView(LoginRequiredMixin, View):
                     {"role": "user", "content": user_prompt},
                 ],
             )
-            import json
-            import re
             match = re.search(r'\{.*\}', raw, re.DOTALL)
             if match:
                 data = json.loads(match.group())
