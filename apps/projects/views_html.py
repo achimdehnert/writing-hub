@@ -7,14 +7,17 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import View
-from django.views.generic import CreateView, DetailView, ListView, UpdateView
+from django.views.generic import DetailView, ListView, UpdateView
 
 from apps.series.models import BookSeries
-from .models import BookProject, OutlineNode, OutlineVersion
+from .models import (
+    AudienceLookup, AuthorStyleLookup, BookProject,
+    ContentTypeLookup, GenreLookup, OutlineNode, OutlineVersion,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +58,19 @@ FW_LABELS = {
 
 KNOWN_FRAMEWORKS = set(OUTLINE_FRAMEWORKS.keys()) | {"blank"}
 
+# Fallback-Kacheln falls ContentTypeLookup leer ist
+DEFAULT_CONTENT_TYPES = [
+    {"slug": "roman", "name": "Roman", "icon": "bi-book",
+     "subtitle": "Erzählung mit Charakteren & Weltenbau",
+     "workflow_hint": "Konzept → Charaktere → Outline → Schreiben"},
+    {"slug": "sachbuch", "name": "Sachbuch", "icon": "bi-journal-text",
+     "subtitle": "Ratgeber, Biographie, How-To oder Sachtext",
+     "workflow_hint": "Thema → Struktur → Kapitel → Schreiben"},
+    {"slug": "essay", "name": "Essay", "icon": "bi-pencil-square",
+     "subtitle": "Argumentativer Text zu einem Thema",
+     "workflow_hint": "These → Recherche → Gliederung → Schreiben"},
+]
+
 
 class ProjectListView(LoginRequiredMixin, ListView):
     model = BookProject
@@ -83,7 +99,6 @@ class ProjectListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        from apps.projects.models import ContentTypeLookup, GenreLookup
         ctx["series_options"] = BookSeries.objects.filter(
             owner=self.request.user
         ).order_by("title")
@@ -96,28 +111,63 @@ class ProjectListView(LoginRequiredMixin, ListView):
         return ctx
 
 
-class ProjectCreateView(LoginRequiredMixin, CreateView):
-    model = BookProject
+class ProjectCreateView(LoginRequiredMixin, View):
+    """Neues Projekt anlegen — BFAgent-style Formular."""
+
     template_name = "projects/project_form.html"
-    fields = [
-        "title", "description", "series",
-        "content_type_lookup", "genre_lookup", "audience_lookup",
-        "target_word_count",
-    ]
-    success_url = reverse_lazy("projects:list")
 
-    def get_form(self, form_class=None):
-        form = super().get_form(form_class)
-        form.fields["series"].queryset = BookSeries.objects.filter(owner=self.request.user)
-        form.fields["series"].empty_label = "— keine Serie —"
-        form.fields["content_type_lookup"].empty_label = "— bitte wählen —"
-        form.fields["genre_lookup"].empty_label = "— bitte wählen —"
-        form.fields["audience_lookup"].empty_label = "— bitte wählen —"
-        return form
+    def _context(self, post_data=None):
+        ct_qs = ContentTypeLookup.objects.all().order_by("order", "name")
+        return {
+            "content_types": ct_qs,
+            "default_content_types": DEFAULT_CONTENT_TYPES,
+            "genres": GenreLookup.objects.all().order_by("order", "name"),
+            "audiences": AudienceLookup.objects.all().order_by("order", "name"),
+            "author_styles": AuthorStyleLookup.objects.filter(
+                is_active=True
+            ).order_by("order", "name"),
+            "series_options": BookSeries.objects.filter(
+                owner=self.request.user
+            ).order_by("title"),
+            "post": post_data or {},
+            "is_edit": False,
+        }
 
-    def form_valid(self, form):
-        form.instance.owner = self.request.user
-        return super().form_valid(form)
+    def get(self, request):
+        return render(request, self.template_name, self._context())
+
+    def post(self, request):
+        title = request.POST.get("title", "").strip()
+        if not title:
+            ctx = self._context(request.POST)
+            ctx["error"] = "Bitte einen Arbeitstitel eingeben."
+            return render(request, self.template_name, ctx)
+
+        ct_id = request.POST.get("content_type_lookup") or None
+        genre_id = request.POST.get("genre_lookup") or None
+        audience_id = request.POST.get("audience_lookup") or None
+        author_style_id = request.POST.get("author_style") or None
+        series_id = request.POST.get("series") or None
+        target_word_count = request.POST.get("target_word_count") or None
+        if target_word_count:
+            try:
+                target_word_count = int(target_word_count)
+            except ValueError:
+                target_word_count = None
+
+        project = BookProject.objects.create(
+            owner=request.user,
+            title=title,
+            description=request.POST.get("description", ""),
+            content_type_lookup_id=ct_id,
+            genre_lookup_id=genre_id,
+            audience_lookup_id=audience_id,
+            author_style_id=author_style_id,
+            series_id=series_id,
+            target_word_count=target_word_count,
+        )
+        messages.success(request, f'Projekt „{project.title}“ angelegt.')
+        return redirect("projects:detail", pk=project.pk)
 
 
 class ProjectDetailView(LoginRequiredMixin, DetailView):
@@ -166,7 +216,7 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
     fields = [
         "title", "description", "series",
         "content_type_lookup", "genre_lookup", "audience_lookup",
-        "target_word_count",
+        "author_style", "target_word_count",
     ]
 
     def get_queryset(self):
@@ -179,7 +229,13 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
         form.fields["content_type_lookup"].empty_label = "— bitte wählen —"
         form.fields["genre_lookup"].empty_label = "— bitte wählen —"
         form.fields["audience_lookup"].empty_label = "— bitte wählen —"
+        form.fields["author_style"].empty_label = "— kein Stil —"
         return form
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["is_edit"] = True
+        return ctx
 
     def get_success_url(self):
         return reverse_lazy("projects:detail", kwargs={"pk": self.object.pk})
@@ -324,11 +380,10 @@ class ChapterWriterView(LoginRequiredMixin, DetailView):
 class ChapterContentView(LoginRequiredMixin, View):
     """
     GET  /projects/node/<uuid>/content/  -> JSON {content, word_count, updated_at}
-    POST /projects/node/<uuid>/content/  -> Speichert content in DB, gibt {ok, word_count} zurück
+    POST /projects/node/<uuid>/content/  -> Speichert content in DB
     """
 
     def _get_node(self, request, node_pk):
-        """Gibt OutlineNode zurück — prüft Ownership via Outline -> Projekt."""
         return get_object_or_404(
             OutlineNode,
             pk=node_pk,
@@ -350,11 +405,9 @@ class ChapterContentView(LoginRequiredMixin, View):
             content = body.get("content", "")
         except (json.JSONDecodeError, AttributeError):
             content = request.POST.get("content", "")
-
         node.content = content
         node.content_updated_at = timezone.now()
         node.save(update_fields=["content", "word_count", "content_updated_at"])
-
         return JsonResponse({
             "ok": True,
             "word_count": node.word_count,

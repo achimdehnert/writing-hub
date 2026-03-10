@@ -1,91 +1,261 @@
 {% extends "base.html" %}
 
-{% block title %}{% if form.instance.pk %}Projekt bearbeiten{% else %}Neues Projekt{% endif %} — Writing Hub{% endblock %}
+{% block title %}{% if is_edit %}Projekt bearbeiten{% else %}Neues Schreibprojekt{% endif %} — Writing Hub{% endblock %}
 {% block nav_projects %}active{% endblock %}
-{% block page_title %}{% if form.instance.pk %}Projekt bearbeiten{% else %}Neues Projekt{% endif %}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-7">
-        <div class="card">
-            <div class="card-body p-4">
-                <form method="post" novalidate>
-                    {% csrf_token %}
+<div class="col-lg-8">
 
-                    <div class="mb-3">
-                        <label class="form-label small text-muted">Titel *</label>
-                        <input type="text" name="title" value="{{ form.title.value|default:'' }}"
-                            class="form-control bg-dark text-light border-secondary{% if form.title.errors %} is-invalid{% endif %}"
-                            placeholder="z.B. Der stille Ozean" required autofocus>
-                        {% for e in form.title.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
-                    </div>
+{% if not is_edit %}
+<a href="{% url 'projects:list' %}" class="btn btn-link text-muted ps-0 mb-3">
+    <i class="bi bi-arrow-left me-1"></i> Zurück zur Projektliste
+</a>
 
-                    <div class="mb-3">
-                        <label class="form-label small text-muted">Beschreibung / Prämisse</label>
-                        <textarea name="description" rows="4"
-                            class="form-control bg-dark text-light border-secondary{% if form.description.errors %} is-invalid{% endif %}"
-                            placeholder="Worum geht es in diesem Projekt?">{{ form.description.value|default:'' }}</textarea>
-                        {% for e in form.description.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small text-muted">Serie</label>
-                        <select name="series" class="form-select bg-dark text-light border-secondary">
-                            <option value="">— keine Serie —</option>
-                            {% for s in form.fields.series.queryset %}
-                            <option value="{{ s.pk }}" {% if form.series.value|stringformat:"s" == s.pk|stringformat:"s" %}selected{% endif %}>{{ s }}</option>
-                            {% endfor %}
-                        </select>
-                        <div class="form-text text-muted">Serien im <a href="{% url 'admin:series_bookseries_changelist' %}" class="text-secondary">Admin-Bereich</a> anlegen.</div>
-                    </div>
-
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-4">
-                            <label class="form-label small text-muted">Inhaltstyp</label>
-                            <select name="content_type_lookup" class="form-select bg-dark text-light border-secondary">
-                                <option value="">— bitte wählen —</option>
-                                {% for ct in form.fields.content_type_lookup.queryset %}
-                                <option value="{{ ct.pk }}" {% if form.content_type_lookup.value|stringformat:"s" == ct.pk|stringformat:"s" %}selected{% endif %}>{{ ct }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small text-muted">Genre</label>
-                            <select name="genre_lookup" class="form-select bg-dark text-light border-secondary">
-                                <option value="">— bitte wählen —</option>
-                                {% for g in form.fields.genre_lookup.queryset %}
-                                <option value="{{ g.pk }}" {% if form.genre_lookup.value|stringformat:"s" == g.pk|stringformat:"s" %}selected{% endif %}>{{ g }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small text-muted">Zielgruppe</label>
-                            <select name="audience_lookup" class="form-select bg-dark text-light border-secondary">
-                                <option value="">— bitte wählen —</option>
-                                {% for a in form.fields.audience_lookup.queryset %}
-                                <option value="{{ a.pk }}" {% if form.audience_lookup.value|stringformat:"s" == a.pk|stringformat:"s" %}selected{% endif %}>{{ a }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="form-label small text-muted">Ziel-Wortanzahl</label>
-                        <input type="number" name="target_word_count" value="{{ form.target_word_count.value|default:'' }}"
-                            class="form-control bg-dark text-light border-secondary"
-                            placeholder="80000" min="1000" step="1000">
-                    </div>
-
-                    <div class="d-flex gap-2 justify-content-end">
-                        <a href="{% url 'projects:list' %}" class="btn btn-outline-secondary">Abbrechen</a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-lg me-1"></i>
-                            {% if form.instance.pk %}Speichern{% else %}Projekt erstellen{% endif %}
-                        </button>
-                    </div>
-                </form>
+<div class="card border-primary mb-4" style="border-color: #6366f1 !important; background: #0d1a2d;">
+    <div class="card-body py-3">
+        <div class="d-flex align-items-start">
+            <i class="bi bi-file-earmark-arrow-up text-primary fs-4 me-3 mt-1"></i>
+            <div>
+                <div class="fw-semibold text-light">Bestehendes Material importieren?</div>
+                <div class="text-muted small">Importiere ein vorhandenes Manuskript oder Planungsdokument als Startpunkt.</div>
             </div>
         </div>
     </div>
 </div>
+{% endif %}
+
+<div class="card">
+<div class="card-body p-4">
+
+{% if is_edit %}
+<h4 class="mb-4 text-center"><i class="bi bi-pencil-square me-2"></i>Projekt bearbeiten</h4>
+{% else %}
+<h4 class="mb-1 text-center"><i class="bi bi-pencil-square me-2"></i>Neues Schreibprojekt</h4>
+<p class="text-center text-muted small mb-4">Wähle deinen Content-Typ und starte dein Schreibabenteuer</p>
+{% endif %}
+
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+{% if messages %}{% for m in messages %}<div class="alert alert-{{ m.tags }}">{{ m }}</div>{% endfor %}{% endif %}
+
+<form method="post" novalidate>
+{% csrf_token %}
+
+{% if not is_edit %}
+<!-- Content-Typ Kacheln -->
+<div class="mb-4">
+    <label class="form-label fw-semibold"><i class="bi bi-collection me-1"></i>Was möchtest du schreiben? *</label>
+    <div class="row g-3">
+        {% for ct in content_types %}
+        <div class="col-md-4">
+            <input type="radio" class="btn-check" name="content_type_lookup"
+                   id="ct_{{ ct.pk }}" value="{{ ct.pk }}"
+                   {% if post.content_type_lookup == ct.pk|stringformat:"s" %}checked{% endif %}>
+            <label class="btn btn-outline-secondary w-100 text-start p-3 h-100 ct-tile"
+                   for="ct_{{ ct.pk }}"
+                   style="border-color: #2d3748; background: #0d1117;">
+                <div class="text-center mb-2">
+                    <i class="{{ ct.icon|default:'bi-file-text' }} fs-2 text-primary"></i>
+                </div>
+                <div class="fw-semibold text-center mb-1">{{ ct.name }}</div>
+                {% if ct.subtitle %}
+                <div class="text-muted small text-center">{{ ct.subtitle }}</div>
+                {% endif %}
+                {% if ct.workflow_hint %}
+                <div class="text-muted mt-2" style="font-size: 0.7rem; border-top: 1px solid #2d3748; padding-top: 0.5rem;">
+                    {{ ct.workflow_hint }}
+                </div>
+                {% endif %}
+            </label>
+        </div>
+        {% empty %}
+        {% for ct in default_content_types %}
+        <div class="col-md-4">
+            <div class="border rounded p-3 text-center" style="border-color: #2d3748; background: #0d1117;">
+                <i class="{{ ct.icon }} fs-2 text-primary mb-2 d-block"></i>
+                <div class="fw-semibold">{{ ct.name }}</div>
+                <div class="text-muted small">{{ ct.subtitle }}</div>
+            </div>
+        </div>
+        {% endfor %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Arbeitstitel -->
+<div class="mb-4">
+    <label class="form-label fw-semibold" for="id_title">
+        <i class="bi bi-type me-1"></i>Arbeitstitel *
+    </label>
+    <input type="text" name="title" id="id_title"
+           value="{% if is_edit %}{{ form.title.value|default:'' }}{% else %}{{ post.title|default:'' }}{% endif %}"
+           class="form-control bg-dark text-light border-secondary"
+           placeholder="z.B. Die Chroniken von Eldoria" required autofocus>
+</div>
+
+{% if not is_edit %}
+<!-- Genre als Tag-Buttons -->
+<div class="mb-4">
+    <label class="form-label fw-semibold"><i class="bi bi-tag me-1"></i>Genre</label>
+    <div class="d-flex flex-wrap gap-2" id="genre-tags">
+        {% for g in genres %}
+        <input type="radio" class="btn-check" name="genre_lookup"
+               id="genre_{{ g.pk }}" value="{{ g.pk }}"
+               {% if post.genre_lookup == g.pk|stringformat:"s" %}checked{% endif %}>
+        <label class="btn btn-outline-secondary btn-sm genre-tag" for="genre_{{ g.pk }}">{{ g.name }}</label>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Beschreibung -->
+<div class="mb-4">
+    <label class="form-label fw-semibold" for="id_desc">
+        <i class="bi bi-text-paragraph me-1"></i>
+        {% if is_edit %}Beschreibung / Prämisse{% else %}Kurzbeschreibung / Prämisse{% endif %}
+    </label>
+    <textarea name="description" id="id_desc" rows="4"
+              class="form-control bg-dark text-light border-secondary"
+              placeholder="Worum geht es in deinem Roman? Wer ist der Protagonist?">{% if is_edit %}{{ form.description.value|default:'' }}{% else %}{{ post.description|default:'' }}{% endif %}</textarea>
+</div>
+
+<!-- Zielgruppe -->
+<div class="mb-4">
+    <label class="form-label fw-semibold" for="id_audience">
+        <i class="bi bi-people me-1"></i>Zielgruppe
+    </label>
+    <select name="audience_lookup" id="id_audience"
+            class="form-select bg-dark text-light border-secondary">
+        <option value="">— Zielgruppe wählen —</option>
+        {% for a in audiences %}
+        <option value="{{ a.pk }}"
+            {% if is_edit and form.audience_lookup.value|stringformat:"s" == a.pk|stringformat:"s" %}selected
+            {% elif not is_edit and post.audience_lookup == a.pk|stringformat:"s" %}selected{% endif %}>
+            {{ a.name }}
+        </option>
+        {% endfor %}
+    </select>
+</div>
+
+<!-- Ziel-Wortanzahl -->
+<div class="mb-4">
+    <label class="form-label fw-semibold" for="id_words">
+        <i class="bi bi-123 me-1"></i>Ziel-Wortanzahl
+    </label>
+    <input type="number" name="target_word_count" id="id_words"
+           value="{% if is_edit %}{{ form.target_word_count.value|default:'50000' }}{% else %}{{ post.target_word_count|default:'50000' }}{% endif %}"
+           class="form-control bg-dark text-light border-secondary"
+           placeholder="50000" min="1000" step="1000">
+</div>
+
+<!-- Autor & Schreibstil -->
+<div class="mb-4">
+    <label class="form-label fw-semibold" for="id_author_style">
+        <i class="bi bi-person-badge me-1"></i>Autor &amp; Schreibstil
+    </label>
+    <select name="author_style" id="id_author_style"
+            class="form-select bg-dark text-light border-secondary">
+        <option value="">— Autor wählen —</option>
+        {% for a in author_styles %}
+        <option value="{{ a.pk }}"
+            {% if is_edit and form.author_style.value|stringformat:"s" == a.pk|stringformat:"s" %}selected
+            {% elif not is_edit and post.author_style == a.pk|stringformat:"s" %}selected{% endif %}>
+            {{ a.name }}
+        </option>
+        {% endfor %}
+    </select>
+    {% if author_styles %}
+    <div class="form-text text-muted" id="author-style-desc"></div>
+    {% else %}
+    <div class="form-text text-muted">
+        Schreibstile im <a href="/admin/projects/authorstylelookup/add/" class="text-secondary" target="_blank">Admin-Bereich</a> anlegen.
+    </div>
+    {% endif %}
+</div>
+
+{% if is_edit %}
+<!-- Edit-only: Serie, Genre, Inhaltstyp als Dropdowns -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <label class="form-label small text-muted">Inhaltstyp</label>
+        <select name="content_type_lookup" class="form-select bg-dark text-light border-secondary">
+            <option value="">— bitte wählen —</option>
+            {% for ct in form.fields.content_type_lookup.queryset %}
+            <option value="{{ ct.pk }}" {% if form.content_type_lookup.value|stringformat:"s" == ct.pk|stringformat:"s" %}selected{% endif %}>{{ ct }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-4">
+        <label class="form-label small text-muted">Genre</label>
+        <select name="genre_lookup" class="form-select bg-dark text-light border-secondary">
+            <option value="">— bitte wählen —</option>
+            {% for g in form.fields.genre_lookup.queryset %}
+            <option value="{{ g.pk }}" {% if form.genre_lookup.value|stringformat:"s" == g.pk|stringformat:"s" %}selected{% endif %}>{{ g }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-4">
+        <label class="form-label small text-muted">Serie</label>
+        <select name="series" class="form-select bg-dark text-light border-secondary">
+            <option value="">— keine Serie —</option>
+            {% for s in form.fields.series.queryset %}
+            <option value="{{ s.pk }}" {% if form.series.value|stringformat:"s" == s.pk|stringformat:"s" %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+{% endif %}
+
+<div class="d-flex gap-2 justify-content-end">
+    <a href="{% url 'projects:list' %}" class="btn btn-outline-secondary">Abbrechen</a>
+    <button type="submit" class="btn btn-primary px-4">
+        <i class="bi bi-check-lg me-1"></i>
+        {% if is_edit %}Speichern{% else %}Projekt erstellen{% endif %}
+    </button>
+</div>
+
+</form>
+</div>
+</div>
+
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Content-Typ Kacheln: aktive Kachel hervorheben
+document.querySelectorAll('.btn-check[name="content_type_lookup"]').forEach(radio => {
+    const label = document.querySelector('label[for="' + radio.id + '"]');
+    if (radio.checked && label) {
+        label.style.borderColor = '#6366f1';
+        label.style.background = '#1e1b4b';
+    }
+    radio.addEventListener('change', () => {
+        document.querySelectorAll('.ct-tile').forEach(l => {
+            l.style.borderColor = '#2d3748';
+            l.style.background = '#0d1117';
+        });
+        if (label) {
+            label.style.borderColor = '#6366f1';
+            label.style.background = '#1e1b4b';
+        }
+    });
+});
+
+// Autor-Stil Beschreibung anzeigen
+const authorDescriptions = {
+    {% for a in author_styles %}
+    "{{ a.pk }}": "{{ a.description|escapejs }}",
+    {% endfor %}
+};
+const authorSelect = document.getElementById('id_author_style');
+const authorDesc = document.getElementById('author-style-desc');
+if (authorSelect && authorDesc) {
+    authorSelect.addEventListener('change', () => {
+        authorDesc.textContent = authorDescriptions[authorSelect.value] || '';
+    });
+}
+</script>
 {% endblock %}
