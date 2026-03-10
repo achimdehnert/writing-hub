@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Redaktion — {{ node.title }}{% endblock %}
+{% block nav_projects %}active{% endblock %}
+
+{% block content %}
+<div style="max-width:1100px;margin:0 auto;">
+
+<!-- Header -->
+<div class="rounded-3 p-4 mb-4" style="background:linear-gradient(135deg,#ea580c,#c2410c);">
+    <a href="{% url 'projects:editing' project.pk %}" class="text-white opacity-75 small d-block mb-1">
+        <i class="bi bi-arrow-left me-1"></i> Zurück zur Redaktion
+    </a>
+    <h5 class="fw-bold mb-0 text-white">{{ node.title }}</h5>
+    <div class="text-white opacity-75 small">Kapitel {{ node.order }} &bull; {{ node.word_count }} Wörter</div>
+</div>
+
+<!-- KI-Analyse starten -->
+<div class="card mb-3" style="background:#0d1117;border-color:#2d3748;">
+    <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+            <div class="fw-semibold small" style="color:#e2e8f0;">KI-Analyse starten</div>
+            <div class="text-muted" style="font-size:.75rem;">Findet Stilprobleme, Unklarheiten, Grammatik, Pacing</div>
+        </div>
+        <form method="post" action="{% url 'projects:editing_ai' project.pk node.id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn"
+                    style="background:#ea580c;color:#fff;border:none;"
+                    {% if not node.content %}disabled{% endif %}>
+                <i class="bi bi-search me-1"></i>Analysieren
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Kapiteltext -->
+    <div class="col-md-6">
+        <div class="card" style="background:#0d1117;border-color:#2d3748;">
+            <div class="card-header py-2" style="border-color:#2d3748;">
+                <span class="small text-muted fw-semibold">KAPITELTEXT</span>
+            </div>
+            <div class="card-body" style="max-height:65vh;overflow-y:auto;">
+                {% if node.content %}
+                <div style="color:#e2e8f0;font-family:'Georgia',serif;font-size:.9rem;line-height:1.8;white-space:pre-wrap;">{{ node.content }}</div>
+                {% else %}
+                <div class="text-muted text-center py-4">
+                    <i class="bi bi-file-earmark d-block mb-2" style="font-size:2rem;"></i>
+                    Noch kein Inhalt
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Vorschläge -->
+    <div class="col-md-6">
+        <div class="card" style="background:#0d1117;border-color:#2d3748;">
+            <div class="card-header py-2 d-flex justify-content-between" style="border-color:#2d3748;">
+                <span class="small fw-semibold" style="color:#e2e8f0;">Vorschläge ({{ editings|length }})</span>
+                {% if open_count > 0 %}
+                <span class="badge" style="background:#f59e0b;color:#000;">{{ open_count }} offen</span>
+                {% endif %}
+            </div>
+            <div class="card-body p-0" style="max-height:65vh;overflow-y:auto;">
+                {% for e in editings %}
+                <div class="p-3" id="editing-{{ e.id }}"
+                     style="border-bottom:1px solid #1e2235;{% if e.is_accepted is not None %}opacity:.6;{% endif %}">
+                    <div class="d-flex align-items-start gap-2">
+                        <div class="flex-grow-1">
+                            {% if e.suggestion_type == 'style' %}
+                            <span class="badge mb-1" style="background:#1e1b4b;color:#a5b4fc;font-size:.65rem;">Stil</span>
+                            {% elif e.suggestion_type == 'clarity' %}
+                            <span class="badge mb-1" style="background:#1a2a3a;color:#60a5fa;font-size:.65rem;">Klärung</span>
+                            {% elif e.suggestion_type == 'grammar' %}
+                            <span class="badge mb-1" style="background:#1a3a1a;color:#22c55e;font-size:.65rem;">Grammatik</span>
+                            {% elif e.suggestion_type == 'pacing' %}
+                            <span class="badge mb-1" style="background:#3a2a0a;color:#fbbf24;font-size:.65rem;">Pacing</span>
+                            {% else %}
+                            <span class="badge mb-1" style="background:#2a1a2a;color:#c084fc;font-size:.65rem;">{{ e.get_suggestion_type_display }}</span>
+                            {% endif %}
+                            {% if e.original_text %}
+                            <div class="mb-1 p-1 rounded" style="background:#1e2235;font-size:.72rem;color:#94a3b8;font-style:italic;">&#8220;{{ e.original_text|truncatechars:80 }}&#8221;</div>
+                            {% endif %}
+                            <div class="small" style="color:#e2e8f0;">{{ e.suggestion }}</div>
+                            {% if e.explanation %}
+                            <div class="mt-1" style="font-size:.72rem;color:#64748b;">{{ e.explanation }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex flex-column gap-1 flex-shrink-0">
+                            {% if e.is_accepted is None %}
+                            <button class="btn btn-sm py-0 px-1" style="color:#22c55e;font-size:.75rem;"
+                                    onclick="decideSuggestion('{{ e.id }}', 'accept', this)" title="Annehmen">
+                                <i class="bi bi-check-lg"></i>
+                            </button>
+                            <button class="btn btn-sm py-0 px-1" style="color:#f87171;font-size:.75rem;"
+                                    onclick="decideSuggestion('{{ e.id }}', 'reject', this)" title="Ablehnen">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                            {% elif e.is_accepted %}
+                            <span style="color:#22c55e;font-size:.75rem;"><i class="bi bi-check-circle-fill"></i></span>
+                            {% else %}
+                            <span style="color:#f87171;font-size:.75rem;"><i class="bi bi-x-circle-fill"></i></span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="p-4 text-center text-muted">
+                    <i class="bi bi-magic d-block mb-1" style="font-size:1.5rem;"></i>
+                    Noch keine Vorschläge
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+
+{% if messages %}
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:1100;">
+    {% for msg in messages %}
+    <div class="toast show align-items-center text-white
+        {% if msg.tags == 'error' %}bg-danger{% elif msg.tags == 'warning' %}bg-warning text-dark{% else %}bg-success{% endif %} border-0 mb-2">
+        <div class="d-flex"><div class="toast-body small">{{ msg }}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = () => document.cookie.match('csrftoken=([^;]+)')?.[1] || '';
+function decideSuggestion(id, action, btn) {
+    const url = '{% url "projects:editing_suggest" project.pk "00000000-0000-0000-0000-000000000000" %}'.replace('00000000-0000-0000-0000-000000000000', id);
+    const fd = new FormData();
+    fd.append('action', action);
+    fd.append('csrfmiddlewaretoken', CSRF());
+    fetch(url, {method:'POST', body:fd})
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                const row = document.getElementById('editing-' + id);
+                if (row) row.style.opacity = '.6';
+                const btns = btn.closest('.d-flex');
+                if (btns) btns.innerHTML = data.accepted
+                    ? '<span style="color:#22c55e;font-size:.75rem;"><i class="bi bi-check-circle-fill"></i></span>'
+                    : '<span style="color:#f87171;font-size:.75rem;"><i class="bi bi-x-circle-fill"></i></span>';
+            }
+        });
+}
+document.querySelectorAll('.toast').forEach(el => setTimeout(() => el.classList.remove('show'), 5000));
+</script>
+{% endblock %}

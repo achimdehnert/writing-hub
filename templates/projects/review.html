@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Review — {{ project.title }}{% endblock %}
+{% block nav_projects %}active{% endblock %}
+
+{% block content %}
+<div style="max-width:1100px;margin:0 auto;">
+
+<div class="mb-3 d-flex align-items-center gap-2">
+    <a href="{% url 'projects:detail' project.pk %}" class="btn btn-link text-muted ps-0">
+        <i class="bi bi-arrow-left me-1"></i> Projekt
+    </a>
+</div>
+
+<!-- Header -->
+<div class="rounded-3 p-4 mb-4" style="background:linear-gradient(135deg,#7c3aed,#6d28d9);">
+    <div class="d-flex align-items-center justify-content-between">
+        <div>
+            <h4 class="fw-bold mb-1 text-white"><i class="bi bi-chat-square-text me-2"></i>Review &amp; Feedback</h4>
+            <div class="text-white opacity-75 small">{{ project.title }} — Feedback sammeln und verarbeiten</div>
+        </div>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-4">
+        <div class="card text-center py-3" style="background:#0d1117;border-color:#2d3748;">
+            <div class="fw-bold fs-3" style="color:#6366f1;">{{ chapter_count }}</div>
+            <div class="text-muted small">Kapitel</div>
+        </div>
+    </div>
+    <div class="col-4">
+        <div class="card text-center py-3" style="background:#0d1117;border-color:#2d3748;">
+            <div class="fw-bold fs-3" style="color:#f59e0b;">{{ open_reviews }}</div>
+            <div class="text-muted small">Offene Feedbacks</div>
+        </div>
+    </div>
+    <div class="col-4">
+        <div class="card text-center py-3" style="background:#0d1117;border-color:#2d3748;">
+            <div class="fw-bold fs-3" style="color:#22c55e;">{{ done_reviews }}</div>
+            <div class="text-muted small">Erledigt</div>
+        </div>
+    </div>
+</div>
+
+<!-- Kapitel-Grid -->
+<h6 class="fw-semibold mb-3" style="color:#e2e8f0;">Kapitel-Feedback ({{ chapter_count }})</h6>
+<div class="row g-3">
+{% for ch in chapters %}
+<div class="col-md-4">
+    <div class="card h-100" style="background:#0d1117;border-color:#2d3748;">
+        <div class="card-body">
+            <div class="text-muted" style="font-size:.7rem;">KAPITEL {{ ch.order }}</div>
+            <div class="fw-semibold mb-1" style="color:#e2e8f0;">{{ ch.title }}</div>
+            <div class="text-muted small mb-2">{{ ch.word_count }} Wörter</div>
+            {% with reviews=review_map|get_item:ch.id|default:"" %}
+            {% if reviews %}
+            <span class="badge mb-2" style="background:#1e1b4b;color:#a5b4fc;">{{ reviews|length }} Feedback</span>
+            {% else %}
+            <span class="badge mb-2" style="background:#1e2235;color:#64748b;">Kein Feedback</span>
+            {% endif %}
+            {% endwith %}
+            {% if ch.content %}
+            <div class="d-flex gap-2">
+                <a href="{% url 'projects:review_chapter' project.pk ch.id %}" class="btn btn-sm w-100"
+                   style="background:#7c3aed;color:#fff;border:none;">
+                    <i class="bi bi-chat-square-text me-1"></i>Feedback
+                </a>
+            </div>
+            {% else %}
+            <div class="text-muted" style="font-size:.75rem;">Noch kein Inhalt</div>
+            <a href="{% url 'projects:chapter_writer' project.pk %}?chapter={{ ch.id }}"
+               class="btn btn-sm btn-outline-secondary mt-1" style="font-size:.75rem;">
+                <i class="bi bi-pen me-1"></i>Schreiben
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% empty %}
+<div class="col-12">
+    <div class="p-4 text-center text-muted">
+        <i class="bi bi-list-ol d-block mb-2" style="font-size:2rem;"></i>
+        Kein Outline vorhanden. Zuerst Outline anlegen.
+    </div>
+</div>
+{% endfor %}
+</div>
+
+</div>
+{% endblock %}

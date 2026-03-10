@@ -1,5 +1,5 @@
 """
-Projects App — Buchprojekte, Outline, Kapitel (ADR-083)
+Projects App — Buchprojekte, Outline, Kapitel, Review, Editing (ADR-083)
 """
 from __future__ import annotations
 
@@ -182,7 +182,6 @@ class BookProject(models.Model):
         return self.title
 
     def get_all_styles(self):
-        """Alle zugeordneten Schreibstile (primär + M2M), dedupliziert."""
         styles = list(self.writing_styles.select_related("author").all())
         if self.writing_style and self.writing_style not in styles:
             styles.insert(0, self.writing_style)
@@ -198,14 +197,8 @@ class OutlineVersion(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
     )
     name = models.CharField(max_length=200)
-    version_label = models.CharField(
-        max_length=200, blank=True, default="",
-        help_text="Optionales Label für diese Version",
-    )
-    source = models.CharField(
-        max_length=80, default="manual",
-        help_text="Framework-Key oder 'manual'/'ai'",
-    )
+    version_label = models.CharField(max_length=200, blank=True, default="")
+    source = models.CharField(max_length=80, default="manual")
     is_active = models.BooleanField(default=True)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -296,7 +289,82 @@ class OutlineNode(models.Model):
         super().save(*args, **kwargs)
 
     def get_effective_style(self):
-        """Effektiver Stil: Kapitel-Stil > Projekt-Primärstil."""
         if self.writing_style:
             return self.writing_style
         return self.outline_version.project.writing_style
+
+
+class ChapterReview(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    node = models.ForeignKey(
+        OutlineNode, on_delete=models.CASCADE, related_name="reviews",
+        verbose_name="Kapitel",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True,
+    )
+    reviewer = models.CharField(max_length=200, default="Autor", verbose_name="Reviewer")
+    FEEDBACK_TYPES = [
+        ("positive", "Positiv"),
+        ("suggestion", "Vorschlag"),
+        ("issue", "Problem"),
+        ("question", "Frage"),
+    ]
+    feedback_type = models.CharField(
+        max_length=20, choices=FEEDBACK_TYPES, default="suggestion"
+    )
+    feedback = models.TextField(verbose_name="Feedback")
+    text_reference = models.TextField(blank=True, verbose_name="Textreferenz")
+    is_resolved = models.BooleanField(default=False)
+    is_ai_generated = models.BooleanField(default=False)
+    ai_agent = models.CharField(max_length=100, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "wh_chapter_reviews"
+        ordering = ["-created_at"]
+        verbose_name = "Kapitel-Review"
+        verbose_name_plural = "Kapitel-Reviews"
+
+    def __str__(self):
+        return f"{self.node.title} — {self.reviewer}"
+
+
+class ChapterEditing(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    node = models.ForeignKey(
+        OutlineNode, on_delete=models.CASCADE, related_name="editings",
+        verbose_name="Kapitel",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True,
+    )
+    SUGGESTION_TYPES = [
+        ("style", "Stil"),
+        ("clarity", "Klärung"),
+        ("consistency", "Konsistenz"),
+        ("grammar", "Grammatik"),
+        ("pacing", "Pacing"),
+        ("character", "Charakter"),
+    ]
+    suggestion_type = models.CharField(
+        max_length=30, choices=SUGGESTION_TYPES, default="style"
+    )
+    original_text = models.TextField(blank=True)
+    suggestion = models.TextField(verbose_name="Vorschlag")
+    explanation = models.TextField(blank=True)
+    is_accepted = models.BooleanField(null=True, blank=True)
+    is_ai_generated = models.BooleanField(default=True)
+    ai_agent = models.CharField(max_length=100, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "wh_chapter_editings"
+        ordering = ["-created_at"]
+        verbose_name = "Kapitel-Editing"
+        verbose_name_plural = "Kapitel-Editings"
+
+    def __str__(self):
+        return f"{self.node.title} — {self.suggestion_type}"

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, views_html
+from . import views, views_html, views_review
 
 app_name = "projects"
 
@@ -14,6 +14,18 @@ urlpatterns = [
     path("<uuid:pk>/outline/generate/", views_html.OutlineGenerateView.as_view(), name="outline_generate"),
     path("node/<uuid:node_pk>/content/", views_html.ChapterContentView.as_view(), name="node_content"),
     path("node/<uuid:node_pk>/style/", views_html.ChapterNodeStyleView.as_view(), name="node_style"),
+    # Review
+    path("<uuid:pk>/review/", views_review.ProjectReviewView.as_view(), name="review"),
+    path("<uuid:pk>/review/<uuid:node_pk>/", views_review.ProjectReviewChapterView.as_view(), name="review_chapter"),
+    path("<uuid:pk>/review/<uuid:node_pk>/add/", views_review.ChapterReviewAddView.as_view(), name="review_add"),
+    path("<uuid:pk>/review/<uuid:node_pk>/ai/", views_review.ChapterAIReviewView.as_view(), name="review_ai"),
+    path("<uuid:pk>/review/resolve/<uuid:review_pk>/", views_review.ChapterReviewResolveView.as_view(), name="review_resolve"),
+    # Redaktion / Editing
+    path("<uuid:pk>/editing/", views_review.ProjectEditingView.as_view(), name="editing"),
+    path("<uuid:pk>/editing/<uuid:node_pk>/", views_review.ChapterEditingView.as_view(), name="editing_chapter"),
+    path("<uuid:pk>/editing/<uuid:node_pk>/ai/", views_review.ChapterAIEditingView.as_view(), name="editing_ai"),
+    path("<uuid:pk>/editing/suggest/<uuid:editing_pk>/", views_review.ChapterEditingSuggestionView.as_view(), name="editing_suggest"),
+    # REST API
     path("api/", views.BookProjectListView.as_view(), name="api_list"),
     path("api/<uuid:pk>/", views.BookProjectDetailView.as_view(), name="api_detail"),
     path("api/<uuid:project_pk>/outline/", views.ProjectOutlineView.as_view(), name="outline"),

@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% block title %}Review — {{ node.title }}{% endblock %}
+{% block nav_projects %}active{% endblock %}
+
+{% block content %}
+<div style="max-width:1100px;margin:0 auto;">
+
+<!-- Header -->
+<div class="rounded-3 p-4 mb-4" style="background:linear-gradient(135deg,#7c3aed,#6d28d9);">
+    <a href="{% url 'projects:review' project.pk %}" class="text-white opacity-75 small d-block mb-1">
+        <i class="bi bi-arrow-left me-1"></i> Zurück zur Übersicht
+    </a>
+    <h5 class="fw-bold mb-0 text-white">{{ node.title }}</h5>
+    <div class="text-white opacity-75 small">Kapitel {{ node.order }} &bull; {{ node.word_count }} Wörter</div>
+</div>
+
+<div class="row g-4">
+
+    <!-- Kapiteltext links -->
+    <div class="col-md-7">
+        <div class="card" style="background:#0d1117;border-color:#2d3748;">
+            <div class="card-header py-2" style="border-color:#2d3748;">
+                <span class="small text-muted fw-semibold">KAPITELTEXT</span>
+            </div>
+            <div class="card-body" style="max-height:60vh;overflow-y:auto;">
+                {% if node.content %}
+                <div style="color:#e2e8f0;font-family:'Georgia',serif;font-size:.92rem;line-height:1.8;white-space:pre-wrap;">{{ node.content }}</div>
+                {% else %}
+                <div class="text-muted text-center py-4">
+                    <i class="bi bi-file-earmark d-block mb-2" style="font-size:2rem;"></i>
+                    Noch kein Inhalt
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback rechts -->
+    <div class="col-md-5">
+
+        <!-- KI-Review mit Agent-Auswahl -->
+        <div class="card mb-3" style="background:#0d1117;border-color:#2d3748;">
+            <div class="card-header py-2" style="border-color:#2d3748;">
+                <span class="small fw-semibold" style="color:#a5b4fc;"><i class="bi bi-stars me-1"></i>KI-Review</span>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'projects:review_ai' project.pk node.id %}">
+                    {% csrf_token %}
+                    <div class="mb-2">
+                        <label class="form-label small text-muted">Agent auswählen</label>
+                        <div class="row g-2" id="agent-grid">
+                            {% for agent in ai_agents %}
+                            <div class="col-12">
+                                <label class="d-flex align-items-center gap-2 p-2 rounded"
+                                       style="border:1px solid #2d3748;cursor:pointer;background:#131929;"
+                                       id="agent-label-{{ agent.key }}"
+                                       onclick="selectAgent('{{ agent.key }}')">
+                                    <input type="radio" name="agent" value="{{ agent.key }}"
+                                           id="agent-{{ agent.key }}" class="d-none"
+                                           {% if forloop.first %}checked{% endif %}>
+                                    <i class="{{ agent.icon }}" style="color:#6366f1;font-size:1.1rem;min-width:1.5rem;"></i>
+                                    <div>
+                                        <div class="small fw-semibold" style="color:#e2e8f0;">{{ agent.name }}</div>
+                                        <div style="font-size:.7rem;color:#64748b;">{{ agent.description }}</div>
+                                    </div>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <button type="submit" class="btn w-100 mt-1"
+                            style="background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3;"
+                            {% if not node.content %}disabled{% endif %}>
+                        <i class="bi bi-stars me-1"></i>KI-Review starten
+                    </button>
+                    {% if not node.content %}
+                    <div class="text-muted mt-1" style="font-size:.72rem;">Kapitel hat noch keinen Inhalt.</div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+
+        <!-- Manuelles Feedback -->
+        <div class="card mb-3" style="background:#0d1117;border-color:#2d3748;">
+            <div class="card-header py-2" style="border-color:#2d3748;">
+                <span class="small fw-semibold" style="color:#e2e8f0;"><i class="bi bi-chat-square-text me-1"></i>Feedback</span>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'projects:review_add' project.pk node.id %}">
+                    {% csrf_token %}
+                    <div class="mb-2">
+                        <label class="form-label small text-muted">Typ</label>
+                        <select name="feedback_type" class="form-select form-select-sm"
+                                style="background:#131929;color:#e2e8f0;border-color:#2d3748;">
+                            <option value="positive">👍 Positiv</option>
+                            <option value="suggestion" selected>💡 Vorschlag</option>
+                            <option value="issue">⚠️ Problem</option>
+                            <option value="question">&#10067; Frage</option>
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small text-muted">Feedback</label>
+                        <textarea name="feedback" rows="3" class="form-control form-control-sm"
+                                  style="background:#131929;color:#e2e8f0;border-color:#2d3748;"
+                                  placeholder="Dein Feedback zum Kapitel..."></textarea>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small text-muted">Reviewer</label>
+                        <input type="text" name="reviewer" value="Autor"
+                               class="form-control form-control-sm"
+                               style="background:#131929;color:#e2e8f0;border-color:#2d3748;">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm w-100">
+                        <i class="bi bi-plus-circle me-1"></i>Feedback hinzufügen
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Bisheriges Feedback -->
+        <div class="card" style="background:#0d1117;border-color:#2d3748;">
+            <div class="card-header py-2 d-flex justify-content-between" style="border-color:#2d3748;">
+                <span class="small fw-semibold" style="color:#e2e8f0;">Bisheriges Feedback ({{ reviews|length }})</span>
+                {% if open_count > 0 %}
+                <span class="badge" style="background:#f59e0b;color:#000;">{{ open_count }} offen</span>
+                {% endif %}
+            </div>
+            <div class="card-body p-0" style="max-height:35vh;overflow-y:auto;">
+                {% for r in reviews %}
+                <div class="p-3" style="border-bottom:1px solid #1e2235;{% if r.is_resolved %}opacity:.5;{% endif %}">
+                    <div class="d-flex align-items-start justify-content-between gap-2">
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center gap-1 mb-1">
+                                {% if r.feedback_type == 'positive' %}
+                                <span class="badge" style="background:#1a3a1a;color:#22c55e;font-size:.65rem;">👍 Positiv</span>
+                                {% elif r.feedback_type == 'issue' %}
+                                <span class="badge" style="background:#3a1a1a;color:#f87171;font-size:.65rem;">⚠️ Problem</span>
+                                {% elif r.feedback_type == 'question' %}
+                                <span class="badge" style="background:#1a2a3a;color:#60a5fa;font-size:.65rem;">&#10067; Frage</span>
+                                {% else %}
+                                <span class="badge" style="background:#1e1b4b;color:#a5b4fc;font-size:.65rem;">💡 Vorschlag</span>
+                                {% endif %}
+                                {% if r.is_ai_generated %}
+                                <span class="badge" style="background:#1e2235;color:#6366f1;font-size:.6rem;"><i class="bi bi-stars"></i> {{ r.reviewer }}</span>
+                                {% else %}
+                                <span style="font-size:.7rem;color:#64748b;">{{ r.reviewer }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="small" style="color:#cbd5e1;">{{ r.feedback }}</div>
+                            {% if r.text_reference %}
+                            <div class="mt-1 p-1 rounded" style="background:#1e2235;font-size:.72rem;color:#94a3b8;font-style:italic;">&#8220;{{ r.text_reference }}&#8221;</div>
+                            {% endif %}
+                        </div>
+                        <button class="btn btn-sm py-0 px-1 flex-shrink-0"
+                                style="font-size:.7rem;{% if r.is_resolved %}color:#22c55e;{% else %}color:#64748b;{% endif %}"
+                                onclick="resolveReview('{{ r.id }}', this)"
+                                title="{% if r.is_resolved %}Wiederöffnen{% else %}Erledigen{% endif %}">
+                            <i class="bi {% if r.is_resolved %}bi-check-circle-fill{% else %}bi-circle{% endif %}"></i>
+                        </button>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="p-4 text-center text-muted">
+                    <i class="bi bi-chat-square d-block mb-1" style="font-size:1.5rem;"></i>
+                    Noch kein Feedback
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+</div>
+</div>
+
+{% if messages %}
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:1100;">
+    {% for msg in messages %}
+    <div class="toast show align-items-center text-white
+        {% if msg.tags == 'error' %}bg-danger{% elif msg.tags == 'warning' %}bg-warning text-dark{% else %}bg-success{% endif %} border-0 mb-2">
+        <div class="d-flex"><div class="toast-body small">{{ msg }}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function selectAgent(key) {
+    document.querySelectorAll('[id^="agent-label-"]').forEach(el => {
+        el.style.borderColor = '#2d3748';
+        el.style.background = '#131929';
+    });
+    const label = document.getElementById('agent-label-' + key);
+    const radio = document.getElementById('agent-' + key);
+    if (label) { label.style.borderColor = '#6366f1'; label.style.background = '#1e1b4b'; }
+    if (radio) radio.checked = true;
+}
+function resolveReview(id, btn) {
+    fetch('{% url "projects:review_resolve" project.pk "00000000-0000-0000-0000-000000000000" %}'.replace('00000000-0000-0000-0000-000000000000', id), {
+        method: 'POST',
+        headers: {'X-CSRFToken': document.cookie.match('csrftoken=([^;]+)')?.[1] || ''}
+    }).then(r => r.json()).then(data => {
+        const row = btn.closest('.p-3');
+        if (data.is_resolved) {
+            row.style.opacity = '.5';
+            btn.style.color = '#22c55e';
+            btn.querySelector('i').className = 'bi bi-check-circle-fill';
+        } else {
+            row.style.opacity = '1';
+            btn.style.color = '#64748b';
+            btn.querySelector('i').className = 'bi bi-circle';
+        }
+    });
+}
+document.addEventListener('DOMContentLoaded', () => {
+    const first = document.querySelector('[id^="agent-label-"]');
+    if (first) { first.style.borderColor = '#6366f1'; first.style.background = '#1e1b4b'; }
+});
+document.querySelectorAll('.toast').forEach(el => setTimeout(() => el.classList.remove('show'), 5000));
+</script>
+{% endblock %}
