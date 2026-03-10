@@ -2,15 +2,16 @@
 Management Command: seed_all
 
 Führt alle Seed-Schritte in der richtigen Reihenfolge aus:
-  1. Django Fixtures (Lookups, Quality Dimensions, Gate Decisions)
-  2. aifw-Konfiguration (LLMProvider, LLMModel, AIActionTypes)
+  1. Django Fixtures (Lookups, Quality Dimensions)
+  2. Project Lookups (ContentType, Genre, Audience)
+  3. Outline Frameworks (Drei-Akt, Save the Cat, etc.)
+  4. aifw-Konfiguration (LLMProvider, LLMModel, AIActionTypes)
 
 Idempotent: mehrfach ausführbar, überschreibt nichts ohne --force.
 
 Usage:
     python manage.py seed_all
     python manage.py seed_all --force
-    python manage.py seed_all --model gpt-4o
     python manage.py seed_all --skip-aifw
     python manage.py seed_all --skip-fixtures
 """
@@ -36,6 +37,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.stdout.write(self.style.MIGRATE_HEADING("\n=== writing-hub seed_all ==="))
+        force = options["force"]
 
         # 1. Fixtures
         if not options["skip_fixtures"]:
@@ -49,20 +51,42 @@ class Command(BaseCommand):
         else:
             self.stdout.write("  [1] Fixtures übersprungen (--skip-fixtures)")
 
-        # 2. aifw
+        # 2. Project Lookups (ContentType, Genre, Audience)
+        self.stdout.write(self.style.MIGRATE_HEADING("\n[2] Project Lookups ..."))
+        try:
+            kwargs = {}
+            if force:
+                kwargs["force"] = True
+            call_command("seed_project_lookups", **kwargs)
+            self.stdout.write(self.style.SUCCESS("  ✓ Project Lookups"))
+        except Exception as exc:
+            self.stdout.write(self.style.WARNING(f"  ! seed_project_lookups: {exc}"))
+
+        # 3. Outline Frameworks
+        self.stdout.write(self.style.MIGRATE_HEADING("\n[3] Outline Frameworks ..."))
+        try:
+            kwargs = {}
+            if force:
+                kwargs["force"] = True
+            call_command("seed_outline_frameworks", **kwargs)
+            self.stdout.write(self.style.SUCCESS("  ✓ Outline Frameworks"))
+        except Exception as exc:
+            self.stdout.write(self.style.WARNING(f"  ! seed_outline_frameworks: {exc}"))
+
+        # 4. aifw
         if not options["skip_aifw"]:
-            self.stdout.write(self.style.MIGRATE_HEADING("\n[2] aifw-Konfiguration ..."))
+            self.stdout.write(self.style.MIGRATE_HEADING("\n[4] aifw-Konfiguration ..."))
             try:
                 kwargs = {
                     "model": options["model"],
                     "provider": options["provider"],
                 }
-                if options["force"]:
+                if force:
                     kwargs["force"] = True
                 call_command("setup_aifw_actions", **kwargs)
             except Exception as exc:
                 self.stdout.write(self.style.WARNING(f"  ! aifw Setup: {exc}"))
         else:
-            self.stdout.write("  [2] aifw übersprungen (--skip-aifw)")
+            self.stdout.write("  [4] aifw übersprungen (--skip-aifw)")
 
         self.stdout.write(self.style.SUCCESS("\n=== seed_all abgeschlossen ==="))
