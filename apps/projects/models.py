@@ -14,6 +14,45 @@ class ContentTypeLookup(models.Model):
     slug = models.SlugField(max_length=50, unique=True)
     order = models.PositiveSmallIntegerField(default=0)
 
+    # Planning LLM Configuration (DB-driven, same pattern as bfagent Migration 0050)
+    planning_action_code = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        help_text=(
+            "aifw action_code for planning calls (premise/themes/logline). "
+            "e.g. 'planning_novel', 'planning_screenplay'. "
+            "Falls back to 'planning_novel' if empty."
+        ),
+    )
+    planning_prompt_template = models.CharField(
+        max_length=128,
+        blank=True,
+        default="",
+        help_text=(
+            "promptfw template key prefix for planning, e.g. 'roman' -> renders "
+            "'roman.system.planning' + 'roman.task.planning'. "
+            "Falls back to slug if empty, then to 'roman' if no match found."
+        ),
+    )
+    planning_system_prompt = models.TextField(
+        blank=True,
+        default="",
+        help_text=(
+            "Custom system prompt for planning LLM calls. "
+            "Overrides promptfw template system prompt when set."
+        ),
+    )
+    planning_user_template = models.TextField(
+        blank=True,
+        default="",
+        help_text=(
+            "Custom user prompt template for planning. "
+            "Variables: {title}, {genre}, {description}, {context}. "
+            "Overrides promptfw template when set."
+        ),
+    )
+
     class Meta:
         db_table = "wh_content_type_lookup"
         ordering = ["order", "name"]

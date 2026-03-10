@@ -14,6 +14,29 @@ from .models import (
 class ContentTypeLookupAdmin(admin.ModelAdmin):
     list_display = ["name", "slug", "order"]
     ordering = ["order", "name"]
+    prepopulated_fields = {"slug": ("name",)}
+
+    fieldsets = (
+        ("Grundinfo", {"fields": ("name", "slug", "order")}),
+        (
+            "Planning KI-Konfiguration (DB-driven)",
+            {
+                "fields": (
+                    "planning_action_code",
+                    "planning_prompt_template",
+                    "planning_system_prompt",
+                    "planning_user_template",
+                ),
+                "classes": ("collapse",),
+                "description": (
+                    "Steuert KI-Generierung fuer Praemisse, Themen und Logline. "
+                    "planning_action_code: aifw action_code (z.B. 'planning_novel'). "
+                    "planning_prompt_template: promptfw-Prefix (z.B. 'roman'). "
+                    "Benutzerdefinierte Prompts ueberschreiben promptfw-Templates."
+                ),
+            },
+        ),
+    )
 
 
 @admin.register(GenreLookup)
