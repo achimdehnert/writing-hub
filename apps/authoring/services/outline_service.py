@@ -14,7 +14,6 @@ from apps.authoring.services.llm_router import LLMRouter
 logger = logging.getLogger(__name__)
 
 try:
-    import outlinefw
     from outlinefw import OutlineGenerator, OutlineNode, ProjectContext
     _OUTLINEFW_AVAILABLE = True
 except ImportError:
@@ -72,7 +71,6 @@ def _save_outline_to_db(
 
     try:
         project = BookProject.objects.get(pk=project_id)
-        # Framework-Key als source speichern für Modal-Vorauswahl
         source = framework if framework else "ai"
         version = OutlineVersion.objects.create(
             project=project,
