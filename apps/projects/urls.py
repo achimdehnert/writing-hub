@@ -4,6 +4,7 @@ from . import (
     views,
     views_export,
     views_html,
+    views_import,
     views_lektorat,
     views_manuscript,
     views_publishing,
@@ -16,6 +17,7 @@ app_name = "projects"
 urlpatterns = [
     path("", views_html.ProjectListView.as_view(), name="list"),
     path("new/", views_html.ProjectCreateView.as_view(), name="create"),
+    path("import/", views_import.ProjectImportView.as_view(), name="import"),
     path("<uuid:pk>/", views_html.ProjectDetailView.as_view(), name="detail"),
     path("<uuid:pk>/edit/", views_html.ProjectUpdateView.as_view(), name="edit"),
     path("<uuid:pk>/write/", views_html.ChapterWriterView.as_view(), name="chapter_writer"),

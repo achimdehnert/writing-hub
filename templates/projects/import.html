@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+{% block title %}Projekt importieren — Writing Hub{% endblock %}
+{% block nav_projects %}active{% endblock %}
+{% block page_title %}<i class="bi bi-upload me-2"></i>Projekt importieren{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'projects:list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Zurück
+</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    body { background: #f8fafc !important; color: #111 !important; }
+    .imp-card { background: #fff; border: 1px solid #e5e7eb; border-radius: .75rem; padding: 1.5rem; height: 100%; }
+    .imp-card h6 { font-weight: 700; color: #111; font-size: .9rem; margin-bottom: .75rem; }
+    .drop-zone { border: 2px dashed #d1d5db; border-radius: .5rem; padding: 2.5rem 1rem; text-align: center; cursor: pointer; transition: all .2s; background: #fafafa; }
+    .drop-zone.dragover { border-color: #6366f1; background: #eef2ff; }
+    .drop-zone i { font-size: 2.5rem; color: #9ca3af; display: block; margin-bottom: .5rem; }
+    .drop-zone .dz-main { color: #374151; font-weight: 600; font-size: .9rem; }
+    .drop-zone .dz-sub { color: #9ca3af; font-size: .78rem; margin-top: .25rem; }
+    .file-item { display: flex; align-items: center; gap: .5rem; padding: .5rem .75rem; border-radius: .375rem; border: 1px solid #e5e7eb; margin-bottom: .375rem; background: #fff; }
+    .file-item .fn { font-size: .82rem; color: #111; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .file-item .fp { font-size: .7rem; color: #9ca3af; }
+    .format-info { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: .5rem; padding: .75rem 1rem; font-size: .82rem; color: #1e40af; }
+    .preview-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: .5rem; padding: 1rem; margin-bottom: .75rem; }
+    .preview-card .pc-title { font-weight: 700; font-size: .9rem; color: #111; }
+    .preview-card .pc-meta { font-size: .75rem; color: #6b7280; margin-top: .2rem; }
+    .pc-badge { display: inline-block; font-size: .7rem; padding: .15rem .5rem; border-radius: 999px; font-weight: 600; }
+    .badge-manuscript { background: #d1fae5; color: #065f46; }
+    .badge-planning { background: #dbeafe; color: #1e40af; }
+    .badge-mixed { background: #fef3c7; color: #92400e; }
+    .chapter-list { max-height: 200px; overflow-y: auto; margin-top: .5rem; }
+    .chapter-item { font-size: .78rem; color: #374151; padding: .2rem 0; border-bottom: 1px solid #f3f4f6; }
+    .chapter-item:last-child { border-bottom: none; }
+    .btn-import { background: #6366f1; color: #fff; border: none; padding: .6rem 2rem; border-radius: .5rem; font-weight: 600; font-size: .9rem; cursor: pointer; }
+    .btn-import:hover { background: #4f46e5; color: #fff; }
+    .btn-import:disabled { opacity: .5; cursor: not-allowed; }
+    .spinner-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 9999; align-items: center; justify-content: center; }
+    .spinner-overlay.show { display: flex; }
+    .main-content { background: #f8fafc !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 1000px; margin: 0 auto;">
+
+<div class="text-center mb-4">
+    <h3 style="font-size:1.6rem;font-weight:800;color:#111;">
+        <i class="bi bi-file-earmark-arrow-up me-2" style="color:#6366f1;"></i>Projekt importieren
+    </h3>
+    <p style="color:#6b7280;font-size:.9rem;">Importiere bestehende Manuskripte oder Planungsdokumente als neues Projekt</p>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-{{ msg.tags }} alert-dismissible py-2 mb-3" style="font-size:.85rem;">
+    {{ msg }} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<form id="importForm" method="post" enctype="multipart/form-data" action="{% url 'projects:import' %}">
+{% csrf_token %}
+<input type="hidden" name="action" value="create" id="formAction">
+
+<div class="row g-4 mb-4">
+
+    <div class="col-md-6">
+        <div class="imp-card">
+            <h6><i class="bi bi-cloud-upload me-2" style="color:#6366f1;"></i>Dateien hochladen</h6>
+            <p style="font-size:.82rem;color:#6b7280;margin-bottom:1rem;">
+                Lade Markdown-Dateien (.md) von deinem Computer hoch. Mehrfachauswahl möglich!
+            </p>
+            <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                <i class="bi bi-file-earmark-plus"></i>
+                <div class="dz-main">Dateien auswählen oder hierher ziehen</div>
+                <div class="dz-sub">Mehrere Dateien mit Strg+Klick auswählen</div>
+            </div>
+            <input type="file" name="files" id="fileInput" multiple accept=".md,.txt,.markdown" style="display:none;">
+            <div id="uploadedFiles" class="mt-3"></div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="imp-card">
+            <h6><i class="bi bi-eye me-2" style="color:#6366f1;"></i>Vorschau &amp; Projekttitel</h6>
+            <div id="previewEmpty" style="color:#9ca3af;font-size:.85rem;padding:2rem 0;text-align:center;">
+                <i class="bi bi-file-text d-block mb-2" style="font-size:2rem;"></i>
+                Wähle eine oder mehrere Dateien aus
+            </div>
+            <div id="previewContent" style="display:none;"></div>
+        </div>
+    </div>
+
+</div>
+
+<div class="format-info mb-4">
+    <div class="fw-semibold mb-2"><i class="bi bi-info-circle me-1"></i>Unterstützte Formate</div>
+    <div class="row g-2">
+        <div class="col-md-4">
+            <span class="pc-badge badge-manuscript me-1">Manuskript</span>
+            Fertige Kapitel mit <code># KAPITEL X: Titel</code> Markern
+        </div>
+        <div class="col-md-4">
+            <span class="pc-badge badge-planning me-1">Planungsdokument</span>
+            Beat-Sheets, Charakterbögen, Story-Arcs
+        </div>
+        <div class="col-md-4">
+            <span class="pc-badge badge-mixed me-1">Gemischt</span>
+            Kombination aus Prosa und Metadaten
+        </div>
+    </div>
+</div>
+
+<div id="titleInputs"></div>
+
+<div class="d-flex justify-content-between align-items-center pt-2">
+    <a href="{% url 'projects:list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Zurück
+    </a>
+    <div class="d-flex gap-3 align-items-center">
+        <a href="{% url 'projects:create' %}" class="btn btn-outline-primary">
+            <i class="bi bi-plus-circle me-1"></i> Neues leeres Projekt
+        </a>
+        <button type="submit" class="btn-import" id="btnImport" disabled>
+            <i class="bi bi-download me-1"></i> <span id="btnImportText">Importieren</span>
+        </button>
+    </div>
+</div>
+
+</form>
+
+<div class="spinner-overlay" id="spinnerOverlay">
+    <div class="text-center text-white">
+        <div class="spinner-border mb-3" style="width:3rem;height:3rem;"></div>
+        <div style="font-size:1rem;font-weight:600;">Projekt wird importiert...</div>
+    </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const uploadedFiles = document.getElementById('uploadedFiles');
+const previewEmpty = document.getElementById('previewEmpty');
+const previewContent = document.getElementById('previewContent');
+const btnImport = document.getElementById('btnImport');
+const btnImportText = document.getElementById('btnImportText');
+const titleInputs = document.getElementById('titleInputs');
+const spinnerOverlay = document.getElementById('spinnerOverlay');
+
+let selectedFiles = new DataTransfer();
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    addFiles(Array.from(e.dataTransfer.files));
+});
+
+fileInput.addEventListener('change', () => {
+    addFiles(Array.from(fileInput.files));
+    fileInput.value = '';
+});
+
+function addFiles(files) {
+    files.forEach(f => {
+        if (f.name.match(/\.(md|txt|markdown)$/i)) selectedFiles.items.add(f);
+    });
+    syncInput();
+    renderFileList();
+    if (selectedFiles.files.length > 0) previewFiles();
+}
+
+function syncInput() {
+    const dt = new DataTransfer();
+    Array.from(selectedFiles.files).forEach(f => dt.items.add(f));
+    fileInput.files = dt.files;
+}
+
+function renderFileList() {
+    uploadedFiles.innerHTML = '';
+    Array.from(selectedFiles.files).forEach((f, i) => {
+        const div = document.createElement('div');
+        div.className = 'file-item';
+        div.innerHTML = `
+            <i class="bi bi-file-earmark-text" style="color:#6366f1;"></i>
+            <div style="flex:1;overflow:hidden;">
+                <div class="fn">${f.name}</div>
+                <div class="fp">${(f.size/1024).toFixed(1)} KB</div>
+            </div>
+            <button type="button" onclick="removeFile(${i})"
+                    style="background:none;border:none;color:#9ca3af;cursor:pointer;">
+                <i class="bi bi-x-lg" style="font-size:.8rem;"></i>
+            </button>`;
+        uploadedFiles.appendChild(div);
+    });
+}
+
+function removeFile(idx) {
+    const dt = new DataTransfer();
+    Array.from(selectedFiles.files).forEach((f, i) => { if (i !== idx) dt.items.add(f); });
+    selectedFiles = dt;
+    syncInput();
+    renderFileList();
+    if (selectedFiles.files.length > 0) previewFiles();
+    else {
+        previewEmpty.style.display = '';
+        previewContent.style.display = 'none';
+        btnImport.disabled = true;
+        titleInputs.innerHTML = '';
+    }
+}
+
+function formatBadge(fmt) {
+    const map = {
+        manuscript: ['badge-manuscript', 'Manuskript'],
+        planning: ['badge-planning', 'Planungsdokument'],
+        mixed: ['badge-mixed', 'Gemischt'],
+    };
+    const [cls, label] = map[fmt] || ['badge-mixed', fmt];
+    return `<span class="pc-badge ${cls}">${label}</span>`;
+}
+
+async function previewFiles() {
+    const fd = new FormData();
+    fd.append('action', 'preview');
+    fd.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+    Array.from(selectedFiles.files).forEach(f => fd.append('files', f));
+
+    previewContent.innerHTML = '<div class="text-center py-3" style="color:#6b7280;"><span class="spinner-border spinner-border-sm me-2"></span>Analysiere...</div>';
+    previewEmpty.style.display = 'none';
+    previewContent.style.display = '';
+    btnImport.disabled = true;
+
+    try {
+        const r = await fetch('{% url "projects:import" %}', { method: 'POST', body: fd });
+        const data = await r.json();
+        if (!data.ok) {
+            previewContent.innerHTML = `<div class="text-danger small">${data.error}</div>`;
+            return;
+        }
+        titleInputs.innerHTML = '';
+        previewContent.innerHTML = '';
+        let okCount = 0;
+        data.files.forEach(file => {
+            if (file.error) {
+                previewContent.innerHTML += `<div class="preview-card"><div class="text-danger small"><i class="bi bi-exclamation-triangle me-1"></i>${file.filename}: ${file.error}</div></div>`;
+                return;
+            }
+            okCount++;
+            const chList = (file.chapters || []).map(ch =>
+                `<div class="chapter-item"><span style="color:#9ca3af;font-size:.7rem;margin-right:.4rem;">Kap.${ch.order}</span>${ch.title}</div>`
+            ).join('');
+            previewContent.innerHTML += `
+                <div class="preview-card">
+                    <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+                        <div>
+                            <div class="pc-title">${file.filename}</div>
+                            <div class="pc-meta">
+                                ${formatBadge(file.format)}
+                                <span class="ms-2">${file.chapter_count} Kapitel &middot; ${file.word_count.toLocaleString('de-DE')} Wörter</span>
+                            </div>
+                        </div>
+                        <div style="min-width:180px;">
+                            <label style="font-size:.72rem;color:#6b7280;display:block;margin-bottom:.25rem;">Projekttitel</label>
+                            <input type="text" name="title_${file.filename}"
+                                   class="form-control form-control-sm" style="font-size:.8rem;background:#fff;color:#111;"
+                                   value="${file.title}">
+                        </div>
+                    </div>
+                    ${chList ? `<div class="chapter-list">${chList}</div>` : ''}
+                </div>`;
+
+            const hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = `title_${file.filename}`;
+            hidden.value = file.title;
+            titleInputs.appendChild(hidden);
+        });
+
+        previewContent.querySelectorAll('input[type=text]').forEach(inp => {
+            inp.addEventListener('input', () => {
+                const h = titleInputs.querySelector(`[name="${inp.name}"]`);
+                if (h) h.value = inp.value;
+            });
+        });
+
+        if (okCount > 0) {
+            btnImport.disabled = false;
+            btnImportText.textContent = okCount === 1 ? '1 Projekt importieren' : `${okCount} Projekte importieren`;
+        }
+    } catch (err) {
+        previewContent.innerHTML = `<div class="text-danger small">Fehler: ${err.message}</div>`;
+    }
+}
+
+document.getElementById('importForm').addEventListener('submit', () => {
+    spinnerOverlay.classList.add('show');
+    btnImport.disabled = true;
+});
+</script>
+{% endblock %}
