@@ -170,10 +170,22 @@
                         <div class="d-flex align-items-center justify-content-between gap-2">
                             <div class="small">
                                 <span class="fw-semibold">{{ draft.source_filename|default:"Freitext" }}</span>
-                                <span class="text-muted ms-2" style="font-size:.75rem;">{{ draft.created_at|date:"d.m.Y" }}</span>
+                                <span class="text-muted ms-2" style="font-size:.75rem;">{{ draft.created_at|date:"d.m.Y H:i" }}</span>
                             </div>
-                            <span class="badge {% if draft.status == 'committed' %}bg-success{% elif draft.status == 'pending_review' %}bg-warning text-dark{% else %}bg-secondary{% endif %}"
-                                  style="font-size:.65rem;">{{ draft.get_status_display }}</span>
+                            <div class="d-flex align-items-center gap-1">
+                                <span class="badge
+                                    {% if draft.status == 'committed' %}bg-success
+                                    {% elif draft.status == 'pending_review' %}bg-warning text-dark
+                                    {% elif draft.status == 'processing' %}bg-info text-dark
+                                    {% else %}bg-secondary{% endif %}"
+                                    style="font-size:.65rem;">
+                                    {{ draft.get_status_display }}
+                                </span>
+                                <a href="{% url 'ideas:review' draft.pk %}"
+                                   class="btn btn-outline-secondary btn-sm py-0 px-1" style="font-size:.7rem;">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </div>
                         </div>
                     </li>
                     {% endfor %}
@@ -181,20 +193,13 @@
                 {% else %}
                 <div class="p-3 text-center">
                     <i class="bi bi-lightbulb d-block mb-2 text-muted" style="font-size:1.5rem;"></i>
-                    <p class="text-muted small mb-2">Noch keine Ideen importiert</p>
-                    <p class="text-muted small">
+                    <p class="text-muted small mb-1">Noch keine Ideen importiert</p>
+                    <p class="text-muted" style="font-size:.75rem;">
                         <i class="bi bi-info-circle me-1"></i>Ideen-Import über bfagent-Integration verfügbar.
                     </p>
                 </div>
                 {% endif %}
             </div>
-            {% if idea_drafts %}
-            <div class="card-footer py-2">
-                <p class="text-muted small mb-0 text-center">
-                    <i class="bi bi-info-circle me-1"></i>Ideen-Import über bfagent-Integration.
-                </p>
-            </div>
-            {% endif %}
         </div>
 
         <!-- Welten -->
@@ -270,27 +275,29 @@
           <div class="mb-3">
             <label class="form-label small text-muted">Framework wählen *</label>
             <select id="outlineFrameworkSelect" name="framework_template"
-                    class="form-select bg-dark text-light border-secondary" required>
+                    class="form-select bg-dark text-light border-secondary" required
+                    onchange="onOutlineFrameworkChange(this.value)">
               <option value="">— Framework auswählen —</option>
-              <option value="three_act">Drei-Akt-Struktur</option>
+              <option value="three_act">Drei-Akt-Struktur (6 Beats)</option>
               <option value="save_the_cat">Save the Cat (15 Beats)</option>
-              <option value="heros_journey">Heldenreise</option>
-              <option value="five_act">Fünf-Akt-Struktur</option>
-              <option value="dan_harmon">Dan Harmon Story Circle</option>
-              <option value="blank">Leere Kapitel (ohne Framework)</option>
+              <option value="heros_journey">Heldenreise (12 Beats)</option>
+              <option value="five_act">Fünf-Akt-Struktur (5 Beats)</option>
+              <option value="dan_harmon">Dan Harmon Story Circle (8 Beats)</option>
+              <option value="blank">Leere Kapitel (Anzahl frei wählbar)</option>
             </select>
-            <div class="form-text text-muted" style="font-size:.75rem;">Wähle ein Framework — Kapitel werden entsprechend vorbereitet.</div>
           </div>
+          <div class="mb-3" id="outlineChapterCountRow" style="display:none;">
+            <label class="form-label small text-muted">Anzahl Kapitel</label>
+            <input type="number" name="chapter_count" id="outlineChapterCount"
+                   class="form-control bg-dark text-light border-secondary"
+                   placeholder="z.B. 12" min="1" max="50" value="12">
+          </div>
+          <div class="mb-2" id="outlineChapterInfo" style="font-size:.8rem;color:#94a3b8;"></div>
           <div class="mb-3">
             <label class="form-label small text-muted">Name der Version</label>
             <input id="outlineNameInput" type="text" name="name"
                    class="form-control bg-dark text-light border-secondary"
                    placeholder="wird automatisch gesetzt">
-          </div>
-          <div class="mb-3">
-            <label class="form-label small text-muted">Anzahl Kapitel <small class="text-muted">(nur für „Leere Kapitel“)</small></label>
-            <input type="number" name="chapter_count" class="form-control bg-dark text-light border-secondary"
-                   placeholder="z.B. 12" min="0" max="50" value="12">
           </div>
           <div class="mb-3">
             <label class="form-label small text-muted">Notizen</label>
@@ -322,21 +329,23 @@
         <div class="modal-body">
           <div class="mb-3">
             <label class="form-label small text-muted">Framework</label>
-            <select name="framework" class="form-select bg-dark text-light border-secondary">
-              <option value="three_act">Drei-Akt-Struktur</option>
+            <select id="kiFrameworkSelect" name="framework"
+                    class="form-select bg-dark text-light border-secondary"
+                    onchange="onKiFrameworkChange(this.value)">
+              <option value="three_act">Drei-Akt-Struktur (6 Beats)</option>
               <option value="save_the_cat">Save the Cat (15 Beats)</option>
-              <option value="heros_journey">Heldenreise</option>
-              <option value="five_act">Fünf-Akt-Struktur</option>
-              <option value="dan_harmon">Dan Harmon Story Circle</option>
+              <option value="heros_journey">Heldenreise (12 Beats)</option>
+              <option value="five_act">Fünf-Akt-Struktur (5 Beats)</option>
+              <option value="dan_harmon">Dan Harmon Story Circle (8 Beats)</option>
             </select>
           </div>
-          <div class="mb-3">
-            <label class="form-label small text-muted">Kapitelanzahl</label>
-            <input type="number" name="chapter_count"
-                   class="form-control bg-dark text-light border-secondary"
-                   value="12" min="3" max="50">
+          <div class="mb-2" id="kiChapterInfo"
+               style="font-size:.85rem; color:#6366f1; font-weight:600; padding: 8px 12px;
+                      background:#1e2235; border-radius:6px; border:1px solid #2d3148;">
+            <i class="bi bi-list-ol me-1"></i><span id="kiChapterInfoText">6 Kapitel werden generiert</span>
           </div>
-          <div class="alert py-2 px-3" style="background:#1e2235;border:1px solid #2d3148;font-size:.8rem;color:#94a3b8;">
+          <input type="hidden" name="chapter_count" id="kiChapterCount" value="6">
+          <div class="mt-3 alert py-2 px-3" style="background:#1e2235;border:1px solid #2d3148;font-size:.8rem;color:#94a3b8;">
             <i class="bi bi-info-circle me-1"></i>
             Die KI nutzt Titel, Genre, ausgewähltes Framework und Beschreibung als Kontext.
             Dies kann 10–30 Sekunden dauern.
@@ -357,6 +366,55 @@
 
 {% block extra_js %}
 <script>
+const FW_BEATS = {
+    'three_act': 6,
+    'save_the_cat': 15,
+    'heros_journey': 12,
+    'five_act': 5,
+    'dan_harmon': 8,
+    'blank': null,
+};
+const FW_LABELS = {
+    'three_act': 'Drei-Akt-Struktur',
+    'save_the_cat': 'Save the Cat',
+    'heros_journey': 'Heldenreise',
+    'five_act': 'Fünf-Akt-Struktur',
+    'dan_harmon': 'Dan Harmon Story Circle',
+    'blank': 'Leere Kapitel',
+};
+
+function onKiFrameworkChange(val) {
+    const count = FW_BEATS[val];
+    const infoText = document.getElementById('kiChapterInfoText');
+    const hiddenInput = document.getElementById('kiChapterCount');
+    if (count) {
+        infoText.textContent = count + ' Kapitel werden generiert';
+        hiddenInput.value = count;
+    }
+}
+
+function onOutlineFrameworkChange(val) {
+    const count = FW_BEATS[val];
+    const nameInput = document.getElementById('outlineNameInput');
+    const infoEl = document.getElementById('outlineChapterInfo');
+    const countRow = document.getElementById('outlineChapterCountRow');
+
+    if (!nameInput.value) {
+        nameInput.placeholder = FW_LABELS[val] || 'wird automatisch gesetzt';
+    }
+
+    if (val === 'blank') {
+        infoEl.textContent = '';
+        countRow.style.display = '';
+    } else if (count) {
+        infoEl.innerHTML = '<i class="bi bi-list-ol me-1"></i><strong>' + count + ' Beats</strong> werden aus dem Framework übernommen';
+        countRow.style.display = 'none';
+    } else {
+        infoEl.textContent = '';
+        countRow.style.display = 'none';
+    }
+}
+
 document.getElementById('generateForm')?.addEventListener('submit', function() {
     const btn = document.getElementById('btn-ki-submit');
     if (btn) {
@@ -365,20 +423,8 @@ document.getElementById('generateForm')?.addEventListener('submit', function() {
     }
 });
 
-document.getElementById('outlineFrameworkSelect')?.addEventListener('change', function() {
-    const nameInput = document.getElementById('outlineNameInput');
-    const labels = {
-        'three_act': 'Drei-Akt-Struktur',
-        'save_the_cat': 'Save the Cat',
-        'heros_journey': 'Heldenreise',
-        'five_act': 'Fünf-Akt-Struktur',
-        'dan_harmon': 'Dan Harmon Story Circle',
-        'blank': 'Leere Kapitel',
-    };
-    if (nameInput && !nameInput.value) {
-        nameInput.placeholder = labels[this.value] || 'wird automatisch gesetzt';
-    }
-});
+// Init: KI-Framework-Info beim Laden setzen
+onKiFrameworkChange(document.getElementById('kiFrameworkSelect')?.value || 'three_act');
 
 document.querySelectorAll('.toast').forEach(function(el) {
     setTimeout(function() { el.classList.remove('show'); }, 5000);
