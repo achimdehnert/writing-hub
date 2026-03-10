@@ -15,14 +15,13 @@ from django.views.generic import DetailView, ListView, UpdateView
 
 from apps.series.models import BookSeries
 from .models import (
-    AudienceLookup, AuthorStyleLookup, BookProject,
+    AudienceLookup, BookProject,
     ContentTypeLookup, GenreLookup, OutlineFramework,
     OutlineNode, OutlineVersion,
 )
 
 logger = logging.getLogger(__name__)
 
-# Fallback-Beats wenn DB leer (nur für KI-Generierung)
 FW_BEATS_FALLBACK = {
     "three_act": 6, "save_the_cat": 15, "heros_journey": 12,
     "five_act": 5, "dan_harmon": 8, "blank": 0,
@@ -51,7 +50,6 @@ DEFAULT_CONTENT_TYPES = [
 
 
 def _get_frameworks():
-    """Frameworks aus DB laden; Fallback auf leere Liste wenn DB leer."""
     return list(
         OutlineFramework.objects
         .filter(is_active=True)
@@ -72,6 +70,19 @@ def _fw_beat_count(fw_key, frameworks):
         if fw.key == fw_key:
             return fw.beat_count
     return FW_BEATS_FALLBACK.get(fw_key, 12)
+
+
+def _get_authors(user):
+    """Autoren mit Schreibstilen für Dropdown."""
+    try:
+        from apps.authors.models import Author
+        return list(
+            Author.objects.filter(owner=user, is_active=True)
+            .prefetch_related("writing_styles")
+            .order_by("name")
+        )
+    except Exception:
+        return []
 
 
 class ProjectListView(LoginRequiredMixin, ListView):
@@ -116,35 +127,31 @@ class ProjectListView(LoginRequiredMixin, ListView):
 class ProjectCreateView(LoginRequiredMixin, View):
     template_name = "projects/project_form.html"
 
-    def _context(self, post_data=None):
+    def _context(self, user, post_data=None):
         return {
             "content_types": ContentTypeLookup.objects.all().order_by("order", "name"),
             "default_content_types": DEFAULT_CONTENT_TYPES,
             "genres": GenreLookup.objects.all().order_by("order", "name"),
             "audiences": AudienceLookup.objects.all().order_by("order", "name"),
-            "author_styles": AuthorStyleLookup.objects.filter(
-                is_active=True
-            ).order_by("order", "name"),
-            "series_options": BookSeries.objects.filter(
-                owner=self.request.user
-            ).order_by("title"),
+            "authors": _get_authors(user),
+            "series_options": BookSeries.objects.filter(owner=user).order_by("title"),
             "post": post_data or {},
             "is_edit": False,
         }
 
     def get(self, request):
-        return render(request, self.template_name, self._context())
+        return render(request, self.template_name, self._context(request.user))
 
     def post(self, request):
         title = request.POST.get("title", "").strip()
         if not title:
-            ctx = self._context(request.POST)
+            ctx = self._context(request.user, request.POST)
             ctx["error"] = "Bitte einen Arbeitstitel eingeben."
             return render(request, self.template_name, ctx)
         ct_id = request.POST.get("content_type_lookup") or None
         genre_id = request.POST.get("genre_lookup") or None
         audience_id = request.POST.get("audience_lookup") or None
-        author_style_id = request.POST.get("author_style") or None
+        writing_style_id = request.POST.get("writing_style") or None
         series_id = request.POST.get("series") or None
         target_word_count = request.POST.get("target_word_count") or None
         if target_word_count:
@@ -159,10 +166,21 @@ class ProjectCreateView(LoginRequiredMixin, View):
             content_type_lookup_id=ct_id,
             genre_lookup_id=genre_id,
             audience_lookup_id=audience_id,
-            author_style_id=author_style_id,
             series_id=series_id,
             target_word_count=target_word_count,
         )
+        # WritingStyle am Projekt speichern
+        if writing_style_id:
+            try:
+                from apps.authors.models import WritingStyle
+                ws = WritingStyle.objects.get(
+                    pk=writing_style_id,
+                    author__owner=request.user,
+                )
+                project.writing_style_id = ws.pk
+                project.save(update_fields=["writing_style_id"])
+            except Exception:
+                pass
         messages.success(request, f'Projekt „{project.title}“ angelegt.')
         return redirect("projects:detail", pk=project.pk)
 
@@ -192,7 +210,6 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
         ctx["selected_outline"] = selected
         ctx["outline_nodes"] = selected.nodes.order_by("order") if selected else []
 
-        # Framework aus DB
         frameworks = _get_frameworks()
         ctx["frameworks"] = frameworks
         active_fw_key = selected.source if selected else "three_act"
@@ -236,7 +253,7 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
     fields = [
         "title", "description", "series",
         "content_type_lookup", "genre_lookup", "audience_lookup",
-        "author_style", "target_word_count",
+        "target_word_count",
     ]
 
     def get_queryset(self):
@@ -249,14 +266,13 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
         form.fields["content_type_lookup"].empty_label = "— bitte wählen —"
         form.fields["genre_lookup"].empty_label = "— bitte wählen —"
         form.fields["audience_lookup"].empty_label = "— bitte wählen —"
-        form.fields["author_style"].empty_label = "— kein Stil —"
         return form
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["is_edit"] = True
-        ctx["author_styles"] = AuthorStyleLookup.objects.filter(is_active=True).order_by("order", "name")
         ctx["audiences"] = AudienceLookup.objects.all().order_by("order", "name")
+        ctx["authors"] = _get_authors(self.request.user)
         return ctx
 
     def get_success_url(self):
@@ -279,7 +295,6 @@ class OutlineCreateView(LoginRequiredMixin, View):
             messages.warning(request, "Bitte ein Framework auswählen.")
             return redirect("projects:detail", pk=pk)
 
-        # Framework aus DB laden
         frameworks = _get_frameworks()
         fw_obj = next((f for f in frameworks if f.key == framework_key), None)
         fw_label = fw_obj.name if fw_obj else FW_LABELS_FALLBACK.get(framework_key, framework_key)
@@ -399,11 +414,6 @@ class ChapterWriterView(LoginRequiredMixin, DetailView):
 
 
 class ChapterContentView(LoginRequiredMixin, View):
-    """
-    GET  /projects/node/<uuid>/content/  -> JSON {content, word_count, updated_at}
-    POST /projects/node/<uuid>/content/  -> Speichert content in DB
-    """
-
     def _get_node(self, request, node_pk):
         return get_object_or_404(
             OutlineNode,

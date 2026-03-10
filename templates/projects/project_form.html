@@ -5,12 +5,7 @@
 
 {% block extra_head %}
 <style>
-/* Form-Kontrast-Override */
-.wh-form .form-label {
-    color: #cbd5e1 !important;
-    font-weight: 500;
-    margin-bottom: .35rem;
-}
+.wh-form .form-label { color: #cbd5e1 !important; font-weight: 500; margin-bottom: .35rem; }
 .wh-form .form-control,
 .wh-form .form-select {
     background-color: #131929 !important;
@@ -18,9 +13,7 @@
     border: 1px solid #475569 !important;
     border-radius: .4rem;
 }
-.wh-form .form-control::placeholder {
-    color: #64748b !important;
-}
+.wh-form .form-control::placeholder { color: #64748b !important; }
 .wh-form .form-control:focus,
 .wh-form .form-select:focus {
     border-color: #6366f1 !important;
@@ -28,30 +21,13 @@
     background-color: #131929 !important;
     color: #f1f5f9 !important;
 }
-.wh-form .form-select option {
-    background: #1e2235;
-    color: #f1f5f9;
-}
-.wh-form .form-text {
-    color: #94a3b8 !important;
-}
-.wh-form .ct-tile {
-    transition: border-color .15s, background .15s;
-}
-.wh-form .ct-tile:hover {
-    border-color: #6366f1 !important;
-    background: #1a1f3a !important;
-}
-.wh-form .btn-check:checked + .ct-tile {
-    border-color: #6366f1 !important;
-    background: #1e1b4b !important;
-}
+.wh-form .form-select option { background: #1e2235; color: #f1f5f9; }
+.wh-form .form-text { color: #94a3b8 !important; }
+.wh-form .ct-tile { transition: border-color .15s, background .15s; }
+.wh-form .ct-tile:hover { border-color: #6366f1 !important; background: #1a1f3a !important; }
+.wh-form .btn-check:checked + .ct-tile { border-color: #6366f1 !important; background: #1e1b4b !important; }
 .wh-form .genre-tag.active,
-.wh-form .btn-check:checked + .genre-tag {
-    background: #4f46e5 !important;
-    color: #fff !important;
-    border-color: #4f46e5 !important;
-}
+.wh-form .btn-check:checked + .genre-tag { background: #4f46e5 !important; color: #fff !important; border-color: #4f46e5 !important; }
 </style>
 {% endblock %}
 
@@ -61,51 +37,36 @@
 
 {% if not is_edit %}
 <a href="{% url 'projects:list' %}" class="btn btn-link text-muted ps-0 mb-3">
-    <i class="bi bi-arrow-left me-1"></i> Zurück zur Projektliste
+    <i class="bi bi-arrow-left me-1"></i> Zurück
 </a>
 {% endif %}
 
 <div class="card" style="background:#0d1117;border-color:#2d3748;">
 <div class="card-body p-4 wh-form">
 
-{% if is_edit %}
-<h4 class="mb-4 text-center" style="color:#e2e8f0;"><i class="bi bi-pencil-square me-2 text-primary"></i>Projekt bearbeiten</h4>
-{% else %}
-<h4 class="mb-1 text-center" style="color:#e2e8f0;"><i class="bi bi-pencil-square me-2 text-primary"></i>Neues Schreibprojekt</h4>
-<p class="text-center mb-4" style="color:#94a3b8;">Wähle deinen Content-Typ und starte dein Schreibabenteuer</p>
-{% endif %}
+<h4 class="mb-4 text-center" style="color:#e2e8f0;">
+    <i class="bi bi-pencil-square me-2 text-primary"></i>
+    {% if is_edit %}Projekt bearbeiten{% else %}Neues Schreibprojekt{% endif %}
+</h4>
 
 {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
-{% if messages %}{% for m in messages %}<div class="alert alert-{{ m.tags }}">{{ m }}</div>{% endfor %}{% endif %}
 
 <form method="post" novalidate>
 {% csrf_token %}
 
 {% if not is_edit %}
-<!-- Content-Typ Kacheln -->
 <div class="mb-4">
     <label class="form-label"><i class="bi bi-collection me-1"></i>Was möchtest du schreiben? *</label>
     <div class="row g-3">
         {% for ct in content_types %}
         <div class="col-md-4">
-            <input type="radio" class="btn-check" name="content_type_lookup"
-                   id="ct_{{ ct.pk }}" value="{{ ct.pk }}"
+            <input type="radio" class="btn-check" name="content_type_lookup" id="ct_{{ ct.pk }}" value="{{ ct.pk }}"
                    {% if post.content_type_lookup == ct.pk|stringformat:"s" %}checked{% endif %}>
-            <label class="btn w-100 text-start p-3 h-100 ct-tile"
-                   for="ct_{{ ct.pk }}"
-                   style="border: 1px solid #475569; background: #131929; color:#f1f5f9;">
-                <div class="text-center mb-2">
-                    <i class="{{ ct.icon|default:'bi-file-text' }} fs-2 text-primary"></i>
-                </div>
-                <div class="fw-semibold text-center mb-1" style="color:#f1f5f9;">{{ ct.name }}</div>
-                {% if ct.subtitle %}
-                <div class="text-center" style="color:#94a3b8;font-size:.8rem;">{{ ct.subtitle }}</div>
-                {% endif %}
-                {% if ct.workflow_hint %}
-                <div class="mt-2" style="font-size:.7rem;color:#64748b;border-top:1px solid #2d3748;padding-top:.5rem;">
-                    {{ ct.workflow_hint }}
-                </div>
-                {% endif %}
+            <label class="btn w-100 text-start p-3 h-100 ct-tile" for="ct_{{ ct.pk }}"
+                   style="border:1px solid #475569;background:#131929;color:#f1f5f9;">
+                <div class="text-center mb-2"><i class="{{ ct.icon|default:'bi-file-text' }} fs-2 text-primary"></i></div>
+                <div class="fw-semibold text-center mb-1">{{ ct.name }}</div>
+                {% if ct.subtitle %}<div class="text-center" style="color:#94a3b8;font-size:.8rem;">{{ ct.subtitle }}</div>{% endif %}
             </label>
         </div>
         {% empty %}
@@ -114,7 +75,6 @@
             <div class="border rounded p-3 text-center" style="border-color:#475569!important;background:#131929;">
                 <i class="{{ ct.icon }} fs-2 text-primary mb-2 d-block"></i>
                 <div class="fw-semibold" style="color:#f1f5f9;">{{ ct.name }}</div>
-                <div style="color:#94a3b8;font-size:.8rem;">{{ ct.subtitle }}</div>
             </div>
         </div>
         {% endfor %}
@@ -123,102 +83,86 @@
 </div>
 {% endif %}
 
-<!-- Arbeitstitel -->
 <div class="mb-4">
-    <label class="form-label" for="id_title">
-        <i class="bi bi-type me-1"></i>Arbeitstitel *
-    </label>
+    <label class="form-label" for="id_title"><i class="bi bi-type me-1"></i>Arbeitstitel *</label>
     <input type="text" name="title" id="id_title"
            value="{% if is_edit %}{{ form.title.value|default:'' }}{% else %}{{ post.title|default:'' }}{% endif %}"
-           class="form-control"
-           placeholder="z.B. Die Chroniken von Eldoria" required autofocus>
+           class="form-control" placeholder="z.B. Die Chroniken von Eldoria" required autofocus>
 </div>
 
 {% if not is_edit %}
-<!-- Genre als Tag-Buttons -->
 <div class="mb-4">
     <label class="form-label"><i class="bi bi-tag me-1"></i>Genre</label>
     <div class="d-flex flex-wrap gap-2">
         {% for g in genres %}
-        <input type="radio" class="btn-check" name="genre_lookup"
-               id="genre_{{ g.pk }}" value="{{ g.pk }}"
+        <input type="radio" class="btn-check" name="genre_lookup" id="genre_{{ g.pk }}" value="{{ g.pk }}"
                {% if post.genre_lookup == g.pk|stringformat:"s" %}checked{% endif %}>
-        <label class="btn btn-sm genre-tag"
-               for="genre_{{ g.pk }}"
+        <label class="btn btn-sm genre-tag" for="genre_{{ g.pk }}"
                style="border:1px solid #475569;color:#cbd5e1;background:#131929;">{{ g.name }}</label>
         {% endfor %}
     </div>
 </div>
 {% endif %}
 
-<!-- Beschreibung -->
 <div class="mb-4">
-    <label class="form-label" for="id_desc">
-        <i class="bi bi-text-paragraph me-1"></i>
-        {% if is_edit %}Beschreibung / Prämisse{% else %}Kurzbeschreibung / Prämisse{% endif %}
-    </label>
+    <label class="form-label" for="id_desc"><i class="bi bi-text-paragraph me-1"></i>Kurzbeschreibung / Prämisse</label>
     <textarea name="description" id="id_desc" rows="4" class="form-control"
-              placeholder="Worum geht es in deinem Roman? Wer ist der Protagonist?">{% if is_edit %}{{ form.description.value|default:'' }}{% else %}{{ post.description|default:'' }}{% endif %}</textarea>
+              placeholder="Worum geht es? Wer ist der Protagonist?">{% if is_edit %}{{ form.description.value|default:'' }}{% else %}{{ post.description|default:'' }}{% endif %}</textarea>
 </div>
 
-<!-- Zielgruppe -->
 <div class="mb-4">
-    <label class="form-label" for="id_audience">
-        <i class="bi bi-people me-1"></i>Zielgruppe
-    </label>
+    <label class="form-label" for="id_audience"><i class="bi bi-people me-1"></i>Zielgruppe</label>
     <select name="audience_lookup" id="id_audience" class="form-select">
         <option value="">— Zielgruppe wählen —</option>
-        {% if is_edit %}
         {% for a in audiences %}
-        <option value="{{ a.pk }}" {% if form.audience_lookup.value|stringformat:"s" == a.pk|stringformat:"s" %}selected{% endif %}>{{ a.name }}</option>
+        <option value="{{ a.pk }}"
+            {% if is_edit %}{% if form.audience_lookup.value|stringformat:"s" == a.pk|stringformat:"s" %}selected{% endif %}
+            {% else %}{% if post.audience_lookup == a.pk|stringformat:"s" %}selected{% endif %}{% endif %}>
+            {{ a.name }}
+        </option>
         {% endfor %}
-        {% else %}
-        {% for a in audiences %}
-        <option value="{{ a.pk }}" {% if post.audience_lookup == a.pk|stringformat:"s" %}selected{% endif %}>{{ a.name }}</option>
-        {% endfor %}
-        {% endif %}
     </select>
 </div>
 
-<!-- Ziel-Wortanzahl -->
 <div class="mb-4">
-    <label class="form-label" for="id_words">
-        <i class="bi bi-123 me-1"></i>Ziel-Wortanzahl
-    </label>
+    <label class="form-label" for="id_words"><i class="bi bi-123 me-1"></i>Ziel-Wortanzahl</label>
     <input type="number" name="target_word_count" id="id_words"
            value="{% if is_edit %}{{ form.target_word_count.value|default:'50000' }}{% else %}{{ post.target_word_count|default:'50000' }}{% endif %}"
-           class="form-control"
-           placeholder="50000" min="1000" step="1000">
+           class="form-control" placeholder="50000" min="1000" step="1000">
 </div>
 
-<!-- Autor & Schreibstil -->
+<!-- Autor & Schreibstil aus authors-App -->
 <div class="mb-4">
-    <label class="form-label" for="id_author_style">
-        <i class="bi bi-person-badge me-1"></i>Autor &amp; Schreibstil
-    </label>
-    <select name="author_style" id="id_author_style" class="form-select">
-        <option value="">— Autor wählen —</option>
-        {% if is_edit %}
-        {% for a in author_styles %}
-        <option value="{{ a.pk }}" {% if form.author_style.value|stringformat:"s" == a.pk|stringformat:"s" %}selected{% endif %}>{{ a.name }}</option>
-        {% endfor %}
-        {% else %}
-        {% for a in author_styles %}
-        <option value="{{ a.pk }}" {% if post.author_style == a.pk|stringformat:"s" %}selected{% endif %}>{{ a.name }}</option>
-        {% endfor %}
-        {% endif %}
-    </select>
-    {% if author_styles %}
-    <div class="form-text" id="author-style-desc"></div>
+    <label class="form-label"><i class="bi bi-person-badge me-1"></i>Autor &amp; Schreibstil</label>
+    {% if authors %}
+    <div class="row g-2">
+        <div class="col-md-5">
+            <select id="author-select" class="form-select" onchange="updateStyleSelect(this.value)">
+                <option value="">— Autor wählen —</option>
+                {% for a in authors %}
+                <option value="{{ a.pk }}">{{ a.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-7">
+            <select name="writing_style" id="style-select" class="form-select">
+                <option value="">— zuerst Autor wählen —</option>
+            </select>
+        </div>
+    </div>
+    <div class="form-text mt-1" id="style-desc"></div>
     {% else %}
-    <div class="form-text">
-        Schreibstile im <a href="/admin/projects/authorstylelookup/add/" class="text-secondary" target="_blank">Admin-Bereich</a> anlegen.
+    <div class="p-3 rounded" style="background:#131929;border:1px solid #475569;">
+        <span class="text-muted small">
+            <i class="bi bi-info-circle me-1"></i>
+            Noch keine Autoren angelegt.
+            <a href="{% url 'authors:create' %}" class="text-primary" target="_blank">Jetzt anlegen</a>
+        </span>
     </div>
     {% endif %}
 </div>
 
 {% if is_edit %}
-<!-- Edit-only: Serie, Genre, Inhaltstyp als Dropdowns -->
 <div class="row g-3 mb-4">
     <div class="col-md-4">
         <label class="form-label small">Inhaltstyp</label>
@@ -268,17 +212,35 @@
 
 {% block extra_js %}
 <script>
-const authorDescriptions = {
-    {% for a in author_styles %}
-    "{{ a.pk }}": "{{ a.description|escapejs }}",
+const AUTHOR_STYLES = {
+    {% for a in authors %}
+    "{{ a.pk }}": [
+        {% for s in a.writing_styles.all %}
+        {"pk": "{{ s.pk }}", "name": "{{ s.name|escapejs }}", "desc": "{{ s.description|escapejs }}", "status": "{{ s.status }}"},
+        {% endfor %}
+    ],
     {% endfor %}
 };
-const authorSelect = document.getElementById('id_author_style');
-const authorDesc = document.getElementById('author-style-desc');
-if (authorSelect && authorDesc) {
-    authorSelect.addEventListener('change', () => {
-        authorDesc.textContent = authorDescriptions[authorSelect.value] || '';
+
+function updateStyleSelect(authorPk) {
+    const styleSelect = document.getElementById('style-select');
+    const desc = document.getElementById('style-desc');
+    styleSelect.innerHTML = '<option value="">— Schreibstil wählen —</option>';
+    desc.textContent = '';
+    const styles = AUTHOR_STYLES[authorPk] || [];
+    styles.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.pk;
+        opt.textContent = s.name + (s.status === 'ready' ? ' ✓' : ' (Entwurf)');
+        styleSelect.appendChild(opt);
     });
 }
+
+document.getElementById('style-select')?.addEventListener('change', function() {
+    const authorPk = document.getElementById('author-select').value;
+    const styles = AUTHOR_STYLES[authorPk] || [];
+    const sel = styles.find(s => s.pk === this.value);
+    document.getElementById('style-desc').textContent = sel?.desc || '';
+});
 </script>
 {% endblock %}

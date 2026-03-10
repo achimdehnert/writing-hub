@@ -22,6 +22,7 @@
         .text-muted { color: #64748b !important; }
         .brand { font-size: 1.1rem; font-weight: 700; color: #6366f1; letter-spacing: -.02em; padding: 1.25rem 1.5rem .75rem; }
     </style>
+    {% block extra_head %}{% endblock %}
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -34,6 +35,9 @@
         </a>
         <a href="{% url 'outlines:list' %}" class="nav-link {% block nav_outlines %}{% endblock %}">
             <i class="bi bi-list-ol"></i> Outlines
+        </a>
+        <a href="{% url 'authors:list' %}" class="nav-link {% block nav_authors %}{% endblock %}">
+            <i class="bi bi-person-badge"></i> Autoren
         </a>
         <a href="{% url 'series_html:list' %}" class="nav-link {% block nav_series %}{% endblock %}">
             <i class="bi bi-collection"></i> Serien

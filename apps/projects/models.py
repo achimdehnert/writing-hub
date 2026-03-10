@@ -69,28 +69,21 @@ class AuthorStyleLookup(models.Model):
     class Meta:
         db_table = "wh_author_style_lookup"
         ordering = ["order", "name"]
-        verbose_name = "Autor / Schreibstil"
-        verbose_name_plural = "Autoren / Schreibstile"
+        verbose_name = "Autor / Schreibstil (Legacy)"
+        verbose_name_plural = "Autoren / Schreibstile (Legacy)"
 
     def __str__(self):
         return self.name
 
 
 class OutlineFramework(models.Model):
-    """
-    Story-Framework (Drei-Akt, Save the Cat, etc.) — DB-driven, via Admin pflegbar.
-    Beliebig erweiterbar ohne Codeänderungen.
-    """
     key = models.SlugField(
         max_length=80, unique=True,
-        help_text="Eindeutiger Schlüssel, z.B. 'save_the_cat' (wird in OutlineVersion.source gespeichert)",
+        help_text="Eindeutiger Schlüssel, z.B. 'save_the_cat'",
     )
     name = models.CharField(max_length=200)
     subtitle = models.CharField(max_length=300, blank=True)
-    icon = models.CharField(
-        max_length=60, blank=True, default="bi-list-ol",
-        help_text="Bootstrap-Icon-Klasse, z.B. 'bi-star'",
-    )
+    icon = models.CharField(max_length=60, blank=True, default="bi-list-ol")
     description = models.TextField(blank=True)
     order = models.PositiveSmallIntegerField(default=0)
     is_active = models.BooleanField(default=True)
@@ -110,9 +103,6 @@ class OutlineFramework(models.Model):
 
 
 class OutlineFrameworkBeat(models.Model):
-    """
-    Einzelner Beat innerhalb eines OutlineFramework.
-    """
     framework = models.ForeignKey(
         OutlineFramework,
         on_delete=models.CASCADE,
@@ -121,14 +111,8 @@ class OutlineFrameworkBeat(models.Model):
     order = models.PositiveSmallIntegerField(default=0)
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    position_start = models.PositiveSmallIntegerField(
-        default=0,
-        help_text="Prozent-Position im Manuskript (Anfang), 0-100",
-    )
-    position_end = models.PositiveSmallIntegerField(
-        default=100,
-        help_text="Prozent-Position im Manuskript (Ende), 0-100",
-    )
+    position_start = models.PositiveSmallIntegerField(default=0)
+    position_end = models.PositiveSmallIntegerField(default=100)
 
     class Meta:
         db_table = "wh_outline_framework_beat"
@@ -178,11 +162,11 @@ class BookProject(models.Model):
         verbose_name="Zielgruppe",
         related_name="projects",
     )
-    author_style = models.ForeignKey(
-        AuthorStyleLookup,
+    writing_style = models.ForeignKey(
+        "authors.WritingStyle",
         on_delete=models.SET_NULL,
         null=True, blank=True,
-        verbose_name="Autor / Schreibstil",
+        verbose_name="Schreibstil",
         related_name="projects",
     )
 
@@ -226,7 +210,7 @@ class OutlineVersion(models.Model):
     name = models.CharField(max_length=200)
     source = models.CharField(
         max_length=80, default="manual",
-        help_text="Framework-Key (OutlineFramework.key) oder 'manual'/'ai'",
+        help_text="Framework-Key oder 'manual'/'ai'",
     )
     is_active = models.BooleanField(default=True)
     notes = models.TextField(blank=True)
@@ -243,9 +227,6 @@ class OutlineVersion(models.Model):
 
 
 class OutlineNode(models.Model):
-    """
-    Einzelner Beat/Kapitel innerhalb einer OutlineVersion.
-    """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     outline_version = models.ForeignKey(
         "OutlineVersion", on_delete=models.CASCADE, related_name="nodes"
@@ -263,19 +244,9 @@ class OutlineNode(models.Model):
     beat_type = models.CharField(max_length=20, choices=BEAT_TYPES, default="chapter")
     order = models.PositiveIntegerField(default=0)
     notes = models.TextField(blank=True)
-
-    content = models.TextField(
-        blank=True,
-        help_text="Kapitelinhalt (von Autor oder KI geschrieben)",
-    )
-    word_count = models.PositiveIntegerField(
-        default=0,
-        help_text="Anzahl Wörter im content-Feld (automatisch berechnet)",
-    )
-    content_updated_at = models.DateTimeField(
-        null=True, blank=True,
-        help_text="Zeitpunkt der letzten Inhalt-Änderung",
-    )
+    content = models.TextField(blank=True)
+    word_count = models.PositiveIntegerField(default=0)
+    content_updated_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = "wh_outline_nodes"
