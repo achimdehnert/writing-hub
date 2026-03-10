@@ -13,6 +13,8 @@ urlpatterns = [
     path("<uuid:pk>/write/", views_html.ChapterWriterView.as_view(), name="chapter_writer"),
     path("<uuid:pk>/outline/create/", views_html.OutlineCreateView.as_view(), name="outline_create"),
     path("<uuid:pk>/outline/generate/", views_html.OutlineGenerateView.as_view(), name="outline_generate"),
+    # Kapitelinhalt speichern/laden
+    path("node/<uuid:node_pk>/content/", views_html.ChapterContentView.as_view(), name="node_content"),
     # REST API
     path("api/", views.BookProjectListView.as_view(), name="api_list"),
     path("api/<uuid:pk>/", views.BookProjectDetailView.as_view(), name="api_detail"),

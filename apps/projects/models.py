@@ -1,8 +1,5 @@
 """
 Projects App — Buchprojekte, Outline, Kapitel (ADR-083)
-
-Extrahiert aus bfagent. BookProject ist der zentrale Anker für alle
-Authoring-Aktivitäten im writing-hub.
 """
 from __future__ import annotations
 
@@ -13,9 +10,6 @@ from django.db import models
 
 
 class ContentTypeLookup(models.Model):
-    """
-    Verwaltbare Inhaltstypen (Roman, Sachbuch, …) — via Django Admin pflegbar.
-    """
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=50, unique=True)
     order = models.PositiveSmallIntegerField(default=0)
@@ -31,9 +25,6 @@ class ContentTypeLookup(models.Model):
 
 
 class GenreLookup(models.Model):
-    """
-    Verwaltbare Genre-Liste (Fantasy, Thriller, …) — via Django Admin pflegbar.
-    """
     name = models.CharField(max_length=100, unique=True)
     order = models.PositiveSmallIntegerField(default=0)
 
@@ -48,9 +39,6 @@ class GenreLookup(models.Model):
 
 
 class AudienceLookup(models.Model):
-    """
-    Verwaltbare Zielgruppen (Erwachsene, Jugendliche, …) — via Django Admin pflegbar.
-    """
     name = models.CharField(max_length=200, unique=True)
     order = models.PositiveSmallIntegerField(default=0)
 
@@ -65,37 +53,22 @@ class AudienceLookup(models.Model):
 
 
 class BookProject(models.Model):
-    """
-    Buchprojekt — zentrales Objekt des Writing Hub.
-
-    Im Gegensatz zu bfagent.BookProjects ist dies die writing-hub-eigene
-    Repräsentation. Sync via API (ADR-083 Phase 3).
-    """
-
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="book_projects",
     )
-
-    bfagent_id = models.IntegerField(
-        null=True, blank=True, db_index=True,
-        help_text="ID des entsprechenden bfagent.BookProjects (für API-Sync)",
-    )
-
+    bfagent_id = models.IntegerField(null=True, blank=True, db_index=True)
     series = models.ForeignKey(
         "series.BookSeries",
         on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name="projects",
         verbose_name="Serie",
-        help_text="Buchserie zu der dieses Projekt gehört (optional)",
     )
-
     title = models.CharField(max_length=300)
     description = models.TextField(blank=True)
-
     content_type_lookup = models.ForeignKey(
         ContentTypeLookup,
         on_delete=models.SET_NULL,
@@ -103,7 +76,6 @@ class BookProject(models.Model):
         verbose_name="Inhaltstyp",
         related_name="projects",
     )
-
     genre_lookup = models.ForeignKey(
         GenreLookup,
         on_delete=models.SET_NULL,
@@ -111,7 +83,6 @@ class BookProject(models.Model):
         verbose_name="Genre",
         related_name="projects",
     )
-
     audience_lookup = models.ForeignKey(
         AudienceLookup,
         on_delete=models.SET_NULL,
@@ -130,11 +101,9 @@ class BookProject(models.Model):
     content_type = models.CharField(
         max_length=20, choices=ContentType.choices, default=ContentType.NOVEL
     )
-
     genre = models.CharField(max_length=100, blank=True)
     target_audience = models.CharField(max_length=200, blank=True)
     target_word_count = models.PositiveIntegerField(null=True, blank=True)
-
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -150,11 +119,6 @@ class BookProject(models.Model):
 
 
 class OutlineVersion(models.Model):
-    """
-    Versionierter Outline-Stand eines Projekts.
-    Nie überschreiben — immer neue Version anlegen.
-    """
-
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey(
         "BookProject", on_delete=models.CASCADE, related_name="outline_versions"
@@ -164,15 +128,13 @@ class OutlineVersion(models.Model):
         on_delete=models.SET_NULL,
         null=True, blank=True,
     )
-
     name = models.CharField(max_length=200)
     source = models.CharField(
         max_length=50, default="manual",
-        help_text="z.B. 'idea_import', 'manual', 'ai_generated'",
+        help_text="Framework-Key z.B. 'save_the_cat', 'three_act' oder 'manual'/'ai'",
     )
     is_active = models.BooleanField(default=True)
     notes = models.TextField(blank=True)
-
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -188,13 +150,13 @@ class OutlineVersion(models.Model):
 class OutlineNode(models.Model):
     """
     Einzelner Beat/Kapitel innerhalb einer OutlineVersion.
+    content: Vom Autor oder KI geschriebener Kapiteltext.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     outline_version = models.ForeignKey(
         "OutlineVersion", on_delete=models.CASCADE, related_name="nodes"
     )
-
     title = models.CharField(max_length=300)
     description = models.TextField(blank=True)
 
@@ -209,6 +171,19 @@ class OutlineNode(models.Model):
     order = models.PositiveIntegerField(default=0)
     notes = models.TextField(blank=True)
 
+    content = models.TextField(
+        blank=True,
+        help_text="Kapitelinhalt (von Autor oder KI geschrieben)",
+    )
+    word_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Anzahl Wörter im content-Feld (automatisch berechnet)",
+    )
+    content_updated_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Zeitpunkt der letzten Inhalt-Änderung",
+    )
+
     class Meta:
         db_table = "wh_outline_nodes"
         ordering = ["outline_version", "order"]
@@ -217,3 +192,10 @@ class OutlineNode(models.Model):
 
     def __str__(self):
         return f"{self.outline_version} — {self.order}. {self.title}"
+
+    def save(self, *args, **kwargs):
+        if self.content:
+            self.word_count = len(self.content.split())
+        else:
+            self.word_count = 0
+        super().save(*args, **kwargs)
