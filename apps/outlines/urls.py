@@ -9,6 +9,8 @@ urlpatterns = [
     path("<uuid:pk>/", views.OutlineDetailView.as_view(), name="detail"),
     path("<uuid:pk>/delete/", views.OutlineDeleteView.as_view(), name="delete"),
     path("<uuid:pk>/set-active/", views.OutlineSetActiveView.as_view(), name="set_active"),
+    path("<uuid:pk>/node/add/", views.OutlineNodeAddView.as_view(), name="node_add"),
     path("node/<uuid:pk>/update/", views.OutlineNodeUpdateView.as_view(), name="node_update"),
+    path("node/<uuid:pk>/delete/", views.OutlineNodeDeleteView.as_view(), name="node_delete"),
     path("node/<uuid:pk>/enrich/", views.OutlineNodeEnrichView.as_view(), name="node_enrich"),
 ]
