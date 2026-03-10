@@ -1,4 +1,3 @@
-import django.contrib.postgres.fields
 from django.db import migrations, models
 
 
@@ -22,7 +21,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="writingstyle",
             name="taboo_list",
-            field=models.JSONField(default=list, help_text="Tabu-Wörter"),
+            field=models.JSONField(default=list, help_text="Tabu-W\u00f6rter"),
         ),
         migrations.AddField(
             model_name="writingstyle",
