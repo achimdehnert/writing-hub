@@ -1,0 +1,52 @@
+site_name: Writing Hub
+site_description: Autorenplattform — Dokumentation für Anwender, Entwickler und Architekten
+site_url: https://devhub.iil.pet/techdocs/writing-hub/
+repo_url: https://github.com/achimdehnert/writing-hub
+repo_name: achimdehnert/writing-hub
+
+nav:
+  - Übersicht: index.md
+  - Anwender-Guide:
+    - Schnellstart: user/quickstart.md
+    - Projekte: user/projects.md
+    - Ideen-Studio: user/ideen-studio.md
+    - Style Lab: user/style-lab.md
+    - WeltenHub-Integration: user/welten.md
+    - Lektorat & Review: user/lektorat.md
+  - Entwickler-Guide:
+    - Architektur: dev/architecture.md
+    - Setup & Lokal: dev/setup.md
+    - Apps & Modelle: dev/apps.md
+    - iil Packages: dev/iil-packages.md
+    - LLM-Integration: dev/llm-integration.md
+    - Tests: dev/testing.md
+    - CI/CD: dev/cicd.md
+  - IT-Architektur:
+    - Systemübersicht: arch/overview.md
+    - Datenmodell: arch/datamodel.md
+    - WeltenHub SSoT: arch/weltenhub-ssot.md
+    - Deployment: arch/deployment.md
+    - ADRs: arch/adrs.md
+
+theme:
+  name: material
+  language: de
+  palette:
+    - scheme: slate
+      primary: indigo
+      accent: purple
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - search.suggest
+    - content.code.copy
+
+markdown_extensions:
+  - tables
+  - fenced_code
+  - toc:
+      permalink: true
+  - admonition
+  - pymdownx.superfences
+  - pymdownx.tabbed
