@@ -2,72 +2,77 @@
 
 ## Warum?
 
-Staging und Production m\u00fcssen identisch konfiguriert sein.
-Manueller Admin-Eingriff nach jedem Deploy ist fehleranf\u00e4llig.
+Staging und Production müssen identisch konfiguriert sein.
+Manueller Admin-Eingriff nach jedem Deploy ist fehleranfällig.
 
 ## Kategorien
 
-### Kategorie A \u2014 Fixtures (JSON im Repo)
-Stammdaten die \u00fcberall gleich sind und versioniert werden m\u00fcssen:
+### Kategorie A — Fixtures (JSON im Repo)
+Stammdaten die überall gleich sind und versioniert werden müssen:
 
 | Fixture | Inhalt |
-|---|---|
+|---------|--------|
 | `fixtures/initial_lookups.json` | ContentTypeLookup, GenreLookup, AudienceLookup |
 | `fixtures/initial_quality.json` | QualityDimension, GateDecisionType |
 
-Fixtures werden bei **jedem Deploy automatisch** via `seed_all` geladen (`loaddata` ist idempotent bei PK-Konflikten).
+Fixtures werden bei **jedem Deploy automatisch** via `seed_all` geladen (`loaddata` ist idempotent).
 
-### Kategorie B \u2014 Management Commands (Code-gesteuert)
-Konfiguration mit Umgebungsabh\u00e4ngigkeiten (Provider, Modell):
+### Kategorie B — Management Commands (Code-gesteuert)
 
 | Command | Zweck |
-|---|---|
+|---------|-------|
 | `setup_aifw_actions` | LLMProvider + LLMModel + AIActionType anlegen |
 | `seed_all` | Orchestriert alle Seeds in richtiger Reihenfolge |
 
-### Kategorie C \u2014 Umgebungsvariablen (.env)
-Sensible Konfiguration **niemals** in Fixtures oder Code:
+Konfigurierte `action_codes` für aifw:
+
+| action_code | Zweck |
+|-------------|-------|
+| `world_generate` | Vollständige Weltgenerierung |
+| `world_expand` | Einzelnen Welt-Aspekt vertiefen |
+| `world_locations` | Orte für eine Welt generieren |
+| `character_generate` | Charaktere / Besetzung generieren |
+| `scene_generate` | Szenen generieren |
+| `chapter_analyze` | Kapitel-Review / Lektorat |
+| `idea_brainstorm` | Buchideen brainstormen (Ideen-Studio) |
+| `idea_refine` | Idee verfeinern |
+| `idea_premise` | Premise aus Idee generieren |
+| `style_extract` | DO/DONT/Taboo aus Quelltext extrahieren |
+
+### Kategorie C — Umgebungsvariablen (.env)
 
 | Variable | Zweck |
-|---|---|
+|----------|-------|
 | `OPENAI_API_KEY` | OpenAI API-Key |
 | `DJANGO_SECRET_KEY` | Django Secret |
 | `DATABASE_URL` | DB-Verbindung |
-
-Diese werden **nicht** geseedet \u2014 m\u00fcssen in `.env.staging` und `.env.production` gesetzt sein.
+| `WELTENHUB_URL` | WeltenHub REST URL |
+| `WELTENHUB_TOKEN` | WeltenHub Service-Token |
+| `REDIS_URL` | Celery Broker |
 
 ## Deploy-Ablauf (automatisch)
 
 ```
 Deploy startet
-  \u2514 migrate --noinput
-  \u2514 collectstatic
-  \u2514 seed_all
-      \u2514 loaddata fixtures/initial_lookups.json    (idempotent)
-      \u2514 loaddata fixtures/initial_quality.json     (idempotent)
-      \u2514 setup_aifw_actions                         (idempotent)
-  \u2514 gunicorn start
+  └ migrate --noinput
+  └ collectstatic
+  └ seed_all
+      └ loaddata fixtures/initial_lookups.json    (idempotent)
+      └ loaddata fixtures/initial_quality.json     (idempotent)
+      └ setup_aifw_actions                         (idempotent)
+  └ gunicorn start
 ```
 
-## Neue Stammdaten hinzuf\u00fcgen
+## Neue Stammdaten hinzufügen
 
 1. Fixture-Datei updaten (oder neue anlegen)
-2. Commit + Push \u2192 n\u00e4chster Deploy \u00fcbertr\u00e4gt automatisch auf Staging + Production
-3. Kein manueller Admin-Eingriff n\u00f6tig
-
-## aifw-Konfiguration \u00e4ndern (Modell wechseln)
-
-```bash
-# Auf Staging oder Production:
-python manage.py setup_aifw_actions --model gpt-4o --force
-
-# Oder: Standard-Modell im Command \u00e4ndern + deployen
-# apps/projects/management/commands/setup_aifw_actions.py \u2192 ACTION_CODES Default
-```
+2. Commit + Push → nächster Deploy überträgt automatisch
+3. Kein manueller Admin-Eingriff nötig
 
 ## Was NICHT in Fixtures kommt
 
-- `auth.User` \u2014 immer umgebungsspezifisch
-- `BookProject`, `BookSeries` \u2014 Nutzerdaten
-- `IdeaImportDraft`, `OutlineVersion` \u2014 Transaktionsdaten
-- `AuthorStyleDNA`, `ChapterQualityScore` \u2014 Nutzerdaten
+- `auth.User` — immer umgebungsspezifisch
+- `BookProject`, `BookSeries` — Nutzerdaten
+- `IdeaImportDraft`, `CreativeSession`, `BookIdea` — Transaktionsdaten
+- `WritingStyle`, `AuthorStyleDNA` — Nutzerdaten
+- `ProjectWorldLink`, `ProjectCharacterLink`, `ProjectLocationLink`, `ProjectSceneLink` — Nutzerdaten

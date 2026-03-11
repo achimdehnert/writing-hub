@@ -1,6 +1,4 @@
-# Writing Hub — Datenmigrations-Anleitung (ADR-083)
-
-Vollständige Setup-Reihenfolge nach Deployment von writing-hub.
+# Writing Hub — Datenmigrations-Anleitung
 
 ## 1. Migrations ausführen
 
@@ -8,96 +6,77 @@ Vollständige Setup-Reihenfolge nach Deployment von writing-hub.
 python manage.py migrate
 ```
 
-## 2. Lookup-Daten seeden (writing-hub)
+Aktuelle Migration-Struktur `worlds`:
+- `0001_initial` — World (Legacy)
+- `0002_projektlinks` — `ProjectWorldLink`, `ProjectCharacterLink`
+- `0003_location_scene_links` — `ProjectLocationLink`, `ProjectSceneLink`
+
+## 2. Lookup-Daten seeden
 
 **Pflicht — muss vor erster Nutzung ausgeführt werden:**
 
 ```bash
-# Quality Gate Entscheidungstypen (approve, review, revise, reject)
-python manage.py seed_quality_gate_decisions
+python manage.py seed_all
+# Orchestriert:
+#   loaddata fixtures/initial_lookups.json   (idempotent)
+#   loaddata fixtures/initial_quality.json   (idempotent)
+#   setup_aifw_actions                       (idempotent)
+```
 
-# Qualitätsdimensionen (style, genre, scene, serial_logic, pacing, dialogue)
+Oder einzeln:
+
+```bash
+python manage.py seed_quality_gate_decisions
 python manage.py seed_quality_dimensions
 ```
 
-## 3. Datenmigration aus bfagent
+## 3. WeltenHub-Konfiguration
 
-**In bfagent ausführen** (Produktionsdaten übertragen):
+In `.env` müssen gesetzt sein:
 
-```bash
-# Dry-run zuerst
-python manage.py migrate_worlds_to_world_sst --dry-run
-python manage.py migrate_characters_to_world_sst --dry-run
-
-# Tatsächliche Migration
-python manage.py migrate_worlds_to_world_sst
-python manage.py migrate_characters_to_world_sst
+```env
+WELTENHUB_URL=https://weltenhub.iil.pet
+WELTENHUB_TOKEN=<service-token>
 ```
 
-### Einzelnes Projekt testen
-
-```bash
-python manage.py migrate_worlds_to_world_sst --project-id 42 --dry-run
-python manage.py migrate_characters_to_world_sst --project-id 42 --dry-run
-```
+`iil-weltenfw[django]` liest diese Variablen automatisch und stellt
+`weltenfw.django.get_client()` bereit.
 
 ## 4. Verifikation
 
-**In bfagent-Shell:**
-
 ```python
-from apps.writing_hub.models_world import WorldCharacter, World
-print(f'WorldCharacter: {WorldCharacter.objects.count()}')
-print(f'World (SSoT): {World.objects.count()}')
+# writing-hub Shell:
+from apps.worlds.models import ProjectWorldLink, ProjectCharacterLink
+from apps.worlds.models import ProjectLocationLink, ProjectSceneLink
+print(f'World-Links:     {ProjectWorldLink.objects.count()}')
+print(f'Char-Links:      {ProjectCharacterLink.objects.count()}')
+print(f'Location-Links:  {ProjectLocationLink.objects.count()}')
+print(f'Scene-Links:     {ProjectSceneLink.objects.count()}')
+
+# WeltenHub-Verbindung testen:
+from weltenfw.django import get_client
+client = get_client()
+print(client.worlds.list())
 ```
 
-**In writing-hub-Shell:**
-
-```python
-from apps.authoring.models import QualityDimension, GateDecisionType
-print(f'Dimensionen: {QualityDimension.objects.filter(is_active=True).count()}')
-print(f'Gate-Typen: {GateDecisionType.objects.count()}')
-from apps.worlds.models import World, WorldCharacter
-print(f'Welten: {World.objects.count()}')
-print(f'Charaktere: {WorldCharacter.objects.count()}')
-```
-
-## 5. Rollback
-
-Da `get_or_create` / `update_or_create` verwendet werden und Legacy-Daten
-**nicht gelöscht** werden, ist kein Rollback notwendig. Die Legacy-Tabellen
-(`characters`, `worlds`) in bfagent bleiben vollständig erhalten.
-
----
-
-## API-Endpunkte (Phase 3)
+## 5. API-Endpunkte
 
 | Endpunkt | Methode | Beschreibung |
 |----------|---------|--------------|
-| `/health/` | GET | Health-Check (kein Auth) |
-| `/api/v1/health/` | GET | API Health-Check |
-| `/api/v1/worlds/` | GET | Welten des Users |
-| `/api/v1/worlds/<id>/characters/` | GET | Charaktere einer Welt |
-| `/api/v1/projects/<id>/outline/` | GET | Aktiver Outline |
-| `/api/v1/idea-import/` | POST | Neuen Import starten |
-| `/api/v1/authoring/projects/<id>/chapters/<ref>/write/` | POST | Kapitel async schreiben |
-| `/api/v1/authoring/jobs/<job_id>/status/` | GET | Job-Status polling |
-| `/api/v1/authoring/projects/<id>/chapters/<ref>/quality/` | GET/POST | Quality Score |
+| `/health/` | GET | Health-Check |
+| `/welten/` | GET | Welten-Übersicht (HTML) |
+| `/welten/<pk>/` | GET | Welt-Detail mit Charakteren + Orten (HTML) |
+| `/welten/generate/` | POST | Welt generieren (LLM → WeltenHub) |
+| `/welten/<pk>/characters/generate/` | POST | Charaktere generieren |
+| `/welten/<pk>/locations/generate/` | POST | Orte generieren |
+| `/api/worlds/` | GET/POST | Welten REST API |
+| `/api/worlds/<id>/characters/` | GET/POST | Charaktere REST API |
+| `/ideen/` | GET | Ideen-Import Liste |
+| `/ideen/studio/` | GET | Ideen-Studio Kreativagent |
+| `/projects/import/` | GET/POST | Markdown-Import |
+| `/autoren/<pk>/stil/` | GET | Style Lab |
 
-```bash
-# Health-Check
-curl https://writing.bfagent.iil.pet/health/
-# {"status": "ok"}
-```
+## 6. Rollback
 
----
-
-## Seed-Reihenfolge (komplett)
-
-```bash
-python manage.py migrate
-python manage.py seed_quality_gate_decisions
-python manage.py seed_quality_dimensions
-# Optional: Superuser anlegen
-python manage.py createsuperuser
-```
+Alle Seeds verwenden `get_or_create` / `update_or_create` — vollständig idempotent.
+Legacy-Daten werden nicht gelöscht.
