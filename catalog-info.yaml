@@ -1,0 +1,53 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: writing-hub
+  title: Writing Hub
+  description: |
+    KI-gestützte Autorenplattform der iil-Plattform.
+    Buchprojekte, Ideen-Studio, Style Lab, WeltenHub-Integration, Lektorat & Review.
+  labels:
+    app: writing-hub
+    platform: iil
+    language: python
+    framework: django
+  annotations:
+    github.com/project-slug: achimdehnert/writing-hub
+    backstage.io/techdocs-ref: dir:.
+  links:
+    - url: https://writing.iil.pet
+      title: Production
+      icon: web
+    - url: https://staging.writing.iil.pet
+      title: Staging
+      icon: web
+    - url: https://github.com/achimdehnert/writing-hub
+      title: GitHub Repository
+      icon: github
+spec:
+  type: service
+  lifecycle: production
+  owner: achimdehnert
+  system: iil-platform
+  dependsOn:
+    - component:weltenhub
+    - resource:postgresql
+    - resource:redis
+  providesApis:
+    - writing-hub-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: writing-hub-api
+  title: Writing Hub REST API
+  description: REST API für Buchprojekte, Welten, Charaktere und Ideen.
+  annotations:
+    github.com/project-slug: achimdehnert/writing-hub
+spec:
+  type: openapi
+  lifecycle: production
+  owner: achimdehnert
+  system: iil-platform
+  definition:
+    $text: https://writing.iil.pet/api/schema/
