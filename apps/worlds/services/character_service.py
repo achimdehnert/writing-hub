@@ -7,11 +7,10 @@ via iil-weltenfw REST Client.
 
 Packages:
   - iil-aifw:       sync_completion() — LLM-Calls
-  - iil-promptfw:   PromptStack — strukturierte Prompts
+  - iil-promptfw:   PromptStack.render_to_messages() — strukturierte Prompts
   - iil-authoringfw: CharacterProfile — typisiertes Schema
-  - iil-weltenfw:   get_client().characters.create() — WeltenHub API
+  - iil-weltenfw:   get_client().characters.create/list — WeltenHub API
 """
-
 from __future__ import annotations
 
 import json
@@ -41,14 +40,8 @@ class WorldCharacterService:
 
     Verwendung:
         svc = WorldCharacterService()
-
-        # Besetzung generieren:
         result = svc.generate_cast(world_id, project_id, count=5)
-
-        # In WeltenHub speichern:
         ids = svc.save_to_weltenhub(world_id, result.characters)
-
-        # Projekt verknuepfen:
         svc.link_to_project(project_id, ids)
 
     aifw action_code: character_generate
@@ -67,40 +60,20 @@ class WorldCharacterService:
     ) -> CharacterGenerationResult:
         """
         Charakter-Besetzung generieren.
-
-        Nutzt authoringfw.CharacterProfile fuer typisierte Prompt-Konstruktion.
-        Nutzt aifw via LLMRouter (action_code=character_generate).
-        Ergebnis: Liste von Charakter-Dicts (WeltenHub CharacterCreateInput-Format).
+        Nutzt promptfw.PromptStack.render_to_messages() wenn Template vorhanden.
+        Nutzt authoringfw.CharacterProfile für typisierte Prompt-Konstruktion.
         """
         world_ctx = self._get_world_context(weltenhub_world_id)
         project_ctx = self._get_project_context(project_id)
         existing = self._get_existing_character_names(weltenhub_world_id)
 
-        messages = [
-            {
-                "role": "system",
-                "content": (
-                    "Du bist ein kreativer Charakter-Entwickler fuer Romane. "
-                    "Erstelle tiefe, glaubwuerdige Figuren. "
-                    "Antworte ausschliesslich mit einem JSON-Array.\n\n"
-                    + world_ctx
-                    + "\n"
-                    + project_ctx
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"Generiere {count} Charaktere."
-                    + (f" Anforderungen: {requirements}" if requirements else "")
-                    + (f" Nicht duplizieren: {existing}" if existing else "")
-                    + "\n\nJSON-Array:\n"
-                    '[{"name": "", "personality": "", "backstory": "", '
-                    '"goals": "", "fears": "", "appearance": "", '
-                    '"is_protagonist": false}]'
-                ),
-            },
-        ]
+        messages = self._build_cast_messages(
+            world_ctx=world_ctx,
+            project_ctx=project_ctx,
+            count=count,
+            requirements=requirements,
+            existing=existing,
+        )
 
         try:
             raw = self._router.completion(
@@ -123,8 +96,7 @@ class WorldCharacterService:
         """
         Bestehenden Charakter aus WeltenHub laden, via LLM bereichern,
         und in WeltenHub aktualisieren.
-
-        Nutzt authoringfw.CharacterProfile fuer strukturierten Kontext.
+        Nutzt authoringfw.CharacterProfile für strukturierten Kontext.
         """
         from weltenfw.django import get_client
         from weltenfw.schema.character import CharacterUpdateInput
@@ -136,14 +108,13 @@ class WorldCharacterService:
             logger.error("enrich_character: Charakter nicht gefunden: %s", exc)
             return {}
 
-        # authoringfw.CharacterProfile fuer Prompt-Kontext
         char_ctx = self._build_character_context(char)
 
         messages = [
             {
                 "role": "system",
                 "content": (
-                    "Du bist ein Experte fuer tiefe Romanfiguren. "
+                    "Du bist ein Experte für tiefe Romanfiguren. "
                     "Bereichere den Charakter mit psychologischer Tiefe. "
                     "Antworte mit einem JSON-Objekt."
                 ),
@@ -153,8 +124,7 @@ class WorldCharacterService:
                 "content": (
                     f"Charakter:\n{char_ctx}\n\n"
                     "Vertiefe: personality, backstory, goals, fears. "
-                    "JSON: {\"personality\": \"\", \"backstory\": \"\", "
-                    "\"goals\": \"\", \"fears\": \"\"}"
+                    'JSON: {"personality": "", "backstory": "", "goals": "", "fears": ""}'
                 ),
             },
         ]
@@ -165,7 +135,6 @@ class WorldCharacterService:
                 quality_level=quality_level, priority="quality"
             )
             data = self._extract_json_object(raw)
-            # WeltenHub aktualisieren
             client.characters.update(
                 weltenhub_character_id,
                 CharacterUpdateInput(
@@ -188,16 +157,12 @@ class WorldCharacterService:
         weltenhub_world_id: UUID,
         characters: list[dict],
     ) -> list[UUID]:
-        """
-        Generierte Charaktere via iil-weltenfw in WeltenHub speichern.
-        Gibt Liste der erstellten Charakter-UUIDs zurueck.
-        """
+        """Generierte Charaktere via iil-weltenfw in WeltenHub speichern."""
         from weltenfw.django import get_client
         from weltenfw.schema.character import CharacterCreateInput
 
         client = get_client()
         created_ids = []
-
         for char_data in characters:
             try:
                 char = client.characters.create(
@@ -218,7 +183,6 @@ class WorldCharacterService:
                 logger.debug("WorldCharacterService: Charakter '%s' erstellt: %s", char.name, char.id)
             except Exception as exc:
                 logger.error("save_to_weltenhub: Charakter '%s' Fehler: %s", char_data.get("name"), exc)
-
         return created_ids
 
     def link_to_project(
@@ -227,7 +191,7 @@ class WorldCharacterService:
         character_ids: list[UUID],
         project_arc_map: dict[str, str] | None = None,
     ) -> int:
-        """Charaktere mit lokalem Projekt verknuepfen via ProjectCharacterLink."""
+        """Charaktere mit lokalem Projekt verknüpfen via ProjectCharacterLink."""
         from apps.projects.models import BookProject
         from apps.worlds.models import ProjectCharacterLink
 
@@ -235,7 +199,6 @@ class WorldCharacterService:
             project = BookProject.objects.get(pk=project_id)
         except Exception:
             return 0
-
         arc_map = project_arc_map or {}
         count = 0
         for char_id in character_ids:
@@ -247,13 +210,8 @@ class WorldCharacterService:
             count += 1
         return count
 
-    def get_project_characters(
-        self, project_id: str
-    ) -> list:
-        """
-        Alle Charaktere eines Projekts aus WeltenHub laden.
-        Gibt Liste von weltenfw.schema.character.CharacterSchema zurueck.
-        """
+    def get_project_characters(self, project_id: str) -> list:
+        """Alle Charaktere eines Projekts aus WeltenHub laden."""
         from apps.worlds.models import ProjectCharacterLink
         from weltenfw.django import get_client
 
@@ -268,8 +226,20 @@ class WorldCharacterService:
                 logger.warning("get_project_characters: %s", exc)
         return characters
 
+    def get_world_characters(self, weltenhub_world_id: UUID) -> list:
+        """
+        Alle Charaktere einer Welt direkt aus WeltenHub laden.
+        Nutzt list(world=world_id) Filter — kein iter_all() mehr.
+        """
+        from weltenfw.django import get_client
+        try:
+            page = get_client().characters.list(world=str(weltenhub_world_id))
+            return list(page.results)
+        except Exception as exc:
+            logger.warning("get_world_characters: %s", exc)
+            return []
+
     def _get_world_context(self, world_id: UUID) -> str:
-        """Welt-Kontext von WeltenHub laden."""
         try:
             from weltenfw.django import get_client
             world = get_client().worlds.get(world_id)
@@ -286,16 +256,63 @@ class WorldCharacterService:
             return ""
 
     def _get_existing_character_names(self, world_id: UUID) -> list[str]:
+        """Vorhandene Namen aus WeltenHub per world-Filter laden (kein iter_all)."""
         try:
-            from weltenfw.django import get_client
-            chars = list(get_client().characters.iter_all())
-            return [c.name for c in chars if str(getattr(c, 'world', '')) == str(world_id)][:30]
+            chars = self.get_world_characters(world_id)
+            return [c.name for c in chars][:30]
         except Exception:
             return []
 
     @staticmethod
+    def _build_cast_messages(
+        world_ctx: str,
+        project_ctx: str,
+        count: int,
+        requirements: str,
+        existing: list[str],
+    ) -> list[dict]:
+        """promptfw render_to_messages() wenn verfügbar, sonst inline."""
+        try:
+            from promptfw import PromptStack
+            stack = PromptStack()
+            if stack.has_template("character_generate"):
+                return stack.render_to_messages(
+                    "character_generate",
+                    world_ctx=world_ctx,
+                    project_ctx=project_ctx,
+                    count=count,
+                    requirements=requirements,
+                    existing=existing,
+                )
+        except Exception:
+            pass
+        return [
+            {
+                "role": "system",
+                "content": (
+                    "Du bist ein kreativer Charakter-Entwickler für Romane. "
+                    "Erstelle tiefe, glaubwürdige Figuren. "
+                    "Antworte ausschließlich mit einem JSON-Array.\n\n"
+                    + world_ctx + "\n" + project_ctx
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"Generiere {count} Charaktere."
+                    + (f" Anforderungen: {requirements}" if requirements else "")
+                    + (f" Nicht duplizieren: {existing}" if existing else "")
+                    + "\n\nJSON-Array:\n"
+                    '[{"name": "", "personality": "", "backstory": "", '
+                    '"goals": "", "fears": "", "appearance": "", '
+                    '"is_protagonist": false}]'
+                ),
+            },
+        ]
+
+    @staticmethod
     def _build_character_context(char) -> str:
-        """authoringfw.CharacterProfile fuer Prompt-Kontext."""
+        """authoringfw.CharacterProfile für Prompt-Kontext."""
         try:
             from authoringfw import CharacterProfile
             profile = CharacterProfile(
@@ -308,7 +325,7 @@ class WorldCharacterService:
             )
             return profile.to_context_string()
         except Exception:
-            return f"Name: {char.name}, Persoenlichkeit: {char.personality or ''}"
+            return f"Name: {char.name}, Persönlichkeit: {char.personality or ''}"
 
     @staticmethod
     def _parse_characters(raw: str) -> list[dict]:

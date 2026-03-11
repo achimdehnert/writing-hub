@@ -5,4 +5,8 @@ app_name = "worlds_html"
 
 urlpatterns = [
     path("", views_html.WorldListView.as_view(), name="list"),
+    path("<uuid:pk>/", views_html.ProjectWorldDetailView.as_view(), name="detail"),
+    path("generate/", views_html.WorldGenerateView.as_view(), name="generate"),
+    path("<uuid:pk>/characters/generate/", views_html.WorldCharacterGenerateView.as_view(), name="characters_generate"),
+    path("<uuid:pk>/locations/generate/", views_html.WorldLocationGenerateView.as_view(), name="locations_generate"),
 ]
