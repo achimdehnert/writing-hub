@@ -13,6 +13,7 @@ urlpatterns = [
     path("healthz/", readiness, name="healthz"),
     path("readyz/", readiness, name="readyz"),
     path("admin/", admin.site.urls),
+        path("oidc/", include("mozilla_django_oidc.urls")),
     path("accounts/", include("django.contrib.auth.urls")),
     path("", include("apps.core.urls", namespace="core")),
     path("projects/", include("apps.projects.urls", namespace="projects")),

@@ -81,6 +81,12 @@ DATABASES = {
     }
 }
 
+
+AUTHENTICATION_BACKENDS = [
+    "apps.accounts.auth.IILOIDCAuthenticationBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -157,3 +163,16 @@ LOGIN_REDIRECT_URL = "/projects/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
 
 ADMIN_MEDIA_PREFIX = "/static/admin/"
+
+# --- authentik OIDC (ADR-142) ---
+OIDC_RP_CLIENT_ID = os.environ.get("OIDC_RP_CLIENT_ID", "")
+OIDC_RP_CLIENT_SECRET = os.environ.get("OIDC_RP_CLIENT_SECRET", "")
+_OIDC_APP_SLUG = os.environ.get("OIDC_APP_SLUG", "writing-hub")
+_IDP = "https://id.iil.pet/application/o"
+OIDC_OP_AUTHORIZATION_ENDPOINT = f"{_IDP}/authorize/"
+OIDC_OP_TOKEN_ENDPOINT = f"{_IDP}/token/"
+OIDC_OP_USER_ENDPOINT = f"{_IDP}/userinfo/"
+OIDC_OP_JWKS_ENDPOINT = f"{_IDP}/{_OIDC_APP_SLUG}/jwks/"
+OIDC_RP_SIGN_ALGO = "RS256"
+OIDC_RP_SCOPES = "openid email profile"
+LOGOUT_REDIRECT_URL = "/"

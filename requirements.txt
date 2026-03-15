@@ -86,3 +86,4 @@ PyJWT==2.10.1
 
 # LLM provider (transitive via aifw/litellm)
 litellm>=1.30
+mozilla-django-oidc>=4.0
