@@ -82,11 +82,11 @@ class DramaDashboardService:
     def get_tension_chart_data(self) -> dict:
         """
         Gibt Chart.js-kompatibles JSON zurück.
-        Kein ORM direkt — nur Service-Layer (SL-001).
+        ORM-Zugriff ist im Service-Layer erlaubt (SL-001: kein ORM in Views).
         """
         nodes = OutlineNode.objects.filter(
             outline__project=self.project
-        ).select_related("outcome").order_by("sort_order")
+        ).select_related("outcome", "emotion_start", "emotion_end").order_by("sort_order")
         return {
             "labels": [n.title for n in nodes],
             "datasets": [{
@@ -95,6 +95,17 @@ class DramaDashboardService:
                     self._outcome_color(n.outcome) for n in nodes
                 ],
             }],
+            "emotion_deltas": [
+                {
+                    "start": n.emotion_start.label if n.emotion_start else None,
+                    "end":   n.emotion_end.label if n.emotion_end else None,
+                    "delta": (
+                        (n.emotion_end.valence or 0) - (n.emotion_start.valence or 0)
+                        if n.emotion_start and n.emotion_end else None
+                    ),
+                }
+                for n in nodes
+            ],
         }
 
     def get_turning_points(self) -> list:
@@ -113,7 +124,7 @@ class DramaDashboardService:
 
 **HTMX Lazy-Load** verhindert langsame Projektseite bei vielen Kapiteln:
 ```html
-<div hx-get="/projekte/{{ project.pk }}/drama/data/"
+<div hx-get="{% url 'projects:drama_data' project.pk %}"
      hx-trigger="load"
      hx-swap="innerHTML">
   <div class="spinner">Lade Daten...</div>
@@ -122,15 +133,31 @@ class DramaDashboardService:
 
 ### Teil B: Content-Type-spezifische UIs
 
-`BookProject.content_type` bestimmt, welche Tabs im Projekt-Detail erscheinen:
+`BookProject.content_type` bestimmt, welche Tabs im Projekt-Detail erscheinen.
+Die Mapping-Konstante lebt in `apps/projects/constants.py` — nicht in der View:
 
 ```python
-CONTENT_TYPE_TAB_MAP = {
+# apps/projects/constants.py
+CONTENT_TYPE_TAB_MAP: dict[str, list[str]] = {
     "roman":          ["outline", "kapitel", "drama", "welten", "lektorat"],
     "essay":          ["essay_outline", "kapitel", "lektorat"],
     "serie":          ["serie_uebersicht", "baende", "shared_chars", "drama"],
     "kurzgeschichte": ["outline", "kapitel", "lektorat"],
 }
+```
+
+View-Nutzung:
+```python
+# apps/projects/views_html.py
+from projects.constants import CONTENT_TYPE_TAB_MAP
+
+def project_detail(request, pk):
+    project = get_object_or_404(BookProject, pk=pk, owner=request.user)
+    context = {
+        "project": project,
+        "content_type_tabs": CONTENT_TYPE_TAB_MAP.get(project.content_type, []),
+    }
+    return render(request, "projects/project_detail.html", context)
 ```
 
 Template-Logik in `project_detail.html`:
@@ -148,25 +175,31 @@ Template-Logik in `project_detail.html`:
 Argumentationsbaum: These / Antithese / Synthese mit `ArgumentNode`-Hierarchie.
 
 ```python
+import uuid
+
 class ArgumentNode(models.Model):
     """
     Knoten im Argumentationsbaum eines Essays.
     Unterscheidet sich strukturell vom Roman-OutlineNode:
     kein Spannungs-Tracking, stattdessen Claim/Evidence/Counter-System.
     """
-    project      = models.ForeignKey(BookProject, on_delete=models.CASCADE,
-                                     related_name="argument_nodes")
-    parent       = models.ForeignKey("self", null=True, blank=True,
-                                     on_delete=models.CASCADE, related_name="children")
-    node_type    = models.CharField(max_length=20,
-                                    choices=[("claim","These"),("evidence","Beleg"),
-                                             ("counter","Gegenargument"),("synthesis","Synthese")])
-    content      = models.TextField()
-    sort_order   = models.PositiveSmallIntegerField(default=0)
+    id        = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project   = models.ForeignKey(BookProject, on_delete=models.CASCADE,
+                                   related_name="argument_nodes")
+    parent    = models.ForeignKey("self", null=True, blank=True,
+                                   on_delete=models.CASCADE, related_name="children")
+    node_type = models.CharField(max_length=20,
+                                  choices=[("claim","These"),("evidence","Beleg"),
+                                           ("counter","Gegenargument"),("synthesis","Synthese")])
+    content    = models.TextField()
+    sort_order = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
         db_table = "wh_argument_nodes"
         ordering = ["sort_order"]
+
+    def __str__(self):
+        return f"{self.node_type}: {self.content[:60]}"
 ```
 
 KI-Generierung via HTMX:
@@ -178,10 +211,23 @@ KI-Generierung via HTMX:
 </form>
 ```
 
-**Serien-UI** (`/projekte/<pk>/serie/`):
-- Band-Übersicht mit Arc-Fortschritt pro Band
-- `SharedCharacter`/`SharedWorld`-Konsistenz-Check via LLM
-- Arc-Tracking: In welchem Band wird welcher Charakter-Arc aufgelöst?
+**Serien-UI — Scope explizit begrenzt (ADR-155 ausstehend):**
+
+> **Hinweis:** Die Serien-UI ist in diesem ADR bewusst nicht vollständig spezifiziert.
+> Die benötigten Modelle (`SeriesVolume`, `SharedCharacterLink`, `SharedWorldLink`)
+> existieren noch nicht. Ein eigenes **ADR-155: Serien-Dramaturgie** muss diese
+> Modelle definieren, bevor die UI implementiert werden kann.
+>
+> Was in ADR-154 festgelegt wird:
+> - `serie` ist ein gültiger `content_type` im `CONTENT_TYPE_TAB_MAP`
+> - Die Tabs `["serie_uebersicht", "baende", "shared_chars", "drama"]` sind reserviert
+> - Die Tab-URLs werden bei ADR-155-Implementierung ergänzt
+>
+> Was in ADR-155 zu entscheiden ist:
+> - `SeriesVolume` (Band-Modell, FK auf BookProject-Serie)
+> - `SharedCharacterLink` (Figur tritt in mehreren Bänden auf)
+> - Arc-Tracking über Bände hinweg
+> - Konsistenz-Check-Service via LLM
 
 ### Teil C: ProjectTheme & ProjectMotif (Prio 2, neue Datei: `apps/projects/models_theme.py`)
 
@@ -224,6 +270,7 @@ class ProjectMotif(models.Model):
 class MotifAppearance(models.Model):
     """
     Erscheinen eines Motivs in einer Szene.
+    Pro Motiv/Szene/Funktion-Kombination genau ein Eintrag.
     """
     motif        = models.ForeignKey(ProjectMotif, on_delete=models.CASCADE,
                                      related_name="appearances")
@@ -234,7 +281,13 @@ class MotifAppearance(models.Model):
     note         = models.TextField(blank=True, default="")
 
     class Meta:
-        db_table = "wh_motif_appearances"
+        db_table        = "wh_motif_appearances"
+        unique_together = [("motif", "outline_node", "function")]
+        verbose_name    = "Motiv-Erscheinen"
+        verbose_name_plural = "Motiv-Erscheinungen"
+
+    def __str__(self):
+        return f"{self.motif.name} / {self.function} @ {self.outline_node}"
 ```
 
 ---

@@ -1,7 +1,7 @@
 # ADR-153: Frontend-Architektur — CSS Design Tokens und HTMX
 
 **Status:** Accepted  
-**Datum:** 2026-03-27  
+**Datum:** 2026-03-27 (rev. 2026-03-27)  
 **Kontext:** writing-hub @ achimdehnert/writing-hub
 
 ---
@@ -53,10 +53,14 @@ in `base.html` ersetzt. Kein Build-Step, kein npm, kein Tailwind-Upgrade.
   --bg-card:       #0d1117;
   --bg-hover:      #1e2235;
 
-  /* Borders */
+  /* Borders
+     --border      = Standard-Trennlinie zwischen Elementen (Cards, Listen)
+     --border-form = Formular-Inputs und interaktive Felder (höherer Kontrast)
+     --border-focus = Fokuszustand (Keyboard-Navigation, :focus-visible)
+  */
   --border:        #2d3148;
-  --border-alt:    #2d3748;
   --border-form:   #475569;
+  --border-focus:  #6366f1;
 
   /* Primary (Indigo) */
   --primary:       #6366f1;
@@ -82,39 +86,60 @@ in `base.html` ersetzt. Kein Build-Step, kein npm, kein Tailwind-Upgrade.
 }
 ```
 
+**Hinweis:** `--border-alt` (#2d3748) wurde gestrichen — der Unterschied zu
+`--border` (#2d3148) war ein einzelnes Hex-Zeichen ohne dokumentierten
+semantischen Unterschied. Alle bisherigen `--border-alt`-Verwendungen
+werden auf `--border` normalisiert.
+
 **Utility-Klassen** ersetzen häufige Inline-Patterns:
 ```css
-.fs-label  { font-size: .65rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
-.fs-sm     { font-size: .8rem; }
-.fs-xs     { font-size: .72rem; }
+.fs-label   { font-size: .65rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.fs-sm      { font-size: .8rem; }
+.fs-xs      { font-size: .72rem; }
 .btn-accent { background: var(--primary); color: #fff; border: none; border-radius: var(--radius-sm); }
 .card-dark  { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); }
 .text-muted { color: var(--text-muted); }
 .text-faint { color: var(--text-faint); }
 ```
 
-**Rollout-Reihenfolge (iterativ, kein Big Bang):**
-1. `base.html` — Token-System einführen (einmalig, sofort wirksam)
+**Rollout-Reihenfolge und Completion-Kriterium:**
+
+Phase 1 — Sofort (Blocker für neue Features):
+1. `base.html` — Token-System + Utility-Klassen einführen
+
+Phase 2 — Innerhalb von 2 Sprints:
 2. `project_detail.html` — größte Datei, höchster Impact
-3. Alle anderen Templates iterativ bei nächster Berührung
+3. `project_list.html`, `outline_detail.html`
 
-### Teil B: HTMX via CDN
+Phase 3 — Definition of Done (DoD):
+- Kein Template mehr mit `style="color: #` (überprüfbar per `grep`)
+- CI-Lint-Rule: `grep -r 'style="color:#\|style="background:#' templates/` → muss leer sein
 
-HTMX wird per CDN eingebunden — kein pip, kein Build-Step:
+### Teil B: HTMX via CDN mit SRI
+
+HTMX wird per CDN mit **Subresource Integrity Hash** eingebunden:
 
 ```html
-<!-- base.html, vor </head> -->
+<!-- base.html — vor </head> -->
+<meta name="csrf-token" content="{{ csrf_token }}">
+
 <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.3/dist/htmx.min.js"
+        integrity="sha384-0895/pl5ih6n6BhLcFzOT+CLnTUDEDmPX9cTdB4oPHTJWHoW/5irdPMVOMnbWIk3"
         crossorigin="anonymous"></script>
 <script>
+  htmx.config.withCredentials = true;
   document.addEventListener('htmx:configRequest', (e) => {
-    e.detail.headers['X-CSRFToken'] = document.querySelector('[name=csrfmiddlewaretoken]')?.value
-      || '{{ csrf_token }}';
+    e.detail.headers['X-CSRFToken'] =
+      document.querySelector('meta[name="csrf-token"]')?.content || '';
   });
 </script>
 ```
 
-`django-htmx` in `requirements.txt` ergänzen:
+**CSRF-Strategie:** Das Meta-Tag `<meta name="csrf-token">` ist immer in
+`base.html` vorhanden — unabhängig davon, ob ein Formular auf der Seite ist.
+Kein Fallback-String nötig. Robuster als `querySelector('[name=csrfmiddlewaretoken]')`.
+
+`django-htmx` in `requirements.txt`:
 ```
 django-htmx>=1.17
 ```
@@ -131,12 +156,49 @@ MIDDLEWARE = [
 ]
 ```
 
-**Quick Wins (Prio 1):**
+### Teil C: SSE vs. Polling — Entscheidung für LLM-Generation-Status
+
+**Entscheidung: SSE (`hx-ext="sse"`) für LLM-Generation, HTMX-Polling für kurze Status-Updates.**
+
+| Usecase | Mechanismus | Begründung |
+|---------|-------------|------------|
+| LLM-Generation Status (10–30s) | `hx-ext="sse"` | Server-Push, 0 unnötige Requests, kein Polling-Overhead |
+| Filter-Bar / Suche | `hx-get` on input | Sofortiges Partial-Update, kein Polling nötig |
+| Kurze Task-Status (<5s) | `hx-trigger="every 2s"` | Akzeptabel für sehr kurze Wartezeiten |
+
+**SSE-Integration für LLM-Generation:**
+```html
+<!-- Template -->
+<div hx-ext="sse"
+     sse-connect="/projekte/{{ project.pk }}/generate/stream/"
+     sse-swap="generation_update">
+  <div id="generation-output"></div>
+</div>
+```
+
+```python
+# View (SL-001-konform)
+def generation_stream(request, pk):
+    project = get_object_or_404(BookProject, pk=pk, owner=request.user)
+    def event_stream():
+        for chunk in GenerationService(project).stream():
+            yield f"event: generation_update\ndata: {chunk}\n\n"
+    return StreamingHttpResponse(event_stream(), content_type="text/event-stream")
+```
+
+`django-htmx` + `htmx-ext-sse` CDN:
+```html
+<script src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.2/sse.js"
+        integrity="sha384-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        crossorigin="anonymous"></script>
+```
+
+**Quick Wins (Prio 1, kein SSE nötig):**
 
 | Feature | Vorher | Nachher |
 |---------|--------|---------|
 | Filter-Bar project_list | Full-Page-Reload | `hx-get` + `hx-target="#projects-grid"` |
-| Generation-Status | `setInterval` polling | `hx-trigger="every 2s"` auf Status-Panel |
+| LLM-Generation Status | `setInterval` polling | `hx-ext="sse"` Stream |
 | Outline-Node Edit | Full-Page + Scroll-Verlust | Inline-Edit via `hx-get`/`hx-swap` |
 | Chapter Save | Full-Page-Reload | `hx-post` + partial response |
 | NarrativeVoice-Form | Full-Page | HTMX-Modal via `hx-get` + `hx-target="body" hx-swap="beforeend"` |
@@ -162,44 +224,50 @@ def my_view(request, pk):
 ## Begründung
 
 - **CSS Custom Properties** sind native Browser-Technologie — kein Tooling,
-  kein Build-Step, sofort wirksam. Alle 40+ Vorkommen von `#0f1117`
-  werden durch `var(--bg-page)` ersetzt — einmalige Änderung statt Grep-Replace.
-- **HTMX via CDN** ist kein Architektur-Risiko: es ist eine Progressive-
-  Enhancement-Library ohne Django-Kopplung. CDN-Einbindung ist legitimiert
-  durch die geringe Bundle-Größe (~14kb gzip) und den fehlenden Build-Step.
-- **Kein React, kein Vue:** Das Projekt ist server-rendered. HTMX ist
-  die minimalste Erweiterung, die 80% der UX-Probleme löst.
-- **SL-001 gilt für HTMX:** HTMX-Views sind reguläre Django-Views.
-  Die Service-Layer-Regel gilt uneingeschränkt.
+  kein Build-Step, sofort wirksam.
+- **`--border-alt` gestrichen:** Zwei nahezu identische Border-Tokens
+  (`#2d3148` vs. `#2d3748`) ohne semantischen Unterschied erzeugen Verwirrung.
+  Drei klar unterschiedene Tokens (`--border`, `--border-form`, `--border-focus`)
+  decken alle Usecases ab.
+- **SRI-Hash auf HTMX-CDN:** Supply-Chain-Angriff wird verhindert.
+  Der Hash ist für htmx.org@2.0.3 angegeben — bei Versionswechsel muss er
+  aktualisiert werden (Quelle: `sha384sum htmx.min.js`).
+- **CSRF via Meta-Tag:** Zuverlässiger als Formular-Selektor — immer vorhanden,
+  unabhängig vom Seiteninhalt.
+- **SSE statt Polling für LLM-Generation:** LLM-Calls dauern 10–30s. Polling
+  alle 2s = 5–15 unnötige Roundtrips. SSE ist eine persistente Verbindung ohne
+  Overhead, Django unterstützt StreamingHttpResponse nativ.
+- **Migration DoD als CI-Rule:** "Iterativ bei nächster Berührung" ohne
+  Completion-Kriterium endet in permanenter Halbmigration.
 
 ---
 
 ## Abgelehnte Alternativen
 
-**Tailwind CSS Purge/Build-Pipeline einführen:** Zu viel Overhead für
-ein Django-Projekt ohne JS-Build-Step. CSS Custom Properties lösen das
-Problem ohne Tooling.
+**Tailwind CSS Build-Pipeline:** Node.js-Abhängigkeit auf dem Server, kein
+erkennbarer Mehrwert gegenüber Custom Properties für dieses Projekt.
 
-**React-Komponenten für interaktive Teile:** Widerspricht dem
-server-rendered Ansatz und dem Ziel minimaler Komplexität.
+**React/Vue für interaktive Teile:** Widerspricht server-rendered Ansatz.
 
-**Alpine.js statt HTMX:** Alpine.js löst nur client-side Interaktivität,
-nicht die Server-Roundtrip-Optimierung. HTMX adressiert beide Aspekte.
+**Alpine.js statt HTMX:** Nur client-side; löst nicht Server-Roundtrip-Optimierung.
 
-**django-tailwind:** Erfordert Node.js auf dem Server — zu viel Overhead
-für den Benefit.
+**WebSocket statt SSE:** Bidirektionale Kommunikation nicht nötig.
+SSE reicht für unidirektionalen Generation-Stream.
+
+**HTMX lokal einbinden (kein CDN):** Würde SRI-Risiko beseitigen, aber
+Build-Step erfordern. CDN + SRI ist der Kompromiss ohne Tooling-Overhead.
 
 ---
 
 ## Konsequenzen
 
-- `base.html` erhält Token-System (einmalig, hoher Impact)
-- `requirements.txt`: `django-htmx>=1.17` ergänzen
-- `config/settings/base.py`: `django_htmx` in `INSTALLED_APPS` + Middleware
-- Templates werden iterativ migriert — keine Big-Bang-Änderung
-- Alle HTMX-Partials liegen in `templates/*/partials/_*.html`
-- LLM-Coding-Regeln: HTMX-Views folgen SL-001 (Service Layer Pflicht)
-- Drama-Dashboard (ADR-154) setzt HTMX für Lazy-Load voraus
+- `base.html`: Meta-CSRF-Tag + Token-System + HTMX CDN + SSE-Ext CDN
+- `requirements.txt`: `django-htmx>=1.17`
+- `config/settings/base.py`: `django_htmx` + Middleware
+- Migration-DoD: CI-Rule `grep -r 'style="color:#\|style="background:#' templates/`
+- LLM-Generation-Views erhalten SSE-Streaming-Endpunkt
+- Alle HTMX-Partials in `templates/*/partials/_*.html`
+- SRI-Hashes bei Versionswechsel aktualisieren (Checkliste im PR-Template)
 
 ---
 
