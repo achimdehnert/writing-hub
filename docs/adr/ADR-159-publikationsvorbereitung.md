@@ -1,9 +1,18 @@
 # ADR-159: Publikationsvorbereitung — Comps, Pitch, Exposé
 
+```yaml
+status: Proposed
+datum: 2026-03-28
+kontext: writing-hub @ achimdehnert/writing-hub
+abhaengig_von: [ADR-083, ADR-150, ADR-151, ADR-157-Rev1, ADR-158]
+implementation_status: none
+```
+
 **Status:** Proposed  
 **Datum:** 2026-03-28  
 **Kontext:** writing-hub @ achimdehnert/writing-hub  
-**Abhängig von:** ADR-150, ADR-151, ADR-157
+**Abhängig von:** ADR-083, ADR-150, ADR-151, ADR-157-Rev1, ADR-158  
+**Deployment-Voraussetzung:** ADR-157 Rev.1 muss deployed sein (`narrative_role`-Feld auf `ProjectCharacterLink` wird in `_get_character()` vorausgesetzt)
 
 ---
 
@@ -342,7 +351,7 @@ def generate_expose_de(project: BookProject) -> PitchDocument:
             if protagonist else "—"
         ),
         antagonist=(
-            protagonist.antagonist_logic
+            antagonist.antagonist_logic   # Rev.1-Fix C1: war fälschlich protagonist.antagonist_logic
             if antagonist else "—"
         ),
     )
@@ -505,14 +514,19 @@ würde rohe JSON-Iteration erfordern.
 
 ## Konsequenzen
 
-- Migration `projects/0011_comparable_titles_pitch` — zwei neue Tabellen
+- Migration `projects/0015_comparable_titles_pitch` — zwei neue Tabellen (Reihenfolge gemäß KONSEQUENZANALYSE_ADR158)
 - `PitchGeneratorService` in `apps/projects/services/pitch_service.py`
-- AIActionTypes anlegen (DB, Admin):
+- AIActionTypes anlegen via Seed-Management-Command oder Admin:
   `logline_generate`, `expose_generate`, `query_generate`
+  ```bash
+  python manage.py seed_ai_action_types  # falls Management Command vorhanden
+  # alternativ: Django Admin → AI-Action-Types manuell anlegen
+  ```
 - URL `projects/<pk>/pitch/` mit Tabs: Logline / Comps / Exposé / Query
 - `pitch_dashboard`-View mit Context: alle aktuellen PitchDocuments + Comps
 - Health-Score: Comp-Checks ergänzen (ADR-157 Revision)
 - Sidebar: Publishing → "Pitch-Paket" als Unter-Navigation
+- **Out of scope (v2):** Leserprobe-Kapitel als eigener Pitch-Typ, Rate-Limit auf Generierungs-Views
 
 ---
 

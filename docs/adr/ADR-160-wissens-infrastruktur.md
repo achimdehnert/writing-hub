@@ -1,9 +1,17 @@
 # ADR-160: Wissens-Infrastruktur — Recherche, Genre-Konventionen, Beta-Reader
 
+```yaml
+status: Proposed
+datum: 2026-03-28
+kontext: writing-hub @ achimdehnert/writing-hub
+abhaengig_von: [ADR-083, ADR-150, ADR-157-Rev1, ADR-158, ADR-159]
+implementation_status: none
+```
+
 **Status:** Proposed  
 **Datum:** 2026-03-28  
 **Kontext:** writing-hub @ achimdehnert/writing-hub  
-**Abhängig von:** ADR-150, ADR-157, ADR-159
+**Abhängig von:** ADR-083, ADR-150, ADR-157-Rev1, ADR-158, ADR-159
 
 ---
 
@@ -137,10 +145,11 @@ class ResearchNote(models.Model):
         """
         Gibt Notiz als LLM-Prompt-Kontext zurück.
         Nur für is_verified=True aufrufen.
+        M2-Fix: content auf 800 Zeichen begrenzt um Token-Budget zu schützen.
         """
         lines = [
             f"[{self.get_note_type_display().upper()}] {self.title}",
-            self.content,
+            self.content[:800],   # M2-Fix: Prompt-Overflow verhindern
         ]
         if self.source:
             lines.append(f"Quelle: {self.source}")
@@ -200,10 +209,10 @@ class GenreConventionProfile(models.Model):
         default=list,
         help_text="Liste von Konventions-Checks (siehe Schema in Docstring)",
     )
-    reader_promise = models.TextField(
-        blank=True, default="",
-        help_text="Was verspricht dieses Genre dem Leser implizit?",
-    )
+    # C1-Fix: reader_promise entfernt — redundant zu GenrePromiseLookup.core_promise (ADR-158).
+    # Das semantische Genre-Versprechen gehört in GenrePromiseLookup (ADR-158), nicht hier.
+    # GenreConventionProfile prüft STRUKTURELLE Regeln (Wendepunkt-Positionen),
+    # GenrePromiseLookup adressiert das SEMANTISCHE Versprechen (LLM-Layer 10).
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -264,7 +273,14 @@ def _evaluate_convention(project, conv: dict) -> bool:
             float(e.setup_node.outlinefw_position) <= 0.75
             for e in entries
         )
-    return True  # unbekannter check_type → nicht blockieren
+    # C4-Fix: unbekannter check_type loggen statt lautlos True zurückgeben
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(
+        "GenreConventionProfile: unbekannter check_type '%s' — Convention '%s' wird ignoriert.",
+        check_type, conv.get('label', '?')
+    )
+    return True  # unbekannter check_type blockiert nicht, aber wird geloggt
 ```
 
 **Seed für Thriller-Konventionen (in Admin oder Management Command):**
@@ -367,6 +383,7 @@ class BetaReaderSession(models.Model):
     reader_note = models.TextField(blank=True, default="")
     is_completed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)   # M4-Fix: für is_completed-Timestamp
     completed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
@@ -517,8 +534,8 @@ getrennt von Autor-Review und KI-Lektorat.
 
 ## Konsequenzen
 
-- Migration `projects/0012_research_genre_beta` — vier neue Tabellen
-  inkl. M2M-Tabelle `wh_research_notes_relevant_nodes`
+- Migration `projects/0016_research_genre_beta` — vier neue Tabellen
+  inkl. M2M-Tabelle `wh_research_notes_relevant_nodes` (Reihenfolge gemäß KONSEQUENZANALYSE_ADR158)
 - `GenreConventionService` in `apps/projects/services/genre_service.py`
 - `project_context_service.py`: Research-Injection ergänzen
 - Health-Score: offene Fragen + Genre-Checks (ADR-157 Revision)
@@ -529,6 +546,7 @@ getrennt von Autor-Review und KI-Lektorat.
   - `projects/<pk>/beta/<session_pk>/feedback/` → Feedback-Eingabe
 - Seed: Thriller, Romance, Krimi, Fantasy Konventions-Profile (Management Command)
 - AIActionType: kein neuer — Genre-Checks sind regelbasiert
+- **Out of scope (v2):** Anonymer Beta-Leser-Zugang ohne Login (eigener URL-Namespace + Token-basierter Zugang)
 
 ---
 
