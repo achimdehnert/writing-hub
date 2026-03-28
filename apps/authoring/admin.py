@@ -10,7 +10,7 @@ from .models import (
     ProjectQualityConfig,
     QualityDimension,
 )
-from .models_jobs import ChapterWriteJob
+from .models_jobs import BatchWriteJob, ChapterWriteJob
 
 
 @admin.register(QualityDimension)
@@ -76,3 +76,12 @@ class ChapterWriteJobAdmin(admin.ModelAdmin):
     list_filter = ["status"]
     search_fields = ["chapter_ref"]
     readonly_fields = ["id", "chapter_ref", "content", "error", "created_at", "updated_at"]
+
+
+@admin.register(BatchWriteJob)
+class BatchWriteJobAdmin(admin.ModelAdmin):
+    list_display = ["project", "status", "completed_count", "failed_count", "total", "created_at"]
+    list_filter = ["status"]
+    search_fields = ["project__title"]
+    raw_id_fields = ["project", "requested_by"]
+    readonly_fields = ["id", "completed_count", "failed_count", "error_log", "current_index", "created_at", "updated_at"]

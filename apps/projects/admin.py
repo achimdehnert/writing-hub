@@ -1,10 +1,12 @@
 from django.contrib import admin
 
 from .models import (
-    AudienceLookup, AuthorStyleLookup, BookProject,
-    ContentTypeLookup, GenreLookup, OutlineFramework,
-    OutlineFrameworkBeat, OutlineNode, OutlineVersion,
-    ProjectGenrePromise, SubplotArc,
+    AudienceLookup, AuthorStyleLookup, BetaReaderFeedback,
+    BetaReaderSession, BookProject, ComparableTitle,
+    ContentTypeLookup, GenreConventionProfile, GenreLookup,
+    OutlineFramework, OutlineFrameworkBeat, OutlineNode,
+    OutlineVersion, PitchDocument, ProjectGenrePromise,
+    ResearchNote, SubplotArc, TextAnalysisSnapshot,
 )
 
 
@@ -109,3 +111,94 @@ class ProjectGenrePromiseAdmin(admin.ModelAdmin):
     search_fields = ["project__title"]
     raw_id_fields = ["project", "genre_promise"]
     readonly_fields = ["id", "created_at"]
+
+
+@admin.register(ComparableTitle)
+class ComparableTitleAdmin(admin.ModelAdmin):
+    list_display = ["author", "title", "publication_year", "project", "relation_type", "sort_order"]
+    list_filter = ["relation_type"]
+    search_fields = ["title", "author", "project__title"]
+    raw_id_fields = ["project"]
+    readonly_fields = ["id", "created_at", "updated_at"]
+    fieldsets = [
+        ("Comp", {"fields": ["id", "project", "title", "author", "publisher", "publication_year"]}),
+        ("Beziehung", {"fields": ["relation_type", "similarity_note", "difference_note"]}),
+        ("Meta", {"fields": ["sort_order", "created_at", "updated_at"]}),
+    ]
+
+
+@admin.register(PitchDocument)
+class PitchDocumentAdmin(admin.ModelAdmin):
+    list_display = ["project", "pitch_type", "version", "word_count", "is_current", "is_ai_generated", "created_at"]
+    list_filter = ["pitch_type", "is_current", "is_ai_generated"]
+    search_fields = ["project__title"]
+    raw_id_fields = ["project"]
+    readonly_fields = ["id", "word_count", "created_at", "updated_at"]
+
+
+class ResearchNoteNodesInline(admin.TabularInline):
+    model = ResearchNote.relevant_nodes.through
+    extra = 0
+    verbose_name = "Verknüpfter Kapitel-Node"
+
+
+@admin.register(ResearchNote)
+class ResearchNoteAdmin(admin.ModelAdmin):
+    list_display = ["title", "note_type", "project", "is_verified", "is_open_question", "created_at"]
+    list_filter = ["note_type", "is_verified", "is_open_question"]
+    search_fields = ["title", "project__title"]
+    raw_id_fields = ["project"]
+    readonly_fields = ["id", "created_at", "updated_at"]
+    inlines = [ResearchNoteNodesInline]
+    fieldsets = [
+        ("Notiz", {"fields": ["id", "project", "note_type", "title", "content", "source"]}),
+        ("Status", {"fields": ["is_verified", "is_open_question", "tags", "sort_order"]}),
+        ("Meta", {"fields": ["created_at", "updated_at"]}),
+    ]
+
+
+@admin.register(GenreConventionProfile)
+class GenreConventionProfileAdmin(admin.ModelAdmin):
+    list_display = ["genre_lookup", "convention_count", "created_at"]
+    search_fields = ["genre_lookup__name"]
+    readonly_fields = ["created_at", "updated_at"]
+
+    def convention_count(self, obj):
+        return len(obj.conventions or [])
+    convention_count.short_description = "Konventionen"
+
+
+class BetaReaderFeedbackInline(admin.TabularInline):
+    model = BetaReaderFeedback
+    extra = 0
+    fields = ["feedback_type", "chapter_order", "text", "is_addressed"]
+    readonly_fields = ["id"]
+
+
+@admin.register(BetaReaderSession)
+class BetaReaderSessionAdmin(admin.ModelAdmin):
+    list_display = ["name", "project", "feedback_focus", "is_completed", "open_feedback_count", "created_at"]
+    list_filter = ["feedback_focus", "is_completed"]
+    search_fields = ["name", "project__title"]
+    raw_id_fields = ["project", "manuscript_snapshot"]
+    readonly_fields = ["id", "created_at", "updated_at"]
+    inlines = [BetaReaderFeedbackInline]
+
+    def open_feedback_count(self, obj):
+        return obj.open_feedback_count
+    open_feedback_count.short_description = "Offen"
+
+
+@admin.register(TextAnalysisSnapshot)
+class TextAnalysisSnapshotAdmin(admin.ModelAdmin):
+    list_display = ["project", "chapters_analyzed", "dead_scene_count", "triggered_by", "computed_at"]
+    list_filter = ["triggered_by"]
+    search_fields = ["project__title"]
+    raw_id_fields = ["project"]
+    readonly_fields = [
+        "id", "dead_scene_count", "dead_scene_node_ids",
+        "character_screen_time", "chapter_word_counts",
+        "pacing_variance", "pacing_issues", "dialogue_ratios",
+        "voice_drift_checked", "voice_drift_detected", "voice_drift_chapters",
+        "chapters_analyzed", "computed_at",
+    ]
