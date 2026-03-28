@@ -5,8 +5,13 @@ from .models import (
     BetaReaderSession, BookProject, ComparableTitle,
     ContentTypeLookup, GenreConventionProfile, GenreLookup,
     OutlineFramework, OutlineFrameworkBeat, OutlineNode,
-    OutlineVersion, PitchDocument, ProjectGenrePromise,
-    ResearchNote, SubplotArc, TextAnalysisSnapshot,
+    OutlineSequence, OutlineVersion, PitchDocument,
+    ProjectGenrePromise, ResearchNote, SubplotArc, TextAnalysisSnapshot,
+)
+from .models_timeline import (
+    ForeshadowingEntry, ForeshadowingTypeLookup,
+    MasterTimeline, NarrativeModelLookup,
+    PlannedFlashback, TimelineEntry,
 )
 
 
@@ -202,3 +207,59 @@ class TextAnalysisSnapshotAdmin(admin.ModelAdmin):
         "voice_drift_checked", "voice_drift_detected", "voice_drift_chapters",
         "chapters_analyzed", "computed_at",
     ]
+
+
+@admin.register(OutlineSequence)
+class OutlineSequenceAdmin(admin.ModelAdmin):
+    list_display = ["title", "outline_version", "act", "sort_order"]
+    list_filter = ["act"]
+    search_fields = ["title", "outline_version__project__title"]
+    raw_id_fields = ["outline_version"]
+    readonly_fields = ["id"]
+
+
+@admin.register(NarrativeModelLookup)
+class NarrativeModelLookupAdmin(admin.ModelAdmin):
+    list_display = ["code", "label", "sort_order"]
+    list_editable = ["sort_order"]
+    prepopulated_fields = {"code": ["label"]}
+
+
+@admin.register(ForeshadowingTypeLookup)
+class ForeshadowingTypeLookupAdmin(admin.ModelAdmin):
+    list_display = ["code", "label", "sort_order"]
+    list_editable = ["sort_order"]
+
+
+class TimelineEntryInline(admin.TabularInline):
+    model = TimelineEntry
+    extra = 0
+    fields = ["entry_type", "story_date", "event_description", "node", "order"]
+    readonly_fields = ["id"]
+
+
+@admin.register(MasterTimeline)
+class MasterTimelineAdmin(admin.ModelAdmin):
+    list_display = ["project", "narrative_model", "story_time_span"]
+    search_fields = ["project__title"]
+    raw_id_fields = ["project"]
+    readonly_fields = ["id", "created_at", "updated_at"]
+    inlines = [TimelineEntryInline]
+
+
+@admin.register(ForeshadowingEntry)
+class ForeshadowingEntryAdmin(admin.ModelAdmin):
+    list_display = ["label", "project", "foreshadow_type", "status", "introduced_in"]
+    list_filter = ["status", "foreshadow_type"]
+    search_fields = ["label", "project__title"]
+    raw_id_fields = ["project", "introduced_in", "resolved_in", "setup_node"]
+    readonly_fields = ["id", "is_planted", "created_at", "updated_at"]
+
+
+@admin.register(PlannedFlashback)
+class PlannedFlashbackAdmin(admin.ModelAdmin):
+    list_display = ["project", "technique", "trigger_node", "created_at"]
+    list_filter = ["technique"]
+    search_fields = ["project__title"]
+    raw_id_fields = ["project", "trigger_node"]
+    readonly_fields = ["id", "created_at"]
