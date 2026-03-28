@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Budget — {{ project.title }} — Writing Hub{% endblock %}
+{% block nav_projects %}active{% endblock %}
+
+{% block content %}
+<div style="max-width:900px;margin:0 auto;">
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <a href="{% url 'projects:detail' project.pk %}" class="btn btn-link text-muted ps-0">← {{ project.title }}</a>
+        <h1 class="h3 mb-0">Wortanzahl-Budget</h1>
+    </div>
+</div>
+
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% elif not allocation %}
+<div class="alert alert-secondary">Budget konnte nicht berechnet werden.</div>
+{% else %}
+
+<!-- Fortschritt -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between mb-1">
+            <span>{{ allocation.current_written|floatformat:"0" }} Wörter geschrieben</span>
+            <span>Ziel: {{ allocation.target_total|floatformat:"0" }}</span>
+        </div>
+        <div class="progress mb-2" style="height:20px">
+            <div class="progress-bar bg-primary" style="width:{{ allocation.completion_pct }}%">
+                {{ allocation.completion_pct }}%
+            </div>
+        </div>
+        <small class="text-muted">Verbleibend: {{ allocation.remaining_budget|floatformat:"0" }} Wörter</small>
+    </div>
+</div>
+
+<!-- Akt-Budgets -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header"><strong>Akt-Budgets</strong></div>
+    <div class="card-body">
+        <div class="row g-2">
+            {% for act, budget in allocation.act_budgets.items %}
+            <div class="col-md-3">
+                <div class="card text-center py-2">
+                    <div class="text-muted small text-uppercase">{{ act }}</div>
+                    <div class="fw-bold">{{ budget|floatformat:"0" }}</div>
+                    <div class="text-muted" style="font-size:.7rem;">Wörter</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Hinweise -->
+{% if allocation.suggestions %}
+<div class="card shadow-sm mb-4 border-warning">
+    <div class="card-header text-warning"><strong>Hinweise</strong></div>
+    <div class="card-body">
+        {% for s in allocation.suggestions %}
+        <p class="mb-1 small">{{ s }}</p>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Kapitel-Tabelle -->
+{% if nodes %}
+<div class="card shadow-sm">
+    <div class="card-header"><strong>Kapitel-Übersicht</strong></div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <thead class="table-light">
+                    <tr><th>#</th><th>Titel</th><th>Ziel</th><th>Ist</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                {% for node in nodes %}
+                {% with budget=allocation.node_budgets|default_if_none:"{}"|get_item:node.pk|stringformat:"s" %}
+                <tr>
+                    <td>{{ node.order }}</td>
+                    <td>{{ node.title|truncatechars:40 }}</td>
+                    <td><small>{{ allocation.node_budgets|get_item:node.id|default:"—" }}</small></td>
+                    <td>
+                        {% if node.word_count %}
+                        <span class="{% if node.id|stringformat:'s' in allocation.over_budget_nodes %}text-warning fw-bold{% elif node.id|stringformat:'s' in allocation.under_budget_nodes %}text-info{% endif %}">
+                            {{ node.word_count }}
+                        </span>
+                        {% else %}
+                        <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if node.id|stringformat:"s" in allocation.over_budget_nodes %}
+                        <span class="badge bg-warning text-dark">Über Budget</span>
+                        {% elif node.id|stringformat:"s" in allocation.under_budget_nodes %}
+                        <span class="badge bg-info text-dark">Unter Budget</span>
+                        {% elif node.word_count %}
+                        <span class="badge bg-success">OK</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Ungeschrieben</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endwith %}
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endif %}
+</div>
+{% endblock %}

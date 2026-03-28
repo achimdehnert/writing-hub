@@ -2,6 +2,7 @@ from django.urls import path
 
 from . import (
     views,
+    views_analysis,
     views_export,
     views_health,
     views_html,
@@ -58,6 +59,9 @@ urlpatterns = [
     # Health-Score (ADR-157)
     path("<uuid:pk>/health/", views_health.ProjectHealthView.as_view(), name="health"),
     path("<uuid:pk>/health/partial/", views_health.ProjectHealthPartialView.as_view(), name="health_partial"),
+    # Strukturanalyse + Budget (ADR-161)
+    path("<uuid:pk>/analysis/", views_analysis.ProjectAnalysisView.as_view(), name="analysis"),
+    path("<uuid:pk>/budget/", views_analysis.ProjectBudgetView.as_view(), name="budget"),
     # Wissens-Infrastruktur: Recherche + Beta-Leser (ADR-160)
     path("<uuid:pk>/research/", views_knowledge.ResearchDashboardView.as_view(), name="research_dashboard"),
     path("<uuid:pk>/beta/", views_knowledge.BetaReaderDashboardView.as_view(), name="beta_dashboard"),

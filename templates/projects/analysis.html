@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Strukturanalyse — {{ project.title }} — Writing Hub{% endblock %}
+{% block nav_projects %}active{% endblock %}
+
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;">
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <a href="{% url 'projects:detail' project.pk %}" class="btn btn-link text-muted ps-0">← {{ project.title }}</a>
+        <h1 class="h3 mb-0">Strukturanalyse</h1>
+        <small class="text-muted">Dead Scenes · Pacing · Screen Time</small>
+    </div>
+    <form method="post">
+        {% csrf_token %}
+        <button class="btn btn-sm btn-outline-primary">Neu berechnen</button>
+    </form>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show">
+    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+{% if not latest %}
+<div class="alert alert-secondary">Noch keine Analyse vorhanden. Klicke "Neu berechnen".</div>
+{% else %}
+
+<!-- Übersicht -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card text-center py-3 {% if latest.dead_scene_count > 0 %}border-warning{% endif %}">
+            <div class="fw-bold fs-3 {% if latest.dead_scene_count > 0 %}text-warning{% else %}text-success{% endif %}">
+                {{ latest.dead_scene_count }}
+            </div>
+            <div class="text-muted small">Dead Scenes</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center py-3">
+            <div class="fw-bold fs-3">{{ latest.chapters_analyzed }}</div>
+            <div class="text-muted small">Kapitel analysiert</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center py-3 {% if latest.pacing_issues %}border-warning{% endif %}">
+            <div class="fw-bold fs-3 {% if latest.pacing_issues %}text-warning{% else %}text-success{% endif %}">
+                {{ latest.pacing_issues|length }}
+            </div>
+            <div class="text-muted small">Pacing-Probleme</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center py-3 {% if latest.voice_drift_detected %}border-danger{% endif %}">
+            <div class="fw-bold fs-3">
+                {% if latest.voice_drift_checked %}
+                    {% if latest.voice_drift_detected %}<span class="text-danger">!</span>{% else %}<span class="text-success">✓</span>{% endif %}
+                {% else %}—{% endif %}
+            </div>
+            <div class="text-muted small">Voice Drift</div>
+        </div>
+    </div>
+</div>
+
+<!-- Dead Scenes -->
+{% if latest.dead_scene_count > 0 %}
+<div class="card shadow-sm mb-3 border-warning">
+    <div class="card-header text-warning"><strong>Dead Scenes ({{ latest.dead_scene_count }})</strong></div>
+    <div class="card-body">
+        <p class="text-muted small mb-0">Szenen mit emotion_start == emotion_end — kein emotionaler Deltawert.</p>
+        <small class="text-muted">Node-IDs: {{ latest.dead_scene_node_ids|join:", " }}</small>
+    </div>
+</div>
+{% endif %}
+
+<!-- Pacing -->
+{% if latest.pacing_issues %}
+<div class="card shadow-sm mb-3 border-warning">
+    <div class="card-header text-warning"><strong>Pacing-Probleme</strong></div>
+    <div class="card-body">
+        {% for issue in latest.pacing_issues %}
+        <div class="mb-2">
+            <span class="badge {% if issue.severity == 'warning' %}bg-warning text-dark{% else %}bg-info text-dark{% endif %}">{{ issue.type }}</span>
+            <span class="ms-2 small">{{ issue.description }}</span>
+            <small class="text-muted d-block">Kapitel: {{ issue.chapter_orders|join:", " }}</small>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Screen Time -->
+{% if latest.character_screen_time %}
+<div class="card shadow-sm mb-3">
+    <div class="card-header"><strong>Figuren-Screen-Time</strong></div>
+    <div class="card-body">
+        <table class="table table-sm mb-0">
+            <thead class="table-light"><tr><th>Figur-ID</th><th>Rolle</th><th>Kapitel</th><th>Anteil</th></tr></thead>
+            <tbody>
+            {% for char_id, data in latest.character_screen_time.items %}
+            <tr>
+                <td><small>{{ char_id|truncatechars:12 }}</small></td>
+                <td>{{ data.role|default:"—" }}</td>
+                <td>{{ data.chapters }}</td>
+                <td>
+                    <div class="progress" style="height:12px;width:80px">
+                        <div class="progress-bar {% if data.role == 'antagonist' and data.percent < 25 %}bg-warning{% else %}bg-primary{% endif %}"
+                             style="width:{{ data.percent }}%"></div>
+                    </div>
+                    <small>{{ data.percent }}%</small>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<small class="text-muted">Berechnet: {{ latest.computed_at|date:"d.m.Y H:i" }} ({{ latest.get_triggered_by_display }})</small>
+
+{% endif %}
+</div>
+{% endblock %}
