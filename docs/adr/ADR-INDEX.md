@@ -21,9 +21,9 @@
 | [156](#adr-156) | Zeitstruktur, Foreshadowing, Sequenz | ✅ Accepted | ⬜ none | `projects/0010+` | 150, 151 |
 | [157](#adr-157) | Antagonist-System, B-Story/Subplot, MVN-Health **Rev.1** | ✅ Accepted | ✅ implemented | `worlds/0004`, `projects/0014+0015` | 150, 151, 152 |
 | [158](#adr-158) | Dialogue Subtext, Opening/Closing Image, GenrePromise | ✅ Accepted | ✅ implemented | `core/0001`, `projects/0015` | 150, 151, 157 |
-| [159](#adr-159) | Publikationsvorbereitung — Comps, Pitch, Exposé | 📋 Proposed | ⬜ none | `projects/0016` | 083, 150, 157-Rev1, 158 |
-| [160](#adr-160) | Wissens-Infrastruktur — Recherche, Genre, Beta-Reader | 📋 Proposed | ⬜ none | `projects/0017` | 083, 150, 157-Rev1, 158, 159 |
-| [161](#adr-161) | Produktions-Infrastruktur — TextAnalysis, Budget, Batch | 📋 Proposed | ⬜ none | `projects/0018`, `authoring/0003` | 150, 151, 153, 157-Rev1 |
+| [159](#adr-159) | Publikationsvorbereitung — Comps, Pitch, Exposé | 📋 Proposed | ✅ implemented | `projects/0017` | 083, 150, 157-Rev1, 158 |
+| [160](#adr-160) | Wissens-Infrastruktur — Recherche, Genre, Beta-Reader | 📋 Proposed | ✅ implemented | `projects/0017` | 083, 150, 157-Rev1, 158, 159 |
+| [161](#adr-161) | Produktions-Infrastruktur — TextAnalysis, Budget, Batch | 📋 Proposed | ✅ implemented | `projects/0016`, `authoring/0002` | 150, 151, 153, 157-Rev1 |
 
 ---
 
@@ -39,17 +39,18 @@ SPRINT 1 — "Dramaturgie sauber" ✅ ABGESCHLOSSEN (Commit 40e6078)
   │                     projects/<pk>/health/ View + Template + HTMX-Partial
   └── FE1: CSS Custom Properties (ADR-153) — ausstehend
 
-SPRINT 2 — "Schreiben effizienter" ← AKTUELL
-  ├── ADR-161  →  projects/0018 + authoring/0003
-  │             TextAnalysisSnapshot, BudgetService, BatchWriteJob
-  └── FE2: HTMX Filter + Auto-Save
+SPRINT 2 — "Schreiben effizienter" ✅ ABGESCHLOSSEN (Commit 5aa247e)
+  ├── ADR-161  →  projects/0016_text_analysis_snapshot
+  │             authoring/0002_batch_write_job
+  │             TextAnalysisSnapshot, BudgetService, BatchWriteJob, run_batch_write
+  └── FE2: HTMX Filter + Auto-Save — ausstehend
 
-SPRINT 3 — "Zum Verlag"
-  ├── ADR-159  →  projects/0016 (ComparableTitle, PitchDocument, PitchGeneratorService)
-  ├── ADR-160  →  projects/0017 (ResearchNote, GenreConventionProfile, BetaReaderSession)
-  └── FE3: Drama-Dashboard (Chart.js)
+SPRINT 3 — "Zum Verlag" ✅ ABGESCHLOSSEN
+  ├── ADR-159  →  projects/0017 (ComparableTitle, PitchDocument, PitchGeneratorService)
+  ├── ADR-160  →  projects/0017 (ResearchNote, GenreConventionProfile, BetaReaderSession, BetaReaderFeedback)
+  └── FE3: Drama-Dashboard (Chart.js) — ausstehend
 
-SPRINT 4 — "Serien & Essays"
+SPRINT 4 — "Serien & Essays" ← AKTUELL (nächstes)
   ├── ADR-155 Impl  →  series/ (bereits Accepted, noch nicht implementiert)
   ├── ADR-156 Impl  →  projects/ (bereits Accepted)
   └── FE4/FE5

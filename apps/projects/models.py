@@ -3,6 +3,7 @@ Projects App — Buchprojekte, Outline, Kapitel, Review, Editing, Lektorat, Snap
 """
 from __future__ import annotations
 
+import datetime
 import uuid
 
 from django.conf import settings
@@ -785,3 +786,320 @@ class TextAnalysisSnapshot(models.Model):
             if data.get("role") == "antagonist" and data.get("percent", 100) < 25:
                 return True
         return False
+
+
+class ComparableTitle(models.Model):
+    """
+    Comparable Title (Comp) für Verlagsanfragen (ADR-159).
+
+    Verlegerische Regeln für gute Comps:
+        - Erschienen in den letzten 5 Jahren (Markt-Relevanz)
+        - Kein Mega-Bestseller (Harry Potter, Hunger Games)
+        - Gleiches Genre + Zielgruppe
+    """
+
+    COMP_RELATION = [
+        ("similar_theme",     "Ähnliches Thema"),
+        ("similar_tone",      "Ähnlicher Ton"),
+        ("similar_structure", "Ähnliche Struktur"),
+        ("same_audience",     "Gleiche Zielgruppe"),
+        ("same_subgenre",     "Gleiches Subgenre"),
+        ("contrast",          "Kontrast — 'wie X, aber Y'"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        BookProject,
+        on_delete=models.CASCADE,
+        related_name="comparable_titles",
+    )
+    title = models.CharField(max_length=300, verbose_name="Buchtitel")
+    author = models.CharField(max_length=200, verbose_name="Autor")
+    publisher = models.CharField(max_length=200, blank=True, default="")
+    publication_year = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        verbose_name="Erscheinungsjahr",
+        help_text="Für Validierung: Comps sollten < 5 Jahre alt sein.",
+    )
+    relation_type = models.CharField(
+        max_length=20, choices=COMP_RELATION, default="similar_theme",
+    )
+    similarity_note = models.TextField(blank=True, default="", verbose_name="Worin ähnlich")
+    difference_note = models.TextField(blank=True, default="", verbose_name="Worin anders")
+    sort_order = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "wh_comparable_titles"
+        ordering = ["project", "sort_order"]
+        verbose_name = "Comparable Title"
+        verbose_name_plural = "Comparable Titles"
+
+    def __str__(self):
+        year = f" ({self.publication_year})" if self.publication_year else ""
+        return f"{self.author}: {self.title}{year}"
+
+    @property
+    def age_warning(self) -> bool:
+        if not self.publication_year:
+            return False
+        return (datetime.date.today().year - self.publication_year) > 5
+
+    def to_comp_string(self) -> str:
+        year = f" ({self.publication_year})" if self.publication_year else ""
+        rel = self.get_relation_type_display()
+        result = f"{self.author}: {self.title}{year} [{rel}]"
+        if self.difference_note:
+            result += f" — {self.difference_note[:100]}"
+        return result
+
+
+class PitchDocument(models.Model):
+    """
+    Pitch-Dokument — Logline, Exposé, Synopsis oder Query Letter (ADR-159).
+
+    Versionierung: Jede Neu-Generierung inkrementiert version.
+    is_current=True markiert die aktive Version pro Typ.
+    """
+
+    PITCH_TYPES = [
+        ("logline",   "Logline — 1 Satz"),
+        ("one_pager", "One-Pager — EN"),
+        ("expose_de", "Exposé — DE Verlagsstandard"),
+        ("synopsis",  "Synopsis — vollständige Handlung"),
+        ("query",     "Query Letter — US/UK"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        BookProject,
+        on_delete=models.CASCADE,
+        related_name="pitch_documents",
+    )
+    pitch_type = models.CharField(max_length=20, choices=PITCH_TYPES, db_index=True)
+    content = models.TextField(verbose_name="Inhalt")
+    word_count = models.PositiveIntegerField(default=0)
+    is_ai_generated = models.BooleanField(default=False)
+    ai_agent = models.CharField(max_length=100, blank=True, default="")
+    is_current = models.BooleanField(
+        default=True, db_index=True,
+        help_text="Aktive Version dieses Typs (nur eine gleichzeitig).",
+    )
+    version = models.PositiveSmallIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "wh_pitch_documents"
+        ordering = ["project", "pitch_type", "-version"]
+        verbose_name = "Pitch-Dokument"
+        verbose_name_plural = "Pitch-Dokumente"
+
+    def __str__(self):
+        return f"{self.get_pitch_type_display()} v{self.version} — {self.project.title}"
+
+    def save(self, *args, **kwargs):
+        if self.content:
+            self.word_count = len(self.content.split())
+        super().save(*args, **kwargs)
+
+
+class ResearchNote(models.Model):
+    """
+    Recherche-Notiz — verifizierter Fakt, offene Frage oder Atmosphäre-Detail (ADR-160).
+
+    is_verified=True → wird in LLM-Prompts injiziert.
+    is_open_question=True → wird im Health-Score als offene Frage gezählt.
+    """
+
+    NOTE_TYPES = [
+        ("fact",       "Fakt — verifiziert"),
+        ("question",   "Offene Frage"),
+        ("rule",       "Regel / Gesetz / Technologie"),
+        ("atmosphere", "Atmosphäre / Detail"),
+        ("quote",      "Zitat"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        BookProject,
+        on_delete=models.CASCADE,
+        related_name="research_notes",
+    )
+    note_type = models.CharField(max_length=20, choices=NOTE_TYPES, default="fact")
+    title = models.CharField(max_length=300, verbose_name="Bezeichnung")
+    content = models.TextField(verbose_name="Inhalt")
+    source = models.CharField(
+        max_length=500, blank=True, default="",
+        help_text="URL, Buchtitel, Experteninterview",
+    )
+    is_verified = models.BooleanField(
+        default=False,
+        help_text="Nur verifizierte Notizen werden in LLM-Prompts injiziert.",
+    )
+    is_open_question = models.BooleanField(
+        default=False,
+        help_text="Noch unbeantwortet — wird im Health-Score gezählt.",
+    )
+    relevant_nodes = models.ManyToManyField(
+        "OutlineNode",
+        blank=True,
+        related_name="research_notes",
+        help_text="Welche Kapitel/Szenen brauchen diese Notiz?",
+    )
+    tags = models.JSONField(default=list)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "wh_research_notes"
+        ordering = ["project", "-is_verified", "note_type", "sort_order"]
+        verbose_name = "Recherche-Notiz"
+        verbose_name_plural = "Recherche-Notizen"
+
+    def __str__(self):
+        verified = " ✓" if self.is_verified else " ?"
+        return f"[{self.get_note_type_display()}]{verified} {self.title}"
+
+    def to_prompt_context(self) -> str:
+        lines = [
+            f"[{self.get_note_type_display().upper()}] {self.title}",
+            self.content[:800],
+        ]
+        if self.source:
+            lines.append(f"Quelle: {self.source}")
+        return "\n".join(lines)
+
+
+class GenreConventionProfile(models.Model):
+    """
+    Genre-Konventions-Profil — maschinenlesbare Vertrags-Regeln (ADR-160).
+
+    1:1 zu GenreLookup. Admin-verwaltbar.
+    conventions JSON-Schema: [{label, description, check_type, check_by_percent, weight, outlinefw_beat}]
+    """
+
+    genre_lookup = models.OneToOneField(
+        "GenreLookup",
+        on_delete=models.CASCADE,
+        related_name="convention_profile",
+    )
+    conventions = models.JSONField(
+        default=list,
+        help_text="Liste von Konventions-Checks (check_type: turning_point_exists, b_story_exists, happy_end_required, fair_play)",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "wh_genre_convention_profiles"
+        verbose_name = "Genre-Konventions-Profil"
+        verbose_name_plural = "Genre-Konventions-Profile"
+
+    def __str__(self):
+        return f"Konventionen: {self.genre_lookup.name}"
+
+
+class BetaReaderSession(models.Model):
+    """
+    Beta-Leser-Runde — strukturiertes Testleser-Feedback (ADR-160).
+
+    Unterschied zu ChapterReview: Externe Person reagiert als Leser,
+    nicht als Strukturanalytiker.
+    """
+
+    ANON_CHOICES = [
+        ("open",      "Offen — alles sichtbar"),
+        ("anon_meta", "Text only — keine Metadaten"),
+        ("anon_full", "Vollständig anonym"),
+    ]
+    FEEDBACK_FOCUS = [
+        ("general",   "Allgemein"),
+        ("pacing",    "Pacing & Tempo"),
+        ("character", "Figuren-Sympathie"),
+        ("clarity",   "Verständlichkeit"),
+        ("tension",   "Spannungsverlauf"),
+        ("ending",    "Schluss / Auflösung"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        BookProject,
+        on_delete=models.CASCADE,
+        related_name="beta_sessions",
+    )
+    name = models.CharField(max_length=200)
+    anonymization = models.CharField(max_length=20, choices=ANON_CHOICES, default="anon_meta")
+    feedback_focus = models.CharField(max_length=20, choices=FEEDBACK_FOCUS, default="general")
+    manuscript_snapshot = models.ForeignKey(
+        "ManuscriptSnapshot",
+        on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="beta_sessions",
+    )
+    reader_name = models.CharField(max_length=200, blank=True, default="")
+    reader_note = models.TextField(blank=True, default="")
+    is_completed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "wh_beta_reader_sessions"
+        ordering = ["-created_at"]
+        verbose_name = "Beta-Leser-Session"
+        verbose_name_plural = "Beta-Leser-Sessions"
+
+    def __str__(self):
+        return f"{self.name} — {self.project.title}"
+
+    @property
+    def open_feedback_count(self) -> int:
+        return self.feedbacks.filter(is_addressed=False).count()
+
+
+class BetaReaderFeedback(models.Model):
+    """
+    Einzelnes Feedback-Item einer Beta-Leser-Session (ADR-160).
+
+    feedback_type='confusion' hat höchste Priorität.
+    """
+
+    FEEDBACK_TYPES = [
+        ("confusion",    "Unklarheit / Verwirrung"),
+        ("boredom",      "Langeweile / Tempo zu langsam"),
+        ("tension_drop", "Spannungsabfall"),
+        ("highlight",    "Besonders gut"),
+        ("character_ok", "Figur sympathisch"),
+        ("char_problem", "Figur-Problem"),
+        ("general",      "Allgemeines Feedback"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    session = models.ForeignKey(
+        BetaReaderSession,
+        on_delete=models.CASCADE,
+        related_name="feedbacks",
+    )
+    node = models.ForeignKey(
+        "OutlineNode",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="beta_feedbacks",
+    )
+    feedback_type = models.CharField(max_length=20, choices=FEEDBACK_TYPES, default="general")
+    text = models.TextField(verbose_name="Feedback-Text")
+    text_reference = models.TextField(blank=True, default="")
+    chapter_order = models.PositiveSmallIntegerField(null=True, blank=True)
+    is_addressed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "wh_beta_reader_feedbacks"
+        ordering = ["session", "chapter_order", "feedback_type"]
+        verbose_name = "Beta-Reader-Feedback"
+        verbose_name_plural = "Beta-Reader-Feedbacks"
+
+    def __str__(self):
+        return f"[{self.get_feedback_type_display()}] {self.text[:60]}"
