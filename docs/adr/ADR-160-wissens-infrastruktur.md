@@ -267,10 +267,10 @@ def _evaluate_convention(project, conv: dict) -> bool:
         return getattr(project, "arc_direction", "") == "positive"
     elif check_type == "fair_play":
         # Alle ForeshadowingEntries müssen Setup vor 75% haben
+        # M1-Fix: position_start (0–100) statt outlinefw_position — laut apps/projects/models.py:109
         entries = project.foreshadowing_entries.filter(is_planted=True)
         return all(
-            e.setup_node and e.setup_node.outlinefw_position and
-            float(e.setup_node.outlinefw_position) <= 0.75
+            e.setup_node and e.setup_node.position_start <= 75
             for e in entries
         )
     # C4-Fix: unbekannter check_type loggen statt lautlos True zurückgeben
