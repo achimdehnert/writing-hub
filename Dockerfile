@@ -28,4 +28,7 @@ RUN chmod +x /app/docker/entrypoint.web.sh
 
 EXPOSE 8000
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/livez/')" || exit 1
+
 CMD ["/app/docker/entrypoint.web.sh"]
