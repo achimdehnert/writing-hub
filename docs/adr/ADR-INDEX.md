@@ -17,8 +17,8 @@
 | [152](#adr-152) | Charakter-Arc-Dramaturgie | ✅ Accepted | ⬜ none | `worlds/0003` | 150, 151 |
 | [153](#adr-153) | Frontend CSS Design Tokens + HTMX | ✅ Accepted | ⬜ none | — (Frontend) | — |
 | [154](#adr-154) | Drama-Dashboard + Content-Type-UIs | ✅ Accepted | ⬜ none | `projects/0009` | 151, 152 |
-| [155](#adr-155) | Serien-Dramaturgie | ✅ Accepted | ⬜ none | `series/0001` | 150, 152 |
-| [156](#adr-156) | Zeitstruktur, Foreshadowing, Sequenz | ✅ Accepted | ⬜ none | `projects/0010+` | 150, 151 |
+| [155](#adr-155) | Serien-Dramaturgie — SeriesArc, VolumeRole, CharacterContinuity | ✅ Accepted | ✅ implemented | `core/0002`, `series/0003` | 150, 152 |
+| [156](#adr-156) | Zeitstruktur, Foreshadowing, OutlineSequence | ✅ Accepted | ✅ implemented | `projects/0018+0019` | 150, 151 |
 | [157](#adr-157) | Antagonist-System, B-Story/Subplot, MVN-Health **Rev.1** | ✅ Accepted | ✅ implemented | `worlds/0004`, `projects/0014+0015` | 150, 151, 152 |
 | [158](#adr-158) | Dialogue Subtext, Opening/Closing Image, GenrePromise | ✅ Accepted | ✅ implemented | `core/0001`, `projects/0015` | 150, 151, 157 |
 | [159](#adr-159) | Publikationsvorbereitung — Comps, Pitch, Exposé | 📋 Proposed | ✅ implemented | `projects/0017` | 083, 150, 157-Rev1, 158 |
@@ -50,10 +50,23 @@ SPRINT 3 — "Zum Verlag" ✅ ABGESCHLOSSEN
   ├── ADR-160  →  projects/0017 (ResearchNote, GenreConventionProfile, BetaReaderSession, BetaReaderFeedback)
   └── FE3: Drama-Dashboard (Chart.js) — ausstehend
 
-SPRINT 4 — "Serien & Essays" ← AKTUELL (nächstes)
-  ├── ADR-155 Impl  →  series/ (bereits Accepted, noch nicht implementiert)
-  ├── ADR-156 Impl  →  projects/ (bereits Accepted)
-  └── FE4/FE5
+SPRINT 4 — "Serien & Essays" ✅ ABGESCHLOSSEN (Commits 2ec9054, b23cd6f, +)
+  ├── ADR-155  →  core/0002_series_arc_type_lookup + series/0003
+  │             SeriesArc, SeriesVolumeRole, SeriesCharacterContinuity
+  │             series/services/continuity_service.py
+  │             Seed: seed_series_arc_types
+  ├── ADR-156  →  projects/0018_outline_sequence + projects/0019_timeline_foreshadowing
+  │             OutlineSequence (in models.py), OutlineNode.sequence FK
+  │             models_timeline.py: NarrativeModelLookup, MasterTimeline, TimelineEntry
+  │             ForeshadowingTypeLookup, ForeshadowingEntry, PlannedFlashback
+  │             get_open_foreshadowing_context() (Layer-8)
+  │             Seed: seed_narrative_lookups (4+6 Einträge)
+  └── FE4/FE5: Drama-Dashboard (Chart.js) — ausstehend
+
+SPRINT 5 — "Frontend" ← AKTUELL (nächstes)
+  ├── FE2: HTMX Filter + Auto-Save
+  ├── FE3: Drama-Dashboard (Chart.js)
+  └── seed_all.py vollständig (alle neuen Seed-Commands integriert)
 ```
 
 ---

@@ -73,19 +73,30 @@ class Command(BaseCommand):
         except Exception as exc:
             self.stdout.write(self.style.WARNING(f"  ! seed_outline_frameworks: {exc}"))
 
-        # 4. Core Lookups (TurningPointTypes + GenrePromises)
+        # 4. Core Lookups (TurningPointTypes + GenrePromises + SeriesArcTypes)
         self.stdout.write(self.style.MIGRATE_HEADING("\n[4] Core Dramaturgik-Lookups ..."))
-        for cmd in ["seed_turning_point_types", "seed_genre_promises"]:
+        for cmd in ["seed_turning_point_types", "seed_genre_promises", "seed_series_arc_types"]:
             try:
                 kwargs = {}
                 if force:
-                    kwargs["force"] = True
+                    kwargs["force_update"] = True
                 call_command(cmd, **kwargs)
                 self.stdout.write(self.style.SUCCESS(f"  ✓ {cmd}"))
             except Exception as exc:
                 self.stdout.write(self.style.WARNING(f"  ! {cmd}: {exc}"))
 
-        # 5. aifw
+        # 5. Narrative Lookups (ADR-156: NarrativeModelLookup + ForeshadowingTypeLookup)
+        self.stdout.write(self.style.MIGRATE_HEADING("\n[5] Narrative Lookups ..."))
+        try:
+            kwargs = {}
+            if force:
+                kwargs["force_update"] = True
+            call_command("seed_narrative_lookups", **kwargs)
+            self.stdout.write(self.style.SUCCESS("  ✓ seed_narrative_lookups"))
+        except Exception as exc:
+            self.stdout.write(self.style.WARNING(f"  ! seed_narrative_lookups: {exc}"))
+
+        # 6. aifw
         if not options["skip_aifw"]:
             self.stdout.write(self.style.MIGRATE_HEADING("\n[4] aifw-Konfiguration ..."))
             try:
