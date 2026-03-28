@@ -304,7 +304,12 @@ tension_numeric = models.SmallIntegerField(
     validators=[MinValueValidator(1), MaxValueValidator(10)],
     help_text="Spannungsniveau 1 (minimal) bis 10 (Maximum)",
 )
-timeline_position = models.DateTimeField(null=True, blank=True)
+timeline_position = models.CharField(
+    max_length=100, blank=True, default="",
+    help_text="Narrativer Zeitpunkt in der Story-Chronologie — kein DateTimeField, "
+              "da fiktive Zeitangaben ('Tag 3, 14:00') kein DB-Datum sind. "
+              "Korrespondiert mit MasterTimeline/TimelineEntry (ADR-156).",
+)
 sequel_note = models.TextField(
     blank=True, default="",
     verbose_name="Sequel-Notiz",

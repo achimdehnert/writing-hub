@@ -147,12 +147,12 @@ is_narrator = models.BooleanField(
 ```python
 class CharacterKnowledgeState(models.Model):
     """
-    Was weiß eine Figur zu einem bestimmten Szenen-Zeitpunkt?
+    Was weiß eine Figur nach einer bestimmten Szene?
 
     Verhindert Info-Leaks: Das LLM prüft vor jedem Dialog, was die
     Figur an diesem Punkt wissen darf.
 
-    Schema für knows / does_not_know (Liste von KnowledgeItem):
+    Schema für knows / does_not_know / suspects (Liste von KnowledgeItem):
         [
           {
             "type": "event",          # event | secret | relationship | world_fact
@@ -162,21 +162,48 @@ class CharacterKnowledgeState(models.Model):
           },
           ...
         ]
+
+    Konsistent mit ADR-156 (MasterTimeline): as_of_node referenziert
+    die Szene, NACH der dieser Wissensstand gilt.
     """
-    project      = models.ForeignKey("projects.BookProject", on_delete=models.CASCADE)
-    character_id = models.UUIDField()
-    chapter_ref  = models.ForeignKey("projects.OutlineNode", on_delete=models.CASCADE)
-    knows         = models.JSONField(default=list)
-    does_not_know = models.JSONField(default=list)
+    id           = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project      = models.ForeignKey("projects.BookProject", on_delete=models.CASCADE,
+                                     related_name="knowledge_states")
+    character_id = models.UUIDField(help_text="WeltenHub-Referenz der Figur")
+    as_of_node   = models.ForeignKey(
+        "projects.OutlineNode", on_delete=models.CASCADE,
+        related_name="knowledge_states",
+        verbose_name="Wissensstand nach diesem Kapitel/Szene",
+    )
+    knows         = models.JSONField(default=list, verbose_name="Weiß",
+                                     help_text="Liste von Informationen, die die Figur jetzt weiß.")
+    does_not_know = models.JSONField(default=list, verbose_name="Weiß nicht",
+                                     help_text="Wichtige Informationen, die der Figur noch verborgen sind.")
+    suspects      = models.JSONField(default=list, verbose_name="Vermutet",
+                                     help_text="Was vermutet die Figur (ohne Gewissheit)?")
+    newly_learned = models.JSONField(default=list, verbose_name="Neu erfahren",
+                                     help_text="Was hat sie in dieser Szene neu erfahren?")
 
     class Meta:
         db_table        = "wh_character_knowledge_states"
-        unique_together = [("project", "character_id", "chapter_ref")]
-        verbose_name    = "Wissensstand Figur"
-        verbose_name_plural = "Wissensstände Figuren"
+        unique_together = [("project", "character_id", "as_of_node")]
+        ordering        = ["project", "character_id", "as_of_node__order"]
+        verbose_name    = "Figur-Wissensstand"
+        verbose_name_plural = "Figur-Wissensstände"
 
     def __str__(self):
-        return f"KnowledgeState char={self.character_id} @ {self.chapter_ref}"
+        return f"KnowledgeState char={self.character_id} @ {self.as_of_node}"
+
+    def to_prompt_context(self) -> str:
+        """Gibt Wissensstand als LLM-Prompt-Kontext zurück."""
+        lines = []
+        if self.knows:
+            lines.append(f"WEISSPUNKT: {'; '.join(self.knows)}")
+        if self.does_not_know:
+            lines.append(f"NOCH UNBEKANNT: {'; '.join(self.does_not_know)}")
+        if self.suspects:
+            lines.append(f"VERMUTET: {'; '.join(self.suspects)}")
+        return "\n".join(lines)
 ```
 
 **KnowledgeItem-Typen:**

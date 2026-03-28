@@ -188,8 +188,11 @@ def generation_stream(request, pk):
 
 `django-htmx` + `htmx-ext-sse` CDN:
 ```html
+<!-- ACHTUNG: integrity-Hash muss vor Deployment ermittelt werden:
+     curl -sL https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.2/sse.js | openssl dgst -sha384 -binary | openssl base64 -A
+     → Ergebnis als sha384-<hash> eintragen -->
 <script src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.2/sse.js"
-        integrity="sha384-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        integrity="sha384-TODO_HASH_VOR_DEPLOYMENT_ERMITTELN"
         crossorigin="anonymous"></script>
 ```
 

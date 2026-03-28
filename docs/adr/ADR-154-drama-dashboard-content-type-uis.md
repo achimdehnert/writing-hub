@@ -85,7 +85,8 @@ class DramaDashboardService:
         ORM-Zugriff ist im Service-Layer erlaubt (SL-001: kein ORM in Views).
         """
         nodes = OutlineNode.objects.filter(
-            outline__project=self.project
+            outline_version__project=self.project,
+            outline_version__is_active=True,
         ).select_related("outcome", "emotion_start", "emotion_end").order_by("sort_order")
         return {
             "labels": [n.title for n in nodes],
