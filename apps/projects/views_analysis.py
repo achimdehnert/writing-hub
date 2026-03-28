@@ -60,13 +60,23 @@ class ProjectBudgetView(LoginRequiredMixin, View):
             error = str(exc)
 
         version = project.outline_versions.filter(is_active=True).first()
-        nodes = []
-        if version:
-            nodes = list(version.nodes.order_by("order"))
+        nodes_with_budget = []
+        if version and allocation:
+            node_budgets = allocation.node_budgets or {}
+            over = set(allocation.over_budget_nodes or [])
+            under = set(allocation.under_budget_nodes or [])
+            for n in version.nodes.order_by("order"):
+                key = str(n.id)
+                nodes_with_budget.append({
+                    "node": n,
+                    "budget": node_budgets.get(key),
+                    "over": key in over,
+                    "under": key in under,
+                })
 
         return render(request, self.template_name, {
             "project": project,
             "allocation": allocation,
-            "nodes": nodes,
+            "nodes_with_budget": nodes_with_budget,
             "error": error,
         })
