@@ -12,10 +12,11 @@ from django.db import models
 
 
 class JobStatus(models.TextChoices):
-    PENDING = "pending", "Ausstehend"
-    RUNNING = "running", "Läuft"
-    DONE = "done", "Fertig"
-    FAILED = "failed", "Fehlgeschlagen"
+    PENDING  = "pending",  "Ausstehend"
+    RUNNING  = "running",  "Läuft"
+    DONE     = "done",     "Fertig"
+    FAILED   = "failed",   "Fehlgeschlagen"
+    CANCELED = "canceled", "Abgebrochen"
 
 
 class ChapterWriteJob(models.Model):
@@ -73,3 +74,64 @@ class ChapterWriteJob(models.Model):
     @property
     def is_failed(self):
         return self.status == JobStatus.FAILED
+
+
+class BatchWriteJob(models.Model):
+    """
+    Sequenzielle Batch-Generierung mehrerer Kapitel (ADR-161).
+
+    Sicherheit: max_chapters=10 — kein blindes Vollmanuskript-Generieren.
+    Sequenziell: jedes Kapitel bekommt den Inhalt des vorherigen als Kontext.
+    Status-Tracking via HTMX-Polling (alle 3s).
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        "projects.BookProject",
+        on_delete=models.CASCADE,
+        related_name="batch_write_jobs",
+    )
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="batch_write_jobs",
+    )
+    node_ids = models.JSONField(
+        help_text="Geordnete Liste von OutlineNode-UUIDs (strings)",
+    )
+    max_chapters = models.PositiveSmallIntegerField(
+        default=10,
+        help_text="Sicherheits-Limit pro Batch-Job",
+    )
+    status = models.CharField(
+        max_length=10, choices=JobStatus.choices, default=JobStatus.PENDING,
+        db_index=True,
+    )
+    current_index = models.PositiveSmallIntegerField(default=0)
+    completed_count = models.PositiveSmallIntegerField(default=0)
+    failed_count = models.PositiveSmallIntegerField(default=0)
+    error_log = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "wh_batch_write_jobs"
+        ordering = ["-created_at"]
+        verbose_name = "Batch-Write-Job"
+        verbose_name_plural = "Batch-Write-Jobs"
+
+    def __str__(self):
+        return f"BatchJob {self.pk} ({self.status}) — {self.project}"
+
+    @property
+    def total(self) -> int:
+        return min(len(self.node_ids or []), self.max_chapters)
+
+    @property
+    def progress_pct(self) -> int:
+        return int(self.completed_count / self.total * 100) if self.total else 0
+
+    @property
+    def is_running(self) -> bool:
+        return self.status == JobStatus.RUNNING

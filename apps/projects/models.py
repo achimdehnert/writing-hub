@@ -682,3 +682,106 @@ class SubplotArc(models.Model):
         if pos < 0.8:
             return "eskalation"
         return "aufloesung"
+
+
+class TextAnalysisSnapshot(models.Model):
+    """
+    Gecachter struktureller Analyse-Snapshot eines Manuskripts (ADR-161).
+
+    Berechnet regelbasiert (kein LLM):
+        - Dead Scenes (emotion_start == emotion_end, beide befüllt)
+        - Character Screen Time (POV-Auftritte pro Figur)
+        - Pacing-Verteilung (Wortanzahl-Varianz)
+        - Dialogue-Ratio-Schätzung (Regex-Heuristik)
+
+    Optional (LLM, teuer):
+        - Voice Drift (check_voice_drift=True)
+
+    Speicher-Strategie: max. 5 Snapshots pro Projekt (FIFO),
+    analog zu ManuscriptSnapshot.
+    """
+
+    TRIGGERED_BY = [
+        ("manual",   "Manuell ausgelöst"),
+        ("lektorat", "Nach Lektorat"),
+        ("save",     "Nach Kapitel-Speichern"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        BookProject,
+        on_delete=models.CASCADE,
+        related_name="analysis_snapshots",
+    )
+
+    dead_scene_count = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Anzahl Nodes mit emotion_start == emotion_end (beide befüllt)",
+    )
+    dead_scene_node_ids = models.JSONField(
+        default=list,
+        help_text="UUIDs der betroffenen OutlineNodes",
+    )
+
+    character_screen_time = models.JSONField(
+        default=dict,
+        help_text="{character_uuid: {chapters: int, percent: float, last_seen_order: int, role: str}}",
+    )
+
+    chapter_word_counts = models.JSONField(
+        default=list,
+        help_text="[{order: int, word_count: int, title: str}]",
+    )
+    pacing_variance = models.FloatField(
+        null=True, blank=True,
+        help_text="Standardabweichung der Kapitel-Wortanzahlen",
+    )
+    pacing_issues = models.JSONField(
+        default=list,
+        help_text="[{type: str, severity: str, description: str, chapter_orders: []}]",
+    )
+
+    dialogue_ratios = models.JSONField(
+        default=dict,
+        help_text="{chapter_order: float} — geschätzter Dialog-Anteil 0.0–1.0",
+    )
+
+    voice_drift_checked = models.BooleanField(default=False)
+    voice_drift_detected = models.BooleanField(default=False)
+    voice_drift_chapters = models.JSONField(
+        default=list,
+        help_text="[{order: int, reason: str}]",
+    )
+
+    chapters_analyzed = models.PositiveSmallIntegerField(default=0)
+    computed_at = models.DateTimeField(auto_now=True)
+    triggered_by = models.CharField(
+        max_length=20, choices=TRIGGERED_BY, default="manual",
+    )
+
+    class Meta:
+        db_table = "wh_text_analysis_snapshots"
+        ordering = ["-computed_at"]
+        get_latest_by = "computed_at"
+        verbose_name = "Text-Analyse-Snapshot"
+        verbose_name_plural = "Text-Analyse-Snapshots"
+
+    def __str__(self):
+        return f"Analyse {self.project.title} — {self.computed_at:%Y-%m-%d %H:%M}"
+
+    @property
+    def has_issues(self) -> bool:
+        return (
+            self.dead_scene_count > 0
+            or bool(self.pacing_issues)
+            or self.voice_drift_detected
+        )
+
+    @property
+    def antagonist_underrepresented(self) -> bool:
+        if self.chapters_analyzed < 8:
+            return False
+        for data in self.character_screen_time.values():
+            if data.get("role") == "antagonist" and data.get("percent", 100) < 25:
+                return True
+        return False
