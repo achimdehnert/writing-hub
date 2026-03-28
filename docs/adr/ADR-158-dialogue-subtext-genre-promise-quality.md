@@ -211,6 +211,12 @@ class DialogueScene(models.Model):
 class TurningPointTypeLookup(models.Model):
     """
     Lookup: Semantische Typen von Wendepunkten.
+    App: apps/core/models_lookups_drama.py (Core-App — app_label="core")
+
+    KONSOLIDIERT aus zwei Specs (K1-Fix, KONSEQUENZANALYSE_ADR158):
+        - ADR-158 nutzte SmallInt (0–100) für default_position
+        - O1-Spec nutzte Decimal (0.0–1.0) für outlinefw-Kompatibilität
+        - Lösung: beide Felder, gegenseitig ableitbar
 
     Seed-Werte (Drei-Akte-Modell + universelle Typen):
         opening_image    | Opening Image     |  1% | Status Quo VOR der Veränderung
@@ -229,30 +235,45 @@ class TurningPointTypeLookup(models.Model):
     code               = models.SlugField(max_length=30, unique=True)
     label              = models.CharField(max_length=100)
     description        = models.TextField(blank=True, default="")
-    default_position   = models.SmallIntegerField(
+
+    # K1-Fix: SmallInt (0–100) — konsistent mit position_percent im gesamten Stack
+    default_position_percent = models.PositiveSmallIntegerField(
         default=0,
         help_text="Typische Position im Roman (0–100%)",
     )
+    # K1-Fix: Decimal (0.0–1.0) — für outlinefw-Kompatibilität
+    default_position_normalized = models.DecimalField(
+        max_digits=4, decimal_places=3,
+        null=True, blank=True,
+        help_text="Normiert (0.0–1.0) — für outlinefw-Kompatibilität, ableitbar aus default_position_percent / 100",
+    )
+    # K1-Fix: outlinefw-Mapping aus O1-Spec
+    outlinefw_beat_name = models.CharField(
+        max_length=80, blank=True, default="",
+        help_text="Mapping auf outlinefw BeatDefinition-Name (falls vorhanden)",
+    )
     mirrors_type_code  = models.SlugField(
         max_length=30, blank=True, default="",
-        help_text="Code des gespiegelten Typs (z.B. closing_image spiegelt opening_image)",
+        help_text="Code des gespiegelten Typs (z.B. closing_image → opening_image)",
     )
     sort_order         = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
         db_table        = "wh_turning_point_type_lookup"
+        app_label       = "core"   # Core-App besitzt die Tabelle — kein Migration-Crash
         ordering        = ["sort_order"]
         verbose_name    = "Wendepunkt-Typ"
         verbose_name_plural = "Wendepunkt-Typen"
 
     def __str__(self):
-        return f"{self.code} — {self.label} ({self.default_position}%)"
+        return f"{self.code} — {self.label} ({self.default_position_percent}%)"
 ```
 
-**`ProjectTurningPoint` erhält FK auf `TurningPointTypeLookup`:**
+**`ProjectTurningPoint` erhält FK auf `TurningPointTypeLookup` (K4-Fix: app_label=core):**
 
 ```python
 # Auf ProjectTurningPoint (ADR-151) — neue Felder:
+# K4-Fix: FK zeigt auf core.TurningPointTypeLookup (nicht projects.)
 turning_point_type = models.ForeignKey(
     "core.TurningPointTypeLookup",
     on_delete=models.SET_NULL,
