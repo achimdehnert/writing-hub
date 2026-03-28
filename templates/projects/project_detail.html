@@ -48,6 +48,14 @@
            style="background:#1e2235;color:#94a3b8;border:1px solid #2d3748;font-size:.75rem;">
             <i class="bi bi-magic me-1"></i> KI-Outline
         </button>
+        <a href="{% url 'projects:drama_dashboard' project.pk %}" class="btn btn-sm"
+           style="background:#1e1a2e;color:#c4b5fd;border:1px solid #4c1d95;font-size:.75rem;">
+            <i class="bi bi-activity me-1"></i> Drama
+        </a>
+        <a href="{% url 'projects:health' project.pk %}" class="btn btn-sm"
+           style="background:#1a2e1a;color:#86efac;border:1px solid #14532d;font-size:.75rem;">
+            <i class="bi bi-heart-pulse me-1"></i> Health
+        </a>
         <a href="{% url 'projects:edit' project.pk %}" class="btn btn-sm"
            style="background:#1e2235;color:#94a3b8;border:1px solid #2d3748;font-size:.75rem;">
             <i class="bi bi-gear me-1"></i> Einstellungen
