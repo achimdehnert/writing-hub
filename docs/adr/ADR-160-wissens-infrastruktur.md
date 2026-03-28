@@ -1,14 +1,14 @@
 # ADR-160: Wissens-Infrastruktur — Recherche, Genre-Konventionen, Beta-Reader
 
 ```yaml
-status: Proposed
+status: Accepted
 datum: 2026-03-28
 kontext: writing-hub @ achimdehnert/writing-hub
 abhaengig_von: [ADR-083, ADR-150, ADR-157-Rev1, ADR-158, ADR-159]
-implementation_status: none
+implementation_status: done
 ```
 
-**Status:** Proposed  
+**Status:** Accepted  
 **Datum:** 2026-03-28  
 **Kontext:** writing-hub @ achimdehnert/writing-hub  
 **Abhängig von:** ADR-083, ADR-150, ADR-157-Rev1, ADR-158, ADR-159
