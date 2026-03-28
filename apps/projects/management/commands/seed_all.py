@@ -96,7 +96,18 @@ class Command(BaseCommand):
         except Exception as exc:
             self.stdout.write(self.style.WARNING(f"  ! seed_narrative_lookups: {exc}"))
 
-        # 6. aifw
+        # 6. Drama Lookups (ADR-158: TurningPointTypeLookup + GenrePromiseLookup + QualityDimensions)
+        self.stdout.write(self.style.MIGRATE_HEADING("\n[6] Drama Lookups (ADR-158) ..."))
+        try:
+            kwargs = {}
+            if force:
+                kwargs["force"] = True
+            call_command("seed_drama_lookups", **kwargs)
+            self.stdout.write(self.style.SUCCESS("  ✓ seed_drama_lookups"))
+        except Exception as exc:
+            self.stdout.write(self.style.WARNING(f"  ! seed_drama_lookups: {exc}"))
+
+        # 7. aifw
         if not options["skip_aifw"]:
             self.stdout.write(self.style.MIGRATE_HEADING("\n[4] aifw-Konfiguration ..."))
             try:

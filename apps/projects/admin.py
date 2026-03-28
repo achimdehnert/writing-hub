@@ -9,6 +9,7 @@ from .models import (
     ProjectGenrePromise, ProjectTurningPoint,
     ResearchNote, SubplotArc, TextAnalysisSnapshot,
 )
+from .models_narrative import DialogueScene
 from .models_timeline import (
     ForeshadowingEntry, ForeshadowingTypeLookup,
     MasterTimeline, NarrativeModelLookup,
@@ -273,3 +274,24 @@ class ProjectTurningPointAdmin(admin.ModelAdmin):
     search_fields = ["project__title", "label"]
     raw_id_fields = ["project", "node"]
     readonly_fields = ["id", "created_at"]
+
+
+class DialogueSceneInline(admin.TabularInline):
+    model = DialogueScene
+    extra = 0
+    fields = [
+        "speaker_a_name", "speaker_b_name",
+        "dialogue_outcome", "sort_order",
+    ]
+
+
+@admin.register(DialogueScene)
+class DialogueSceneAdmin(admin.ModelAdmin):
+    list_display = [
+        "node", "speaker_a_name", "speaker_b_name",
+        "dialogue_outcome", "sort_order",
+    ]
+    list_filter = ["dialogue_outcome"]
+    search_fields = ["speaker_a_name", "speaker_b_name", "node__title"]
+    raw_id_fields = ["node"]
+    readonly_fields = ["id"]

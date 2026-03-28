@@ -1,137 +1,142 @@
 """
-Projects App — Narrative Models (ADR-157)
+Projects App — Narrative Models (ADR-158)
 
-SubplotArc: B-Story/C-Story-Tracking.
+DialogueScene: Subtext-Struktur für Dialog-Szenen.
+
+Hinweis: SubplotArc und ProjectGenrePromise sind in apps/projects/models.py
+definiert (Migration 0015). Keine Duplikate hier.
 """
 from __future__ import annotations
 
 import uuid
 
-from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
-class SubplotArc(models.Model):
+class DialogueScene(models.Model):
     """
-    Dramaturgischer Nebenstrang (B-Story, C-Story).
+    Subtext-Struktur einer Dialog-Szene (ADR-158).
 
-    Die B-Story ist NICHT optional — sie ist das thematische Herz
-    des Romans. Sie beginnt typischerweise bei ~37% (Save-the-Cat /
-    Drei-Akte-Modell).
+    Pro OutlineNode kann es 0–N DialogueScenes geben.
+    Verhindert On-Nose-Dialog durch strukturierte Subtext-Vorgaben an das LLM.
 
-    story_label:
-        a_story → Haupthandlung
-        b_story → Thematischer Spiegel (Liebesinteresse/Mentor-Typ)
-        c_story → Weiterer Subplot (nur bei Bedarf, > 80k Wörter)
+    Dialog-Outcome-Typen:
+        status_quo    → Dialog ändert nichts (selten erlaubt)
+        info_shift    → Informationsstand verändert sich
+        power_shift   → Machtverhältnis kippt
+        relationship  → Beziehung verändert sich
+        revelation    → Enthüllung — etwas kommt ans Licht
+        decision      → Entscheidung wird herbeigeführt
     """
 
-    STORY_LABELS = [
-        ("a_story", "A-Story — Haupthandlung"),
-        ("b_story", "B-Story — Thematischer Spiegel"),
-        ("c_story", "C-Story — Weiterer Subplot"),
+    DIALOGUE_OUTCOMES = [
+        ("status_quo",   "Status Quo — nichts ändert sich (Ausnahme!)"),
+        ("info_shift",   "Info-Shift — Wissensstand verändert sich"),
+        ("power_shift",  "Power-Shift — Machtverhältnis kippt"),
+        ("relationship", "Beziehungs-Shift — Nähe/Distanz verändert"),
+        ("revelation",   "Enthüllung — etwas kommt ans Licht"),
+        ("decision",     "Entscheidungs-Katalysator"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    project = models.ForeignKey(
-        "projects.BookProject",
+    node = models.ForeignKey(
+        "projects.OutlineNode",
         on_delete=models.CASCADE,
-        related_name="subplot_arcs",
+        related_name="dialogue_scenes",
+        verbose_name="Szene",
     )
-    story_label = models.CharField(
-        max_length=10, choices=STORY_LABELS, default="b_story",
-        db_index=True,
-    )
-    title = models.CharField(max_length=200, verbose_name="Subplot-Bezeichnung")
 
-    carried_by_character_id = models.UUIDField(
+    speaker_a_character_id = models.UUIDField(
         null=True, blank=True,
-        verbose_name="Träger-Figur (WeltenHub UUID)",
+        verbose_name="Figur A (WeltenHub UUID)",
     )
-    carried_by_name = models.CharField(
+    speaker_a_name = models.CharField(
         max_length=200, blank=True, default="",
-        verbose_name="Träger-Figur (Cache)",
+        verbose_name="Figur A (Cache)",
     )
-
-    thematic_mirror = models.TextField(
-        blank=True, default="",
-        verbose_name="Thematischer Spiegel",
-        help_text="Wie spiegelt dieser Subplot das Thema der A-Story?",
-    )
-    embodies_need = models.BooleanField(
-        default=True,
-        verbose_name="Verkörpert das Need",
-        help_text="Dieser Subplot verkörpert das Need des Protagonisten.",
-    )
-
-    begins_at_percent = models.PositiveSmallIntegerField(
-        default=37,
-        validators=[MinValueValidator(0), MaxValueValidator(100)],
-        verbose_name="Beginn (%)",
-        help_text="Empfehlung Drei-Akte/Save-the-Cat: 37%.",
-    )
-    ends_at_percent = models.PositiveSmallIntegerField(
-        default=95,
-        validators=[MinValueValidator(0), MaxValueValidator(100)],
-        verbose_name="Ende (%)",
-    )
-
-    begins_at_node = models.ForeignKey(
-        "projects.OutlineNode",
-        on_delete=models.SET_NULL,
+    speaker_b_character_id = models.UUIDField(
         null=True, blank=True,
-        related_name="subplot_begins",
-        verbose_name="Beginnt in Kapitel/Szene",
+        verbose_name="Figur B (WeltenHub UUID)",
     )
-    ends_at_node = models.ForeignKey(
-        "projects.OutlineNode",
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name="subplot_ends",
-        verbose_name="Endet in Kapitel/Szene",
+    speaker_b_name = models.CharField(
+        max_length=200, blank=True, default="",
+        verbose_name="Figur B (Cache)",
     )
 
-    intersection_nodes = models.ManyToManyField(
-        "projects.OutlineNode",
-        blank=True,
-        related_name="subplot_intersections",
-        help_text="Kapitel/Szenen, in denen dieser Subplot die A-Story kreuzt.",
-    )
-    intersection_notes = models.TextField(
+    goal_a = models.TextField(
         blank=True, default="",
-        verbose_name="Kreuzungspunkte — Anmerkungen",
+        verbose_name="Ziel Figur A im Dialog",
+        help_text="Was will Figur A durch dieses Gespräch erreichen?",
+    )
+    goal_b = models.TextField(
+        blank=True, default="",
+        verbose_name="Ziel Figur B im Dialog",
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    subtext_a = models.TextField(
+        blank=True, default="",
+        verbose_name="Subtext Figur A",
+        help_text="Was meint Figur A wirklich — darf es aber nicht sagen?",
+    )
+    subtext_b = models.TextField(
+        blank=True, default="",
+        verbose_name="Subtext Figur B",
+    )
+
+    info_asymmetry = models.TextField(
+        blank=True, default="",
+        verbose_name="Informations-Asymmetrie",
+        help_text="Was weiß eine Figur, was die andere nicht weiß?",
+    )
+
+    dialogue_outcome = models.CharField(
+        max_length=20,
+        choices=DIALOGUE_OUTCOMES,
+        default="info_shift",
+        verbose_name="Dialog-Outcome",
+    )
+    outcome_description = models.TextField(
+        blank=True, default="",
+        verbose_name="Outcome-Beschreibung",
+        help_text="Was ändert sich konkret durch diesen Dialog?",
+    )
+
+    sort_order = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
-        db_table = "wh_subplot_arcs"
-        ordering = ["project", "story_label"]
-        verbose_name = "Subplot-Arc"
-        verbose_name_plural = "Subplot-Arcs"
+        db_table = "wh_dialogue_scenes"
+        ordering = ["node", "sort_order"]
+        verbose_name = "Dialog-Subtext"
+        verbose_name_plural = "Dialog-Subtexte"
 
     def __str__(self):
-        return f"{self.get_story_label_display()}: {self.title}"
+        a = self.speaker_a_name or "?"
+        b = self.speaker_b_name or "?"
+        return f"Dialog: {a} ↔ {b} [{self.get_dialogue_outcome_display()}]"
 
-    def clean(self):
-        from django.core.exceptions import ValidationError
-        if self.begins_at_percent >= self.ends_at_percent:
-            raise ValidationError(
-                "begins_at_percent muss kleiner als ends_at_percent sein."
+    def to_prompt_context(self) -> str:
+        """Gibt Subtext-Struktur als LLM-Prompt-Block zurück."""
+        lines = [
+            f"[DIALOG: {self.speaker_a_name} ↔ {self.speaker_b_name}]",
+            f"ZIEL {self.speaker_a_name}: {self.goal_a}",
+            f"ZIEL {self.speaker_b_name}: {self.goal_b}",
+        ]
+        if self.subtext_a:
+            lines.append(
+                f"SUBTEXT {self.speaker_a_name}: {self.subtext_a} "
+                f"(darf NICHT direkt gesagt werden)"
             )
+        if self.subtext_b:
+            lines.append(
+                f"SUBTEXT {self.speaker_b_name}: {self.subtext_b} "
+                f"(darf NICHT direkt gesagt werden)"
+            )
+        if self.info_asymmetry:
+            lines.append(f"INFORMATIONS-ASYMMETRIE: {self.info_asymmetry}")
+        lines.append(
+            f"ERWARTETER OUTCOME: {self.get_dialogue_outcome_display()} — "
+            f"{self.outcome_description}"
+        )
+        return "\n".join(lines)
 
-    def b_story_phase(self, current_percent: int) -> str:
-        """Aktuelle Phase der B-Story für LLM-Kontext."""
-        if current_percent < self.begins_at_percent:
-            return "vor_beginn"
-        span = self.ends_at_percent - self.begins_at_percent
-        if span <= 0:
-            return "entwicklung"
-        pos = (current_percent - self.begins_at_percent) / span
-        if pos < 0.2:
-            return "beginn"
-        if pos < 0.5:
-            return "entwicklung"
-        if pos < 0.8:
-            return "eskalation"
-        return "aufloesung"
+

@@ -285,6 +285,14 @@ class ProjectTurningPoint(models.Model):
         help_text="0–100, relativer Buchfortschritt",
     )
     description = models.TextField(blank=True, default="")
+    mirrors_node = models.ForeignKey(
+        "projects.OutlineNode",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="mirrored_by_turning_points",
+        verbose_name="Gespiegelte Szene",
+        help_text="Nur für closing_image: die OutlineNode des Opening Image.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -1241,3 +1249,8 @@ class BetaReaderFeedback(models.Model):
 
     def __str__(self):
         return f"[{self.get_feedback_type_display()}] {self.text[:60]}"
+
+
+# ADR-158: DialogueScene discoverable machen
+from apps.projects.models_narrative import DialogueScene  # noqa: E402, F401
+
