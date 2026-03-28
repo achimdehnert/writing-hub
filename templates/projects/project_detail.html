@@ -60,6 +60,22 @@
            style="background:#2e1a1a;color:#fca5a5;border:1px solid #7f1d1d;font-size:.75rem;">
             <i class="bi bi-send me-1"></i> Pitch
         </a>
+        <a href="{% url 'projects:analysis' project.pk %}" class="btn btn-sm"
+           style="background:#1a2428;color:#67e8f9;border:1px solid #164e63;font-size:.75rem;">
+            <i class="bi bi-bar-chart me-1"></i> Analyse
+        </a>
+        <a href="{% url 'projects:budget' project.pk %}" class="btn btn-sm"
+           style="background:#1a2428;color:#6ee7b7;border:1px solid #065f46;font-size:.75rem;">
+            <i class="bi bi-calculator me-1"></i> Budget
+        </a>
+        <a href="{% url 'projects:research_dashboard' project.pk %}" class="btn btn-sm"
+           style="background:#2a2818;color:#fde68a;border:1px solid #78350f;font-size:.75rem;">
+            <i class="bi bi-journal-text me-1"></i> Recherche
+        </a>
+        <a href="{% url 'projects:beta_dashboard' project.pk %}" class="btn btn-sm"
+           style="background:#28182a;color:#e9d5ff;border:1px solid #6b21a8;font-size:.75rem;">
+            <i class="bi bi-people me-1"></i> Beta
+        </a>
         <a href="{% url 'projects:edit' project.pk %}" class="btn btn-sm"
            style="background:#1e2235;color:#94a3b8;border:1px solid #2d3748;font-size:.75rem;">
             <i class="bi bi-gear me-1"></i> Einstellungen
