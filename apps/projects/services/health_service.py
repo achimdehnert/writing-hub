@@ -184,6 +184,52 @@ def compute_dramaturgic_health(project) -> DramaturgicHealthResult:
         weight=1,
     ))
 
+    # --- COMPARABLE TITLES / COMPS (ADR-159, Gewicht 1) ---
+    try:
+        comp_count = project.comparable_titles.count()
+        checks.append(HealthCheck(
+            label="Comparable Titles",
+            passed=comp_count >= 2,
+            message="Weniger als 2 Comps — für Verlagsanfrage unzureichend.",
+            weight=1,
+        ))
+        if comp_count > 0:
+            comps = list(project.comparable_titles.all())
+            checks.append(HealthCheck(
+                label="Comps aktuell (< 5 Jahre)",
+                passed=not any(c.age_warning for c in comps),
+                message="Mindestens ein Comp ist älter als 5 Jahre — verlegerisch problematisch.",
+                weight=1,
+            ))
+    except Exception:
+        pass
+
+    # --- OFFENE RECHERCHE-FRAGEN (ADR-160, Gewicht 1) ---
+    try:
+        open_questions = project.research_notes.filter(is_open_question=True).count()
+        checks.append(HealthCheck(
+            label="Offene Recherche-Fragen",
+            passed=open_questions == 0,
+            message=f"{open_questions} offene Recherche-Fragen — vor Fertigstellung klären.",
+            weight=1,
+        ))
+    except Exception:
+        pass
+
+    # --- GENRE-KONVENTIONEN (ADR-160, Gewicht 2 für 'required') ---
+    try:
+        from apps.projects.services.genre_service import check_genre_conventions
+        for gc in check_genre_conventions(project):
+            if gc["weight"] == "required":
+                checks.append(HealthCheck(
+                    label=f"Genre-Konvention: {gc['label']}",
+                    passed=gc["passed"],
+                    message=gc["description"],
+                    weight=2,
+                ))
+    except Exception:
+        pass
+
     total_weight = sum(c.weight for c in checks)
     earned_weight = sum(c.weight for c in checks if c.passed)
     score = int((earned_weight / total_weight) * 100) if total_weight else 0

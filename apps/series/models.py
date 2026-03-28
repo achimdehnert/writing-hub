@@ -64,3 +64,10 @@ class SeriesVolume(models.Model):
 
     def __str__(self):
         return f"{self.series.title} Band {self.volume_number}: {self.project.title}"
+
+
+from apps.series.models_arc import (  # noqa: E402, F401
+    SeriesArc,
+    SeriesCharacterContinuity,
+    SeriesVolumeRole,
+)

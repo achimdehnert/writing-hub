@@ -10,6 +10,13 @@ from django.conf import settings
 from django.db import models
 
 
+def _import_timeline_models():
+    from apps.projects import models_timeline  # noqa: F401
+
+
+_import_timeline_models()
+
+
 class ContentTypeLookup(models.Model):
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=50, unique=True)
@@ -240,6 +247,47 @@ class OutlineVersion(models.Model):
         return new
 
 
+class OutlineSequence(models.Model):
+    """
+    Mesostruktur-Zwischenebene zwischen Akt und Kapitel (ADR-156).
+
+    Hierarchie: OutlineVersion → OutlineSequence → OutlineNode
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    outline_version = models.ForeignKey(
+        "OutlineVersion",
+        on_delete=models.CASCADE,
+        related_name="sequences",
+    )
+    act = models.CharField(
+        max_length=20, blank=True, default="",
+        verbose_name="Akt-Zugehörigkeit",
+        help_text="z.B. 'act_1', 'act_2a', 'act_3'",
+    )
+    title = models.CharField(max_length=200)
+    goal = models.TextField(
+        verbose_name="Sequenz-Ziel",
+        help_text="Was versucht die Figur in dieser Sequenz zu erreichen?",
+    )
+    start_state = models.TextField(blank=True, default="", verbose_name="Ausgangslage")
+    end_state = models.TextField(
+        blank=True, default="",
+        verbose_name="Endzustand",
+        help_text="Positiv (Ziel erreicht) oder negativ (Komplikation)?",
+    )
+    sort_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "wh_outline_sequences"
+        ordering = ["outline_version", "sort_order"]
+        verbose_name = "Sequenz"
+        verbose_name_plural = "Sequenzen"
+
+    def __str__(self):
+        return f"Seq {self.sort_order}: {self.title}"
+
+
 class OutlineNode(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     outline_version = models.ForeignKey(
@@ -266,6 +314,13 @@ class OutlineNode(models.Model):
         null=True, blank=True,
         verbose_name="Schreibstil f\u00fcr dieses Kapitel",
         related_name="outline_nodes",
+    )
+    sequence = models.ForeignKey(
+        "projects.OutlineSequence",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="nodes",
+        verbose_name="Sequenz-Zugehörigkeit",
     )
     order = models.PositiveIntegerField(default=0)
     notes = models.TextField(blank=True)

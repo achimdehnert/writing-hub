@@ -145,3 +145,30 @@ class GenrePromiseLookup(models.Model):
         if self.must_haves:
             lines.append("Pflicht-Elemente: " + ", ".join(self.must_haves))
         return "\n".join(lines)
+
+
+class SeriesArcTypeLookup(models.Model):
+    """
+    Lookup: Serien-Arc-Typen (ADR-155).
+
+    Seed-Werte:
+        single_arc     | Durchgehender Arc  | Eine Figur, ein Arc über alle Bände
+        anthology      | Anthologie         | Jeder Band eigenständig, lose verbunden
+        escalating_arc | Eskalierender Arc  | Jeder Band erhöht die Einsätze
+        dual_arc       | Doppel-Arc         | Haupt-Arc + Band-eigener Arc parallel
+    """
+
+    code = models.SlugField(max_length=30, unique=True)
+    label = models.CharField(max_length=100)
+    description = models.TextField(blank=True, default="")
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        app_label = "core"
+        db_table = "wh_series_arc_type_lookup"
+        ordering = ["sort_order"]
+        verbose_name = "Serien-Arc-Typ"
+        verbose_name_plural = "Serien-Arc-Typen"
+
+    def __str__(self):
+        return self.label
