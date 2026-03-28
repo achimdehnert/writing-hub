@@ -57,6 +57,9 @@ urlpatterns = [
     # Health-Score (ADR-157)
     path("<uuid:pk>/health/", views_health.ProjectHealthView.as_view(), name="health"),
     path("<uuid:pk>/health/partial/", views_health.ProjectHealthPartialView.as_view(), name="health_partial"),
+    # Pitch-Paket / Publikationsvorbereitung (ADR-159)
+    path("<uuid:pk>/pitch/", views_publishing.PitchDashboardView.as_view(), name="pitch_dashboard"),
+    path("<uuid:pk>/pitch/<str:pitch_type>/generate/", views_publishing.GeneratePitchView.as_view(), name="pitch_generate"),
     # Drama-Dashboard (ADR-154)
     path("<uuid:pk>/drama/", views_html.DramaDashboardView.as_view(), name="drama_dashboard"),
     path("node/<uuid:node_pk>/drama-update/", views_html.DramaNodeUpdateView.as_view(), name="drama_node_update"),

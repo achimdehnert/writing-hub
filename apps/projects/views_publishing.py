@@ -175,3 +175,100 @@ class PublishingKeywordsAIView(LoginRequiredMixin, View):
             return JsonResponse({"ok": True, "keywords": result.strip()})
         except Exception as exc:
             return JsonResponse({"ok": False, "error": str(exc)}, status=500)
+
+
+class PitchDashboardView(LoginRequiredMixin, View):
+    """Pitch-Dashboard: Logline, Comps, Exposé, Query Letter (ADR-159)."""
+
+    template_name = "projects/pitch_dashboard.html"
+
+    def get(self, request, pk):
+        from .models import ComparableTitle, PitchDocument
+        project = get_object_or_404(BookProject, pk=pk)
+        comps = ComparableTitle.objects.filter(project=project).order_by("sort_order")
+        pitch_docs = {}
+        for pitch_type, _ in PitchDocument.PITCH_TYPES:
+            pitch_docs[pitch_type] = PitchDocument.objects.filter(
+                project=project, pitch_type=pitch_type, is_current=True
+            ).first()
+        return self._render(request, project, comps, pitch_docs)
+
+    def post(self, request, pk):
+        from .models import ComparableTitle, PitchDocument
+        project = get_object_or_404(BookProject, pk=pk)
+        action = request.POST.get("action", "")
+
+        if action == "add_comp":
+            ComparableTitle.objects.create(
+                project=project,
+                title=request.POST.get("title", ""),
+                author=request.POST.get("author", ""),
+                publisher=request.POST.get("publisher", ""),
+                publication_year=request.POST.get("publication_year") or None,
+                relation_type=request.POST.get("relation_type", "similar_theme"),
+                similarity_note=request.POST.get("similarity_note", ""),
+                difference_note=request.POST.get("difference_note", ""),
+                sort_order=ComparableTitle.objects.filter(project=project).count(),
+            )
+            messages.success(request, "Comp hinzugefügt.")
+        elif action == "delete_comp":
+            comp_id = request.POST.get("comp_id")
+            ComparableTitle.objects.filter(project=project, pk=comp_id).delete()
+            messages.success(request, "Comp entfernt.")
+        elif action == "save_pitch":
+            pitch_type = request.POST.get("pitch_type", "")
+            content = request.POST.get("content", "")
+            if pitch_type and content:
+                PitchDocument.objects.filter(
+                    project=project, pitch_type=pitch_type, is_current=True
+                ).update(is_current=False)
+                last = PitchDocument.objects.filter(
+                    project=project, pitch_type=pitch_type
+                ).order_by("-version").first()
+                PitchDocument.objects.create(
+                    project=project,
+                    pitch_type=pitch_type,
+                    content=content,
+                    is_current=True,
+                    version=(last.version + 1) if last else 1,
+                )
+                messages.success(request, "Pitch-Dokument gespeichert.")
+
+        return redirect("projects:pitch_dashboard", pk=pk)
+
+    def _render(self, request, project, comps, pitch_docs):
+        from .models import ComparableTitle
+        return render(request, self.template_name, {
+            "project": project,
+            "comps": comps,
+            "pitch_docs": pitch_docs,
+            "comp_relation_choices": ComparableTitle.COMP_RELATION,
+        })
+
+
+class GeneratePitchView(LoginRequiredMixin, View):
+    """HTMX/POST: Generiert ein Pitch-Dokument via LLM (ADR-159)."""
+
+    def post(self, request, pk, pitch_type):
+        from .services.pitch_service import (
+            generate_expose_de, generate_logline, generate_query,
+        )
+        project = get_object_or_404(BookProject, pk=pk)
+
+        generators = {
+            "logline": generate_logline,
+            "expose_de": generate_expose_de,
+            "query": generate_query,
+        }
+        generator = generators.get(pitch_type)
+        if not generator:
+            messages.error(request, f"Unbekannter Pitch-Typ: {pitch_type}")
+            return redirect("projects:pitch_dashboard", pk=pk)
+
+        try:
+            generator(project)
+            messages.success(request, f"{pitch_type} erfolgreich generiert.")
+        except Exception as exc:
+            messages.error(request, f"Generierung fehlgeschlagen: {exc}")
+
+        return redirect("projects:pitch_dashboard", pk=pk)

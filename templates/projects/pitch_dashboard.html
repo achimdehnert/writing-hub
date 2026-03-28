@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% block title %}Pitch-Paket — {{ project.title }} — Writing Hub{% endblock %}
+{% block nav_projects %}active{% endblock %}
+
+{% block content %}
+<div style="max-width:1100px;margin:0 auto;">
+
+<!-- Header -->
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <a href="{% url 'projects:detail' project.pk %}" class="btn btn-link text-muted ps-0">
+            ← {{ project.title }}
+        </a>
+        <h1 class="h3 mb-0">Pitch-Paket</h1>
+        <small class="text-muted">Logline · Comps · Exposé · Query Letter</small>
+    </div>
+</div>
+
+{% if messages %}
+<div class="mb-3">
+{% for msg in messages %}
+<div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show" role="alert">
+    {{ msg }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+</div>
+{% endif %}
+
+<!-- Tabs -->
+<ul class="nav nav-tabs mb-4" id="pitchTabs">
+    <li class="nav-item">
+        <a class="nav-link active" data-bs-toggle="tab" href="#tab-logline">Logline</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#tab-comps">Comps ({{ comps|length }})</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#tab-expose">Exposé</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#tab-query">Query Letter</a>
+    </li>
+</ul>
+
+<div class="tab-content">
+
+    <!-- Logline -->
+    <div class="tab-pane fade show active" id="tab-logline">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <strong>Logline</strong>
+                <form method="post" action="{% url 'projects:pitch_generate' pk=project.pk pitch_type='logline' %}">
+                    {% csrf_token %}
+                    <button class="btn btn-sm btn-outline-primary">KI generieren</button>
+                </form>
+            </div>
+            <div class="card-body">
+                {% if pitch_docs.logline %}
+                <div class="mb-3">
+                    <div class="bg-light rounded p-3 fs-5 fst-italic">
+                        "{{ pitch_docs.logline.content }}"
+                    </div>
+                    <small class="text-muted">v{{ pitch_docs.logline.version }}
+                        {% if pitch_docs.logline.is_ai_generated %} · KI-generiert{% endif %}
+                    </small>
+                </div>
+                {% endif %}
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="save_pitch">
+                    <input type="hidden" name="pitch_type" value="logline">
+                    <textarea name="content" class="form-control mb-2" rows="3"
+                        placeholder="Logline manuell eingeben oder KI-Vorschlag bearbeiten …">{% if pitch_docs.logline %}{{ pitch_docs.logline.content }}{% endif %}</textarea>
+                    <button class="btn btn-sm btn-success">Speichern</button>
+                </form>
+                <div class="alert alert-info mt-3 mb-0 small">
+                    <strong>Format (Save-the-Cat):</strong>
+                    "Ein [Figur mit Mangel] muss [äußeres Ziel erreichen], bevor [Stakes] — aber [Antagonist] stellt sich entgegen." — Max. 35 Wörter.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comps -->
+    <div class="tab-pane fade" id="tab-comps">
+        {% if comps %}
+        <div class="table-responsive mb-4">
+            <table class="table table-sm align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Autor</th>
+                        <th>Titel</th>
+                        <th>Jahr</th>
+                        <th>Typ</th>
+                        <th>Unterschied</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for comp in comps %}
+                <tr>
+                    <td>{{ comp.author }}</td>
+                    <td>
+                        {{ comp.title }}
+                        {% if comp.age_warning %}
+                        <span class="badge bg-warning text-dark ms-1" title="Älter als 5 Jahre">!</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ comp.publication_year|default:"—" }}</td>
+                    <td><small>{{ comp.get_relation_type_display }}</small></td>
+                    <td><small class="text-muted">{{ comp.difference_note|truncatechars:60 }}</small></td>
+                    <td>
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_comp">
+                            <input type="hidden" name="comp_id" value="{{ comp.pk }}">
+                            <button class="btn btn-sm btn-outline-danger">×</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted">Noch keine Comps angelegt.</p>
+        {% endif %}
+
+        <div class="card shadow-sm">
+            <div class="card-header"><strong>Comp hinzufügen</strong></div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_comp">
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <input name="author" class="form-control form-control-sm" placeholder="Autor *" required>
+                        </div>
+                        <div class="col-md-5">
+                            <input name="title" class="form-control form-control-sm" placeholder="Titel *" required>
+                        </div>
+                        <div class="col-md-3">
+                            <input name="publication_year" type="number" class="form-control form-control-sm"
+                                placeholder="Jahr" min="2000" max="2030">
+                        </div>
+                        <div class="col-md-4">
+                            <select name="relation_type" class="form-select form-select-sm">
+                                {% for val, label in comp_relation_choices %}
+                                <option value="{{ val }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-8">
+                            <input name="difference_note" class="form-control form-control-sm"
+                                placeholder="Worin unterschiedlich? ('wie X, aber …')">
+                        </div>
+                        <div class="col-12">
+                            <button class="btn btn-sm btn-success">Comp hinzufügen</button>
+                        </div>
+                    </div>
+                </form>
+                <div class="alert alert-info mt-3 mb-0 small">
+                    Comps sollten <strong>in den letzten 5 Jahren erschienen</strong> und
+                    <strong>kein Mega-Bestseller</strong> sein. 2 Comps Minimum.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exposé -->
+    <div class="tab-pane fade" id="tab-expose">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <strong>Exposé (Deutsch, Verlagsstandard)</strong>
+                <form method="post" action="{% url 'projects:pitch_generate' pk=project.pk pitch_type='expose_de' %}">
+                    {% csrf_token %}
+                    <button class="btn btn-sm btn-outline-primary">KI generieren</button>
+                </form>
+            </div>
+            <div class="card-body">
+                {% if pitch_docs.expose_de %}
+                <div class="mb-2">
+                    <small class="text-muted">v{{ pitch_docs.expose_de.version }}
+                        · {{ pitch_docs.expose_de.word_count }} Wörter
+                        {% if pitch_docs.expose_de.is_ai_generated %} · KI-generiert{% endif %}
+                    </small>
+                </div>
+                {% endif %}
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="save_pitch">
+                    <input type="hidden" name="pitch_type" value="expose_de">
+                    <textarea name="content" class="form-control mb-2 font-monospace" rows="20"
+                        style="font-size:0.85rem;">{% if pitch_docs.expose_de %}{{ pitch_docs.expose_de.content }}{% endif %}</textarea>
+                    <button class="btn btn-sm btn-success">Speichern</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Query Letter -->
+    <div class="tab-pane fade" id="tab-query">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <strong>Query Letter (US/UK)</strong>
+                <form method="post" action="{% url 'projects:pitch_generate' pk=project.pk pitch_type='query' %}">
+                    {% csrf_token %}
+                    <button class="btn btn-sm btn-outline-primary">KI generieren</button>
+                </form>
+            </div>
+            <div class="card-body">
+                {% if pitch_docs.query %}
+                <div class="mb-2">
+                    <small class="text-muted">v{{ pitch_docs.query.version }}
+                        · {{ pitch_docs.query.word_count }} Wörter
+                        {% if pitch_docs.query.is_ai_generated %} · KI-generiert{% endif %}
+                    </small>
+                </div>
+                {% endif %}
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="save_pitch">
+                    <input type="hidden" name="pitch_type" value="query">
+                    <textarea name="content" class="form-control mb-2 font-monospace" rows="20"
+                        style="font-size:0.85rem;">{% if pitch_docs.query %}{{ pitch_docs.query.content }}{% endif %}</textarea>
+                    <button class="btn btn-sm btn-success">Speichern</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /tab-content -->
+</div>
+{% endblock %}
