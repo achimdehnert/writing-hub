@@ -3,6 +3,7 @@ from django.urls import path
 from . import (
     views,
     views_export,
+    views_health,
     views_html,
     views_import,
     views_lektorat,
@@ -53,6 +54,9 @@ urlpatterns = [
     path("<uuid:pk>/lektorat/start/", views_lektorat.LektoratSessionStartView.as_view(), name="lektorat_start"),
     path("<uuid:pk>/lektorat/<uuid:session_pk>/", views_lektorat.LektoratSessionDetailView.as_view(), name="lektorat_session"),
     path("<uuid:pk>/lektorat/issue/<uuid:issue_pk>/resolve/", views_lektorat.LektoratIssueResolveView.as_view(), name="lektorat_resolve"),
+    # Health-Score (ADR-157)
+    path("<uuid:pk>/health/", views_health.ProjectHealthView.as_view(), name="health"),
+    path("<uuid:pk>/health/partial/", views_health.ProjectHealthPartialView.as_view(), name="health_partial"),
     # REST API
     path("api/", views.BookProjectListView.as_view(), name="api_list"),
     path("api/<uuid:pk>/", views.BookProjectDetailView.as_view(), name="api_detail"),

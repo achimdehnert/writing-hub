@@ -73,7 +73,19 @@ class Command(BaseCommand):
         except Exception as exc:
             self.stdout.write(self.style.WARNING(f"  ! seed_outline_frameworks: {exc}"))
 
-        # 4. aifw
+        # 4. Core Lookups (TurningPointTypes + GenrePromises)
+        self.stdout.write(self.style.MIGRATE_HEADING("\n[4] Core Dramaturgik-Lookups ..."))
+        for cmd in ["seed_turning_point_types", "seed_genre_promises"]:
+            try:
+                kwargs = {}
+                if force:
+                    kwargs["force"] = True
+                call_command(cmd, **kwargs)
+                self.stdout.write(self.style.SUCCESS(f"  ✓ {cmd}"))
+            except Exception as exc:
+                self.stdout.write(self.style.WARNING(f"  ! {cmd}: {exc}"))
+
+        # 5. aifw
         if not options["skip_aifw"]:
             self.stdout.write(self.style.MIGRATE_HEADING("\n[4] aifw-Konfiguration ..."))
             try:

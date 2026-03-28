@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Dramaturgik-Health — {{ project.title }} — Writing Hub{% endblock %}
+{% block nav_projects %}active{% endblock %}
+{% block page_title %}<i class="bi bi-heart-pulse me-2"></i>Dramaturgik-Health{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'projects:detail' project.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Zurück
+</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .health-header { background: #f0fdf4; border: 1px solid #d1fae5; border-radius: .6rem; padding: 1rem 1.5rem; margin-bottom: 1.5rem; }
+    .health-card { background: #fff; border-radius: .6rem; border: 1px solid #e5e7eb; padding: 1.5rem; margin-bottom: 1.25rem; }
+    .health-card h5 { font-size: .95rem; font-weight: 700; color: #111; border-bottom: 2px solid #0d9488; padding-bottom: .5rem; margin-bottom: 1.25rem; }
+    .score-ring { width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; font-weight: 800; border: 5px solid; }
+    .check-row { display: flex; align-items: flex-start; gap: .6rem; padding: .5rem 0; border-bottom: 1px solid #f3f4f6; }
+    .check-row:last-child { border-bottom: none; }
+    .check-icon { flex-shrink: 0; width: 1.4rem; text-align: center; margin-top: .1rem; }
+    .check-label { font-size: .88rem; font-weight: 600; color: #111; }
+    .check-msg { font-size: .78rem; color: #6b7280; }
+    .weight-dots { display: inline-flex; gap: 2px; margin-left: .5rem; }
+    .weight-dot { width: 6px; height: 6px; border-radius: 50%; background: #d1d5db; }
+    .weight-dot.filled { background: #0d9488; }
+    .mvn-badge { display: inline-flex; align-items: center; gap: .35rem; padding: .25rem .75rem; border-radius: 999px; font-size: .78rem; font-weight: 600; }
+    .issue-card { background: #fef2f2; border: 1px solid #fecaca; border-radius: .5rem; padding: .75rem 1rem; margin-bottom: .5rem; }
+    .issue-card .issue-label { font-size: .88rem; font-weight: 700; color: #991b1b; }
+    .issue-card .issue-msg { font-size: .8rem; color: #7f1d1d; margin-top: .2rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 860px; margin: 0 auto;">
+
+<!-- Header -->
+<div class="health-header d-flex align-items-center justify-content-between flex-wrap gap-3">
+    <div>
+        <div style="font-size:1.3rem;font-weight:800;color:#111;">
+            <i class="bi bi-heart-pulse me-2" style="color:#0d9488;"></i>Dramaturgik-Health
+        </div>
+        <div style="color:#6b7280;font-size:.85rem;">{{ project.title }}</div>
+    </div>
+    <div class="d-flex align-items-center gap-3">
+        <!-- Score Ring -->
+        {% if health.level == "solid" %}
+            <div class="score-ring" style="border-color:#22c55e;color:#22c55e;">{{ health.score }}%</div>
+        {% elif health.level == "developing" %}
+            <div class="score-ring" style="border-color:#f59e0b;color:#f59e0b;">{{ health.score }}%</div>
+        {% else %}
+            <div class="score-ring" style="border-color:#ef4444;color:#ef4444;">{{ health.score }}%</div>
+        {% endif %}
+        <div>
+            <div class="mvn-badge {% if health.mvn_complete %}bg-success bg-opacity-10 text-success border border-success border-opacity-25{% else %}bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25{% endif %}">
+                <i class="bi bi-{% if health.mvn_complete %}check-circle{% else %}x-circle{% endif %}"></i>
+                MVN {% if health.mvn_complete %}vollständig{% else %}unvollständig{% endif %}
+            </div>
+            <div style="font-size:.78rem;color:#6b7280;margin-top:.35rem;">
+                Level: <strong>{{ level_label.0 }}</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Issues -->
+{% if top_issues %}
+<div class="health-card">
+    <h5><i class="bi bi-exclamation-triangle me-2" style="color:#ef4444;"></i>Top-3 Baustellen</h5>
+    {% for check in top_issues %}
+    <div class="issue-card">
+        <div class="issue-label">
+            {% for i in "123" %}
+                {% if forloop.counter <= check.weight %}
+                    <i class="bi bi-circle-fill" style="font-size:.5rem;color:#ef4444;"></i>
+                {% else %}
+                    <i class="bi bi-circle" style="font-size:.5rem;color:#d1d5db;"></i>
+                {% endif %}
+            {% endfor %}
+            {{ check.label }}
+        </div>
+        <div class="issue-msg">{{ check.message }}</div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Alle Checks -->
+<div class="health-card">
+    <h5><i class="bi bi-list-check me-2"></i>Alle Planungs-Checks ({{ health.checks|length }})</h5>
+
+    <!-- Bestanden -->
+    {% if passed_checks %}
+    <div style="font-size:.78rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem;">
+        Bestanden ({{ passed_checks|length }})
+    </div>
+    {% for check in passed_checks %}
+    <div class="check-row">
+        <div class="check-icon"><i class="bi bi-check-circle-fill" style="color:#22c55e;"></i></div>
+        <div>
+            <div class="check-label">
+                {{ check.label }}
+                <span class="weight-dots">
+                    {% for i in "123" %}
+                        <span class="weight-dot {% if forloop.counter <= check.weight %}filled{% endif %}"></span>
+                    {% endfor %}
+                </span>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Offen -->
+    {% if failed_checks %}
+    <div style="font-size:.78rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-top:1rem;margin-bottom:.5rem;">
+        Offen ({{ failed_checks|length }})
+    </div>
+    {% for check in failed_checks %}
+    <div class="check-row">
+        <div class="check-icon">
+            {% if check.weight >= 3 %}
+                <i class="bi bi-x-circle-fill" style="color:#ef4444;"></i>
+            {% else %}
+                <i class="bi bi-dash-circle-fill" style="color:#f59e0b;"></i>
+            {% endif %}
+        </div>
+        <div>
+            <div class="check-label">
+                {{ check.label }}
+                <span class="weight-dots">
+                    {% for i in "123" %}
+                        <span class="weight-dot {% if forloop.counter <= check.weight %}filled{% endif %}" style="{% if forloop.counter <= check.weight %}background:{% if check.weight >= 3 %}#ef4444{% else %}#f59e0b{% endif %};{% endif %}"></span>
+                    {% endfor %}
+                </span>
+            </div>
+            <div class="check-msg">{{ check.message }}</div>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+</div>
+
+<!-- Legende -->
+<div class="health-card" style="padding: 1rem 1.5rem;">
+    <div style="font-size:.78rem;color:#6b7280;display:flex;flex-wrap:wrap;gap:1.5rem;">
+        <span><i class="bi bi-circle-fill" style="color:#0d9488;font-size:.5rem;"></i><i class="bi bi-circle-fill" style="color:#0d9488;font-size:.5rem;"></i><i class="bi bi-circle-fill" style="color:#0d9488;font-size:.5rem;"></i> MVN-kritisch (Gewicht 3)</span>
+        <span><i class="bi bi-circle-fill" style="color:#0d9488;font-size:.5rem;"></i><i class="bi bi-circle-fill" style="color:#0d9488;font-size:.5rem;"></i><i class="bi bi-circle" style="color:#d1d5db;font-size:.5rem;"></i> Wichtig (Gewicht 2)</span>
+        <span><i class="bi bi-circle-fill" style="color:#0d9488;font-size:.5rem;"></i><i class="bi bi-circle" style="color:#d1d5db;font-size:.5rem;"></i><i class="bi bi-circle" style="color:#d1d5db;font-size:.5rem;"></i> Empfohlen (Gewicht 1)</span>
+        <span><span class="score-ring" style="width:1rem;height:1rem;border-width:2px;border-color:#22c55e;font-size:.6rem;"></span> ≥80% = Solide</span>
+        <span><span class="score-ring" style="width:1rem;height:1rem;border-width:2px;border-color:#f59e0b;font-size:.6rem;"></span> ≥50% = In Entwicklung</span>
+        <span><span class="score-ring" style="width:1rem;height:1rem;border-width:2px;border-color:#ef4444;font-size:.6rem;"></span> &lt;50% = Grundriss</span>
+    </div>
+</div>
+
+</div>
+{% endblock %}

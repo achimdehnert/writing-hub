@@ -1,6 +1,6 @@
 # ADR-INDEX — writing-hub
 
-**Letzte Aktualisierung:** 2026-03-28  
+**Letzte Aktualisierung:** 2026-03-28 (Sprint 1 abgeschlossen)  
 **Basis:** ADR-150–161  
 **Legende:**
 - Status: `Accepted` ✅ | `Proposed` 📋 | `Deprecated` ⛔
@@ -19,29 +19,34 @@
 | [154](#adr-154) | Drama-Dashboard + Content-Type-UIs | ✅ Accepted | ⬜ none | `projects/0009` | 151, 152 |
 | [155](#adr-155) | Serien-Dramaturgie | ✅ Accepted | ⬜ none | `series/0001` | 150, 152 |
 | [156](#adr-156) | Zeitstruktur, Foreshadowing, Sequenz | ✅ Accepted | ⬜ none | `projects/0010+` | 150, 151 |
-| [157](#adr-157) | Antagonist-System, B-Story/Subplot, MVN-Health **Rev.1** | ✅ Accepted | ⬜ none | `worlds/0004`, `projects/0014` | 150, 151, 152 |
-| [158](#adr-158) | Dialogue Subtext, Opening/Closing Image, GenrePromise | ✅ Accepted | ⬜ none | `core/0001`, `projects/0014` | 150, 151, 157 |
-| [159](#adr-159) | Publikationsvorbereitung — Comps, Pitch, Exposé | 📋 Proposed | ⬜ none | `projects/0015` | 083, 150, 157-Rev1, 158 |
-| [160](#adr-160) | Wissens-Infrastruktur — Recherche, Genre, Beta-Reader | 📋 Proposed | ⬜ none | `projects/0016` | 083, 150, 157-Rev1, 158, 159 |
-| [161](#adr-161) | Produktions-Infrastruktur — TextAnalysis, Budget, Batch | 📋 Proposed | ⬜ none | `projects/0017`, `authoring/0003` | 150, 151, 153, 157-Rev1 |
+| [157](#adr-157) | Antagonist-System, B-Story/Subplot, MVN-Health **Rev.1** | ✅ Accepted | ✅ implemented | `worlds/0004`, `projects/0014+0015` | 150, 151, 152 |
+| [158](#adr-158) | Dialogue Subtext, Opening/Closing Image, GenrePromise | ✅ Accepted | ✅ implemented | `core/0001`, `projects/0015` | 150, 151, 157 |
+| [159](#adr-159) | Publikationsvorbereitung — Comps, Pitch, Exposé | 📋 Proposed | ⬜ none | `projects/0016` | 083, 150, 157-Rev1, 158 |
+| [160](#adr-160) | Wissens-Infrastruktur — Recherche, Genre, Beta-Reader | 📋 Proposed | ⬜ none | `projects/0017` | 083, 150, 157-Rev1, 158, 159 |
+| [161](#adr-161) | Produktions-Infrastruktur — TextAnalysis, Budget, Batch | 📋 Proposed | ⬜ none | `projects/0018`, `authoring/0003` | 150, 151, 153, 157-Rev1 |
 
 ---
 
 ## Sprint-Reihenfolge
 
 ```
-SPRINT 1 — "Dramaturgie sauber" (jetzt bereit)
-  ├── ADR-157 Rev.1  →  worlds/0004 + projects/0014_narrative_role_subplot_arc
-  ├── ADR-158        →  core/0001_lookups_drama + projects/0014_dialogue_genre
-  └── FE1: CSS Custom Properties (ADR-153)
+SPRINT 1 — "Dramaturgie sauber" ✅ ABGESCHLOSSEN (Commit 40e6078)
+  ├── ADR-157 Rev.1  →  worlds/0004 + projects/0014_narrative_role_antagonist
+  │                     projects/0015_subplot_arc_genre_promise
+  │                     services/health_service.py
+  ├── ADR-158        →  core/0001_lookups_drama (TurningPointTypeLookup, GenrePromiseLookup)
+  │                     seed_turning_point_types + seed_genre_promises
+  │                     projects/<pk>/health/ View + Template + HTMX-Partial
+  └── FE1: CSS Custom Properties (ADR-153) — ausstehend
 
-SPRINT 2 — "Schreiben effizienter"
-  ├── ADR-161  →  projects/0017 + authoring/0003
+SPRINT 2 — "Schreiben effizienter" ← AKTUELL
+  ├── ADR-161  →  projects/0018 + authoring/0003
+  │             TextAnalysisSnapshot, BudgetService, BatchWriteJob
   └── FE2: HTMX Filter + Auto-Save
 
 SPRINT 3 — "Zum Verlag"
-  ├── ADR-159  →  projects/0015
-  ├── ADR-160  →  projects/0016
+  ├── ADR-159  →  projects/0016 (ComparableTitle, PitchDocument, PitchGeneratorService)
+  ├── ADR-160  →  projects/0017 (ResearchNote, GenreConventionProfile, BetaReaderSession)
   └── FE3: Drama-Dashboard (Chart.js)
 
 SPRINT 4 — "Serien & Essays"
@@ -164,11 +169,19 @@ ProjectCharacterLink: +narrative_role, +antagonist_type, +antagonist_logic,
                       +mirror_to_protagonist, +shared_trait_with_protagonist,
                       +information_advantage
 ```
-**Migrations:**
+**Migrations:** ✅ applied
 ```
 worlds/0004_narrative_role_antagonist
-projects/0014_subplot_arc
+projects/0014_narrative_role_antagonist
+projects/0015_subplot_arc_genre_promise  (SubplotArc + M2M)
 ```
+**Implementiert (Commit 40e6078):**
+- `apps/worlds/models.py` — narrative_role + alle Antagonisten-Felder
+- `apps/projects/models.py` — SubplotArc
+- `apps/projects/services/health_service.py` — compute_dramaturgic_health()
+- `apps/projects/views_health.py` — ProjectHealthView + HTMX-Partial
+- `templates/projects/health.html`
+- `apps/projects/urls.py` — /health/ + /health/partial/
 **`core`-App:** Vorhanden (`apps/core/`) — kein neues App-Setup nötig  
 **`n.act`:** Bestätigt — `OutlineNode.act = CharField(max_length=100)` (`models.py:259`)  
 **Sprint:** 1 — jetzt bereit ✅
@@ -187,12 +200,17 @@ wh_turning_point_type_lookup   (core, app_label="core")
 wh_genre_promise_lookup        (core, app_label="core")
 wh_project_genre_promises
 ```
-**Migrations:**
+**Migrations:** ✅ applied
 ```
 core/0001_lookups_drama
-projects/0015_dialogue_genre_promise   (nach ADR-157 Migration 0014)
+projects/0015_subplot_arc_genre_promise  (ProjectGenrePromise in gleicher Migration)
 ```
-**Sprint:** 1 — jetzt bereit ✅
+**Implementiert (Commit 40e6078):**
+- `apps/core/models_lookups_drama.py` — TurningPointTypeLookup + GenrePromiseLookup
+- `apps/core/management/commands/seed_turning_point_types.py` — 12 Seed-Einträge
+- `apps/core/management/commands/seed_genre_promises.py` — 6 Genre-Versprechen
+- `apps/projects/models.py` — ProjectGenrePromise
+**Sprint:** 1 ✅ abgeschlossen
 
 ---
 
@@ -200,9 +218,9 @@ projects/0015_dialogue_genre_promise   (nach ADR-157 Migration 0014)
 
 **Titel:** Publikationsvorbereitung — Comps, Pitch, Exposé  
 **Datei:** `ADR-159-publikationsvorbereitung.md`  
-**Status:** Proposed — wartet auf ADR-157+158 deployed  
+**Status:** Proposed — ADR-157+158 jetzt implemented ✅ — bereit für Sprint 3  
 **Neue Tabellen:** `wh_comparable_titles`, `wh_pitch_documents`  
-**Migration:** `projects/0015_comparable_titles_pitch` (nach ADR-157+158)  
+**Migration:** `projects/0016_comparable_titles_pitch`  
 **Sprint:** 3
 
 ---
@@ -220,7 +238,7 @@ wh_genre_convention_profiles
 wh_beta_reader_sessions
 wh_beta_reader_feedbacks
 ```
-**Migration:** `projects/0016_research_genre_beta`  
+**Migration:** `projects/0017_research_genre_beta`  
 **M1-Fix:** `_evaluate_convention()` fair_play-Check korrigiert: `outlinefw_position` → `position_start` (`apps/projects/models.py:109`). ✅  
 **Sprint:** 3
 
@@ -230,11 +248,11 @@ wh_beta_reader_feedbacks
 
 **Titel:** Produktions-Infrastruktur — TextAnalysis, Budget, Pacing, Batch  
 **Datei:** `ADR-161-produktions-infrastruktur.md`  
-**Status:** Proposed — wartet auf ADR-157 deployed  
+**Status:** Proposed — ADR-157 jetzt implemented ✅ — bereit für Sprint 2  
 **Neue Tabellen:** `wh_text_analysis_snapshots`, `wh_batch_write_jobs`  
 **Migrations:**
 ```
-projects/0017_text_analysis_batch
+projects/0018_text_analysis_batch
 authoring/0003_batch_write_job
 ```
 **Bestätigt:** `OutlineNode.act` existiert (`apps/projects/models.py:259`). Defensive `getattr` im ADR bleibt als Sicherheitsnetz.  
