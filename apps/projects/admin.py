@@ -295,3 +295,5 @@ class DialogueSceneAdmin(admin.ModelAdmin):
     search_fields = ["speaker_a_name", "speaker_b_name", "node__title"]
     raw_id_fields = ["node"]
     readonly_fields = ["id"]
+
+
