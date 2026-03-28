@@ -1,10 +1,11 @@
 """
-Analysis + Budget Views — TextAnalysisSnapshot + BudgetService (ADR-161)
+Analysis + Budget + Batch Views — ADR-161
 """
 from __future__ import annotations
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 
@@ -79,4 +80,66 @@ class ProjectBudgetView(LoginRequiredMixin, View):
             "allocation": allocation,
             "nodes_with_budget": nodes_with_budget,
             "error": error,
+        })
+
+
+class ProjectBatchView(LoginRequiredMixin, View):
+    """Batch-Generierung mehrerer Kapitel starten (ADR-161 Teil D)."""
+
+    template_name = "projects/batch.html"
+
+    def get(self, request, pk):
+        project = get_object_or_404(BookProject, pk=pk)
+        from apps.authoring.models_jobs import BatchWriteJob
+        jobs = BatchWriteJob.objects.filter(
+            project=project
+        ).order_by("-created_at")[:10]
+        version = project.outline_versions.filter(is_active=True).first()
+        nodes = list(version.nodes.order_by("order")) if version else []
+        return render(request, self.template_name, {
+            "project": project,
+            "jobs": jobs,
+            "nodes": nodes,
+        })
+
+    def post(self, request, pk):
+        project = get_object_or_404(BookProject, pk=pk)
+        node_ids = request.POST.getlist("node_ids")
+        if not node_ids:
+            messages.error(request, "Keine Kapitel ausgewählt.")
+            return redirect("projects:batch", pk=pk)
+        max_chapters = min(int(request.POST.get("max_chapters", 10)), 10)
+        from apps.authoring.models_jobs import BatchWriteJob
+        from apps.authoring.tasks import run_batch_write
+        job = BatchWriteJob.objects.create(
+            project=project,
+            requested_by=request.user,
+            node_ids=node_ids[:max_chapters],
+            max_chapters=max_chapters,
+        )
+        run_batch_write.delay(str(job.id))
+        messages.success(
+            request,
+            f"Batch-Job gestartet ({job.total} Kapitel).",
+        )
+        return redirect("projects:batch", pk=pk)
+
+
+class ProjectBatchStatusView(LoginRequiredMixin, View):
+    """HTMX-Polling: Job-Status als JSON (ADR-161 Teil D)."""
+
+    def get(self, request, pk, job_id):
+        project = get_object_or_404(BookProject, pk=pk)
+        from apps.authoring.models_jobs import BatchWriteJob
+        job = get_object_or_404(
+            BatchWriteJob, pk=job_id, project=project
+        )
+        return JsonResponse({
+            "status": job.status,
+            "progress_pct": job.progress_pct,
+            "completed": job.completed_count,
+            "failed": job.failed_count,
+            "total": job.total,
+            "current_index": job.current_index,
+            "is_done": job.status in ("done", "failed", "canceled"),
         })

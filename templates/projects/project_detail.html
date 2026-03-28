@@ -64,6 +64,10 @@
            style="background:#1a2428;color:#67e8f9;border:1px solid #164e63;font-size:.75rem;">
             <i class="bi bi-bar-chart me-1"></i> Analyse
         </a>
+        <a href="{% url 'projects:batch' project.pk %}" class="btn btn-sm"
+           style="background:#1a2428;color:#a5b4fc;border:1px solid #3730a3;font-size:.75rem;">
+            <i class="bi bi-collection-play me-1"></i> Batch
+        </a>
         <a href="{% url 'projects:budget' project.pk %}" class="btn btn-sm"
            style="background:#1a2428;color:#6ee7b7;border:1px solid #065f46;font-size:.75rem;">
             <i class="bi bi-calculator me-1"></i> Budget
