@@ -260,141 +260,45 @@
 
 <!-- Kapitel-Liste -->
 <div class="card mb-4" style="background:#0d1117;border-color:#2d3748;">
-    <div class="card-header d-flex align-items-center justify-content-between py-2" style="border-color:#2d3748;">
-        <span class="fw-semibold"><i class="bi bi-list-ol me-2"></i>Kapitel / Beats</span>
-        <span class="text-muted small">{{ node_count }} Einträge</span>
+    <div class="card-header py-2" style="border-color:#2d3748;">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="fw-semibold"><i class="bi bi-list-ol me-2"></i>Kapitel / Beats</span>
+            <span class="text-muted small" id="node-count-label">{{ node_count }} Einträge</span>
+        </div>
+        <!-- Filter-Bar (HTMX) -->
+        <form hx-get="{% url 'outlines:node_filter' outline.pk %}"
+              hx-target="#node-list-container"
+              hx-swap="innerHTML"
+              hx-trigger="input changed delay:400ms, change"
+              class="d-flex gap-2 flex-wrap">
+            <input type="text" name="q"
+                   class="form-control form-control-sm bg-dark text-light border-secondary"
+                   style="max-width:200px;"
+                   placeholder="Suche…">
+            <select name="beat_type"
+                    class="form-select form-select-sm bg-dark text-light border-secondary"
+                    style="max-width:160px;">
+                <option value="">Alle Typen</option>
+                <option value="chapter">Kapitel</option>
+                <option value="scene">Szene</option>
+                <option value="beat">Beat</option>
+                <option value="act">Akt</option>
+                <option value="part">Teil</option>
+            </select>
+            <input type="text" name="act"
+                   class="form-control form-control-sm bg-dark text-light border-secondary"
+                   style="max-width:160px;"
+                   placeholder="Akt filtern…">
+            <button type="button" class="btn btn-outline-secondary btn-sm"
+                    onclick="this.closest('form').reset();htmx.trigger(this.closest('form'),'change')">
+                <i class="bi bi-x-circle me-1"></i>Reset
+            </button>
+        </form>
     </div>
-    <div class="card-body p-0">
+    <div class="card-body p-0" id="node-list-container">
         {% if nodes %}
         {% for node in nodes %}
-        <div class="px-3 py-3" id="node-{{ node.pk }}" style="border-bottom:1px solid #1e2235;">
-            <div class="d-flex align-items-start justify-content-between gap-3">
-                <div class="flex-grow-1">
-                    <!-- Titel-Zeile -->
-                    <div class="d-flex align-items-center gap-2 mb-2">
-                        <span class="fw-bold" style="color:#6366f1;min-width:2rem;">{{ node.order }}.</span>
-                        <span class="fw-semibold" style="color:#e2e8f0;">{{ node.title }}</span>
-                        {% if node.word_count > 0 %}
-                        <span class="badge" style="background:#1a3a1a;color:#22c55e;font-size:.62rem;">{{ node.word_count }}W</span>
-                        {% endif %}
-                    </div>
-                    <!-- Meta-Zeile: Beat/Phase, Akt, Zielwörter -->
-                    <div class="d-flex flex-wrap gap-2 ms-4 mb-2">
-                        {% if node.beat_phase %}
-                        <span class="badge" style="background:#1e1b4b;color:#a5b4fc;font-size:.68rem;">
-                            <i class="bi bi-bookmark me-1"></i>{{ node.beat_phase }}
-                        </span>
-                        {% endif %}
-                        {% if node.act %}
-                        <span class="badge" style="background:#1e2a1e;color:#86efac;font-size:.68rem;">
-                            <i class="bi bi-layers me-1"></i>{{ node.act }}
-                        </span>
-                        {% endif %}
-                        {% if node.target_words %}
-                        <span class="badge" style="background:#1e2235;color:#94a3b8;font-size:.68rem;">
-                            <i class="bi bi-123 me-1"></i>{{ node.target_words }} Zielw.
-                        </span>
-                        {% endif %}
-                    </div>
-                    <!-- Description -->
-                    {% if node.description %}
-                    <div class="ms-4 text-muted small" style="white-space:pre-wrap;line-height:1.6;max-height:100px;overflow:hidden;" id="desc-{{ node.pk }}">{{ node.description }}</div>
-                    {% if node.description|length > 300 %}
-                    <button class="btn btn-link btn-sm ms-4 p-0 text-muted" style="font-size:.72rem;"
-                            onclick="toggleDesc('{{ node.pk }}')" id="toggle-{{ node.pk }}">mehr anzeigen</button>
-                    {% endif %}
-                    {% endif %}
-                    <!-- Emotionaler Bogen -->
-                    {% if node.emotional_arc %}
-                    <div class="ms-4 mt-1 px-2 py-1 rounded" style="background:#1e1a0e;border-left:2px solid #f59e0b;font-size:.78rem;color:#fcd34d;">
-                        <i class="bi bi-heart me-1"></i>{{ node.emotional_arc }}
-                    </div>
-                    {% endif %}
-                </div>
-                <!-- Aktionen -->
-                <div class="d-flex gap-1 flex-shrink-0">
-                    <form method="post" action="{% url 'outlines:node_enrich' node.pk %}" style="display:inline;">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm"
-                                style="background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3;"
-                                title="KI Outline"
-                                onclick="this.disabled=true;this.innerHTML='<span class=\'spinner-border spinner-border-sm\'></span>';this.form.submit();">
-                            <i class="bi bi-stars"></i>
-                        </button>
-                    </form>
-                    <button class="btn btn-outline-secondary btn-sm"
-                            data-bs-toggle="collapse" data-bs-target="#edit-{{ node.pk }}"
-                            title="Bearbeiten">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <form method="post" action="{% url 'outlines:node_delete' node.pk %}"
-                          style="display:inline;" onsubmit="return confirm('Kapitel löschen?')">
-                        {% csrf_token %}
-                        <button class="btn btn-outline-danger btn-sm" title="Löschen">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Edit-Formular -->
-            <div class="collapse mt-2" id="edit-{{ node.pk }}">
-                <form method="post" action="{% url 'outlines:node_update' node.pk %}" class="ms-4 p-3 rounded" style="background:#1a1f2e;">
-                    {% csrf_token %}
-                    <div class="row g-2 mb-2">
-                        <div class="col-md-6">
-                            <label class="form-label small text-muted">Titel</label>
-                            <input type="text" name="title" value="{{ node.title }}"
-                                   class="form-control form-control-sm bg-dark text-light border-secondary">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small text-muted">Beat / Phase</label>
-                            <input type="text" name="beat_phase" value="{{ node.beat_phase }}"
-                                   class="form-control form-control-sm bg-dark text-light border-secondary"
-                                   placeholder="z.B. Opening Image">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small text-muted">Akt</label>
-                            <input type="text" name="act" value="{{ node.act }}"
-                                   class="form-control form-control-sm bg-dark text-light border-secondary"
-                                   placeholder="z.B. Akt 1 - Setup">
-                        </div>
-                    </div>
-                    <div class="row g-2 mb-2">
-                        <div class="col-md-3">
-                            <label class="form-label small text-muted">Ziel-Wörter</label>
-                            <input type="number" name="target_words" value="{{ node.target_words|default:'' }}"
-                                   class="form-control form-control-sm bg-dark text-light border-secondary"
-                                   placeholder="3000">
-                        </div>
-                        <div class="col-md-9">
-                            <label class="form-label small text-muted"><i class="bi bi-heart me-1"></i>Emotionaler Bogen</label>
-                            <input type="text" name="emotional_arc" value="{{ node.emotional_arc }}"
-                                   class="form-control form-control-sm bg-dark text-light border-secondary"
-                                   placeholder="z.B. Neugierig und optimistisch">
-                        </div>
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label small text-muted">Kapitel-Outline</label>
-                        <textarea name="description" rows="8"
-                                  class="form-control form-control-sm bg-dark text-light border-secondary"
-                                  style="font-size:.83rem;" placeholder="Was passiert in diesem Beat/Kapitel?">{{ node.description }}</textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small text-muted">Notizen</label>
-                        <textarea name="notes" rows="2"
-                                  class="form-control form-control-sm bg-dark text-light border-secondary">{{ node.notes }}</textarea>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary btn-sm">
-                            <i class="bi bi-floppy me-1"></i>Speichern
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm"
-                                data-bs-toggle="collapse" data-bs-target="#edit-{{ node.pk }}">Abbrechen</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+        {% include "outlines/partials/node_row.html" with node=node %}
         {% endfor %}
         {% else %}
         <div class="p-5 text-center">

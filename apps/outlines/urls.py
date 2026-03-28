@@ -15,4 +15,5 @@ urlpatterns = [
     path("node/<uuid:pk>/update/", views.OutlineNodeUpdateView.as_view(), name="node_update"),
     path("node/<uuid:pk>/delete/", views.OutlineNodeDeleteView.as_view(), name="node_delete"),
     path("node/<uuid:pk>/enrich/", views.OutlineNodeEnrichView.as_view(), name="node_enrich"),
+    path("<uuid:pk>/filter/", views.OutlineNodeFilterView.as_view(), name="node_filter"),
 ]

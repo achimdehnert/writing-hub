@@ -1,0 +1,11 @@
+{% if nodes %}
+{% for node in nodes %}
+{% include "outlines/partials/node_row.html" with node=node %}
+{% endfor %}
+{% else %}
+<div class="p-5 text-center">
+    <i class="bi bi-search d-block mb-2 text-muted" style="font-size:3rem;"></i>
+    <p class="text-muted mb-1">Keine Kapitel gefunden</p>
+    <p class="text-muted small">Filter anpassen oder zurücksetzen.</p>
+</div>
+{% endif %}

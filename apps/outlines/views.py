@@ -119,6 +119,9 @@ class OutlineSaveVersionView(LoginRequiredMixin, View):
 
 class OutlineNodeUpdateView(LoginRequiredMixin, View):
     def post(self, request, pk):
+        from django.template.loader import render_to_string
+        from django.http import HttpResponse
+
         node = get_object_or_404(
             OutlineNode, pk=pk, outline_version__project__owner=request.user
         )
@@ -139,8 +142,47 @@ class OutlineNodeUpdateView(LoginRequiredMixin, View):
             "title", "description", "notes", "beat_type",
             "beat_phase", "act", "emotional_arc", "target_words",
         ])
+
+        if request.headers.get("HX-Request"):
+            html = render_to_string(
+                "outlines/partials/node_row.html",
+                {"node": node, "saved": True},
+                request=request,
+            )
+            return HttpResponse(html)
+
         messages.success(request, f'Kapitel „{node.title}" gespeichert.')
         return redirect("outlines:detail", pk=node.outline_version.pk)
+
+
+class OutlineNodeFilterView(LoginRequiredMixin, View):
+    """HTMX: Filtert Kapitel-Liste nach beat_type und/oder act (Partial-Response)."""
+
+    def get(self, request, pk):
+        from django.template.loader import render_to_string
+        from django.http import HttpResponse
+
+        outline = get_object_or_404(OutlineVersion, pk=pk, project__owner=request.user)
+        qs = outline.nodes.order_by("order")
+
+        beat_type = request.GET.get("beat_type", "").strip()
+        act = request.GET.get("act", "").strip()
+        search = request.GET.get("q", "").strip()
+
+        if beat_type:
+            qs = qs.filter(beat_type=beat_type)
+        if act:
+            qs = qs.filter(act__icontains=act)
+        if search:
+            qs = qs.filter(title__icontains=search) | qs.filter(description__icontains=search)
+
+        nodes = list(qs)
+        html = render_to_string(
+            "outlines/partials/node_list.html",
+            {"nodes": nodes, "outline": outline},
+            request=request,
+        )
+        return HttpResponse(html)
 
 
 class OutlineNodeAddView(LoginRequiredMixin, View):

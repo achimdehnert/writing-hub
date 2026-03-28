@@ -22,10 +22,16 @@
         .text-muted { color: #64748b !important; }
         .brand { font-size: 1.1rem; font-weight: 700; color: #6366f1; letter-spacing: -.02em; padding: 1.25rem 1.5rem .75rem; }
     </style>
+    <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
+    <style>
+        .htmx-indicator { display: none; }
+        .htmx-request .htmx-indicator { display: inline-block; }
+        .htmx-request.htmx-indicator { display: inline-block; }
+    </style>
     {% block extra_head %}{% endblock %}
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>{% comment %}HTMX global CSRF{% endcomment %}
 
 <div class="sidebar d-flex flex-column">
     <div class="brand"><i class="bi bi-pen"></i> Writing Hub</div>
