@@ -1,9 +1,19 @@
-# ADR-158: Produktions-Infrastruktur — TextAnalysis, Budget, Pacing, Batch
+# ADR-161: Produktions-Infrastruktur — TextAnalysis, Budget, Pacing, Batch
+
+```yaml
+status: Proposed
+datum: 2026-03-28
+kontext: writing-hub @ achimdehnert/writing-hub
+abhaengig_von: [ADR-150, ADR-151, ADR-153, ADR-157-Rev1]
+implementation_status: none
+```
 
 **Status:** Proposed  
 **Datum:** 2026-03-28  
 **Kontext:** writing-hub @ achimdehnert/writing-hub  
-**Abhängig von:** ADR-150, ADR-151, ADR-157
+**Abhängig von:** ADR-150, ADR-151, ADR-153 (HTMX-Polling), ADR-157-Rev1  
+**Hinweis:** Ursprünglich als ADR-158 entworfen — umbenannt wegen Nummerierungskonflikt
+mit ADR-158 (Accepted: Dialogue Subtext / GenrePromise). Siehe KONSEQUENZANALYSE_ADR158.md.
 
 ---
 
@@ -466,9 +476,11 @@ def compute_budget(project: BookProject) -> BudgetAllocation:
     total_written = sum(n.word_count for n in nodes if n.word_count)
 
     # Akt-Zuordnung
+    # M1-Fix: getattr defensiv — n.act ist kein garantiertes Feld laut ADR-151
     act_node_map: dict[str, list] = {k: [] for k in ACT_PROPORTIONS}
     for n in nodes:
-        act = (n.act or "act_1").lower().replace(" ", "_")
+        raw_act = getattr(n, "act", None) or "act_1"
+        act = raw_act.lower().replace(" ", "_")
         if not act.startswith("act_"):
             act = f"act_{act}"
         bucket = act if act in act_node_map else "act_1"
@@ -543,6 +555,21 @@ def _suggest_rebalancing(alloc: BudgetAllocation, nodes) -> list[str]:
 ```python
 # apps/authoring/models_jobs.py — ergänzen
 
+from django.conf import settings  # C3-Fix
+from django.db import models
+import uuid
+
+
+# C2-Fix: JobStatus-Enum (falls noch nicht in authoring.models vorhanden)
+class JobStatus(models.TextChoices):
+    PENDING  = "pending",  "Ausstehend"
+    RUNNING  = "running",  "Läuft"
+    DONE     = "done",     "Abgeschlossen"
+    FAILED   = "failed",   "Fehlgeschlagen"
+    CANCELED = "canceled", "Abgebrochen"
+    # Falls bereits vorhanden: from authoring.models import JobStatus
+
+
 class BatchWriteJob(models.Model):
     """
     Sequenzielle Batch-Generierung mehrerer Kapitel.
@@ -602,7 +629,7 @@ class BatchWriteJob(models.Model):
 ```python
 # apps/authoring/tasks.py — Celery Task
 
-@shared_task(bind=True, max_retries=2)
+@shared_task(bind=True, max_retries=2, soft_time_limit=3600)  # M3-Fix: 1h Timeout
 def run_batch_write(self, job_id: str):
     from authoring.models_jobs import BatchWriteJob
     from authoring.services.chapter_production_service import write_chapter
@@ -680,7 +707,7 @@ Sequenziell ist das korrekte Modell für narrativen Text.
 
 ## Konsequenzen
 
-- Migration `projects/0010_text_analysis_snapshot` — neue Tabelle
+- Migration `projects/0017_text_analysis_batch` — neue Tabelle (Reihenfolge gemäß KONSEQUENZANALYSE_ADR158)
 - Migration `authoring/0003_batch_write_job` — neue Tabelle
 - `TextAnalysisService` in `apps/projects/services/`
 - `BudgetService` in `apps/projects/services/`
