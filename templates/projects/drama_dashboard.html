@@ -1,0 +1,355 @@
+{% extends "base.html" %}
+{% block title %}Drama-Dashboard — {{ project.title }} — Writing Hub{% endblock %}
+{% block nav_projects %}active{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;">
+
+<!-- Header -->
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <a href="{% url 'projects:detail' project.pk %}" class="btn btn-link text-muted ps-0">
+            <i class="bi bi-arrow-left me-1"></i>{{ project.title }}
+        </a>
+        <h4 class="fw-bold mb-0 mt-1" style="color:#e2e8f0;">
+            <i class="bi bi-activity me-2" style="color:#6366f1;"></i>Drama-Dashboard
+        </h4>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'projects:health' project.pk %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-heart-pulse me-1"></i>Health-Score
+        </a>
+        <a href="{% url 'outlines:list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-list-ol me-1"></i>Outline
+        </a>
+    </div>
+</div>
+
+<!-- Health-Score Banner -->
+{% if health.max_score > 0 %}
+<div class="card mb-4" style="background:#0d1117;border-color:#2d3748;">
+    <div class="card-body py-3">
+        <div class="d-flex align-items-center gap-4 flex-wrap">
+            <div>
+                <div class="text-muted small mb-1">DRAMA-HEALTH</div>
+                <div class="fw-bold" style="font-size:1.8rem;
+                    color:{% if health.percent >= 80 %}#22c55e{% elif health.percent >= 50 %}#f59e0b{% else %}#ef4444{% endif %}">
+                    {{ health.percent }}%
+                </div>
+            </div>
+            <div class="flex-grow-1">
+                <div class="d-flex flex-wrap gap-2">
+                    {% for c in health.checks %}
+                    <span class="badge px-2 py-1"
+                          style="background:{% if c.passed %}#1a3a1a{% else %}#2a1a1a{% endif %};
+                                 color:{% if c.passed %}#86efac{% else %}#fca5a5{% endif %};
+                                 font-size:.68rem;">
+                        {% if c.passed %}<i class="bi bi-check-circle-fill me-1"></i>{% else %}<i class="bi bi-x-circle-fill me-1"></i>{% endif %}
+                        {{ c.label }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Spannungskurve -->
+<div class="card mb-4" style="background:#0d1117;border-color:#2d3748;">
+    <div class="card-header py-2 d-flex align-items-center justify-content-between" style="border-color:#2d3748;">
+        <span class="fw-semibold"><i class="bi bi-graph-up me-2" style="color:#6366f1;"></i>Spannungskurve</span>
+        {% if not chart_data.has_tension_data %}
+        <span class="badge" style="background:#2d1a00;color:#f59e0b;font-size:.7rem;">
+            <i class="bi bi-info-circle me-1"></i>Noch keine Spannungswerte — unten eingeben
+        </span>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if chart_data.has_tension_data %}
+        <div style="height:280px;">
+            <canvas id="tensionChart"></canvas>
+        </div>
+        <!-- Legende: Outcome-Farben -->
+        <div class="d-flex gap-3 mt-2 flex-wrap" style="font-size:.72rem;color:#94a3b8;">
+            <span><span class="d-inline-block me-1" style="width:10px;height:10px;border-radius:50%;background:#22c55e;"></span>Yes</span>
+            <span><span class="d-inline-block me-1" style="width:10px;height:10px;border-radius:50%;background:#f59e0b;"></span>Yes, but</span>
+            <span><span class="d-inline-block me-1" style="width:10px;height:10px;border-radius:50%;background:#ef4444;"></span>No</span>
+            <span><span class="d-inline-block me-1" style="width:10px;height:10px;border-radius:50%;background:#7f1d1d;"></span>No, and</span>
+            <span><span class="d-inline-block me-1" style="width:10px;height:10px;border-radius:50%;background:#94a3b8;"></span>offen</span>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="bi bi-graph-up d-block mb-2 text-muted" style="font-size:3rem;"></i>
+            <p class="text-muted small">Trag unten Spannungswerte (1–10) ein, um die Kurve zu sehen.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Emotions-Delta -->
+{% if chart_data.emotion_deltas %}
+{% with has_emotions=False %}
+{% for e in chart_data.emotion_deltas %}{% if e.start or e.end %}{% with has_emotions=True %}{% endwith %}{% endif %}{% endfor %}
+{% endwith %}
+<div class="card mb-4" style="background:#0d1117;border-color:#2d3748;">
+    <div class="card-header py-2" style="border-color:#2d3748;">
+        <span class="fw-semibold"><i class="bi bi-heart me-2" style="color:#f59e0b;"></i>Emotions-Delta</span>
+    </div>
+    <div class="card-body p-0">
+        {% for e in chart_data.emotion_deltas %}
+        {% if e.start or e.end %}
+        <div class="px-3 py-2 d-flex align-items-center gap-3" style="border-bottom:1px solid #1e2235;">
+            <span class="text-muted small" style="min-width:180px;">{{ e.label }}</span>
+            <span class="badge" style="background:#1e2a1e;color:#86efac;font-size:.75rem;">{{ e.start|default:"—" }}</span>
+            <i class="bi bi-arrow-right text-muted small"></i>
+            <span class="badge" style="background:#2a1e1e;color:#fca5a5;font-size:.75rem;">{{ e.end|default:"—" }}</span>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Wendepunkte -->
+<div class="card mb-4" style="background:#0d1117;border-color:#2d3748;">
+    <div class="card-header py-2 d-flex align-items-center justify-content-between" style="border-color:#2d3748;">
+        <span class="fw-semibold"><i class="bi bi-flag me-2" style="color:#f59e0b;"></i>Wendepunkte</span>
+        <button class="btn btn-outline-success btn-sm" data-bs-toggle="collapse" data-bs-target="#add-turning-point">
+            <i class="bi bi-plus-circle me-1"></i>Hinzufügen
+        </button>
+    </div>
+    <!-- Formular: neuen Wendepunkt anlegen -->
+    <div class="collapse" id="add-turning-point">
+        <div class="p-3" style="background:#0a0d14;border-bottom:1px solid #2d3748;">
+            <form method="post" action="{% url 'projects:drama_turning_point_add' project.pk %}" class="row g-2 align-items-end">
+                {% csrf_token %}
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Typ</label>
+                    <select name="turning_point_type" class="form-select form-select-sm bg-dark text-light border-secondary">
+                        <option value="">— keiner —</option>
+                        {% for tp in turning_point_types %}
+                        <option value="{{ tp.pk }}">{{ tp.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Bezeichnung</label>
+                    <input type="text" name="label" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Optionaler Override">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">Position (%)</label>
+                    <input type="number" name="position_percent" min="0" max="100" value="25"
+                           class="form-control form-control-sm bg-dark text-light border-secondary">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-success btn-sm">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if turning_points %}
+        {% for tp in turning_points %}
+        <div class="px-3 py-2 d-flex align-items-center gap-3" style="border-bottom:1px solid #1e2235;">
+            <div style="min-width:60px;">
+                <span class="badge" style="background:#1e1b4b;color:#a5b4fc;font-size:.8rem;">{{ tp.position_percent }}%</span>
+            </div>
+            <div class="flex-grow-1">
+                <span class="fw-semibold" style="color:#e2e8f0;">{{ tp.get_label }}</span>
+                {% if tp.turning_point_type %}
+                <span class="text-muted small ms-2">{{ tp.turning_point_type.label }}</span>
+                {% endif %}
+                {% if tp.description %}
+                <div class="text-muted small">{{ tp.description }}</div>
+                {% endif %}
+            </div>
+            {% if tp.node %}
+            <span class="badge" style="background:#1e2235;color:#94a3b8;font-size:.68rem;">
+                {{ tp.node.order }}. {{ tp.node.title|truncatechars:30 }}
+            </span>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="p-4 text-center text-muted small">
+            <i class="bi bi-flag d-block mb-2" style="font-size:2rem;"></i>
+            Noch keine Wendepunkte — oben hinzufügen.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Kapitel-Dramaturgie-Editor -->
+<div class="card mb-4" style="background:#0d1117;border-color:#2d3748;">
+    <div class="card-header py-2" style="border-color:#2d3748;">
+        <span class="fw-semibold">
+            <i class="bi bi-sliders me-2" style="color:#6366f1;"></i>Kapitel-Dramaturgie
+        </span>
+        <span class="text-muted small ms-2">(Spannung + Outcome + Emotionen)</span>
+    </div>
+    <div class="card-body p-0">
+        {% for e in chart_data.emotion_deltas %}
+        {% with forloop.counter0 as idx %}
+        {% with chart_data.tension|slice:idx as tension_slice %}
+        {% endwith %}
+        {% endwith %}
+        {% endfor %}
+        <!-- Tabelle mit HTMX-Inline-Edit pro Zeile -->
+        <div style="overflow-x:auto;">
+            <table class="table table-dark table-sm mb-0" style="border-color:#2d3748;">
+                <thead style="background:#1a1d27;">
+                    <tr style="font-size:.75rem;color:#94a3b8;">
+                        <th class="ps-3">#</th>
+                        <th>Titel</th>
+                        <th style="width:100px;">Spannung<br><span style="font-size:.65rem;">(1–10)</span></th>
+                        <th style="width:140px;">Outcome</th>
+                        <th style="width:130px;">Emotion Start</th>
+                        <th style="width:130px;">Emotion Ende</th>
+                        <th style="width:60px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for node_data in chart_data.drama_nodes %}
+                    <tr id="drama-row-{{ node_data.pk }}" style="font-size:.8rem;">
+                        <td class="ps-3 text-muted">{{ node_data.order }}</td>
+                        <td style="color:#e2e8f0;max-width:200px;">{{ node_data.title|truncatechars:40 }}</td>
+                        <td>
+                            <input type="number" min="1" max="10"
+                                   value="{{ node_data.tension_numeric|default:'' }}"
+                                   class="form-control form-control-sm bg-dark text-light border-secondary"
+                                   style="width:70px;"
+                                   data-node-pk="{{ node_data.pk }}"
+                                   data-field="tension_numeric"
+                                   onchange="saveDramaField(this)">
+                        </td>
+                        <td>
+                            <select class="form-select form-select-sm bg-dark text-light border-secondary"
+                                    data-node-pk="{{ node_data.pk }}"
+                                    data-field="outcome"
+                                    onchange="saveDramaField(this)">
+                                <option value="" {% if not node_data.outcome %}selected{% endif %}>—</option>
+                                <option value="yes" {% if node_data.outcome == "yes" %}selected{% endif %} style="color:#22c55e;">Yes ✓</option>
+                                <option value="yes_but" {% if node_data.outcome == "yes_but" %}selected{% endif %} style="color:#f59e0b;">Yes, but…</option>
+                                <option value="no" {% if node_data.outcome == "no" %}selected{% endif %} style="color:#ef4444;">No ✗</option>
+                                <option value="no_and" {% if node_data.outcome == "no_and" %}selected{% endif %} style="color:#991b1b;">No, and…</option>
+                            </select>
+                        </td>
+                        <td>
+                            <input type="text"
+                                   value="{{ node_data.emotion_start }}"
+                                   class="form-control form-control-sm bg-dark text-light border-secondary"
+                                   placeholder="z.B. Hoffnung"
+                                   data-node-pk="{{ node_data.pk }}"
+                                   data-field="emotion_start"
+                                   onchange="saveDramaField(this)">
+                        </td>
+                        <td>
+                            <input type="text"
+                                   value="{{ node_data.emotion_end }}"
+                                   class="form-control form-control-sm bg-dark text-light border-secondary"
+                                   placeholder="z.B. Verzweiflung"
+                                   data-node-pk="{{ node_data.pk }}"
+                                   data-field="emotion_end"
+                                   onchange="saveDramaField(this)">
+                        </td>
+                        <td id="status-{{ node_data.pk }}"></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            <i class="bi bi-list-ol me-2"></i>Keine aktive Outline gefunden.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Chart.js Spannungskurve
+{% if chart_data.has_tension_data %}
+(function() {
+    const chartData = {{ chart_json|safe }};
+    const ctx = document.getElementById('tensionChart');
+    if (!ctx) return;
+    new Chart(ctx, {
+        type: 'line',
+        data: chartData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            return 'Spannung: ' + ctx.raw + '/10';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    min: 0, max: 10,
+                    grid: { color: 'rgba(45,55,72,0.6)' },
+                    ticks: { color: '#94a3b8', stepSize: 1 }
+                },
+                x: {
+                    grid: { color: 'rgba(45,55,72,0.4)' },
+                    ticks: { color: '#94a3b8', maxRotation: 45, font: { size: 10 } }
+                }
+            }
+        }
+    });
+})();
+{% endif %}
+
+// HTMX-ähnliches Auto-Save für Dramaturgie-Felder
+function saveDramaField(el) {
+    const nodePk = el.dataset.nodePk;
+    const field = el.dataset.field;
+    const value = el.value;
+    const statusEl = document.getElementById('status-' + nodePk);
+
+    const formData = new FormData();
+    formData.append(field, value);
+    formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+
+    fetch(`/projekte/node/${nodePk}/drama-update/`, {
+        method: 'POST',
+        body: formData,
+        headers: { 'HX-Request': 'true' }
+    })
+    .then(r => r.text())
+    .then(html => {
+        if (statusEl) {
+            statusEl.innerHTML = html;
+            setTimeout(() => { statusEl.innerHTML = ''; }, 2000);
+        }
+    })
+    .catch(() => {
+        if (statusEl) {
+            statusEl.innerHTML = '<span class="text-danger small">✗</span>';
+        }
+    });
+}
+
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return '';
+}
+</script>
+{% endblock %}

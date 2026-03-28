@@ -6,7 +6,8 @@ from .models import (
     ContentTypeLookup, GenreConventionProfile, GenreLookup,
     OutlineFramework, OutlineFrameworkBeat, OutlineNode,
     OutlineSequence, OutlineVersion, PitchDocument,
-    ProjectGenrePromise, ResearchNote, SubplotArc, TextAnalysisSnapshot,
+    ProjectGenrePromise, ProjectTurningPoint,
+    ResearchNote, SubplotArc, TextAnalysisSnapshot,
 )
 from .models_timeline import (
     ForeshadowingEntry, ForeshadowingTypeLookup,
@@ -262,4 +263,13 @@ class PlannedFlashbackAdmin(admin.ModelAdmin):
     list_filter = ["technique"]
     search_fields = ["project__title"]
     raw_id_fields = ["project", "trigger_node"]
+    readonly_fields = ["id", "created_at"]
+
+
+@admin.register(ProjectTurningPoint)
+class ProjectTurningPointAdmin(admin.ModelAdmin):
+    list_display = ["project", "get_label", "position_percent", "turning_point_type"]
+    list_filter = ["turning_point_type"]
+    search_fields = ["project__title", "label"]
+    raw_id_fields = ["project", "node"]
     readonly_fields = ["id", "created_at"]

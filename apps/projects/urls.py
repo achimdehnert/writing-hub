@@ -57,6 +57,10 @@ urlpatterns = [
     # Health-Score (ADR-157)
     path("<uuid:pk>/health/", views_health.ProjectHealthView.as_view(), name="health"),
     path("<uuid:pk>/health/partial/", views_health.ProjectHealthPartialView.as_view(), name="health_partial"),
+    # Drama-Dashboard (ADR-154)
+    path("<uuid:pk>/drama/", views_html.DramaDashboardView.as_view(), name="drama_dashboard"),
+    path("node/<uuid:node_pk>/drama-update/", views_html.DramaNodeUpdateView.as_view(), name="drama_node_update"),
+    path("<uuid:pk>/drama/turning-point/add/", views_html.DramaTurningPointAddView.as_view(), name="drama_turning_point_add"),
     # REST API
     path("api/", views.BookProjectListView.as_view(), name="api_list"),
     path("api/<uuid:pk>/", views.BookProjectDetailView.as_view(), name="api_detail"),

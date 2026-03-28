@@ -247,6 +247,64 @@ class OutlineVersion(models.Model):
         return new
 
 
+class ProjectTurningPoint(models.Model):
+    """
+    Wendepunkt-Markierung auf der Spannungskurve (ADR-154).
+
+    Verknüpft einen semantischen Wendepunkt-Typ (core.TurningPointTypeLookup)
+    mit einer Position im Projekt und optional einer konkreten Szene.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        "BookProject",
+        on_delete=models.CASCADE,
+        related_name="turning_points",
+    )
+    turning_point_type = models.ForeignKey(
+        "core.TurningPointTypeLookup",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="project_turning_points",
+    )
+    node = models.ForeignKey(
+        "projects.OutlineNode",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="turning_point_markers",
+        verbose_name="Verknüpfte Szene",
+    )
+    label = models.CharField(
+        max_length=200, blank=True, default="",
+        verbose_name="Bezeichnung (Override)",
+        help_text="Leer = Typ-Label verwenden",
+    )
+    position_percent = models.PositiveSmallIntegerField(
+        default=0,
+        verbose_name="Position (%)",
+        help_text="0–100, relativer Buchfortschritt",
+    )
+    description = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "wh_project_turning_points"
+        ordering = ["project", "position_percent"]
+        verbose_name = "Wendepunkt"
+        verbose_name_plural = "Wendepunkte"
+
+    def __str__(self):
+        lbl = self.label or (self.turning_point_type.label if self.turning_point_type else "?")
+        return f"{lbl} @ {self.position_percent}%"
+
+    def get_label(self):
+        if self.label:
+            return self.label
+        if self.turning_point_type:
+            return self.turning_point_type.label
+        return "Wendepunkt"
+
+
 class OutlineSequence(models.Model):
     """
     Mesostruktur-Zwischenebene zwischen Akt und Kapitel (ADR-156).
@@ -321,6 +379,31 @@ class OutlineNode(models.Model):
         null=True, blank=True,
         related_name="nodes",
         verbose_name="Sequenz-Zugehörigkeit",
+    )
+    OUTCOME_CHOICES = [
+        ("yes",     "Yes (Ziel erreicht)"),
+        ("no",      "No (Ziel verfehlt)"),
+        ("yes_but", "Yes, but (mit Komplikation)"),
+        ("no_and",  "No, and (Lage verschlechtert)"),
+    ]
+    outcome = models.CharField(
+        max_length=10, choices=OUTCOME_CHOICES, blank=True, default="",
+        verbose_name="Szenen-Outcome",
+    )
+    tension_numeric = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        verbose_name="Spannungswert (1–10)",
+        help_text="Subjektiver Spannungswert 1–10 für die Spannungskurve",
+    )
+    emotion_start = models.CharField(
+        max_length=100, blank=True, default="",
+        verbose_name="Emotion Beginn",
+        help_text="Dominante Emotion zu Szenen-Beginn (z.B. 'Hoffnung')",
+    )
+    emotion_end = models.CharField(
+        max_length=100, blank=True, default="",
+        verbose_name="Emotion Ende",
+        help_text="Dominante Emotion am Szenen-Ende (z.B. 'Verzweiflung')",
     )
     order = models.PositiveIntegerField(default=0)
     notes = models.TextField(blank=True)

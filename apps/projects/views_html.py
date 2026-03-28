@@ -501,3 +501,98 @@ class ChapterContentView(LoginRequiredMixin, View):
             "word_count": node.word_count,
             "updated_at": node.content_updated_at.isoformat(),
         })
+
+
+class DramaDashboardView(LoginRequiredMixin, View):
+    """Drama-Dashboard: Spannungskurve + Wendepunkte + Health-Score (ADR-154)."""
+
+    def get(self, request, pk):
+        from apps.projects.services.drama_service import DramaDashboardService
+
+        project = get_object_or_404(BookProject, pk=pk, owner=request.user)
+        svc = DramaDashboardService(project)
+
+        chart_json = svc.get_chart_json()
+        chart_data = svc.get_tension_chart_data()
+        turning_points = svc.get_turning_points()
+        health = svc.get_health_data()
+
+        turning_point_types = []
+        try:
+            from apps.core.models_lookups_drama import TurningPointTypeLookup
+            turning_point_types = list(
+                TurningPointTypeLookup.objects.order_by("sort_order")
+            )
+        except Exception:
+            pass
+
+        return render(request, "projects/drama_dashboard.html", {
+            "project": project,
+            "chart_json": chart_json,
+            "chart_data": chart_data,
+            "turning_points": turning_points,
+            "turning_point_types": turning_point_types,
+            "health": health,
+        })
+
+
+class DramaNodeUpdateView(LoginRequiredMixin, View):
+    """HTMX: tension_numeric + outcome + emotion_start/end auf OutlineNode speichern."""
+
+    def post(self, request, node_pk):
+        from django.http import HttpResponse
+
+        node = get_object_or_404(
+            OutlineNode, pk=node_pk, outline_version__project__owner=request.user
+        )
+        tn = request.POST.get("tension_numeric", "")
+        if tn:
+            try:
+                node.tension_numeric = max(1, min(10, int(tn)))
+            except ValueError:
+                pass
+        outcome = request.POST.get("outcome", "")
+        if outcome in ("yes", "no", "yes_but", "no_and", ""):
+            node.outcome = outcome
+        node.emotion_start = request.POST.get("emotion_start", node.emotion_start)
+        node.emotion_end = request.POST.get("emotion_end", node.emotion_end)
+        node.save(update_fields=["tension_numeric", "outcome", "emotion_start", "emotion_end"])
+
+        if request.headers.get("HX-Request"):
+            return HttpResponse(
+                f'<span class="badge bg-success text-white ms-1 small">✓ {node.title[:20]}</span>'
+            )
+        return redirect("projects:drama_dashboard", pk=node.outline_version.project.pk)
+
+
+class DramaTurningPointAddView(LoginRequiredMixin, View):
+    """Wendepunkt anlegen — POST from Drama-Dashboard form."""
+
+    def post(self, request, pk):
+        from apps.projects.models import ProjectTurningPoint
+
+        project = get_object_or_404(BookProject, pk=pk, owner=request.user)
+        tp_type_pk = request.POST.get("turning_point_type", "").strip()
+        label = request.POST.get("label", "").strip()
+        pos = request.POST.get("position_percent", "0").strip()
+
+        tp_type = None
+        if tp_type_pk:
+            try:
+                from apps.core.models_lookups_drama import TurningPointTypeLookup
+                tp_type = TurningPointTypeLookup.objects.filter(pk=tp_type_pk).first()
+            except Exception:
+                pass
+
+        try:
+            position = max(0, min(100, int(pos)))
+        except (ValueError, TypeError):
+            position = 0
+
+        ProjectTurningPoint.objects.create(
+            project=project,
+            turning_point_type=tp_type,
+            label=label,
+            position_percent=position,
+        )
+        return redirect("projects:drama_dashboard", pk=pk)
