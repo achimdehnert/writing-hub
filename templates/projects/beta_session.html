@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}{{ session.name }} — Beta-Leser — Writing Hub{% endblock %}
+{% block nav_projects %}active{% endblock %}
+
+{% block content %}
+<div style="max-width:900px;margin:0 auto;">
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <a href="{% url 'projects:beta_dashboard' project.pk %}" class="btn btn-link text-muted ps-0">← Beta-Leser</a>
+        <h1 class="h3 mb-0">{{ session.name }}</h1>
+        {% if session.reader_name %}<small class="text-muted">{{ session.reader_name }}</small>{% endif %}
+    </div>
+    {% if not session.is_completed %}
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="complete_session">
+        <button class="btn btn-sm btn-success">Session abschließen</button>
+    </form>
+    {% endif %}
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show">
+    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+{% if feedbacks %}
+<div class="table-responsive mb-4">
+    <table class="table table-sm align-middle">
+        <thead class="table-light">
+            <tr><th>Typ</th><th>Kap.</th><th>Feedback</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+        {% for fb in feedbacks %}
+        <tr class="{% if fb.feedback_type == 'confusion' %}table-danger{% elif fb.feedback_type == 'highlight' %}table-success{% endif %}">
+            <td><span class="badge bg-secondary">{{ fb.get_feedback_type_display }}</span></td>
+            <td>{{ fb.chapter_order|default:"—" }}</td>
+            <td>
+                {{ fb.text }}
+                {% if fb.text_reference %}<br><small class="text-muted fst-italic">"{{ fb.text_reference|truncatechars:80 }}"</small>{% endif %}
+            </td>
+            <td>
+                <form method="post" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="toggle_addressed">
+                    <input type="hidden" name="feedback_id" value="{{ fb.pk }}">
+                    <button class="btn btn-sm {% if fb.is_addressed %}btn-success{% else %}btn-outline-secondary{% endif %}">
+                        {% if fb.is_addressed %}✓{% else %}○{% endif %}
+                    </button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="text-muted mb-4">Noch kein Feedback vorhanden.</p>
+{% endif %}
+
+{% if not session.is_completed %}
+<div class="card shadow-sm">
+    <div class="card-header"><strong>Feedback hinzufügen</strong></div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_feedback">
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <select name="feedback_type" class="form-select form-select-sm">
+                        {% for val, label in feedback_type_choices %}
+                        <option value="{{ val }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input name="chapter_order" type="number" class="form-control form-control-sm" placeholder="Kap. Nr.">
+                </div>
+                <div class="col-md-6">
+                    <input name="text_reference" class="form-control form-control-sm" placeholder="Textreferenz (Zitat, optional)">
+                </div>
+                <div class="col-12">
+                    <textarea name="text" class="form-control form-control-sm" rows="2" placeholder="Feedback-Text *" required></textarea>
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-sm btn-success">Feedback hinzufügen</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Recherche — {{ project.title }} — Writing Hub{% endblock %}
+{% block nav_projects %}active{% endblock %}
+
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;">
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <a href="{% url 'projects:detail' project.pk %}" class="btn btn-link text-muted ps-0">← {{ project.title }}</a>
+        <h1 class="h3 mb-0">Recherche-Notizen</h1>
+        <small class="text-muted">{{ notes|length }} Einträge</small>
+    </div>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show">
+    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+{% if notes %}
+<div class="table-responsive mb-4">
+    <table class="table table-sm align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Typ</th>
+                <th>Titel</th>
+                <th>Quelle</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for note in notes %}
+        <tr>
+            <td><span class="badge bg-secondary">{{ note.get_note_type_display }}</span></td>
+            <td>
+                {{ note.title }}
+                {% if note.is_open_question %}<span class="badge bg-warning text-dark ms-1">Offen</span>{% endif %}
+            </td>
+            <td><small class="text-muted">{{ note.source|truncatechars:40 }}</small></td>
+            <td>
+                <form method="post" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="toggle_verified">
+                    <input type="hidden" name="note_id" value="{{ note.pk }}">
+                    <button class="btn btn-sm {% if note.is_verified %}btn-success{% else %}btn-outline-secondary{% endif %}">
+                        {% if note.is_verified %}✓ Verifiziert{% else %}? Ungeprüft{% endif %}
+                    </button>
+                </form>
+            </td>
+            <td>
+                <form method="post" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete_note">
+                    <input type="hidden" name="note_id" value="{{ note.pk }}">
+                    <button class="btn btn-sm btn-outline-danger">×</button>
+                </form>
+            </td>
+        </tr>
+        <tr class="table-light">
+            <td colspan="5"><small class="text-muted">{{ note.content|truncatechars:200 }}</small></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="text-muted">Noch keine Recherche-Notizen vorhanden.</p>
+{% endif %}
+
+<div class="card shadow-sm">
+    <div class="card-header"><strong>Notiz hinzufügen</strong></div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_note">
+            <div class="row g-2">
+                <div class="col-md-3">
+                    <select name="note_type" class="form-select form-select-sm">
+                        {% for val, label in note_type_choices %}
+                        <option value="{{ val }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-9">
+                    <input name="title" class="form-control form-control-sm" placeholder="Bezeichnung *" required>
+                </div>
+                <div class="col-12">
+                    <textarea name="content" class="form-control form-control-sm" rows="3" placeholder="Inhalt *" required></textarea>
+                </div>
+                <div class="col-md-8">
+                    <input name="source" class="form-control form-control-sm" placeholder="Quelle (URL, Buchtitel, …)">
+                </div>
+                <div class="col-md-2 d-flex align-items-center gap-2">
+                    <input type="checkbox" name="is_verified" id="is_verified" class="form-check-input">
+                    <label for="is_verified" class="form-check-label small">Verifiziert</label>
+                </div>
+                <div class="col-md-2 d-flex align-items-center gap-2">
+                    <input type="checkbox" name="is_open_question" id="is_open_question" class="form-check-input">
+                    <label for="is_open_question" class="form-check-label small">Offen</label>
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-sm btn-success">Notiz hinzufügen</button>
+                </div>
+            </div>
+        </form>
+        <div class="alert alert-info mt-3 mb-0 small">
+            Nur <strong>verifizierte</strong> Notizen werden in LLM-Prompts injiziert.
+        </div>
+    </div>
+</div>
+
+</div>
+{% endblock %}

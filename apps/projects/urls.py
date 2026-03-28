@@ -6,6 +6,7 @@ from . import (
     views_health,
     views_html,
     views_import,
+    views_knowledge,
     views_lektorat,
     views_manuscript,
     views_publishing,
@@ -57,6 +58,10 @@ urlpatterns = [
     # Health-Score (ADR-157)
     path("<uuid:pk>/health/", views_health.ProjectHealthView.as_view(), name="health"),
     path("<uuid:pk>/health/partial/", views_health.ProjectHealthPartialView.as_view(), name="health_partial"),
+    # Wissens-Infrastruktur: Recherche + Beta-Leser (ADR-160)
+    path("<uuid:pk>/research/", views_knowledge.ResearchDashboardView.as_view(), name="research_dashboard"),
+    path("<uuid:pk>/beta/", views_knowledge.BetaReaderDashboardView.as_view(), name="beta_dashboard"),
+    path("<uuid:pk>/beta/<uuid:session_pk>/", views_knowledge.BetaReaderSessionDetailView.as_view(), name="beta_session"),
     # Pitch-Paket / Publikationsvorbereitung (ADR-159)
     path("<uuid:pk>/pitch/", views_publishing.PitchDashboardView.as_view(), name="pitch_dashboard"),
     path("<uuid:pk>/pitch/<str:pitch_type>/generate/", views_publishing.GeneratePitchView.as_view(), name="pitch_generate"),
