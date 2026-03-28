@@ -50,7 +50,33 @@ class ProjectWorldLink(models.Model):
 class ProjectCharacterLink(models.Model):
     """
     Verknüpft ein lokales BookProject mit einem WeltenHub-Charakter (UUID).
+
+    ADR-157: narrative_role + Antagonisten-Felder ergänzt.
     """
+
+    NARRATIVE_ROLES = [
+        ("protagonist",        "Protagonist — Hauptfigur mit Arc"),
+        ("antagonist",         "Antagonist — Gegenkraft mit eigener Logik"),
+        ("deuteragonist",      "Deuteragonist — zweite Hauptfigur (B-Story)"),
+        ("mentor",             "Mentor — gibt Werkzeug/Weisheit"),
+        ("ally",               "Verbündeter — Spiegel und Unterstützung"),
+        ("love_interest",      "Liebesinteresse — verkörpert das Need"),
+        ("trickster",          "Trickster — Humor und Dekonstruktion"),
+        ("herald",             "Herold — bringt den Ruf"),
+        ("shapeshifter",       "Gestaltenwandler — zweifelt Loyalität an"),
+        ("shadow",             "Schatten — was wäre der Protagonist wenn..."),
+        ("threshold_guardian", "Schwellenwächter — testet Entschlossenheit"),
+        ("supporting",         "Nebenfigur — dramaturgische Funktion"),
+    ]
+
+    ANTAGONIST_TYPES = [
+        ("person",      "Person / Gruppe"),
+        ("system",      "System / Institution / Gesellschaft"),
+        ("nature",      "Natur / Umwelt / Schicksal"),
+        ("inner_self",  "Inneres Selbst — die eigene dunkle Seite"),
+        ("combination", "Kombination mehrerer Typen"),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey(
         "projects.BookProject",
@@ -64,7 +90,52 @@ class ProjectCharacterLink(models.Model):
     project_arc = models.TextField(blank=True, help_text="Projekt-spezifischer Charakterbogen (override)")
     project_role = models.CharField(max_length=50, blank=True, help_text="Rolle in diesem Projekt (override)")
     notes = models.TextField(blank=True)
+
+    # --- ADR-157: Dramaturgische Felder ---
+    narrative_role = models.CharField(
+        max_length=30,
+        choices=NARRATIVE_ROLES,
+        default="supporting",
+        verbose_name="Narrative Rolle",
+        db_index=True,
+    )
+
+    # Charakter-Arc (ADR-152)
+    want = models.TextField(blank=True, default="", verbose_name="Want (äußeres Ziel)")
+    need = models.TextField(blank=True, default="", verbose_name="Need (innere Wahrheit)")
+    flaw = models.TextField(blank=True, default="", verbose_name="Flaw (psychologischer Riss)")
+    ghost = models.TextField(blank=True, default="", verbose_name="Ghost (prägender Moment)")
+    false_belief = models.TextField(blank=True, default="", verbose_name="False Belief")
+    true_belief = models.TextField(blank=True, default="", verbose_name="True Belief (Erkenntnis am Ende)")
+
+    # Antagonisten-Felder (ADR-157)
+    antagonist_type = models.CharField(
+        max_length=20, choices=ANTAGONIST_TYPES,
+        blank=True, default="",
+        verbose_name="Antagonisten-Typ",
+    )
+    antagonist_logic = models.TextField(
+        blank=True, default="",
+        verbose_name="Antagonisten-Logik",
+        help_text="Warum glaubt der Antagonist, das Richtige zu tun?",
+    )
+    mirror_to_protagonist = models.TextField(
+        blank=True, default="",
+        verbose_name="Spiegel zum Protagonisten",
+        help_text="Was zeigt diese Figur, was der Protagonist sein KÖNNTE?",
+    )
+    shared_trait_with_protagonist = models.TextField(
+        blank=True, default="",
+        verbose_name="Gemeinsamkeit mit Protagonisten",
+    )
+    information_advantage = models.TextField(
+        blank=True, default="",
+        verbose_name="Informationsvorsprung",
+        help_text="Nur für externe Antagonisten (person, system, nature).",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "wh_project_character_links"
@@ -74,11 +145,20 @@ class ProjectCharacterLink(models.Model):
         verbose_name_plural = "Project Character Links"
 
     def __str__(self):
-        return f"{self.project} → char:{self.weltenhub_character_id}"
+        return f"{self.project} → char:{self.weltenhub_character_id} ({self.narrative_role})"
 
     def get_character(self):
         from weltenfw.django import get_client
         return get_client().characters.get(self.weltenhub_character_id)
+
+    @property
+    def carries_b_story(self) -> bool:
+        from projects.models import SubplotArc
+        return SubplotArc.objects.filter(
+            project=self.project,
+            story_label="b_story",
+            carried_by_character_id=self.weltenhub_character_id,
+        ).exists()
 
 
 class ProjectLocationLink(models.Model):

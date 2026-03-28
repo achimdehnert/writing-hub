@@ -4,6 +4,7 @@ from .models import (
     AudienceLookup, AuthorStyleLookup, BookProject,
     ContentTypeLookup, GenreLookup, OutlineFramework,
     OutlineFrameworkBeat, OutlineNode, OutlineVersion,
+    ProjectGenrePromise, SubplotArc,
 )
 
 
@@ -71,3 +72,40 @@ class OutlineNodeAdmin(admin.ModelAdmin):
     list_display = ["title", "outline_version", "beat_type", "order", "word_count"]
     list_filter = ["beat_type"]
     search_fields = ["title"]
+
+
+class SubplotArcIntersectionInline(admin.TabularInline):
+    model = SubplotArc.intersection_nodes.through
+    extra = 0
+    verbose_name = "Kreuzungspunkt"
+    verbose_name_plural = "Kreuzungspunkte"
+
+
+@admin.register(SubplotArc)
+class SubplotArcAdmin(admin.ModelAdmin):
+    list_display = ["title", "project", "story_label", "begins_at_percent", "ends_at_percent", "created_at"]
+    list_filter = ["story_label", "embodies_need"]
+    search_fields = ["title", "project__title"]
+    readonly_fields = ["id", "created_at", "updated_at"]
+    raw_id_fields = ["project", "begins_at_node", "ends_at_node"]
+    inlines = [SubplotArcIntersectionInline]
+    fieldsets = [
+        ("Allgemein", {"fields": ["id", "project", "story_label", "title"]}),
+        ("Träger-Figur", {"fields": ["carried_by_character_id", "carried_by_name"]}),
+        ("Dramaturgik", {"fields": ["thematic_mirror", "embodies_need"]}),
+        ("Position", {"fields": [
+            "begins_at_percent", "ends_at_percent",
+            "begins_at_node", "ends_at_node",
+        ]}),
+        ("Anmerkungen", {"fields": ["intersection_notes"]}),
+        ("Meta", {"fields": ["created_at", "updated_at"]}),
+    ]
+
+
+@admin.register(ProjectGenrePromise)
+class ProjectGenrePromiseAdmin(admin.ModelAdmin):
+    list_display = ["project", "genre_promise", "is_primary", "created_at"]
+    list_filter = ["is_primary"]
+    search_fields = ["project__title"]
+    raw_id_fields = ["project", "genre_promise"]
+    readonly_fields = ["id", "created_at"]
