@@ -1,11 +1,11 @@
 {% if filter_active %}
 <div class="mb-3 small text-muted">
-    <i class="bi bi-funnel-fill me-1"></i>{{ projects|length }} Ergebnis{{ projects|length|pluralize:"s,se" }}
+    <i class="bi bi-funnel-fill me-1"></i>{{ page_obj.paginator.count }} Ergebnis{{ page_obj.paginator.count|pluralize:"s,se" }}
 </div>
 {% endif %}
 
 {% if projects %}
-<div class="row g-3" id="project-grid">
+<div class="row g-3" id="project-grid" hx-history-elt>
     {% for project in projects %}
     <div class="col-md-6 col-lg-4">
         <div class="card h-100">
@@ -63,6 +63,45 @@
     </div>
     {% endfor %}
 </div>
+
+{% if page_obj.has_other_pages %}
+<nav class="mt-4 d-flex justify-content-center" aria-label="Seitennavigation">
+    <ul class="pagination pagination-sm">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link bg-dark text-light border-secondary"
+               hx-get="{% url 'projects:list_partial' %}?page={{ page_obj.previous_page_number }}"
+               hx-target="#project-results"
+               hx-include="#filter-q, #filter-typ, #filter-genre, #filter-serie"
+               href="#">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+        </li>
+        {% endif %}
+        {% for num in page_obj.paginator.page_range %}
+        <li class="page-item {% if num == page_obj.number %}active{% endif %}">
+            <a class="page-link {% if num == page_obj.number %}bg-primary border-primary{% else %}bg-dark text-light border-secondary{% endif %}"
+               hx-get="{% url 'projects:list_partial' %}?page={{ num }}"
+               hx-target="#project-results"
+               hx-include="#filter-q, #filter-typ, #filter-genre, #filter-serie"
+               href="#">{{ num }}</a>
+        </li>
+        {% endfor %}
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link bg-dark text-light border-secondary"
+               hx-get="{% url 'projects:list_partial' %}?page={{ page_obj.next_page_number }}"
+               hx-target="#project-results"
+               hx-include="#filter-q, #filter-typ, #filter-genre, #filter-serie"
+               href="#">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
 {% else %}
 <div class="text-center py-5" id="project-grid">
     <i class="bi bi-folder2-open display-4 text-muted"></i>

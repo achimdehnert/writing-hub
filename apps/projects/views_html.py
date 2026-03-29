@@ -139,6 +139,16 @@ def _filter_projects(request):
     return qs
 
 
+PAGE_SIZE = 12
+
+
+def _paginate(qs, request):
+    from django.core.paginator import Paginator
+    paginator = Paginator(list(qs), PAGE_SIZE)
+    page_number = request.GET.get("page", 1)
+    return paginator.get_page(page_number)
+
+
 class ProjectListView(LoginRequiredMixin, ListView):
     model = BookProject
     template_name = "projects/project_list.html"
@@ -152,28 +162,36 @@ class ProjectListView(LoginRequiredMixin, ListView):
         ctx["series_options"] = BookSeries.objects.filter(
             owner=self.request.user
         ).order_by("title")
-        ctx["genre_options"] = GenreLookup.objects.all().order_by("order", "name")
-        ctx["ct_options"] = ContentTypeLookup.objects.all().order_by("order", "name")
+        ctx["genre_options"] = GenreLookup.objects.all().order_by(
+            "order", "name"
+        )
+        ctx["ct_options"] = ContentTypeLookup.objects.all().order_by(
+            "order", "name"
+        )
         ctx["filter_serie"] = self.request.GET.get("serie", "")
         ctx["filter_genre"] = self.request.GET.get("genre", "")
         ctx["filter_typ"] = self.request.GET.get("typ", "")
         ctx["filter_q"] = self.request.GET.get("q", "")
+        ctx["page_obj"] = _paginate(ctx["projects"], self.request)
+        ctx["projects"] = ctx["page_obj"]
         return ctx
 
 
 class ProjectListPartialView(LoginRequiredMixin, View):
-    """HTMX-Partial: gibt nur die Projektkarten-Grid zurück (kein Layout)."""
+    """HTMX-Partial: Projektkarten-Grid ohne Layout, mit Paginierung."""
 
     def get(self, request):
-        projects = _filter_projects(request)
+        qs = _filter_projects(request)
         filter_active = any([
             request.GET.get("q"),
             request.GET.get("genre"),
             request.GET.get("typ"),
             request.GET.get("serie"),
         ])
+        page_obj = _paginate(qs, request)
         return render(request, "projects/project_list_partial.html", {
-            "projects": projects,
+            "projects": page_obj,
+            "page_obj": page_obj,
             "filter_active": filter_active,
         })
 
