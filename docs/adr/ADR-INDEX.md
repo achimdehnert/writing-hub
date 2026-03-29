@@ -12,18 +12,18 @@
 
 | ADR | Titel | Status | Impl | Migrations | Abhängig von |
 |-----|-------|--------|------|------------|--------------|
-| [150](#adr-150) | Romanstruktur 4-Ebenen-Datenmodell | ✅ Accepted | ⬜ none | `projects/0001` (Basis) | — |
-| [151](#adr-151) | Dramaturgische Felder OutlineNode + Lookups | ✅ Accepted | ⬜ none | `projects/0008`, `core/initial` | 150 |
-| [152](#adr-152) | Charakter-Arc-Dramaturgie | ✅ Accepted | ⬜ none | `worlds/0003` | 150, 151 |
-| [153](#adr-153) | Frontend CSS Design Tokens + HTMX | ✅ Accepted | ⬜ none | — (Frontend) | — |
-| [154](#adr-154) | Drama-Dashboard + Content-Type-UIs | ✅ Accepted | ⬜ none | `projects/0009` | 151, 152 |
+| [150](#adr-150) | Romanstruktur 4-Ebenen-Datenmodell | ✅ Accepted | ✅ implemented | `projects/0001` (Basis) | — |
+| [151](#adr-151) | Dramaturgische Felder OutlineNode + Lookups | ✅ Accepted | ✅ implemented | `projects/0008`, `core/initial` | 150 |
+| [152](#adr-152) | Charakter-Arc-Dramaturgie | ✅ Accepted | ✅ implemented | `worlds/0003` | 150, 151 |
+| [153](#adr-153) | Frontend CSS Design Tokens + HTMX | ✅ Accepted | ✅ implemented | — (Frontend) | — |
+| [154](#adr-154) | Drama-Dashboard + Content-Type-UIs | ✅ Accepted | ✅ implemented | `projects/0009` | 151, 152 |
 | [155](#adr-155) | Serien-Dramaturgie — SeriesArc, VolumeRole, CharacterContinuity | ✅ Accepted | ✅ implemented | `core/0002`, `series/0003` | 150, 152 |
 | [156](#adr-156) | Zeitstruktur, Foreshadowing, OutlineSequence | ✅ Accepted | ✅ implemented | `projects/0018+0019` | 150, 151 |
 | [157](#adr-157) | Antagonist-System, B-Story/Subplot, MVN-Health **Rev.1** | ✅ Accepted | ✅ implemented | `worlds/0004`, `projects/0014+0015` | 150, 151, 152 |
 | [158](#adr-158) | Dialogue Subtext, Opening/Closing Image, GenrePromise | ✅ Accepted | ✅ implemented | `core/0001`, `projects/0015` | 150, 151, 157 |
-| [159](#adr-159) | Publikationsvorbereitung — Comps, Pitch, Exposé | 📋 Proposed | ✅ implemented | `projects/0017` | 083, 150, 157-Rev1, 158 |
-| [160](#adr-160) | Wissens-Infrastruktur — Recherche, Genre, Beta-Reader | 📋 Proposed | ✅ implemented | `projects/0017` | 083, 150, 157-Rev1, 158, 159 |
-| [161](#adr-161) | Produktions-Infrastruktur — TextAnalysis, Budget, Batch | 📋 Proposed | ✅ implemented | `projects/0016`, `authoring/0002` | 150, 151, 153, 157-Rev1 |
+| [159](#adr-159) | Publikationsvorbereitung — Comps, Pitch, Exposé | ✅ Accepted | ✅ implemented | `projects/0017` | 083, 150, 157-Rev1, 158 |
+| [160](#adr-160) | Wissens-Infrastruktur — Recherche, Genre, Beta-Reader | ✅ Accepted | ✅ implemented | `projects/0017` | 083, 150, 157-Rev1, 158, 159 |
+| [161](#adr-161) | Produktions-Infrastruktur — TextAnalysis, Budget, Batch | ✅ Accepted | ✅ implemented | `projects/0016`, `authoring/0002` | 150, 151, 153, 157-Rev1 |
 
 ---
 
