@@ -29,18 +29,8 @@
         <strong>Job läuft…</strong>
         <span class="badge bg-primary">{{ job.status }}</span>
     </div>
-    <div class="card-body"
-         hx-get="{% url 'projects:batch_status' project.pk job.pk %}"
-         hx-trigger="every 3s"
-         hx-swap="innerHTML"
-         id="job-status-{{ job.pk }}">
-        <div class="d-flex align-items-center gap-3">
-            <div class="progress flex-grow-1" style="height:18px">
-                <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
-                     style="width:{{ job.progress_pct }}%">{{ job.progress_pct }}%</div>
-            </div>
-            <small class="text-muted">{{ job.completed_count }}/{{ job.total }}</small>
-        </div>
+    <div class="card-body" id="job-status-{{ job.pk }}">
+        {% include "projects/batch_status_partial.html" with job=job is_done=False %}
     </div>
 </div>
 {% endif %}
@@ -149,31 +139,5 @@
 
 </div>
 
-{% block extra_js %}
-<script>
-// HTMX Polling: Job-Status nachladen und Fortschrittsbalken aktualisieren
-document.addEventListener('htmx:afterSwap', function(evt) {
-    const el = evt.detail.target;
-    try {
-        const data = JSON.parse(el.innerText);
-        const bar = el.querySelector ? el : document.getElementById(el.id);
-        if (data && data.progress_pct !== undefined) {
-            el.innerHTML = '<div class="d-flex align-items-center gap-3">' +
-                '<div class="progress flex-grow-1" style="height:18px">' +
-                '<div class="progress-bar progress-bar-striped ' +
-                (data.is_done ? '' : 'progress-bar-animated ') + 'bg-primary" ' +
-                'style="width:' + data.progress_pct + '%">' + data.progress_pct + '%</div>' +
-                '</div>' +
-                '<small class="text-muted">' + data.completed + '/' + data.total + '</small>' +
-                '</div>';
-            if (data.is_done) {
-                htmx.remove(el);
-                location.reload();
-            }
-        }
-    } catch(e) {}
-});
-</script>
-{% endblock %}
 
 {% endblock %}

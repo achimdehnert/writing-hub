@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 
@@ -126,7 +125,7 @@ class ProjectBatchView(LoginRequiredMixin, View):
 
 
 class ProjectBatchStatusView(LoginRequiredMixin, View):
-    """HTMX-Polling: Job-Status als JSON (ADR-161 Teil D)."""
+    """HTMX-Polling: Job-Status als HTML-Partial (ADR-161 Teil D)."""
 
     def get(self, request, pk, job_id):
         project = get_object_or_404(BookProject, pk=pk)
@@ -134,12 +133,8 @@ class ProjectBatchStatusView(LoginRequiredMixin, View):
         job = get_object_or_404(
             BatchWriteJob, pk=job_id, project=project
         )
-        return JsonResponse({
-            "status": job.status,
-            "progress_pct": job.progress_pct,
-            "completed": job.completed_count,
-            "failed": job.failed_count,
-            "total": job.total,
-            "current_index": job.current_index,
-            "is_done": job.status in ("done", "failed", "canceled"),
+        is_done = job.status in ("done", "failed", "canceled")
+        return render(request, "projects/batch_status_partial.html", {
+            "job": job,
+            "is_done": is_done,
         })

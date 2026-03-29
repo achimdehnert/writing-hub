@@ -19,6 +19,7 @@ app_name = "projects"
 
 urlpatterns = [
     path("", views_html.ProjectListView.as_view(), name="list"),
+    path("partial/", views_html.ProjectListPartialView.as_view(), name="list_partial"),
     path("new/", views_html.ProjectCreateView.as_view(), name="create"),
     path("import/", views_import.ProjectImportView.as_view(), name="import"),
     path("<uuid:pk>/", views_html.ProjectDetailView.as_view(), name="detail"),

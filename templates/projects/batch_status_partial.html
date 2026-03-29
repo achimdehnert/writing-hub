@@ -1,0 +1,19 @@
+<div class="d-flex align-items-center gap-3"
+     {% if not is_done %}
+     hx-get="{{ request.path }}"
+     hx-trigger="every 3s"
+     hx-swap="outerHTML"
+     {% endif %}>
+    <div class="progress flex-grow-1" style="height:18px;">
+        <div class="progress-bar {% if not is_done %}progress-bar-striped progress-bar-animated{% endif %}
+            {% if job.status == 'done' %}bg-success{% elif job.status == 'failed' %}bg-danger{% else %}bg-primary{% endif %}"
+             style="width:{{ job.progress_pct }}%;">{{ job.progress_pct }}%</div>
+    </div>
+    <small class="text-muted">{{ job.completed_count }}/{{ job.total }}</small>
+    {% if is_done %}
+    <a href="{{ request.path|slice:":-9" }}" class="btn btn-sm btn-outline-secondary"
+       hx-get="{{ request.path|slice:":-9" }}" hx-target="body" hx-push-url="true">
+        <i class="bi bi-arrow-clockwise"></i>
+    </a>
+    {% endif %}
+</div>

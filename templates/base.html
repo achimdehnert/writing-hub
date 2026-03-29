@@ -22,11 +22,33 @@
         .text-muted { color: #64748b !important; }
         .brand { font-size: 1.1rem; font-weight: 700; color: #6366f1; letter-spacing: -.02em; padding: 1.25rem 1.5rem .75rem; }
     </style>
-    <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@1.9.12/dist/htmx.min.js" defer></script>
     <style>
         .htmx-indicator { display: none; }
         .htmx-request .htmx-indicator { display: inline-block; }
         .htmx-request.htmx-indicator { display: inline-block; }
+        /* Quick-Action Buttons (project_detail) */
+        .btn-action { font-size: .75rem; border-width: 1px; }
+        .btn-action-write    { background:#1e1b4b; color:#a5b4fc; border-color:#3730a3; }
+        .btn-action-write:hover { background:#2d2a6e; color:#c7d2fe; }
+        .btn-action-drama    { background:#1e1a2e; color:#c4b5fd; border-color:#4c1d95; }
+        .btn-action-drama:hover { background:#2d1f4e; color:#ddd6fe; }
+        .btn-action-health   { background:#1a2e1a; color:#86efac; border-color:#14532d; }
+        .btn-action-health:hover { background:#1e3b1e; color:#bbf7d0; }
+        .btn-action-pitch    { background:#2e1a1a; color:#fca5a5; border-color:#7f1d1d; }
+        .btn-action-pitch:hover { background:#3f2020; color:#fecaca; }
+        .btn-action-analysis { background:#1a2428; color:#67e8f9; border-color:#164e63; }
+        .btn-action-analysis:hover { background:#1e2f35; color:#a5f3fc; }
+        .btn-action-batch    { background:#1a2428; color:#a5b4fc; border-color:#3730a3; }
+        .btn-action-batch:hover { background:#1e2f35; color:#c7d2fe; }
+        .btn-action-budget   { background:#1a2428; color:#6ee7b7; border-color:#065f46; }
+        .btn-action-budget:hover { background:#1e2f35; color:#a7f3d0; }
+        .btn-action-research { background:#2a2818; color:#fde68a; border-color:#78350f; }
+        .btn-action-research:hover { background:#38340f; color:#fef08a; }
+        .btn-action-beta     { background:#28182a; color:#e9d5ff; border-color:#6b21a8; }
+        .btn-action-beta:hover { background:#3b1f40; color:#f3e8ff; }
+        .btn-action-neutral  { background:#1e2235; color:#94a3b8; border-color:#2d3748; }
+        .btn-action-neutral:hover { background:#262d45; color:#cbd5e1; }
     </style>
     {% block extra_head %}{% endblock %}
     {% block extra_css %}{% endblock %}
@@ -35,26 +57,27 @@
 
 <div class="sidebar d-flex flex-column">
     <div class="brand"><i class="bi bi-pen"></i> Writing Hub</div>
+    {% with app=request.resolver_match.app_name %}
     <nav class="nav flex-column mt-2 flex-grow-1">
-        <a href="{% url 'projects:list' %}" class="nav-link {% block nav_projects %}{% endblock %}">
+        <a href="{% url 'projects:list' %}" class="nav-link {% if app == 'projects' %}active{% endif %}">
             <i class="bi bi-folder2-open"></i> Projekte
         </a>
-        <a href="{% url 'ideas:creative_dashboard' %}" class="nav-link {% block nav_studio %}{% endblock %}">
+        <a href="{% url 'ideas:creative_dashboard' %}" class="nav-link {% if app == 'ideas' %}active{% endif %}">
             <i class="bi bi-lightbulb"></i> Ideen-Studio
         </a>
-        <a href="{% url 'outlines:list' %}" class="nav-link {% block nav_outlines %}{% endblock %}">
+        <a href="{% url 'outlines:list' %}" class="nav-link {% if app == 'outlines' %}active{% endif %}">
             <i class="bi bi-list-ol"></i> Outlines
         </a>
-        <a href="{% url 'authors:list' %}" class="nav-link {% block nav_authors %}{% endblock %}">
+        <a href="{% url 'authors:list' %}" class="nav-link {% if app == 'authors' %}active{% endif %}">
             <i class="bi bi-person-badge"></i> Autoren
         </a>
-        <a href="{% url 'series_html:list' %}" class="nav-link {% block nav_series %}{% endblock %}">
+        <a href="{% url 'series_html:list' %}" class="nav-link {% if app == 'series_html' %}active{% endif %}">
             <i class="bi bi-collection"></i> Serien
         </a>
-        <a href="{% url 'ideas:list' %}" class="nav-link {% block nav_ideas %}{% endblock %}">
+        <a href="{% url 'ideas:list' %}" class="nav-link {% if app == 'ideas' and 'list' in request.resolver_match.url_name %}active{% endif %}">
             <i class="bi bi-upload"></i> Ideen-Import
         </a>
-        <a href="https://weltenhub.iil.pet" target="_blank" rel="noopener" class="nav-link {% block nav_worlds %}{% endblock %}">
+        <a href="https://weltenhub.iil.pet" target="_blank" rel="noopener" class="nav-link">
             <i class="bi bi-globe2"></i> WeltenHub <i class="bi bi-box-arrow-up-right ms-1" style="font-size:.65rem;"></i>
         </a>
         <hr class="border-secondary mx-3">
@@ -67,6 +90,7 @@
             <i class="bi bi-box-arrow-left"></i> Abmelden
         </a>
     </nav>
+    {% endwith %}
     <div class="p-3 text-muted" style="font-size:.75rem;">
         {% if user.is_authenticated %}
         <i class="bi bi-person-circle"></i> {{ user.username }}
@@ -96,7 +120,7 @@
     {% block content %}{% endblock %}
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
 {% block extra_js %}{% endblock %}
 </body>
 </html>

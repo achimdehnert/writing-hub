@@ -97,30 +97,55 @@ def _get_all_styles(user):
         return []
 
 
+def _filter_projects(request):
+    """Gemeinsame Filter-Logik für ProjectListView + ProjectListPartialView."""
+    from django.db.models import Sum  # noqa: F811
+    qs = BookProject.objects.filter(
+        owner=request.user, is_active=True
+    ).select_related("genre_lookup", "content_type_lookup", "series")
+    series_id = request.GET.get("serie")
+    genre_id = request.GET.get("genre")
+    ct_id = request.GET.get("typ")
+    q = request.GET.get("q", "").strip()
+    if series_id == "none":
+        qs = qs.filter(series__isnull=True)
+    elif series_id:
+        qs = qs.filter(series_id=series_id)
+    if genre_id:
+        qs = qs.filter(genre_lookup_id=genre_id)
+    if ct_id:
+        qs = qs.filter(content_type_lookup_id=ct_id)
+    if q:
+        qs = qs.filter(title__icontains=q)
+    # Wortanzahl pro Projekt annotieren (für Fortschrittsbalken)
+    from django.db.models import Sum
+    word_sums = {
+        row["outline_version__project_id"]: row["total"]
+        for row in OutlineNode.objects.filter(
+            outline_version__project__in=qs,
+            outline_version__is_active=True,
+        ).values("outline_version__project_id").annotate(
+            total=Sum("word_count")
+        )
+    }
+    for p in qs:
+        p.written_words = word_sums.get(p.pk, 0) or 0
+        if p.target_word_count and p.target_word_count > 0:
+            p.progress_pct = min(
+                100, round(p.written_words / p.target_word_count * 100)
+            )
+        else:
+            p.progress_pct = 0
+    return qs
+
+
 class ProjectListView(LoginRequiredMixin, ListView):
     model = BookProject
     template_name = "projects/project_list.html"
     context_object_name = "projects"
 
     def get_queryset(self):
-        qs = BookProject.objects.filter(
-            owner=self.request.user, is_active=True
-        ).select_related("genre_lookup", "content_type_lookup", "series")
-        series_id = self.request.GET.get("serie")
-        genre_id = self.request.GET.get("genre")
-        ct_id = self.request.GET.get("typ")
-        q = self.request.GET.get("q", "").strip()
-        if series_id == "none":
-            qs = qs.filter(series__isnull=True)
-        elif series_id:
-            qs = qs.filter(series_id=series_id)
-        if genre_id:
-            qs = qs.filter(genre_lookup_id=genre_id)
-        if ct_id:
-            qs = qs.filter(content_type_lookup_id=ct_id)
-        if q:
-            qs = qs.filter(title__icontains=q)
-        return qs
+        return _filter_projects(self.request)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -134,6 +159,23 @@ class ProjectListView(LoginRequiredMixin, ListView):
         ctx["filter_typ"] = self.request.GET.get("typ", "")
         ctx["filter_q"] = self.request.GET.get("q", "")
         return ctx
+
+
+class ProjectListPartialView(LoginRequiredMixin, View):
+    """HTMX-Partial: gibt nur die Projektkarten-Grid zurück (kein Layout)."""
+
+    def get(self, request):
+        projects = _filter_projects(request)
+        filter_active = any([
+            request.GET.get("q"),
+            request.GET.get("genre"),
+            request.GET.get("typ"),
+            request.GET.get("serie"),
+        ])
+        return render(request, "projects/project_list_partial.html", {
+            "projects": projects,
+            "filter_active": filter_active,
+        })
 
 
 class ProjectCreateView(LoginRequiredMixin, View):
