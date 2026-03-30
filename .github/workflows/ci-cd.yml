@@ -46,6 +46,21 @@ jobs:
       matrix:
         job: [lint, test]
 
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: writing_hub_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -79,9 +94,19 @@ jobs:
         run: python manage.py migrate
         env:
           DJANGO_SETTINGS_MODULE: config.settings.test
+          TEST_DB_USER: postgres
+          TEST_DB_PASSWORD: postgres
+          TEST_DB_HOST: localhost
+          TEST_DB_PORT: "5434"
 
       - name: Run tests
         if: matrix.job == 'test'
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.test
+          TEST_DB_USER: postgres
+          TEST_DB_PASSWORD: postgres
+          TEST_DB_HOST: localhost
+          TEST_DB_PORT: "5434"
         run: |
           set +e
           python -m pytest
