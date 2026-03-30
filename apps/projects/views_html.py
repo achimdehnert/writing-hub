@@ -118,7 +118,6 @@ def _filter_projects(request):
     if q:
         qs = qs.filter(title__icontains=q)
     # Wortanzahl pro Projekt annotieren (für Fortschrittsbalken)
-    from django.db.models import Sum
     word_sums = {
         row["outline_version__project_id"]: row["total"]
         for row in OutlineNode.objects.filter(
