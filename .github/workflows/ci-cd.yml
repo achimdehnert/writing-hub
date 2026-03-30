@@ -117,8 +117,6 @@ jobs:
             exit 0
           fi
           exit "$code"
-        env:
-          DJANGO_SETTINGS_MODULE: config.settings.test
 
 # ═══════════════════════════════════════════════════════════════════════════
 # STAGE 2a: Staging Deploy
