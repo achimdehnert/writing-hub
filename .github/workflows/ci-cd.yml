@@ -158,6 +158,11 @@ jobs:
           ssh -i ~/.ssh/id_rsa root@88.198.191.108 \
             "printf '%s' '${{ secrets.WRITINGHUB_ENV_STAGING }}' > /opt/writing-hub-staging/.env.staging"
 
+      - name: Pre-deploy DB snapshot
+        run: |
+          ssh -i ~/.ssh/id_rsa root@88.198.191.108 \
+            "bash /opt/writing-hub-staging/pre-deploy-snapshot.sh || echo 'snapshot skipped (DB not running)'"
+
       - name: Copy compose file and deploy
         run: |
           scp -i ~/.ssh/id_rsa docker-compose.staging.yml \
@@ -192,6 +197,22 @@ jobs:
           done
           echo "⚠️ Staging health check failed after 3 retries"
           exit 1
+
+      - name: Notify Discord
+        if: always()
+        run: |
+          STATUS="${{ job.status }}"
+          if [ "$STATUS" = "success" ]; then
+            COLOR=3066993
+            EMOJI="✅"
+          else
+            COLOR=15158332
+            EMOJI="❌"
+          fi
+          curl -sf -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"embeds\":[{\"title\":\"$EMOJI writing-hub Staging Deploy\",\"description\":\"Status: **$STATUS**\nCommit: \`${{ github.sha }}\`\nBranch: \`${{ github.ref_name }}\`\",\"color\":$COLOR,\"url\":\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}]}" \
+            || echo "Discord notify skipped (no webhook configured)"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # STAGE 2b: Production Deploy
@@ -265,3 +286,19 @@ jobs:
           done
           echo "⚠️ Production health check failed after 3 retries"
           exit 1
+
+      - name: Notify Discord
+        if: always()
+        run: |
+          STATUS="${{ job.status }}"
+          if [ "$STATUS" = "success" ]; then
+            COLOR=3066993
+            EMOJI="✅"
+          else
+            COLOR=15158332
+            EMOJI="❌"
+          fi
+          curl -sf -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"embeds\":[{\"title\":\"$EMOJI writing-hub Production Deploy\",\"description\":\"Status: **$STATUS**\nCommit: \`${{ github.sha }}\`\nBranch: \`${{ github.ref_name }}\`\",\"color\":$COLOR,\"url\":\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}]}" \
+            || echo "Discord notify skipped (no webhook configured)"
