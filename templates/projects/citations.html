@@ -116,9 +116,50 @@
         <div id="searchResults" style="display:none;">
             <div class="d-flex align-items-center justify-content-between mb-2">
                 <small class="text-muted"><span id="searchCount">0</span> Treffer für "<span id="searchQueryDisplay"></span>"</small>
-                <small class="text-muted">Klick auf <strong>+ Hinzufügen</strong> um Quelle zu übernehmen</small>
+                <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted">Klick auf <strong>+ Hinzufügen</strong> um Quelle zu übernehmen</small>
+                    <button id="summarizeBtn" class="btn btn-sm"
+                            style="background:#1a1a4a;border-color:#6366f1;color:#818cf8;font-size:.75rem;padding:.2rem .6rem;"
+                            onclick="runSummarize()">
+                        <i class="bi bi-stars me-1"></i>KI-Zusammenfassung
+                    </button>
+                </div>
             </div>
-            <div id="searchResultsList" style="max-height:480px;overflow-y:auto;"></div>
+            <!-- Stil-Auswahl für Zusammenfassung -->
+            <div id="summaryControls" class="d-flex gap-2 align-items-center mb-2 flex-wrap">
+                <small class="text-muted">Stil:</small>
+                <select id="summaryStyle" class="form-select form-select-sm inp-dark" style="width:auto;">
+                    <option value="scientific">Wissenschaftlich</option>
+                    <option value="complex">Komplex / Fachpublikum</option>
+                    <option value="medium" selected>Allgemein informiert</option>
+                    <option value="simple">Einfache Sprache</option>
+                </select>
+                <select id="citationStyle" class="form-select form-select-sm inp-dark" style="width:auto;">
+                    <option value="inline">Inline [Autor Jahr]</option>
+                    <option value="bibliography">Literaturliste [1][2]</option>
+                    <option value="none">Ohne Zitate</option>
+                </select>
+            </div>
+            <div id="searchResultsList" style="max-height:400px;overflow-y:auto;"></div>
+            <!-- Zusammenfassung -->
+            <div id="summaryResult" style="display:none;" class="mt-3">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <i class="bi bi-stars" style="color:#818cf8;"></i>
+                    <strong style="color:#a5b4fc;font-size:.9rem;">KI-Zusammenfassung</strong>
+                    <span id="summaryAiBadge" class="badge ms-1" style="background:#1a1a3a;color:#818cf8;font-size:.65rem;display:none;">KI</span>
+                    <span id="summarySourceCount" class="text-muted small ms-auto"></span>
+                    <span class="search-spinner spinner-border spinner-border-sm" id="summarySpinner" role="status"></span>
+                </div>
+                <pre id="summaryText" class="bib-output p-3 mb-2" style="border-color:#312e81;color:#c7d2fe;max-height:350px;overflow-y:auto;"></pre>
+                <div id="summaryKeyPoints" style="display:none;" class="mb-2">
+                    <small class="text-muted d-block mb-1">Kernpunkte:</small>
+                    <ul id="summaryKpList" style="list-style:none;padding:0;margin:0;color:#94a3b8;font-size:.82rem;"></ul>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary"
+                        onclick="navigator.clipboard.writeText(document.getElementById('summaryText').textContent); this.textContent='✓ Kopiert!'; setTimeout(()=>this.textContent='Zusammenfassung kopieren',2000)">
+                    <i class="bi bi-clipboard me-1"></i>Zusammenfassung kopieren
+                </button>
+            </div>
         </div>
         <div id="searchEmpty" style="display:none;" class="text-center text-muted py-3">
             <i class="bi bi-search fs-4 d-block mb-1"></i>
@@ -325,6 +366,7 @@
 
 <script>
 const SEARCH_URL = "{% url 'projects:citation_search' project.pk %}";
+const SUMMARIZE_URL = "{% url 'projects:citation_summarize' project.pk %}";
 const ADD_URL = "{% url 'projects:citations' project.pk %}";
 const CSRF = "{{ csrf_token }}";
 
@@ -430,6 +472,67 @@ function renderPapers(papers) {
         </div>`;
     }).join("");
     list._papers = papers;
+}
+
+async function runSummarize() {
+    const list = document.getElementById("searchResultsList");
+    const papers = list._papers;
+    if (!papers || papers.length === 0) return;
+
+    const style = document.getElementById("summaryStyle").value;
+    const citStyle = document.getElementById("citationStyle").value;
+    const query = document.getElementById("searchQueryDisplay").textContent;
+
+    const resultDiv = document.getElementById("summaryResult");
+    const spinner = document.getElementById("summarySpinner");
+    const summaryText = document.getElementById("summaryText");
+    const kpDiv = document.getElementById("summaryKeyPoints");
+    const kpList = document.getElementById("summaryKpList");
+    const aiBadge = document.getElementById("summaryAiBadge");
+    const srcCount = document.getElementById("summarySourceCount");
+
+    document.getElementById("summarizeBtn").disabled = true;
+    spinner.classList.add("active");
+    summaryText.textContent = "Analysiere " + papers.length + " Quellen…";
+    resultDiv.style.display = "";
+    kpDiv.style.display = "none";
+
+    const body = new FormData();
+    body.append("csrfmiddlewaretoken", CSRF);
+    body.append("papers_json", JSON.stringify(papers));
+    body.append("query", query);
+    body.append("style", style);
+    body.append("citation_style", citStyle);
+
+    try {
+        const resp = await fetch(SUMMARIZE_URL, {method: "POST", body});
+        const data = await resp.json();
+
+        spinner.classList.remove("active");
+        document.getElementById("summarizeBtn").disabled = false;
+
+        if (!data.ok) {
+            summaryText.textContent = "Fehler: " + (data.error || "Unbekannter Fehler");
+            return;
+        }
+
+        summaryText.textContent = data.summary || "(Keine Zusammenfassung)";
+        srcCount.textContent = data.source_count + " Quellen analysiert";
+
+        if (data.ai_generated) {
+            aiBadge.style.display = "";
+        }
+
+        if (data.key_points && data.key_points.length > 0) {
+            kpList.innerHTML = data.key_points
+                .map(kp => `<li>→ ${kp}</li>`).join("");
+            kpDiv.style.display = "";
+        }
+    } catch (err) {
+        spinner.classList.remove("active");
+        document.getElementById("summarizeBtn").disabled = false;
+        summaryText.textContent = "Netzwerkfehler: " + err.message;
+    }
 }
 
 async function addPaperToList(idx) {
