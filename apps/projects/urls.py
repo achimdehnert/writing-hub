@@ -12,6 +12,7 @@ from . import (
     views_lektorat,
     views_manuscript,
     views_publishing,
+    views_research_summary,
     views_review,
     views_versions,
 )
@@ -82,6 +83,9 @@ urlpatterns = [
     path("<uuid:pk>/citations/doi/", views_citations.CitationDOILookupAjaxView.as_view(), name="citation_doi"),
     path("<uuid:pk>/citations/isbn/", views_citations.CitationISBNLookupAjaxView.as_view(), name="citation_isbn"),
     path("<uuid:pk>/citations/search/", views_citations.LiteraturrechercheAjaxView.as_view(), name="citation_search"),
+    path("<uuid:pk>/citations/summarize/", views_research_summary.ResearchSummarizeAjaxView.as_view(), name="citation_summarize"),
+    path("<uuid:pk>/outline-research/", views_research_summary.OutlineResearchView.as_view(), name="outline_research"),
+    path("<uuid:pk>/outline-research/node/", views_research_summary.OutlineNodeResearchAjaxView.as_view(), name="outline_node_research"),
     # REST API
     path("api/", views.BookProjectListView.as_view(), name="api_list"),
     path("api/<uuid:pk>/", views.BookProjectDetailView.as_view(), name="api_detail"),

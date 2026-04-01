@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+{% block title %}Outline-Recherche — {{ project.title }} — Writing Hub{% endblock %}
+{% block nav_projects %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+.res-card { background:#0d1117; border:1px solid #2d3748; border-radius:.5rem; }
+.res-card .card-header { background:#131929; border-bottom:1px solid #2d3748; color:#e2e8f0; }
+.node-card { background:#0d1117; border:1px solid #2d3748; border-radius:.4rem; transition:border-color .2s; }
+.node-card.researching { border-color:#6366f1; animation:pulse-border 1.5s infinite; }
+.node-card.done { border-color:#22c55e; }
+.node-card.error { border-color:#ef4444; }
+@keyframes pulse-border {
+    0%,100% { border-color:#6366f1; }
+    50%      { border-color:#818cf8; }
+}
+.beat-pill { font-size:.65rem; padding:.2rem .45rem; border-radius:3px; font-weight:600; }
+.brief-box { background:#0a0f1a; border:1px solid #334155; border-radius:.4rem;
+    font-size:.82rem; line-height:1.6; color:#cbd5e1; white-space:pre-wrap; word-break:break-word; }
+.brief-box strong { color:#e2e8f0; }
+.kp-list { list-style:none; padding:0; margin:0; }
+.kp-list li::before { content:"→ "; color:#6366f1; }
+.src-mini { font-size:.7rem; color:#94a3b8; }
+.word-badge { font-size:.7rem; padding:.2rem .5rem; border-radius:10px;
+    background:#1a2a3a; color:#7dd3fc; border:1px solid #1e3a5f; }
+.progress-bar-custom { height:4px; border-radius:2px; background:#1e2235; overflow:hidden; }
+.progress-fill { height:100%; background:linear-gradient(90deg,#6366f1,#7dd3fc); transition:width .3s; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;">
+
+<!-- Header -->
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <a href="{% url 'projects:detail' project.pk %}" class="btn btn-link text-muted ps-0">
+            <i class="bi bi-arrow-left me-1"></i>{{ project.title }}
+        </a>
+        <h1 class="h3 mb-0" style="color:#e2e8f0;">
+            <i class="bi bi-diagram-3 me-2" style="color:#7dd3fc;"></i>Outline-Recherche
+        </h1>
+        <small class="text-muted">
+            Automatische Literaturrecherche je Kapitel · {{ nodes|length }} Kapitel
+            {% if outline %}&nbsp;·&nbsp;{{ outline.title|default:"Aktives Outline" }}{% endif %}
+        </small>
+    </div>
+    <a href="{% url 'projects:citations' project.pk %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-journal-bookmark me-1"></i>Zur Quellenliste
+    </a>
+</div>
+
+{% if not outline or not nodes %}
+<div class="res-card p-4 text-center text-muted">
+    <i class="bi bi-diagram-3 fs-3 d-block mb-2 opacity-50"></i>
+    <strong>Kein Outline vorhanden.</strong><br>
+    <small>Erstelle zuerst ein Outline mit Kapitel-Struktur.</small>
+    <div class="mt-3">
+        <a href="{% url 'projects:detail' project.pk %}" class="btn btn-sm btn-outline-primary">
+            Zum Projekt
+        </a>
+    </div>
+</div>
+{% else %}
+
+<!-- Steuerung -->
+<div class="res-card mb-4 p-3">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label small text-muted mb-1">Zusammenfassungsstil</label>
+            <select id="globalStyle" class="form-select form-select-sm" style="background:#131929;border-color:#475569;color:#f1f5f9;">
+                {% for val, label, color in summary_styles %}
+                <option value="{{ val }}" style="color:{{ color }};"
+                    {% if val == "scientific" %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label small text-muted mb-1">Übergeordnetes Thema (optional)</label>
+            <input id="projectTopic" type="text" class="form-control form-control-sm"
+                   style="background:#131929;border-color:#475569;color:#f1f5f9;"
+                   placeholder="{{ project.title }}" value="{{ project.title }}">
+        </div>
+        <div class="col-md-4 d-flex gap-2">
+            <button id="researchAllBtn" class="btn btn-sm flex-grow-1"
+                    style="background:#1a1a4a;border-color:#6366f1;color:#818cf8;"
+                    onclick="researchAll()">
+                <i class="bi bi-play-fill me-1"></i>Alle Kapitel recherchieren
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="resetAll()" title="Alle Ergebnisse löschen">
+                <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
+        </div>
+    </div>
+    {% if not has_llm %}
+    <div class="alert alert-warning py-2 mt-3 mb-0 small">
+        <i class="bi bi-exclamation-triangle me-1"></i>
+        <strong>Kein LLM-API-Key</strong> — Zusammenfassungen werden ohne KI-Analyse erstellt
+        (nur extraktiv). Für vollständige KI-Zusammenfassungen <code>TOGETHER_API_KEY</code> setzen.
+    </div>
+    {% endif %}
+    <!-- Fortschrittsbalken -->
+    <div id="progressBar" class="progress-bar-custom mt-3" style="display:none;">
+        <div id="progressFill" class="progress-fill" style="width:0%"></div>
+    </div>
+    <div id="progressText" class="text-muted small mt-1" style="display:none;"></div>
+</div>
+
+<!-- Kapitel-Karten -->
+<div id="nodeList" class="d-flex flex-column gap-3">
+{% for node in nodes %}
+<div class="node-card p-3" id="node-{{ node.id }}">
+    <div class="d-flex align-items-start gap-3">
+        <!-- Linke Spalte: Kapitel-Info -->
+        <div class="flex-grow-1">
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="beat-pill" style="background:#1a1a2e;color:#a5b4fc;border:1px solid #312e81;">
+                    {{ node.beat_type|default:"Kapitel" }}
+                </span>
+                <strong style="color:#e2e8f0;font-size:.95rem;">{{ node.title }}</strong>
+                {% if node.target_words %}
+                <span class="word-badge">
+                    <i class="bi bi-text-paragraph me-1"></i>{{ node.target_words|floatformat:"0" }} Wörter
+                </span>
+                {% endif %}
+            </div>
+            {% if node.description %}
+            <div class="text-muted small mb-2">{{ node.description|truncatechars:120 }}</div>
+            {% endif %}
+            <!-- Ergebnis-Bereich -->
+            <div id="result-{{ node.id }}" style="display:none;">
+                <div id="brief-{{ node.id }}" class="brief-box p-3 mb-2"></div>
+                <div id="kpoints-{{ node.id }}" class="mb-2" style="display:none;">
+                    <small class="text-muted d-block mb-1">Kernpunkte:</small>
+                    <ul class="kp-list small" id="kplist-{{ node.id }}"></ul>
+                </div>
+                <div id="sources-{{ node.id }}" class="d-flex flex-wrap gap-2"></div>
+            </div>
+            <div id="error-{{ node.id }}" class="text-danger small mt-1" style="display:none;"></div>
+        </div>
+        <!-- Rechte Spalte: Button -->
+        <div class="flex-shrink-0">
+            <button class="btn btn-sm node-research-btn"
+                    style="background:#0f2a0f;border-color:#22c55e;color:#86efac;"
+                    id="btn-{{ node.id }}"
+                    onclick="researchNode('{{ node.id }}', '{{ node.title|escapejs }}')">
+                <i class="bi bi-search me-1"></i>Recherchieren
+            </button>
+        </div>
+    </div>
+</div>
+{% endfor %}
+</div>
+
+{% endif %}
+</div>
+
+<script>
+const PROJECT_PK = "{{ project.pk }}";
+const NODE_RESEARCH_URL = "{% url 'projects:outline_node_research' project.pk %}";
+const CSRF = "{{ csrf_token }}";
+
+const NODES = [
+    {% for node in nodes %}
+    {"id": "{{ node.id }}", "title": "{{ node.title|escapejs }}"},
+    {% endfor %}
+];
+
+async function researchNode(nodeId, nodeTitle) {
+    const card = document.getElementById("node-" + nodeId);
+    const btn = document.getElementById("btn-" + nodeId);
+    const resultDiv = document.getElementById("result-" + nodeId);
+    const errorDiv = document.getElementById("error-" + nodeId);
+    const briefDiv = document.getElementById("brief-" + nodeId);
+    const kpDiv = document.getElementById("kpoints-" + nodeId);
+    const sourcesDiv = document.getElementById("sources-" + nodeId);
+
+    card.className = card.className.replace(/\b(done|error)\b/g, "").trim() + " researching";
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Suche…';
+    resultDiv.style.display = "none";
+    errorDiv.style.display = "none";
+
+    const style = document.getElementById("globalStyle").value;
+    const topic = document.getElementById("projectTopic").value.trim();
+
+    const body = new FormData();
+    body.append("csrfmiddlewaretoken", CSRF);
+    body.append("node_id", nodeId);
+    body.append("style", style);
+    body.append("project_topic", topic);
+
+    try {
+        const resp = await fetch(NODE_RESEARCH_URL, {method: "POST", body});
+        const data = await resp.json();
+
+        card.className = card.className.replace("researching", "").trim();
+        btn.disabled = false;
+
+        if (!data.ok) {
+            card.classList.add("error");
+            errorDiv.textContent = data.error || "Fehler bei der Recherche";
+            errorDiv.style.display = "";
+            btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Erneut';
+            return;
+        }
+
+        card.classList.add("done");
+        btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Fertig';
+        btn.style.cssText = "background:#0f2a0f;border-color:#86efac;color:#86efac;";
+
+        // Brief (Markdown-Rendering einfach via innerHTML-escaping + pre)
+        briefDiv.textContent = data.writing_brief || data.summary || "";
+
+        // Key Points
+        if (data.key_points && data.key_points.length > 0) {
+            const kpList = document.getElementById("kplist-" + nodeId);
+            kpList.innerHTML = data.key_points
+                .map(kp => `<li>${escHtml(kp)}</li>`).join("");
+            kpDiv.style.display = "";
+        }
+
+        // Quellen
+        if (data.papers && data.papers.length > 0) {
+            sourcesDiv.innerHTML = "<small class='text-muted w-100 d-block mb-1'>"
+                + data.source_count + " Quellen gefunden:</small>"
+                + data.papers.slice(0, 5).map(p => {
+                    const year = (p.publication_date || "").slice(0, 4);
+                    const doi = p.doi ? ` · <a href="https://doi.org/${escHtml(p.doi)}" target="_blank" style="color:#6366f1;">DOI</a>` : "";
+                    return `<div class="src-mini mb-1">· ${escHtml(p.title || "")}${year ? " (" + year + ")" : ""}${doi}</div>`;
+                }).join("");
+        }
+
+        resultDiv.style.display = "";
+    } catch (err) {
+        card.className = card.className.replace("researching", "").trim();
+        card.classList.add("error");
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Erneut';
+        errorDiv.textContent = "Netzwerkfehler: " + err.message;
+        errorDiv.style.display = "";
+    }
+}
+
+async function researchAll() {
+    if (!NODES.length) return;
+    const btn = document.getElementById("researchAllBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Läuft…';
+
+    const progressBar = document.getElementById("progressBar");
+    const progressFill = document.getElementById("progressFill");
+    const progressText = document.getElementById("progressText");
+    progressBar.style.display = "";
+    progressText.style.display = "";
+
+    let done = 0;
+    for (const node of NODES) {
+        progressText.textContent = `${done + 1} / ${NODES.length}: ${node.title}`;
+        progressFill.style.width = `${Math.round((done / NODES.length) * 100)}%`;
+        await researchNode(node.id, node.title);
+        done++;
+        await new Promise(r => setTimeout(r, 300));
+    }
+
+    progressFill.style.width = "100%";
+    progressText.textContent = `✓ Alle ${NODES.length} Kapitel recherchiert`;
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-check-all me-1"></i>Abgeschlossen';
+}
+
+function resetAll() {
+    for (const node of NODES) {
+        const card = document.getElementById("node-" + node.id);
+        card.className = card.className.replace(/\b(done|error|researching)\b/g, "").trim();
+        const btn = document.getElementById("btn-" + node.id);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-search me-1"></i>Recherchieren';
+        btn.style.cssText = "background:#0f2a0f;border-color:#22c55e;color:#86efac;";
+        document.getElementById("result-" + node.id).style.display = "none";
+        document.getElementById("error-" + node.id).style.display = "none";
+    }
+    document.getElementById("progressBar").style.display = "none";
+    document.getElementById("progressText").style.display = "none";
+    const allBtn = document.getElementById("researchAllBtn");
+    allBtn.disabled = false;
+    allBtn.innerHTML = '<i class="bi bi-play-fill me-1"></i>Alle Kapitel recherchieren';
+}
+
+function escHtml(s) {
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+</script>
+{% endblock %}

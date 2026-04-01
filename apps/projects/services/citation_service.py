@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 try:
     from iil_researchfw import Citation, CitationService, CitationStyle, Author, SourceType
     from iil_researchfw.search import AcademicSearchService
+    from iil_researchfw.analysis.summary import AISummaryService, make_together_llm
+    from iil_researchfw.analysis.relevance import RelevanceScorer
     _RESEARCHFW_AVAILABLE = True
 except ImportError:
     _RESEARCHFW_AVAILABLE = False
@@ -146,6 +148,157 @@ def search_papers(
     svc = AcademicSearchService()
     papers = _run_async(svc.search(query, sources=sources, max_results=max_results))
     return [_paper_to_dict(p) for p in papers]
+
+
+def summarize_papers(
+    papers: list[dict[str, Any]],
+    query: str = "",
+    style: str = "scientific",
+    citation_style: str = "inline",
+    llm_api_key: str | None = None,
+) -> dict[str, Any]:
+    """
+    Analysiert eine Liste von Paper-Dicts und erstellt eine KI-Zusammenfassung.
+
+    Args:
+        papers: Ergebnisse aus search_papers()
+        query: Ursprünglicher Suchbegriff (für Kontext)
+        style: 'scientific' | 'complex' | 'medium' | 'simple'
+        citation_style: 'inline' | 'bibliography' | 'none'
+        llm_api_key: Together AI API Key (fallback: TOGETHER_API_KEY env var)
+
+    Returns dict mit 'summary', 'key_points', 'top_papers', 'ai_generated'.
+    """
+    if not _RESEARCHFW_AVAILABLE or not papers:
+        return {
+            "summary": "",
+            "key_points": [],
+            "top_papers": [],
+            "ai_generated": False,
+        }
+
+    scorer = RelevanceScorer()
+    scored = scorer.score(
+        query or "research",
+        [{"title": p.get("title", ""), "abstract": p.get("abstract", "")}
+         for p in papers],
+        fields=["title", "abstract"],
+    )
+    scored_top = scored[:10]
+    top_papers = papers[:min(10, len(papers))]
+    if scored_top:
+        idx_map = {
+            id(papers[i]): i
+            for i in range(len(papers))
+        }
+        top_papers = [
+            papers[idx_map[id(s.item)]]
+            for s in scored_top
+            if id(s.item) in idx_map
+        ] or top_papers
+
+    findings = [
+        {
+            "title": p.get("title", ""),
+            "content": p.get("abstract", ""),
+            "source": p.get("source", ""),
+            "doi": p.get("doi", ""),
+            "year": (p.get("publication_date") or "")[:4],
+        }
+        for p in top_papers
+    ]
+
+    import os
+    key = llm_api_key or os.environ.get("TOGETHER_API_KEY", "")
+    llm_fn = make_together_llm(api_key=key) if key else None
+    svc = AISummaryService(llm_fn=llm_fn)
+    result = _run_async(
+        svc.summarize_findings(
+            findings,
+            max_length=400,
+            style=style,
+            citation_style=citation_style,
+        )
+    )
+    result["top_papers"] = top_papers
+    return result
+
+
+def research_outline_node(
+    node_title: str,
+    node_description: str = "",
+    target_words: int | None = None,
+    project_topic: str = "",
+    style: str = "scientific",
+    llm_api_key: str | None = None,
+) -> dict[str, Any]:
+    """
+    Recherchiert für ein Outline-Kapitel und erstellt Schreib-Grundlage.
+
+    Kombiniert Literatursuche + Zusammenfassung + Schreibumfang-Hinweis.
+
+    Args:
+        node_title: Kapitel-Titel aus dem Outline
+        node_description: Beschreibung / Beat des Kapitels
+        target_words: Zielumfang in Wörtern (aus OutlineNode.target_words)
+        project_topic: Übergeordnetes Projekt-Thema für Kontext
+        style: Zusammenfassungsstil
+        llm_api_key: Together AI Key
+
+    Returns dict mit 'papers', 'summary', 'key_points', 'writing_brief'.
+    """
+    if not _RESEARCHFW_AVAILABLE:
+        return {"papers": [], "summary": "", "key_points": [], "writing_brief": ""}
+
+    query_parts = [node_title]
+    if project_topic:
+        query_parts.append(project_topic)
+    query = " ".join(query_parts)
+
+    papers = search_papers(query, max_results=15)
+    if not papers:
+        return {
+            "papers": [],
+            "summary": "",
+            "key_points": [],
+            "writing_brief": f"Keine Quellen für '{node_title}' gefunden.",
+        }
+
+    summary_result = summarize_papers(
+        papers,
+        query=query,
+        style=style,
+        citation_style="inline",
+        llm_api_key=llm_api_key,
+    )
+
+    word_hint = ""
+    if target_words:
+        word_hint = (
+            f"\n\n**Zielumfang:** {target_words:,} Wörter. "
+            f"Plane entsprechend ca. {max(1, target_words // 200)} Absätze "
+            f"à {min(200, target_words)} Wörter."
+        )
+
+    description_hint = ""
+    if node_description:
+        description_hint = f"\n\n**Kapitel-Anforderung:** {node_description}"
+
+    writing_brief = (
+        f"## Schreib-Grundlage: {node_title}\n\n"
+        + summary_result.get("summary", "")
+        + description_hint
+        + word_hint
+    )
+
+    return {
+        "papers": summary_result.get("top_papers", []),
+        "summary": summary_result.get("summary", ""),
+        "key_points": summary_result.get("key_points", []),
+        "writing_brief": writing_brief,
+        "ai_generated": summary_result.get("ai_generated", False),
+        "source_count": summary_result.get("source_count", 0),
+    }
 
 
 def _paper_to_dict(p: Any) -> dict[str, Any]:
