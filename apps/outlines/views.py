@@ -253,24 +253,24 @@ class OutlineGenerateFullView(LoginRequiredMixin, View):
                 round(project.target_word_count / total)
                 if project.target_word_count else 3000
             )
-            structure_prompt = (
-                f"{context_block}\n\n"
-                f"Framework: {fw_name}\n"
-                f"Kapitel ({total} Stk.):\n"
-                + "\n".join(f"{n.order}. {n.title}" for n in nodes)
-                + "\n\nWeise jedem Kapitel zu:\n"
-                "- Beat/Phase (aus dem Framework)\n"
-                "- Akt (z.B. 'Akt 1 - Setup', 'Akt 2 - Konfrontation', 'Akt 3 - Auflösung')\n"
-                f"- Ziel-Wörter (Summe soll {project.target_word_count or total * target_per_chapter} ergeben)\n\n"
-                "Antworte NUR als JSON-Array:\n"
-                '[{"order":1,"beat_phase":"Opening Image","act":"Akt 1 - Setup","target_words":3000},...]'
+            from apps.core.prompt_utils import render_prompt
+            chapters_list = [{"order": n.order, "title": n.title} for n in nodes]
+            prompt_msgs = render_prompt(
+                "outlines/structure_pass",
+                context_block=context_block,
+                framework=fw_name,
+                chapters=chapters_list,
+                total=total,
+                target_word_count=project.target_word_count or total * target_per_chapter,
             )
+            if not prompt_msgs:
+                prompt_msgs = [
+                    {"role": "system", "content": "Du bist ein Story-Struktur-Experte. Antworte nur mit JSON."},
+                    {"role": "user", "content": f"Struktur für {total} Kapitel erstellen."},
+                ]
             raw = router.completion(
                 action_code="chapter_outline",
-                messages=[
-                    {"role": "system", "content": "Du bist ein Story-Struktur-Experte. Antworte nur mit JSON."},
-                    {"role": "user", "content": structure_prompt},
-                ],
+                messages=prompt_msgs,
             )
             match = re.search(r'\[.*\]', raw, re.DOTALL)
             if match:
@@ -289,26 +289,24 @@ class OutlineGenerateFullView(LoginRequiredMixin, View):
         if detail_level in ("full", "detail"):
             for node in nodes:
                 try:
-                    beat_ctx = f"Beat/Phase: {node.beat_phase}\nAkt: {node.act}" if node.beat_phase else ""
-                    node_prompt = (
-                        f"{context_block}\n\n"
-                        f"{beat_ctx}\n"
-                        f"Kapitel {node.order}: {node.title}\n"
-                        f"Ziel-Wörter: {node.target_words or 3000}\n"
-                        f"Bisheriges Outline:\n{node.description or '(leer)'}\n\n"
-                        "Erstelle ein detailliertes Kapitel-Outline mit:\n"
-                        "- 2-4 Szenen mit Ort und konkreter Handlung\n"
-                        "- Dialog-Hinweise\n"
-                        "- Innerer Monolog des Protagonisten\n"
-                        "- Cliffhanger am Ende\n\n"
-                        "Antworte als JSON: {\"description\": \"...\", \"emotional_arc\": \"...\"}"
+                    prompt_msgs = render_prompt(
+                        "outlines/detail_pass",
+                        context_block=context_block,
+                        beat_phase=node.beat_phase or "",
+                        act=node.act or "",
+                        order=node.order,
+                        title=node.title,
+                        target_words=node.target_words or 3000,
+                        description=node.description or "(leer)",
                     )
+                    if not prompt_msgs:
+                        prompt_msgs = [
+                            {"role": "system", "content": "Du bist ein Romanautor. Antworte nur mit JSON."},
+                            {"role": "user", "content": f"Detail für Kapitel {node.order}: {node.title}"},
+                        ]
                     raw = router.completion(
                         action_code="chapter_outline",
-                        messages=[
-                            {"role": "system", "content": "Du bist ein Romanautor. Antworte nur mit JSON."},
-                            {"role": "user", "content": node_prompt},
-                        ],
+                        messages=prompt_msgs,
                     )
                     match = re.search(r'\{.*\}', raw, re.DOTALL)
                     if match:
@@ -350,28 +348,26 @@ class OutlineNodeEnrichView(LoginRequiredMixin, View):
             ctx = ctx_svc.get_context(str(project.pk))
             context_block = ctx.to_prompt_block()
             existing = node.description.strip() or "(noch kein Inhalt)"
-            beat_ctx = f"Beat/Phase: {node.beat_phase}\nAkt: {node.act}\n" if node.beat_phase else ""
-            system_prompt = (
-                "Du bist ein erfahrener Romanautor und Story-Entwickler.\n"
-                "Du erweiterst kurze Kapitel-Outlines zu detaillierten Szenenplanungen.\n"
-                "Antworte als JSON: {\"description\": \"...\", \"emotional_arc\": \"...\"}"
+            from apps.core.prompt_utils import render_prompt
+            prompt_msgs = render_prompt(
+                "outlines/enrich_node",
+                context_block=context_block,
+                beat_phase=node.beat_phase or "",
+                act=node.act or "",
+                order=node.order,
+                title=node.title,
+                target_words=node.target_words or 3000,
+                description=existing,
             )
-            user_prompt = (
-                f"Projekt-Kontext:\n{context_block}\n\n"
-                f"{beat_ctx}"
-                f"Kapitel {node.order}: {node.title}\n"
-                f"Ziel-Wörter: {node.target_words or 3000}\n\n"
-                f"Bisheriger Inhalt:\n{existing}\n\n"
-                "Erstelle ein DETAILLIERTES Kapitel-Outline mit 2-4 Szenen, Dialog-Hinweisen, "
-                "innerem Monolog und Cliffhanger. JSON-Format."
-            )
+            if not prompt_msgs:
+                prompt_msgs = [
+                    {"role": "system", "content": "Du bist ein Romanautor. Antworte als JSON."},
+                    {"role": "user", "content": f"Erweitere Kapitel {node.order}: {node.title}"},
+                ]
             router = LLMRouter()
             raw = router.completion(
                 action_code="chapter_outline",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
+                messages=prompt_msgs,
             )
             match = re.search(r'\{.*\}', raw, re.DOTALL)
             if match:

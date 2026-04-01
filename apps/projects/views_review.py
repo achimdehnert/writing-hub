@@ -185,20 +185,33 @@ class ChapterAIReviewView(LoginRequiredMixin, View):
             ),
         }
 
-        system_prompt = AGENT_PROMPTS.get(agent_key, AGENT_PROMPTS["lector"])
-        user_prompt = (
-            f"Kapitel {node.order}: {node.title}\n\n"
-            f"{node.content[:8000]}"
+        from apps.core.prompt_utils import render_prompt
+        template_map = {
+            "story_editor": "projects/review_story_editor",
+            "lector": "projects/review_lector",
+            "beta_reader": "projects/review_beta_reader",
+            "genre_expert": "projects/review_genre_expert",
+            "dramaturg": "projects/review_dramaturg",
+        }
+        template_name = template_map.get(agent_key, "projects/review_lector")
+        prompt_msgs = render_prompt(
+            template_name,
+            order=node.order,
+            title=node.title,
+            content=node.content,
         )
+        if not prompt_msgs:
+            system_prompt = AGENT_PROMPTS.get(agent_key, AGENT_PROMPTS["lector"])
+            prompt_msgs = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"Kapitel {node.order}: {node.title}\n\n{node.content[:8000]}"},
+            ]
 
         try:
             router = LLMRouter()
             raw = router.completion(
                 action_code="chapter_analyze",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
+                messages=prompt_msgs,
             )
             match = re.search(r"\[.*\]", raw, re.DOTALL)
             if match:
