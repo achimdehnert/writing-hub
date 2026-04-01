@@ -3,6 +3,7 @@ from django.urls import path
 from . import (
     views,
     views_analysis,
+    views_citations,
     views_export,
     views_health,
     views_html,
@@ -76,6 +77,10 @@ urlpatterns = [
     path("<uuid:pk>/drama/", views_html.DramaDashboardView.as_view(), name="drama_dashboard"),
     path("node/<uuid:node_pk>/drama-update/", views_html.DramaNodeUpdateView.as_view(), name="drama_node_update"),
     path("<uuid:pk>/drama/turning-point/add/", views_html.DramaTurningPointAddView.as_view(), name="drama_turning_point_add"),
+    # Zitations-Management (academic/scientific projects)
+    path("<uuid:pk>/citations/", views_citations.CitationDashboardView.as_view(), name="citations"),
+    path("<uuid:pk>/citations/doi/", views_citations.CitationDOILookupAjaxView.as_view(), name="citation_doi"),
+    path("<uuid:pk>/citations/isbn/", views_citations.CitationISBNLookupAjaxView.as_view(), name="citation_isbn"),
     # REST API
     path("api/", views.BookProjectListView.as_view(), name="api_list"),
     path("api/<uuid:pk>/", views.BookProjectDetailView.as_view(), name="api_detail"),

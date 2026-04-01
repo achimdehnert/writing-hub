@@ -65,6 +65,11 @@
         <a href="{% url 'projects:research_dashboard' project.pk %}" class="btn btn-sm btn-action btn-action-research">
             <i class="bi bi-journal-text me-1"></i> Recherche
         </a>
+        {% if project.content_type == 'academic' or project.content_type == 'scientific' %}
+        <a href="{% url 'projects:citations' project.pk %}" class="btn btn-sm btn-action" style="background:#1a2a3a;border-color:#3b5a7a;color:#7dd3fc;">
+            <i class="bi bi-journal-bookmark me-1"></i> Quellen &amp; Zitation
+        </a>
+        {% endif %}
         <a href="{% url 'projects:beta_dashboard' project.pk %}" class="btn btn-sm btn-action btn-action-beta">
             <i class="bi bi-people me-1"></i> Beta
         </a>
