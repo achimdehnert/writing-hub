@@ -164,6 +164,9 @@ LOGOUT_REDIRECT_URL = "/accounts/login/"
 
 ADMIN_MEDIA_PREFIX = "/static/admin/"
 
+# --- KI-Dienste ---
+TOGETHER_API_KEY = os.environ.get("TOGETHER_API_KEY", "")
+
 # --- authentik OIDC (ADR-142) ---
 OIDC_RP_CLIENT_ID = os.environ.get("OIDC_RP_CLIENT_ID", "")
 OIDC_RP_CLIENT_SECRET = os.environ.get("OIDC_RP_CLIENT_SECRET", "")

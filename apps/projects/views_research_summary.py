@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 
+from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
@@ -66,7 +66,7 @@ class ResearchSummarizeAjaxView(LoginRequiredMixin, View):
         if style not in valid_styles:
             style = "scientific"
 
-        llm_key = os.environ.get("TOGETHER_API_KEY", "")
+        llm_key = getattr(settings, "TOGETHER_API_KEY", "")
         result = summarize_papers(
             papers,
             query=query,
@@ -122,7 +122,7 @@ class OutlineResearchView(LoginRequiredMixin, View):
             "nodes": nodes,
             "summary_styles": SUMMARY_STYLES,
             "citation_styles_list": CITATION_STYLES,
-            "has_llm": bool(os.environ.get("TOGETHER_API_KEY")),
+            "has_llm": bool(getattr(settings, "TOGETHER_API_KEY", "")),
         })
 
 
@@ -152,7 +152,7 @@ class OutlineNodeResearchAjaxView(LoginRequiredMixin, View):
         )
 
         project_topic = topic_override or project.title or ""
-        llm_key = os.environ.get("TOGETHER_API_KEY", "")
+        llm_key = getattr(settings, "TOGETHER_API_KEY", "")
 
         result = research_outline_node(
             node_title=node.title,

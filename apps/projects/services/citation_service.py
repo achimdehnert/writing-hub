@@ -208,8 +208,8 @@ def summarize_papers(
         for p in top_papers
     ]
 
-    import os
-    key = llm_api_key or os.environ.get("TOGETHER_API_KEY", "")
+    from django.conf import settings
+    key = llm_api_key or getattr(settings, "TOGETHER_API_KEY", "")
     llm_fn = make_together_llm(api_key=key) if key else None
     svc = AISummaryService(llm_fn=llm_fn)
     result = _run_async(
