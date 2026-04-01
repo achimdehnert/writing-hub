@@ -20,6 +20,10 @@ class CreativeSession(models.Model):
         PREMISE = "premise", "Premise"
         DONE = "done", "Abgeschlossen"
 
+    class SessionType(models.TextChoices):
+        LITERARY = "literary", "Belletristik"
+        SCIENTIFIC = "scientific", "Wissenschaftlich"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -30,11 +34,22 @@ class CreativeSession(models.Model):
         max_length=200,
         help_text="Arbeitstitel der Session (z.B. Projektname oder Ideen-Thema)",
     )
+    session_type = models.CharField(
+        max_length=20,
+        choices=SessionType.choices,
+        default=SessionType.LITERARY,
+        help_text="Belletristik oder Wissenschaftlich",
+    )
     inspiration = models.TextField(
         blank=True,
         help_text="Initiale Idee, Genre-Wunsch oder freier Inspirationstext",
     )
     genre = models.CharField(max_length=100, blank=True)
+    research_field = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Fachgebiet / Disziplin (nur für wissenschaftliche Sessions)",
+    )
     style_dna_hint = models.TextField(
         blank=True,
         help_text="Optionaler Stil-Hinweis für die KI-Generierung",

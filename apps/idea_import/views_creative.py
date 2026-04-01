@@ -51,6 +51,8 @@ class CreativeSessionStartView(LoginRequiredMixin, View):
         title = request.POST.get("title", "").strip()
         inspiration = request.POST.get("inspiration", "").strip()
         genre = request.POST.get("genre", "").strip()
+        session_type = request.POST.get("session_type", "literary").strip()
+        research_field = request.POST.get("research_field", "").strip()
         if not title:
             messages.warning(request, "Bitte einen Arbeitstitel eingeben.")
             return redirect("ideas:creative_dashboard")
@@ -59,6 +61,8 @@ class CreativeSessionStartView(LoginRequiredMixin, View):
             title=title,
             inspiration=inspiration,
             genre=genre,
+            session_type=session_type,
+            research_field=research_field,
         )
         return redirect("ideas:creative_session", pk=session.pk)
 
@@ -84,7 +88,7 @@ class CreativeSessionView(LoginRequiredMixin, View):
 
 
 class CreativeBrainstormView(LoginRequiredMixin, View):
-    """POST — LLM generiert 3-5 Buchideen für die Session."""
+    """POST — LLM generiert 3-5 Ideen für die Session (literarisch oder wissenschaftlich)."""
 
     def post(self, request, pk):
         session = get_object_or_404(CreativeSession, pk=pk, owner=request.user)
@@ -94,8 +98,12 @@ class CreativeBrainstormView(LoginRequiredMixin, View):
             session.style_dna_hint = style_hint
             session.save(update_fields=["style_dna_hint"])
 
+        is_scientific = session.session_type == CreativeSession.SessionType.SCIENTIFIC
         try:
-            ideas = _brainstorm_ideas(session, count)
+            if is_scientific:
+                ideas = _brainstorm_topics(session, count)
+            else:
+                ideas = _brainstorm_ideas(session, count)
             for i, idea_data in enumerate(ideas):
                 BookIdea.objects.create(
                     session=session,
@@ -117,19 +125,23 @@ class CreativeBrainstormView(LoginRequiredMixin, View):
 
 
 class CreativeRefineView(LoginRequiredMixin, View):
-    """POST — LLM verfeinert eine einzelne Buchidee."""
+    """POST — LLM verfeinert eine einzelne Idee (literarisch oder wissenschaftlich)."""
 
     def post(self, request, pk, idea_pk):
         session = get_object_or_404(CreativeSession, pk=pk, owner=request.user)
         idea = get_object_or_404(BookIdea, pk=idea_pk, session=session)
+        is_scientific = session.session_type == CreativeSession.SessionType.SCIENTIFIC
         try:
-            refined = _refine_idea(idea, session)
+            if is_scientific:
+                refined = _refine_topic(idea, session)
+            else:
+                refined = _refine_idea(idea, session)
             idea.refined_logline = refined.get("refined_logline", idea.logline)
             idea.hook = refined.get("hook", idea.hook)
             idea.themes = refined.get("themes", idea.themes)
             idea.is_refined = True
             idea.save()
-            messages.success(request, f'„{idea.title}\u201c verfeinert.')
+            messages.success(request, f'\u201e{idea.title}\u201c verfeinert.')
         except Exception as exc:
             logger.exception("Refine error idea=%s: %s", idea_pk, exc)
             messages.error(request, f"Fehler: {exc}")
@@ -152,20 +164,25 @@ class CreativeRateView(LoginRequiredMixin, View):
 
 
 class CreativePremiseView(LoginRequiredMixin, View):
-    """POST — LLM generiert vollständige Premise für eine gewählte Idee."""
+    """POST — LLM generiert vollständige Premise / Exposé für eine gewählte Idee."""
 
     def post(self, request, pk, idea_pk):
         session = get_object_or_404(CreativeSession, pk=pk, owner=request.user)
         idea = get_object_or_404(BookIdea, pk=idea_pk, session=session)
+        is_scientific = session.session_type == CreativeSession.SessionType.SCIENTIFIC
         try:
-            premise_text = _generate_premise(idea, session)
+            if is_scientific:
+                premise_text = _generate_expose(idea, session)
+            else:
+                premise_text = _generate_premise(idea, session)
             idea.premise = premise_text
             idea.save(update_fields=["premise"])
             session.selected_idea = idea
             session.premise = premise_text
             session.phase = CreativeSession.Phase.PREMISE
             session.save(update_fields=["selected_idea", "premise", "phase"])
-            messages.success(request, f'Premise für \u201e{idea.title}\u201c generiert.')
+            label = "Exposé" if is_scientific else "Premise"
+            messages.success(request, f'{label} für \u201e{idea.title}\u201c generiert.')
         except Exception as exc:
             logger.exception("Premise error idea=%s: %s", idea_pk, exc)
             messages.error(request, f"Fehler: {exc}")
@@ -186,12 +203,25 @@ class CreativeCreateProjectView(LoginRequiredMixin, View):
         title = request.POST.get("title", idea.title).strip() or idea.title
         description = session.premise or idea.logline
 
+        is_scientific = session.session_type == CreativeSession.SessionType.SCIENTIFIC
+        content_type_slug = None
+        if is_scientific:
+            content_type_slug = idea.genre if idea.genre in ("scientific", "academic") else "scientific"
         project = BookProject.objects.create(
             owner=request.user,
             title=title,
             description=description,
             genre=idea.genre,
         )
+        if content_type_slug:
+            try:
+                from apps.projects.models import ContentTypeLookup
+                ct = ContentTypeLookup.objects.filter(slug=content_type_slug).first()
+                if ct:
+                    project.content_type_lookup = ct
+                    project.save(update_fields=["content_type_lookup"])
+            except Exception:
+                pass
         session.created_project = project
         session.phase = CreativeSession.Phase.DONE
         session.save(update_fields=["created_project", "phase"])
@@ -270,6 +300,88 @@ def _refine_idea(idea: BookIdea, session: CreativeSession) -> dict:
     ])
     clean = raw.strip().lstrip("`").removeprefix("json").strip().rstrip("`")
     return json.loads(clean)
+
+
+def _brainstorm_topics(session: CreativeSession, count: int = 5) -> list[dict]:
+    """Generiert wissenschaftliche Themenvorschläge als JSON-Array."""
+    router = _get_router()
+    field_hint = f"Fachgebiet: {session.research_field}" if session.research_field else ""
+    inspiration = f"Themenrichtung: {session.inspiration}" if session.inspiration else ""
+    system = (
+        "Du bist ein erfahrener Wissenschaftsberater. "
+        "Generiere originelle, forschungsrelevante Themenvorschläge.\n"
+        "Antworte NUR mit gültigem JSON, kein Markdown."
+    )
+    user = (
+        f"{field_hint}\n{inspiration}\n\n"
+        f"Generiere {count} verschiedene wissenschaftliche Themenvorschläge als JSON-Array:\n"
+        '[{"title": "Thementitel", '
+        '"logline": "Kernfrage und Relevanz in 1-2 Sätzen", '
+        '"hook": "Was ist der innovative Beitrag?", '
+        '"genre": "scientific", '
+        '"themes": ["Schlüsselkonzept1", "Schlüsselkonzept2"]}, ...]\n'
+        "Jedes Thema soll eine klare Forschungsfrage und wissenschaftlichen Mehrwert haben. Nur JSON."
+    )
+    raw = router.completion(action_code="outline_gen", messages=[
+        {"role": "system", "content": system},
+        {"role": "user", "content": user},
+    ])
+    clean = raw.strip().lstrip("`").removeprefix("json").strip().rstrip("`")
+    data = json.loads(clean)
+    return data if isinstance(data, list) else data.get("ideas", data.get("topics", []))
+
+
+def _refine_topic(idea: BookIdea, session: CreativeSession) -> dict:
+    """Schärft ein wissenschaftliches Thema: Forschungsfrage, Methodik, Beitrag."""
+    router = _get_router()
+    field_hint = f"Fachgebiet: {session.research_field}" if session.research_field else ""
+    system = (
+        "Du bist ein erfahrener Wissenschaftsberater und Gutachter.\n"
+        "Verfeinere wissenschaftliche Themenvorschläge: schärfe die Forschungsfrage, "
+        "identifiziere Methodik und wissenschaftlichen Beitrag.\n"
+        "Antworte NUR mit gültigem JSON."
+    )
+    user = (
+        f"Thema: {idea.title}\n"
+        f"Kernfrage: {idea.logline}\n"
+        f"Innovationsbeitrag: {idea.hook}\n"
+        f"{field_hint}\n\n"
+        'JSON: {"refined_logline": "Präzisierte Forschungsfrage", '
+        '"hook": "Wissenschaftlicher Beitrag und Alleinstellungsmerkmal", '
+        '"themes": ["Schlüsselbegriff1", "Schlüsselbegriff2"]}'
+    )
+    raw = router.completion(action_code="outline_gen", messages=[
+        {"role": "system", "content": system},
+        {"role": "user", "content": user},
+    ])
+    clean = raw.strip().lstrip("`").removeprefix("json").strip().rstrip("`")
+    return json.loads(clean)
+
+
+def _generate_expose(idea: BookIdea, session: CreativeSession) -> str:
+    """Generiert ein wissenschaftliches Exposé (Forschungsfrage, Stand, Methodik, Relevanz)."""
+    router = _get_router()
+    field_hint = f"Fachgebiet: {session.research_field}" if session.research_field else ""
+    logline = idea.refined_logline or idea.logline
+    system = (
+        "Du bist ein erfahrener Wissenschaftsberater. "
+        "Erstelle ein kompaktes wissenschaftliches Exposé.\n"
+        "Antworte nur mit dem Exposé-Text, kein JSON, keine Erklärungen."
+    )
+    user = (
+        f"Thema: {idea.title}\n"
+        f"Forschungsfrage: {logline}\n"
+        f"Innovationsbeitrag: {idea.hook}\n"
+        f"Schlüsselkonzepte: {', '.join(idea.themes or [])}\n"
+        f"{field_hint}\n\n"
+        "Erstelle ein wissenschaftliches Exposé (250-400 Wörter) mit: "
+        "Forschungsfrage, Forschungsstand, Methodik, erwarteter Beitrag zur Forschung, "
+        "Gliederungsvorschlag."
+    )
+    return router.completion(action_code="outline_gen", messages=[
+        {"role": "system", "content": system},
+        {"role": "user", "content": user},
+    ])
 
 
 def _generate_premise(idea: BookIdea, session: CreativeSession) -> str:

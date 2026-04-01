@@ -51,16 +51,22 @@
         <!-- Brainstorm bar -->
         <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
             <h6 style="color:#94a3b8;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;margin:0;">
+                {% if session.session_type == 'scientific' %}
+                <i class="bi bi-mortarboard me-1"></i> Themenvorschläge ({{ ideas|length }})
+                {% else %}
                 <i class="bi bi-book me-1"></i> Buchideen ({{ ideas|length }})
+                {% endif %}
             </h6>
             <form method="post" action="{% url 'ideas:creative_brainstorm' session.pk %}" class="d-flex gap-2 align-items-center">
                 {% csrf_token %}
                 <select name="count" class="form-select form-select-sm" style="background:#131929;color:#f1f5f9;border-color:#475569;width:auto;">
-                    <option value="3">3 Ideen</option>
-                    <option value="5" selected>5 Ideen</option>
+                    <option value="3">3 {% if session.session_type == 'scientific' %}Themen{% else %}Ideen{% endif %}</option>
+                    <option value="5" selected>5 {% if session.session_type == 'scientific' %}Themen{% else %}Ideen{% endif %}</option>
                 </select>
                 <button type="submit" class="btn btn-primary btn-sm">
-                    <i class="bi bi-stars me-1"></i> {% if ideas %}Mehr Ideen{% else %}Ideen generieren{% endif %}
+                    <i class="bi bi-stars me-1"></i>
+                    {% if ideas %}{% if session.session_type == 'scientific' %}Mehr Themen{% else %}Mehr Ideen{% endif %}
+                    {% else %}{% if session.session_type == 'scientific' %}Themen generieren{% else %}Ideen generieren{% endif %}{% endif %}
                 </button>
             </form>
         </div>
@@ -71,8 +77,18 @@
             <div class="col-md-6">
                 <div class="idea-card {% if session.selected_idea and session.selected_idea.pk == idea.pk %}selected{% endif %}">
                     <div class="idea-title">{{ idea.title }}</div>
-                    <div class="idea-logline">{{ idea.refined_logline|default:idea.logline }}</div>
-                    {% if idea.hook %}<div class="idea-hook">{{ idea.hook }}</div>{% endif %}
+                    <div class="idea-logline">
+                        {% if session.session_type == 'scientific' %}
+                        <span style="color:#7dd3fc;font-size:.72rem;font-weight:600;">Forschungsfrage:</span><br>
+                        {% endif %}
+                        {{ idea.refined_logline|default:idea.logline }}
+                    </div>
+                    {% if idea.hook %}
+                    <div class="idea-hook">
+                        {% if session.session_type == 'scientific' %}<i class="bi bi-lightbulb me-1" style="color:#fbbf24;"></i>{% endif %}
+                        {{ idea.hook }}
+                    </div>
+                    {% endif %}
 
                     <!-- Rating stars -->
                     <div class="d-flex gap-1 mt-2 mb-2" id="stars-{{ idea.pk }}">
@@ -96,7 +112,11 @@
                         <form method="post" action="{% url 'ideas:creative_premise' session.pk idea.pk %}">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-outline-primary action-btn">
+                                {% if session.session_type == 'scientific' %}
+                                <i class="bi bi-journal-text me-1"></i>Exposé
+                                {% else %}
                                 <i class="bi bi-file-text me-1"></i>Premise
+                                {% endif %}
                             </button>
                         </form>
                         {% if not session.created_project %}
@@ -117,8 +137,13 @@
         </div>
         {% else %}
         <div style="text-align:center;padding:3rem 0;color:#64748b;">
+            {% if session.session_type == 'scientific' %}
+            <i class="bi bi-mortarboard d-block mb-2" style="font-size:2.5rem;color:#7dd3fc;"></i>
+            <div style="font-size:.9rem;">Noch keine Themen — klick auf "Themen generieren"!</div>
+            {% else %}
             <i class="bi bi-lightbulb d-block mb-2" style="font-size:2.5rem;color:#fbbf24;"></i>
             <div style="font-size:.9rem;">Noch keine Ideen — klick auf "Ideen generieren"!</div>
+            {% endif %}
         </div>
         {% endif %}
 
@@ -131,15 +156,30 @@
             <div class="side-card-title"><i class="bi bi-info-circle me-1"></i>Session-Info</div>
             <div style="font-size:.82rem;color:#94a3b8;">
                 <div>Erstellt: {{ session.created_at|date:"d.m.Y H:i" }}</div>
+                {% if session.session_type == 'scientific' %}
+                <div class="mt-1">
+                    <span class="badge" style="background:#0d1a2d;color:#7dd3fc;border:1px solid #1e3a5f;font-size:.7rem;">
+                        <i class="bi bi-mortarboard me-1"></i>Wissenschaftlich
+                    </span>
+                </div>
+                {% if session.research_field %}<div class="mt-1">Fachgebiet: <strong style="color:#e2e8f0;">{{ session.research_field }}</strong></div>{% endif %}
+                {% else %}
                 {% if session.genre %}<div>Genre: <strong style="color:#e2e8f0;">{{ session.genre }}</strong></div>{% endif %}
                 {% if session.style_dna_hint %}<div class="mt-1">Stil: <em style="color:#a5b4fc;">{{ session.style_dna_hint|truncatechars:80 }}</em></div>{% endif %}
-                {% if session.inspiration %}<div class="mt-1">Inspiration:<br><em style="color:#94a3b8;">{{ session.inspiration|truncatechars:120 }}</em></div>{% endif %}
+                {% endif %}
+                {% if session.inspiration %}<div class="mt-1">{% if session.session_type == 'scientific' %}Themenrichtung{% else %}Inspiration{% endif %}:<br><em style="color:#94a3b8;">{{ session.inspiration|truncatechars:120 }}</em></div>{% endif %}
             </div>
         </div>
 
         {% if session.premise %}
         <div class="side-card">
-            <div class="side-card-title"><i class="bi bi-file-text me-1"></i>Premise</div>
+            <div class="side-card-title">
+                {% if session.session_type == 'scientific' %}
+                <i class="bi bi-journal-text me-1"></i>Exposé
+                {% else %}
+                <i class="bi bi-file-text me-1"></i>Premise
+                {% endif %}
+            </div>
             <div class="premise-box">{{ session.premise }}</div>
             {% if not session.created_project %}
             <form method="post" action="{% url 'ideas:creative_create_project' session.pk %}" class="mt-2">
