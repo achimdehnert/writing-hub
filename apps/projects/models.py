@@ -169,9 +169,11 @@ class BookProject(models.Model):
         SHORT_STORY = "short_story", "Kurzgeschichte"
         SCREENPLAY = "screenplay", "Drehbuch"
         ESSAY = "essay", "Essay"
+        ACADEMIC = "academic", "Akademische Arbeit (Monographie, Dissertation)"
+        SCIENTIFIC = "scientific", "Wissenschaftliches Paper (IMRaD)"
 
     content_type = models.CharField(
-        max_length=20, choices=ContentType.choices, default=ContentType.NOVEL
+        max_length=30, choices=ContentType.choices, default=ContentType.NOVEL
     )
     genre = models.CharField(max_length=100, blank=True)
     target_audience = models.CharField(max_length=200, blank=True)

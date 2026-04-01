@@ -37,7 +37,10 @@ asgiref==3.8.1
 iil-aifw>=0.6.0,<1
 
 # Prompt templates — PromptStack, 5-layer Jinja2, render_to_messages()
-iil-promptfw>=0.5.1,<1
+iil-promptfw>=0.7.0,<1
+
+# Research framework — CitationService, ISBN-Lookup, BibTeX-Parser, academic search
+iil-researchfw>=0.3.0,<1
 
 # Domain schemas — StyleProfile, CharacterProfile, WorldContext
 iil-authoringfw>=0.6.0,<1
