@@ -157,8 +157,12 @@
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-lightbulb me-2" style="color:#6366f1;font-size:1.2rem;"></i>
                     <div>
-                        <div class="fw-semibold small" style="color:#e2e8f0;">Konzept</div>
-                        <div class="text-muted" style="font-size:.72rem;">Prämisse &amp; Themen</div>
+                        <div class="fw-semibold small" style="color:#e2e8f0;">
+                            {% if project.content_type == 'academic' or project.content_type == 'scientific' %}Exposé &amp; Fragestellung{% else %}Konzept{% endif %}
+                        </div>
+                        <div class="text-muted" style="font-size:.72rem;">
+                            {% if project.content_type == 'academic' or project.content_type == 'scientific' %}Forschungsfrage &amp; Ziel{% else %}Prämisse &amp; Themen{% endif %}
+                        </div>
                     </div>
                 </div>
                 <div class="progress mb-1" style="height:3px;background:#1e2235;">
@@ -172,7 +176,54 @@
         </div>
     </div>
 
-    <!-- Charaktere -->
+    {% if project.content_type == 'academic' or project.content_type == 'scientific' %}
+    <!-- Literaturrecherche (nur academic/scientific) -->
+    <div class="col-md-4">
+        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
+             onclick="location.href='{% url 'projects:citations' project.pk %}'">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-journal-bookmark me-2" style="color:#7dd3fc;font-size:1.2rem;"></i>
+                    <div>
+                        <div class="fw-semibold small" style="color:#e2e8f0;">Literaturrecherche</div>
+                        <div class="text-muted" style="font-size:.72rem;">Quellen &amp; Zitationen</div>
+                    </div>
+                </div>
+                <div class="progress mb-1" style="height:3px;background:#1e2235;">
+                    <div class="progress-bar" style="width:0%;background:#7dd3fc;"></div>
+                </div>
+                <div class="d-flex justify-content-between" style="font-size:.7rem;">
+                    <span style="color:#7dd3fc;">→ Quellen verwalten</span>
+                    <span class="text-muted">Ausstehend</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Methodik (nur academic/scientific) -->
+    <div class="col-md-4">
+        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
+             onclick="location.href='{% url 'projects:research_dashboard' project.pk %}'">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-diagram-3 me-2" style="color:#7dd3fc;font-size:1.2rem;"></i>
+                    <div>
+                        <div class="fw-semibold small" style="color:#e2e8f0;">Methodik &amp; Notizen</div>
+                        <div class="text-muted" style="font-size:.72rem;">Forschungsnotizen</div>
+                    </div>
+                </div>
+                <div class="progress mb-1" style="height:3px;background:#1e2235;">
+                    <div class="progress-bar" style="width:0%;background:#7dd3fc;"></div>
+                </div>
+                <div class="d-flex justify-content-between" style="font-size:.7rem;">
+                    <span style="color:#7dd3fc;">→ Recherche öffnen</span>
+                    <span class="text-muted">Ausstehend</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Charaktere (nur fiktionale Projekte) -->
     <div class="col-md-4">
         <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;">
             <div class="card-body">
@@ -194,7 +245,7 @@
         </div>
     </div>
 
-    <!-- Weltenbau -->
+    <!-- Weltenbau (nur fiktionale Projekte) -->
     <div class="col-md-4">
         <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;">
             <div class="card-body">
@@ -215,6 +266,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
     <!-- Outline -->
     <div class="col-md-4">
@@ -306,7 +358,31 @@
         </div>
     </div>
 
-    <!-- Illustration -->
+    {% if project.content_type == 'academic' or project.content_type == 'scientific' %}
+    <!-- Peer Review (nur academic/scientific) -->
+    <div class="col-md-4">
+        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
+             onclick="location.href='{% url 'projects:review' project.pk %}'">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-people-fill me-2" style="color:#7dd3fc;font-size:1.2rem;"></i>
+                    <div>
+                        <div class="fw-semibold small" style="color:#e2e8f0;">Peer Review</div>
+                        <div class="text-muted" style="font-size:.72rem;">Fachliche Begutachtung</div>
+                    </div>
+                </div>
+                <div class="progress mb-1" style="height:3px;background:#1e2235;">
+                    <div class="progress-bar" style="width:0%;background:#7dd3fc;"></div>
+                </div>
+                <div class="d-flex justify-content-between" style="font-size:.7rem;">
+                    <span style="color:#7dd3fc;">→ Review öffnen</span>
+                    <span class="text-muted">Ausstehend</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Illustration (nur fiktionale Projekte) -->
     <div class="col-md-4">
         <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;">
             <div class="card-body">
@@ -314,7 +390,7 @@
                     <i class="bi bi-image me-2" style="color:#6366f1;font-size:1.2rem;"></i>
                     <div>
                         <div class="fw-semibold small" style="color:#e2e8f0;">Illustration</div>
-                        <div class="text-muted" style="font-size:.72rem;">Bilder & Cover</div>
+                        <div class="text-muted" style="font-size:.72rem;">Bilder &amp; Cover</div>
                     </div>
                 </div>
                 <div class="progress mb-1" style="height:3px;background:#1e2235;">
@@ -327,16 +403,21 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
-    <!-- Publishing -->
+    <!-- Publishing / Einreichung -->
     <div class="col-md-4">
         <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-bookmark-check me-2" style="color:#6366f1;font-size:1.2rem;"></i>
                     <div>
-                        <div class="fw-semibold small" style="color:#e2e8f0;">Publishing</div>
-                        <div class="text-muted" style="font-size:.72rem;">Metadaten &amp; Cover</div>
+                        <div class="fw-semibold small" style="color:#e2e8f0;">
+                            {% if project.content_type == 'academic' or project.content_type == 'scientific' %}Einreichung{% else %}Publishing{% endif %}
+                        </div>
+                        <div class="text-muted" style="font-size:.72rem;">
+                            {% if project.content_type == 'academic' or project.content_type == 'scientific' %}Journal / Verlag / Repository{% else %}Metadaten &amp; Cover{% endif %}
+                        </div>
                     </div>
                 </div>
                 <div class="progress mb-1" style="height:3px;background:#1e2235;">
