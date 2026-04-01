@@ -80,6 +80,28 @@ Wichtigste ADRs:
 
 **Regel:** Änderungen immer über `develop` auf Staging testen — Production NUR auf explizite Anweisung.
 
+## Prompt Templates (promptfw)
+
+Alle LLM-Prompts sind als Jinja2-Templates in `/templates/prompts/` ausgelagert:
+
+```
+templates/prompts/
+├── idea_import/          # Brainstorm, Refine, Premise, Exposé
+├── outlines/             # Structure-Pass, Detail-Pass, Enrich
+├── authors/              # Analyze Style, Extract Rules, Generate Sample
+└── projects/             # Review Agents, Lektorat, Keywords
+```
+
+**Nutzung:**
+```python
+from apps.core.prompt_utils import render_prompt
+
+messages = render_prompt("idea_import/brainstorm_ideas", genre="Thriller", count=5)
+result = router.completion(action_code="outline_generate", messages=messages)
+```
+
+**18 Templates** für zentrale Prompt-Verwaltung, A/B-Testing und Versionierung.
+
 ## Testing
 
 ```bash
