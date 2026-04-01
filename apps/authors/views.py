@@ -261,21 +261,21 @@ class SampleUpdateView(LoginRequiredMixin, View):
             situation_label = dict(WritingStyleSample.SITUATIONS).get(situation, situation)
             try:
                 from apps.authoring.services.llm_router import LLMRouter
+                from apps.core.prompt_utils import render_prompt
                 router = LLMRouter()
+                prompt_msgs = render_prompt(
+                    "authors/generate_sample",
+                    style_desc=style_desc,
+                    situation_label=situation_label,
+                )
+                if not prompt_msgs:
+                    prompt_msgs = [
+                        {"role": "system", "content": "Du bist ein Romanautor. Antworte nur mit dem Text."},
+                        {"role": "user", "content": f"Schreibe einen Beispieltext für: {situation_label}"},
+                    ]
                 result = router.completion(
                     action_code="chapter_write",
-                    messages=[
-                        {"role": "system", "content": (
-                            "Du bist ein professioneller Romanautor. "
-                            "Schreibe kurze Beispieltexte (150-250 Wörter) in einem vorgegebenen Schreibstil. "
-                            "Antworte nur mit dem Text."
-                        )},
-                        {"role": "user", "content": (
-                            f"Schreibstil:\n{style_desc}\n\n"
-                            f"Situation: {situation_label}\n"
-                            f"Schreibe einen neuen Beispieltext für diese Situation. 150-250 Wörter."
-                        )},
-                    ],
+                    messages=prompt_msgs,
                 )
                 WritingStyleSample.objects.update_or_create(
                     style=style, situation=situation,

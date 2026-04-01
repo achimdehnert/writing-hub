@@ -158,19 +158,21 @@ class PublishingKeywordsAIView(LoginRequiredMixin, View):
             elif project.genre:
                 genre = project.genre
 
-            prompt = (
-                f'Buchprojekt: "{project.title}"\n'
-                f"Genre: {genre}\n"
-                f"Beschreibung: {project.description[:500] if project.description else 'keine'}\n\n"
-                "Generiere genau 7 deutsche Suchkeywords (kommagetrennt, keine Nummerierung, "
-                "keine Anf\u00fchrungszeichen), die Leser auf Amazon/Kindle bei der Suche verwenden."
+            from apps.core.prompt_utils import render_prompt
+            messages = render_prompt(
+                "projects/generate_keywords",
+                title=project.title,
+                genre=genre,
+                description=project.description or "",
             )
+            if not messages:
+                messages = [
+                    {"role": "system", "content": "Du bist ein Buchmarketing-Experte."},
+                    {"role": "user", "content": f"Generiere 7 Keywords für: {project.title}"},
+                ]
             result = router.completion(
                 action_code="chapter_analyze",
-                messages=[
-                    {"role": "system", "content": "Du bist ein Buchmarketing-Experte."},
-                    {"role": "user", "content": prompt},
-                ],
+                messages=messages,
             )
             return JsonResponse({"ok": True, "keywords": result.strip()})
         except Exception as exc:

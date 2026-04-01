@@ -74,27 +74,22 @@ class LektoratSessionStartView(LoginRequiredMixin, View):
             for node in chapters:
                 if not node.content or not node.content.strip():
                     continue
-                system = (
-                    "Du bist ein professioneller Lektor.\n"
-                    "Analysiere das Kapitel und finde Konsistenz-, Logik-, Stil-, "
-                    "Charakter-, Zeitlinie- und Pacing-Probleme.\n"
-                    "Antworte NUR als JSON-Array:\n"
-                    "[{\"type\": \"consistency|logic|style|character|timeline|pacing\",\n"
-                    " \"severity\": \"info|warning|error\",\n"
-                    " \"description\": \"...\",\n"
-                    " \"suggestion\": \"...\"}]"
+                from apps.core.prompt_utils import render_prompt
+                messages = render_prompt(
+                    "projects/lektorat_analyze",
+                    order=node.order,
+                    title=node.title,
+                    content=node.content,
                 )
-                user = (
-                    f"Kapitel {node.order}: {node.title}\n\n"
-                    f"{node.content[:6000]}"
-                )
+                if not messages:
+                    messages = [
+                        {"role": "system", "content": "Du bist ein Lektor. Antworte als JSON-Array."},
+                        {"role": "user", "content": f"Kapitel {node.order}: {node.title}\n\n{node.content[:6000]}"},
+                    ]
                 try:
                     raw = router.completion(
                         action_code="chapter_analyze",
-                        messages=[
-                            {"role": "system", "content": system},
-                            {"role": "user", "content": user},
-                        ],
+                        messages=messages,
                     )
                     match = re.search(r"\[.*\]", raw, re.DOTALL)
                     if match:

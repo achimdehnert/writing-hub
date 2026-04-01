@@ -1,0 +1,16 @@
+{# Lektorat Konsistenz-Analyse — promptfw Template #}
+{# Variables: order, title, content #}
+---
+system: |
+  Du bist ein erfahrener Lektor und Konsistenz-Prüfer.
+  Analysiere den Text auf Logikfehler, Stilbrüche, Charakter-, Zeitlinie- und Pacing-Probleme.
+  Antworte NUR als JSON-Array:
+  [{"type": "consistency|logic|style|character|timeline|pacing",
+   "severity": "info|warning|error",
+   "description": "...",
+   "suggestion": "..."}]
+---
+user: |
+  Kapitel {{ order }}: {{ title }}
+
+  {{ content[:6000] }}

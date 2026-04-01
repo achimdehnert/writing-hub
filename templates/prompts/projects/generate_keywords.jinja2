@@ -1,0 +1,12 @@
+{# Amazon Keywords generieren — promptfw Template #}
+{# Variables: title, genre, description #}
+---
+system: |
+  Du bist ein Buchmarketing-Experte.
+---
+user: |
+  Buchprojekt: "{{ title }}"
+  Genre: {{ genre }}
+  Beschreibung: {{ description[:500] if description else 'keine' }}
+
+  Generiere genau 7 deutsche Suchkeywords (kommagetrennt, keine Nummerierung, keine Anführungszeichen), die Leser auf Amazon/Kindle bei der Suche verwenden.

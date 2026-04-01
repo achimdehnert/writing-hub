@@ -37,31 +37,22 @@ def analyze_style(style: WritingStyle) -> bool:
     style.status = WritingStyle.Status.ANALYZING
     style.save(update_fields=["status"])
 
-    system = (
-        "Du bist ein erfahrener Literaturkritiker und Schreibcoach.\n"
-        "Analysiere den folgenden Text und erstelle ein detailliertes Stilprofil.\n"
-        "Antworte auf Deutsch in klar strukturierten Abschnitten."
+    from apps.core.prompt_utils import render_prompt
+    prompt_msgs = render_prompt(
+        "authors/analyze_style",
+        source_text=text,
     )
-    user = (
-        f"Analysiere folgenden Text und erstelle ein detailliertes Stilprofil:\n\n"
-        f"{text[:4000]}\n\n"
-        "Erstelle das Stilprofil mit folgenden Abschnitten:\n"
-        "## Satzstruktur & Rhythmus\n"
-        "## Wortwahl & Vokabular\n"
-        "## Perspektive & Erzählstimme\n"
-        "## Tonalität & Atmosphäre\n"
-        "## Besondere Merkmale\n"
-        "## Stil-Prompt (1-2 Sätze für LLM-Instruktion)\n"
-    )
+    if not prompt_msgs:
+        prompt_msgs = [
+            {"role": "system", "content": "Du bist ein Literaturkritiker. Erstelle ein Stilprofil."},
+            {"role": "user", "content": f"Analysiere:\n\n{text[:4000]}"},
+        ]
 
     try:
         router = LLMRouter()
         result = router.completion(
             action_code="style_check",
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
+            messages=prompt_msgs,
         )
 
         style_prompt = ""
@@ -106,31 +97,22 @@ def extract_style_rules(style: WritingStyle) -> tuple[bool, dict]:
 
     source = text[:3000] if text else profile[:2000]
 
-    system = (
-        "Du bist ein Schreibcoach und Stilanalyst.\n"
-        "Analysiere den Text und extrahiere präzise Stil-Regeln.\n"
-        "Antworte NUR mit gültigem JSON, keine Erklärungen davor oder danach."
+    from apps.core.prompt_utils import render_prompt
+    prompt_msgs = render_prompt(
+        "authors/extract_rules",
+        source_text=source,
     )
-    user = (
-        f"Text:\n{source}\n\n"
-        "Extrahiere Stil-Regeln als JSON mit dieser Struktur:\n"
-        "{\n"
-        '  "signature_moves": ["charakteristisches Stilmittel 1", ...],\n'
-        '  "do_list": ["Was dieser Autor macht / erlaubt ist", ...],\n'
-        '  "dont_list": ["Was dieser Autor vermeidet", ...],\n'
-        '  "taboo_list": ["absolut verbotene Wörter oder Konstrukte", ...]\n'
-        "}\n"
-        "Gib 4-8 Einträge pro Liste. Nur JSON, kein Markdown."
-    )
+    if not prompt_msgs:
+        prompt_msgs = [
+            {"role": "system", "content": "Du bist ein Stilanalyst. Antworte NUR mit JSON."},
+            {"role": "user", "content": f"Extrahiere Stil-Regeln:\n\n{source[:3000]}"},
+        ]
 
     try:
         router = LLMRouter()
         raw = router.completion(
             action_code="style_check",
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
+            messages=prompt_msgs,
         )
         # Strip possible markdown code fences
         clean = raw.strip().lstrip("`").removeprefix("json").strip().rstrip("`")
@@ -164,27 +146,25 @@ def generate_samples(style: WritingStyle) -> int:
     count = 0
 
     router = LLMRouter()
-    system = (
-        "Du bist ein professioneller Romanautor.\n"
-        "Schreibe kurze Beispieltexte (150-250 Wörter) in einem vorgegebenen Schreibstil.\n"
-        "Antworte nur mit dem Text, keine Erklärungen oder Metainformationen."
-    )
+    from apps.core.prompt_utils import render_prompt
 
     for situation_key, situation_label in SITUATIONS:
         if style.samples.filter(situation=situation_key).exists():
             continue
         try:
-            user = (
-                f"Schreibstil-Profil:\n{style_desc}\n\n"
-                f"Schreibe einen Beispieltext für folgende Situation: {situation_label}\n"
-                f"Der Text soll exakt diesen Schreibstil nachahmen. 150-250 Wörter."
+            prompt_msgs = render_prompt(
+                "authors/generate_sample",
+                style_desc=style_desc,
+                situation_label=situation_label,
             )
+            if not prompt_msgs:
+                prompt_msgs = [
+                    {"role": "system", "content": "Du bist ein Romanautor. Antworte nur mit dem Text."},
+                    {"role": "user", "content": f"Schreibe einen Beispieltext für: {situation_label}"},
+                ]
             result = router.completion(
                 action_code="chapter_write",
-                messages=[
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": user},
-                ],
+                messages=prompt_msgs,
             )
             WritingStyleSample.objects.create(
                 style=style,
