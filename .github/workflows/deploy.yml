@@ -1,40 +1,16 @@
-name: "Deploy"
+name: "_disabled_deploy"
 
+# Disabled — ci-cd.yml handles all deploys (staging + production)
 on:
-  push:
-    branches: ["main"]
-    tags: ["v*.*.*"]
   workflow_dispatch:
     inputs:
-      image_tag_override:
-        description: "Rollback auf Image-Tag (z.B. v1.2.1) — leer = auto"
+      reason:
+        description: 'This workflow is disabled — use ci-cd.yml instead'
         required: false
-        default: ""
-      target_environment:
-        description: "Ziel-Environment (leer=auto, staging, production)"
-        required: false
-        default: ""
-        type: choice
-        options:
-          - ""
-          - staging
-          - production
 
 jobs:
-  ci:
-    uses: achimdehnert/platform/.github/workflows/_ci-python.yml@main
-    if: startsWith(github.ref, 'refs/heads/')
-    secrets: inherit
-
-  deploy:
-    needs: [ci]
-    if: always() && (needs.ci.result == 'success' || needs.ci.result == 'skipped')
-    uses: achimdehnert/platform/.github/workflows/_deploy-unified.yml@main
-    with:
-      app_name: "writing-hub"
-      app_path: "/opt/writing-hub"
-      health_check_url: "https://writing.iil.pet/healthz/"
-      image_tag_override: ${{ inputs.image_tag_override || '' }}
-      target_environment: ${{ inputs.target_environment || '' }}
-      notify_discord: true
-    secrets: inherit
+  noop:
+    runs-on: ubuntu-latest
+    if: false
+    steps:
+      - run: echo "disabled"
