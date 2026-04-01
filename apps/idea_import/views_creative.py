@@ -269,7 +269,7 @@ def _brainstorm_ideas(session: CreativeSession, count: int = 5) -> list[dict]:
         '"hook": "Was macht diese Idee besonders?", "genre": "...", "themes": ["..."]}, ...]\n'
         "Jede Idee soll einzigartig und spannend sein. Nur JSON."
     )
-    raw = router.completion(action_code="outline_gen", messages=[
+    raw = router.completion(action_code="outline_generate", messages=[
         {"role": "system", "content": system},
         {"role": "user", "content": user},
     ])
@@ -294,7 +294,7 @@ def _refine_idea(idea: BookIdea, session: CreativeSession) -> dict:
         f"{style}\n\n"
         'JSON: {"refined_logline": "...", "hook": "...", "themes": ["..."]}'
     )
-    raw = router.completion(action_code="outline_gen", messages=[
+    raw = router.completion(action_code="outline_generate", messages=[
         {"role": "system", "content": system},
         {"role": "user", "content": user},
     ])
@@ -322,7 +322,7 @@ def _brainstorm_topics(session: CreativeSession, count: int = 5) -> list[dict]:
         '"themes": ["Schlüsselkonzept1", "Schlüsselkonzept2"]}, ...]\n'
         "Jedes Thema soll eine klare Forschungsfrage und wissenschaftlichen Mehrwert haben. Nur JSON."
     )
-    raw = router.completion(action_code="outline_gen", messages=[
+    raw = router.completion(action_code="outline_generate", messages=[
         {"role": "system", "content": system},
         {"role": "user", "content": user},
     ])
@@ -350,7 +350,7 @@ def _refine_topic(idea: BookIdea, session: CreativeSession) -> dict:
         '"hook": "Wissenschaftlicher Beitrag und Alleinstellungsmerkmal", '
         '"themes": ["Schlüsselbegriff1", "Schlüsselbegriff2"]}'
     )
-    raw = router.completion(action_code="outline_gen", messages=[
+    raw = router.completion(action_code="outline_generate", messages=[
         {"role": "system", "content": system},
         {"role": "user", "content": user},
     ])
@@ -378,7 +378,7 @@ def _generate_expose(idea: BookIdea, session: CreativeSession) -> str:
         "Forschungsfrage, Forschungsstand, Methodik, erwarteter Beitrag zur Forschung, "
         "Gliederungsvorschlag."
     )
-    return router.completion(action_code="outline_gen", messages=[
+    return router.completion(action_code="outline_generate", messages=[
         {"role": "system", "content": system},
         {"role": "user", "content": user},
     ])
@@ -401,7 +401,7 @@ def _generate_premise(idea: BookIdea, session: CreativeSession) -> str:
         "Erstelle eine vollständige Buchpremise (250-400 Wörter): Protagonist, Welt, Konflikt, "
         "Wendepunkte, emotionaler Kern, thematische Aussage."
     )
-    return router.completion(action_code="outline_gen", messages=[
+    return router.completion(action_code="outline_generate", messages=[
         {"role": "system", "content": system},
         {"role": "user", "content": user},
     ])
