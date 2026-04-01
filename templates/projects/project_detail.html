@@ -710,11 +710,26 @@
                    class="form-control bg-dark text-light border-secondary"
                    placeholder="wird automatisch gesetzt">
           </div>
+          {% if project.description %}
+          <div class="rounded p-3 mb-2" style="background:#0d1a2d;border:1px solid #1e3a5f;">
+            <div class="form-check form-switch mb-0">
+              <input class="form-check-input" type="checkbox" name="ai_generate" value="1"
+                     id="aiGenerateCheck" checked>
+              <label class="form-check-label small fw-semibold" for="aiGenerateCheck"
+                     style="color:#a5b4fc;">
+                <i class="bi bi-stars me-1"></i>Mit KI vorgenerieren
+              </label>
+            </div>
+            <div class="text-muted mt-1" style="font-size:.72rem;">
+              Erstellt Kapitel-Inhalte automatisch basierend auf der Projektbeschreibung.
+            </div>
+          </div>
+          {% endif %}
         </div>
         <div class="modal-footer border-secondary py-2">
           <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Abbrechen</button>
           <button type="submit" class="btn btn-primary btn-sm">
-            <i class="bi bi-check-lg me-1"></i>Anwenden
+            <i class="bi bi-stars me-1"></i>Anwenden &amp; KI generieren
           </button>
         </div>
       </form>

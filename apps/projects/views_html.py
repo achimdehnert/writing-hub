@@ -447,6 +447,57 @@ class OutlineCreateView(LoginRequiredMixin, View):
                 messages.success(request, f'Outline „{name}" mit {chapter_count} leeren Kapiteln angelegt.')
             else:
                 messages.success(request, f'Outline „{name}" angelegt.')
+            if request.POST.get("ai_generate") == "1" and project.description:
+                try:
+                    from apps.authoring.services.outline_service import (
+                        OutlineGeneratorService,
+                    )
+                    svc = OutlineGeneratorService()
+                    result = svc.generate_outline(
+                        project_id=str(project.pk),
+                        framework=framework_key,
+                        chapter_count=len(beats) if beats else (chapter_count or 12),
+                    )
+                    if result.success and result.nodes:
+                        version.nodes.all().delete()
+                        db_nodes = []
+                        from apps.projects.models import OutlineNode as _ON
+                        for i, node in enumerate(result.nodes):
+                            beat = ""
+                            try:
+                                beat = node.act.value if hasattr(node.act, "value") else str(node.act)
+                            except Exception:
+                                beat = "chapter"
+                            summary = ""
+                            try:
+                                summary = node.summary or node.description or ""
+                            except Exception:
+                                pass
+                            db_nodes.append(_ON(
+                                outline_version=version,
+                                title=node.title,
+                                description=summary,
+                                beat_type=beat or "chapter",
+                                order=i + 1,
+                            ))
+                        _ON.objects.bulk_create(db_nodes)
+                        messages.success(
+                            request,
+                            f'KI-Outline „{name}" mit {len(result.nodes)} Kapiteln generiert.'
+                        )
+                    else:
+                        err = getattr(result, "error_message", "") or ""
+                        messages.warning(
+                            request,
+                            f"Outline angelegt, KI-Generierung fehlgeschlagen: {err}" if err
+                            else "Outline angelegt, KI konnte keine Kapitel generieren."
+                        )
+                except Exception as ai_exc:
+                    logger.exception("KI-Generierung beim Anlegen fehlgeschlagen: %s", ai_exc)
+                    messages.warning(
+                        request,
+                        f"Outline angelegt, KI-Generierung fehlgeschlagen: {ai_exc}"
+                    )
             url = reverse("projects:detail", kwargs={"pk": pk}) + f"?outline={version.pk}"
             return redirect(url)
         except Exception as exc:
