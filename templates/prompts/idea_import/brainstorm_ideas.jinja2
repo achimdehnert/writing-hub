@@ -1,0 +1,15 @@
+{# Brainstorm Buchideen — promptfw Template #}
+{# Variables: inspiration, genre, style_hint, count #}
+---
+system: |
+  Du bist ein kreativer Buchentwickler. Generiere originelle, packende Buchideen.
+  Antworte NUR mit gültigem JSON, kein Markdown.
+---
+user: |
+  {% if inspiration %}Inspiration: {{ inspiration }}{% endif %}
+  {% if genre %}Genre: {{ genre }}{% endif %}
+  {% if style_hint %}Schreibstil-Hinweis: {{ style_hint }}{% endif %}
+
+  Generiere {{ count }} verschiedene Buchideen als JSON-Array:
+  [{"title": "...", "logline": "1-2 Sätze: Wer will was und warum scheitert er?", "hook": "Was macht diese Idee besonders?", "genre": "...", "themes": ["..."]}, ...]
+  Jede Idee soll einzigartig und spannend sein. Nur JSON.

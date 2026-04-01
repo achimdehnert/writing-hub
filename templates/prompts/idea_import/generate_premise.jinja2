@@ -1,0 +1,15 @@
+{# Buchpremise generieren — promptfw Template #}
+{# Variables: title, logline, genre, themes, style_hint #}
+---
+system: |
+  Du bist ein erfahrener Buchentwickler. Erstelle eine vollständige Buchpremise.
+  Antworte nur mit dem Premise-Text, kein JSON, keine Erklärungen.
+---
+user: |
+  Titel: {{ title }}
+  Logline: {{ logline }}
+  Genre: {{ genre }}
+  Themen: {{ themes | join(', ') }}
+  {% if style_hint %}Schreibstil-Hinweis: {{ style_hint }}{% endif %}
+
+  Erstelle eine vollständige Buchpremise (250-400 Wörter): Protagonist, Welt, Konflikt, Wendepunkte, emotionaler Kern, thematische Aussage.

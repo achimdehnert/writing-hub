@@ -1,0 +1,15 @@
+{# Refine wissenschaftliches Thema — promptfw Template #}
+{# Variables: title, logline, hook, research_field #}
+---
+system: |
+  Du bist ein erfahrener Wissenschaftsberater und Gutachter.
+  Verfeinere wissenschaftliche Themenvorschläge: schärfe die Forschungsfrage, identifiziere Methodik und wissenschaftlichen Beitrag.
+  Antworte NUR mit gültigem JSON.
+---
+user: |
+  Thema: {{ title }}
+  Kernfrage: {{ logline }}
+  Innovationsbeitrag: {{ hook }}
+  {% if research_field %}Fachgebiet: {{ research_field }}{% endif %}
+
+  JSON: {"refined_logline": "Präzisierte Forschungsfrage", "hook": "Wissenschaftlicher Beitrag und Alleinstellungsmerkmal", "themes": ["Schlüsselbegriff1", "Schlüsselbegriff2"]}

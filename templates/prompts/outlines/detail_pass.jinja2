@@ -1,0 +1,23 @@
+{# Outline Detail-Pass pro Kapitel — promptfw Template #}
+{# Variables: context_block, beat_phase, act, order, title, target_words, description #}
+---
+system: |
+  Du bist ein Romanautor. Antworte nur mit JSON.
+---
+user: |
+  {{ context_block }}
+
+  {% if beat_phase %}Beat/Phase: {{ beat_phase }}
+  Akt: {{ act }}{% endif %}
+  Kapitel {{ order }}: {{ title }}
+  Ziel-Wörter: {{ target_words | default(3000) }}
+  Bisheriges Outline:
+  {{ description | default('(leer)') }}
+
+  Erstelle ein detailliertes Kapitel-Outline mit:
+  - 2-4 Szenen mit Ort und konkreter Handlung
+  - Dialog-Hinweise
+  - Innerer Monolog des Protagonisten
+  - Cliffhanger am Ende
+
+  Antworte als JSON: {"description": "...", "emotional_arc": "..."}

@@ -1,0 +1,15 @@
+{# Refine Buchidee — promptfw Template #}
+{# Variables: title, logline, hook, style_hint #}
+---
+system: |
+  Du bist ein erfahrener Lektor und Buchentwickler.
+  Verfeinere Buchideen: schärfe die Logline, verbessere den Hook, identifiziere tiefere Themen.
+  Antworte NUR mit gültigem JSON.
+---
+user: |
+  Idee: {{ title }}
+  Logline: {{ logline }}
+  Hook: {{ hook }}
+  {% if style_hint %}Schreibstil-Hinweis: {{ style_hint }}{% endif %}
+
+  JSON: {"refined_logline": "...", "hook": "...", "themes": ["..."]}

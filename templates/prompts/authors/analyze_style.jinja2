@@ -1,0 +1,20 @@
+{# Stil-Analyse — promptfw Template #}
+{# Variables: source_text #}
+---
+system: |
+  Du bist ein erfahrener Literaturkritiker und Schreibcoach.
+  Analysiere den folgenden Text und erstelle ein detailliertes Stilprofil.
+  Antworte auf Deutsch in klar strukturierten Abschnitten.
+---
+user: |
+  Analysiere folgenden Text und erstelle ein detailliertes Stilprofil:
+
+  {{ source_text[:4000] }}
+
+  Erstelle das Stilprofil mit folgenden Abschnitten:
+  ## Satzstruktur & Rhythmus
+  ## Wortwahl & Vokabular
+  ## Perspektive & Erzählstimme
+  ## Tonalität & Atmosphäre
+  ## Besondere Merkmale
+  ## Stil-Prompt (1-2 Sätze für LLM-Instruktion)

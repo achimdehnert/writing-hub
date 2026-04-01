@@ -1,0 +1,14 @@
+{# Brainstorm wissenschaftliche Themen — promptfw Template #}
+{# Variables: research_field, inspiration, count #}
+---
+system: |
+  Du bist ein erfahrener Wissenschaftsberater. Generiere originelle, forschungsrelevante Themenvorschläge.
+  Antworte NUR mit gültigem JSON, kein Markdown.
+---
+user: |
+  {% if research_field %}Fachgebiet: {{ research_field }}{% endif %}
+  {% if inspiration %}Themenrichtung: {{ inspiration }}{% endif %}
+
+  Generiere {{ count }} verschiedene wissenschaftliche Themenvorschläge als JSON-Array:
+  [{"title": "Thementitel", "logline": "Kernfrage und Relevanz in 1-2 Sätzen", "hook": "Was ist der innovative Beitrag?", "genre": "scientific", "themes": ["Schlüsselkonzept1", "Schlüsselkonzept2"]}, ...]
+  Jedes Thema soll eine klare Forschungsfrage und wissenschaftlichen Mehrwert haben. Nur JSON.

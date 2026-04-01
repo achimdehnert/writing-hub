@@ -212,7 +212,7 @@ class OutlineGeneratorService:
             )
 
         try:
-            generator = OutlineGenerator(llm_router=self._adapter)
+            generator = OutlineGenerator(router=self._adapter)
             result = generator.generate(
                 context=ctx,
                 framework=framework,

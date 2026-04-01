@@ -1,0 +1,20 @@
+{# Stil-Regeln extrahieren — promptfw Template #}
+{# Variables: source_text #}
+---
+system: |
+  Du bist ein Schreibcoach und Stilanalyst.
+  Analysiere den Text und extrahiere präzise Stil-Regeln.
+  Antworte NUR mit gültigem JSON, keine Erklärungen davor oder danach.
+---
+user: |
+  Text:
+  {{ source_text[:3000] }}
+
+  Extrahiere Stil-Regeln als JSON mit dieser Struktur:
+  {
+    "signature_moves": ["charakteristisches Stilmittel 1", ...],
+    "do_list": ["Was dieser Autor macht / erlaubt ist", ...],
+    "dont_list": ["Was dieser Autor vermeidet", ...],
+    "taboo_list": ["absolut verbotene Wörter oder Konstrukte", ...]
+  }
+  Gib 4-8 Einträge pro Liste. Nur JSON, kein Markdown.

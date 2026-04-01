@@ -1,0 +1,15 @@
+{# Wissenschaftliches Exposé generieren — promptfw Template #}
+{# Variables: title, logline, hook, themes, research_field #}
+---
+system: |
+  Du bist ein erfahrener Wissenschaftsberater. Erstelle ein kompaktes wissenschaftliches Exposé.
+  Antworte nur mit dem Exposé-Text, kein JSON, keine Erklärungen.
+---
+user: |
+  Thema: {{ title }}
+  Forschungsfrage: {{ logline }}
+  Innovationsbeitrag: {{ hook }}
+  Schlüsselkonzepte: {{ themes | join(', ') }}
+  {% if research_field %}Fachgebiet: {{ research_field }}{% endif %}
+
+  Erstelle ein wissenschaftliches Exposé (250-400 Wörter) mit: Forschungsfrage, Forschungsstand, Methodik, erwarteter Beitrag zur Forschung, Gliederungsvorschlag.

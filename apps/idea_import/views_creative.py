@@ -262,79 +262,66 @@ def _style_block(session: CreativeSession) -> str:
 
 
 def _brainstorm_ideas(session: CreativeSession, count: int = 5) -> list[dict]:
-    router = _get_router()
-    style = _style_block(session)
-    genre_hint = f"Genre: {session.genre}" if session.genre else ""
-    inspiration = f"Inspiration: {session.inspiration}" if session.inspiration else ""
+    from apps.core.prompt_utils import render_prompt
 
-    system = (
-        "Du bist ein kreativer Buchentwickler. Generiere originelle, packende Buchideen.\n"
-        "Antworte NUR mit gültigem JSON, kein Markdown."
+    router = _get_router()
+    messages = render_prompt(
+        "idea_import/brainstorm_ideas",
+        inspiration=session.inspiration or "",
+        genre=session.genre or "",
+        style_hint=session.style_dna_hint or "",
+        count=count,
     )
-    user = (
-        f"{inspiration}\n{genre_hint}\n{style}\n\n"
-        f"Generiere {count} verschiedene Buchideen als JSON-Array:\n"
-        '[{"title": "...", "logline": "1-2 Sätze: Wer will was und warum scheitert er?", '
-        '"hook": "Was macht diese Idee besonders?", "genre": "...", "themes": ["..."]}, ...]\n'
-        "Jede Idee soll einzigartig und spannend sein. Nur JSON."
-    )
-    raw = router.completion(action_code="outline_generate", messages=[
-        {"role": "system", "content": system},
-        {"role": "user", "content": user},
-    ])
+    if not messages:
+        # Fallback if template not found
+        messages = [
+            {"role": "system", "content": "Du bist ein kreativer Buchentwickler. Antworte NUR mit JSON."},
+            {"role": "user", "content": f"Generiere {count} Buchideen als JSON-Array."},
+        ]
+    raw = router.completion(action_code="outline_generate", messages=messages)
     clean = raw.strip().lstrip("`").removeprefix("json").strip().rstrip("`")
     data = json.loads(clean)
     return data if isinstance(data, list) else data.get("ideas", [])
 
 
 def _refine_idea(idea: BookIdea, session: CreativeSession) -> dict:
+    from apps.core.prompt_utils import render_prompt
+
     router = _get_router()
-    style = _style_block(session)
-    system = (
-        "Du bist ein erfahrener Lektor und Buchentwickler.\n"
-        "Verfeinere Buchideen: schärfe die Logline, verbessere den Hook, "
-        "identifiziere tiefere Themen.\n"
-        "Antworte NUR mit gültigem JSON."
+    messages = render_prompt(
+        "idea_import/refine_idea",
+        title=idea.title,
+        logline=idea.logline,
+        hook=idea.hook,
+        style_hint=session.style_dna_hint or "",
     )
-    user = (
-        f"Idee: {idea.title}\n"
-        f"Logline: {idea.logline}\n"
-        f"Hook: {idea.hook}\n"
-        f"{style}\n\n"
-        'JSON: {"refined_logline": "...", "hook": "...", "themes": ["..."]}'
-    )
-    raw = router.completion(action_code="outline_generate", messages=[
-        {"role": "system", "content": system},
-        {"role": "user", "content": user},
-    ])
+    if not messages:
+        messages = [
+            {"role": "system", "content": "Du bist ein Lektor. Antworte NUR mit JSON."},
+            {"role": "user", "content": f"Verfeinere: {idea.title}"},
+        ]
+    raw = router.completion(action_code="outline_generate", messages=messages)
     clean = raw.strip().lstrip("`").removeprefix("json").strip().rstrip("`")
     return json.loads(clean)
 
 
 def _brainstorm_topics(session: CreativeSession, count: int = 5) -> list[dict]:
     """Generiert wissenschaftliche Themenvorschläge als JSON-Array."""
+    from apps.core.prompt_utils import render_prompt
+
     router = _get_router()
-    field_hint = f"Fachgebiet: {session.research_field}" if session.research_field else ""
-    inspiration = f"Themenrichtung: {session.inspiration}" if session.inspiration else ""
-    system = (
-        "Du bist ein erfahrener Wissenschaftsberater. "
-        "Generiere originelle, forschungsrelevante Themenvorschläge.\n"
-        "Antworte NUR mit gültigem JSON, kein Markdown."
+    messages = render_prompt(
+        "idea_import/brainstorm_topics",
+        research_field=session.research_field or "",
+        inspiration=session.inspiration or "",
+        count=count,
     )
-    user = (
-        f"{field_hint}\n{inspiration}\n\n"
-        f"Generiere {count} verschiedene wissenschaftliche Themenvorschläge als JSON-Array:\n"
-        '[{"title": "Thementitel", '
-        '"logline": "Kernfrage und Relevanz in 1-2 Sätzen", '
-        '"hook": "Was ist der innovative Beitrag?", '
-        '"genre": "scientific", '
-        '"themes": ["Schlüsselkonzept1", "Schlüsselkonzept2"]}, ...]\n'
-        "Jedes Thema soll eine klare Forschungsfrage und wissenschaftlichen Mehrwert haben. Nur JSON."
-    )
-    raw = router.completion(action_code="outline_generate", messages=[
-        {"role": "system", "content": system},
-        {"role": "user", "content": user},
-    ])
+    if not messages:
+        messages = [
+            {"role": "system", "content": "Du bist ein Wissenschaftsberater. Antworte NUR mit JSON."},
+            {"role": "user", "content": f"Generiere {count} Themenvorschläge als JSON-Array."},
+        ]
+    raw = router.completion(action_code="outline_generate", messages=messages)
     clean = raw.strip().lstrip("`").removeprefix("json").strip().rstrip("`")
     data = json.loads(clean)
     return data if isinstance(data, list) else data.get("ideas", data.get("topics", []))
@@ -342,75 +329,64 @@ def _brainstorm_topics(session: CreativeSession, count: int = 5) -> list[dict]:
 
 def _refine_topic(idea: BookIdea, session: CreativeSession) -> dict:
     """Schärft ein wissenschaftliches Thema: Forschungsfrage, Methodik, Beitrag."""
+    from apps.core.prompt_utils import render_prompt
+
     router = _get_router()
-    field_hint = f"Fachgebiet: {session.research_field}" if session.research_field else ""
-    system = (
-        "Du bist ein erfahrener Wissenschaftsberater und Gutachter.\n"
-        "Verfeinere wissenschaftliche Themenvorschläge: schärfe die Forschungsfrage, "
-        "identifiziere Methodik und wissenschaftlichen Beitrag.\n"
-        "Antworte NUR mit gültigem JSON."
+    messages = render_prompt(
+        "idea_import/refine_topic",
+        title=idea.title,
+        logline=idea.logline,
+        hook=idea.hook,
+        research_field=session.research_field or "",
     )
-    user = (
-        f"Thema: {idea.title}\n"
-        f"Kernfrage: {idea.logline}\n"
-        f"Innovationsbeitrag: {idea.hook}\n"
-        f"{field_hint}\n\n"
-        'JSON: {"refined_logline": "Präzisierte Forschungsfrage", '
-        '"hook": "Wissenschaftlicher Beitrag und Alleinstellungsmerkmal", '
-        '"themes": ["Schlüsselbegriff1", "Schlüsselbegriff2"]}'
-    )
-    raw = router.completion(action_code="outline_generate", messages=[
-        {"role": "system", "content": system},
-        {"role": "user", "content": user},
-    ])
+    if not messages:
+        messages = [
+            {"role": "system", "content": "Du bist ein Wissenschaftsberater. Antworte NUR mit JSON."},
+            {"role": "user", "content": f"Verfeinere: {idea.title}"},
+        ]
+    raw = router.completion(action_code="outline_generate", messages=messages)
     clean = raw.strip().lstrip("`").removeprefix("json").strip().rstrip("`")
     return json.loads(clean)
 
 
 def _generate_expose(idea: BookIdea, session: CreativeSession) -> str:
     """Generiert ein wissenschaftliches Exposé (Forschungsfrage, Stand, Methodik, Relevanz)."""
+    from apps.core.prompt_utils import render_prompt
+
     router = _get_router()
-    field_hint = f"Fachgebiet: {session.research_field}" if session.research_field else ""
     logline = idea.refined_logline or idea.logline
-    system = (
-        "Du bist ein erfahrener Wissenschaftsberater. "
-        "Erstelle ein kompaktes wissenschaftliches Exposé.\n"
-        "Antworte nur mit dem Exposé-Text, kein JSON, keine Erklärungen."
+    messages = render_prompt(
+        "idea_import/generate_expose",
+        title=idea.title,
+        logline=logline,
+        hook=idea.hook,
+        themes=idea.themes or [],
+        research_field=session.research_field or "",
     )
-    user = (
-        f"Thema: {idea.title}\n"
-        f"Forschungsfrage: {logline}\n"
-        f"Innovationsbeitrag: {idea.hook}\n"
-        f"Schlüsselkonzepte: {', '.join(idea.themes or [])}\n"
-        f"{field_hint}\n\n"
-        "Erstelle ein wissenschaftliches Exposé (250-400 Wörter) mit: "
-        "Forschungsfrage, Forschungsstand, Methodik, erwarteter Beitrag zur Forschung, "
-        "Gliederungsvorschlag."
-    )
-    return router.completion(action_code="outline_generate", messages=[
-        {"role": "system", "content": system},
-        {"role": "user", "content": user},
-    ])
+    if not messages:
+        messages = [
+            {"role": "system", "content": "Du bist ein Wissenschaftsberater."},
+            {"role": "user", "content": f"Erstelle ein Exposé für: {idea.title}"},
+        ]
+    return router.completion(action_code="outline_generate", messages=messages)
 
 
 def _generate_premise(idea: BookIdea, session: CreativeSession) -> str:
+    from apps.core.prompt_utils import render_prompt
+
     router = _get_router()
-    style = _style_block(session)
-    system = (
-        "Du bist ein erfahrener Buchentwickler. Erstelle eine vollständige Buchpremise.\n"
-        "Antworte nur mit dem Premise-Text, kein JSON, keine Erklärungen."
-    )
     logline = idea.refined_logline or idea.logline
-    user = (
-        f"Titel: {idea.title}\n"
-        f"Logline: {logline}\n"
-        f"Genre: {idea.genre}\n"
-        f"Themen: {', '.join(idea.themes or [])}\n"
-        f"{style}\n\n"
-        "Erstelle eine vollständige Buchpremise (250-400 Wörter): Protagonist, Welt, Konflikt, "
-        "Wendepunkte, emotionaler Kern, thematische Aussage."
+    messages = render_prompt(
+        "idea_import/generate_premise",
+        title=idea.title,
+        logline=logline,
+        genre=idea.genre or "",
+        themes=idea.themes or [],
+        style_hint=session.style_dna_hint or "",
     )
-    return router.completion(action_code="outline_generate", messages=[
-        {"role": "system", "content": system},
-        {"role": "user", "content": user},
-    ])
+    if not messages:
+        messages = [
+            {"role": "system", "content": "Du bist ein Buchentwickler."},
+            {"role": "user", "content": f"Erstelle eine Premise für: {idea.title}"},
+        ]
+    return router.completion(action_code="outline_generate", messages=messages)

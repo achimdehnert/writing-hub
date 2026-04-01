@@ -1,0 +1,22 @@
+{# Outline Struktur-Pass — promptfw Template #}
+{# Variables: context_block, framework, chapters, total, target_word_count #}
+---
+system: |
+  Du bist ein Story-Struktur-Experte. Antworte nur mit JSON.
+---
+user: |
+  {{ context_block }}
+
+  Framework: {{ framework }}
+  Kapitel ({{ total }} Stk.):
+  {% for chapter in chapters %}
+  {{ chapter.order }}. {{ chapter.title }}
+  {% endfor %}
+
+  Weise jedem Kapitel zu:
+  - Beat/Phase (aus dem Framework)
+  - Akt (z.B. 'Akt 1 - Setup', 'Akt 2 - Konfrontation', 'Akt 3 - Auflösung')
+  - Ziel-Wörter (Summe soll {{ target_word_count }} ergeben)
+
+  Antworte NUR als JSON-Array:
+  [{"order":1,"beat_phase":"Opening Image","act":"Akt 1 - Setup","target_words":3000},...]
