@@ -196,8 +196,17 @@ class CreativeCreateProjectView(LoginRequiredMixin, View):
         session = get_object_or_404(CreativeSession, pk=pk, owner=request.user)
         idea = session.selected_idea
         if not idea:
-            messages.warning(request, "Bitte zuerst eine Idee auswählen und eine Premise generieren.")
-            return redirect("ideas:creative_session", pk=pk)
+            idea_pk = request.POST.get("idea_pk")
+            if idea_pk:
+                idea = get_object_or_404(BookIdea, pk=idea_pk, session=session)
+                session.selected_idea = idea
+                session.save(update_fields=["selected_idea"])
+            else:
+                messages.warning(
+                    request,
+                    "Bitte zuerst eine Idee auswählen.",
+                )
+                return redirect("ideas:creative_session", pk=pk)
 
         from apps.projects.models import BookProject
         title = request.POST.get("title", idea.title).strip() or idea.title

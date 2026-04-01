@@ -240,6 +240,7 @@
             </div>
             <form method="post" action="{% url 'ideas:creative_create_project' session.pk %}">
                 {% csrf_token %}
+                <input type="hidden" name="idea_pk" id="modalIdeaPk">
                 <div class="modal-body">
                     <label class="form-label small" style="color:#94a3b8;">Projekttitel</label>
                     <input type="text" name="title" id="modalProjectTitle"
@@ -276,6 +277,7 @@ async function rateIdea(ideaPk, rating, btn) {
 
 function selectAndCreate(ideaPk, ideaTitle) {
     document.getElementById('modalProjectTitle').value = ideaTitle;
+    document.getElementById('modalIdeaPk').value = ideaPk;
     new bootstrap.Modal(document.getElementById('modalCreateProject')).show();
 }
 </script>
