@@ -53,20 +53,57 @@ class chapter_write_start(APIView):
             status="pending",
         )
 
-        write_chapter_task.delay(
-            project_id=str(project_id),
-            chapter_ref=str(chapter_ref),
-            chapter_number=data.get("chapter_number", 1),
-            chapter_title=data.get("chapter_title", ""),
-            chapter_outline=data.get("chapter_outline", ""),
-            target_word_count=data.get("target_word_count", 2000),
-            chapter_beat=data.get("chapter_beat", ""),
-            emotional_arc=data.get("emotional_arc", ""),
-            prev_chapter_summary=data.get("prev_chapter_summary", ""),
-        )
+        try:
+            write_chapter_task.delay(
+                project_id=str(project_id),
+                chapter_ref=str(chapter_ref),
+                chapter_number=data.get("chapter_number", 1),
+                chapter_title=data.get("chapter_title", ""),
+                chapter_outline=data.get("chapter_outline", ""),
+                target_word_count=data.get("target_word_count", 2000),
+                chapter_beat=data.get("chapter_beat", ""),
+                emotional_arc=data.get("emotional_arc", ""),
+                prev_chapter_summary=data.get("prev_chapter_summary", ""),
+            )
+        except Exception:
+            logger.warning(
+                "Celery nicht verfügbar — synchrone Generierung für chapter_ref=%s",
+                chapter_ref,
+            )
+            from apps.authoring.handlers.chapter_writer_handler import (
+                ChapterContext,
+                ChapterWriterHandler,
+            )
+            try:
+                context = ChapterContext.from_project(
+                    project_id=str(project_id),
+                    chapter_ref=str(chapter_ref),
+                )
+                context.chapter_number = data.get("chapter_number", 1)
+                context.chapter_title = data.get("chapter_title", "")
+                context.chapter_outline = data.get("chapter_outline", "")
+                context.target_word_count = data.get("target_word_count", 2000)
+                context.chapter_beat = data.get("chapter_beat", "")
+                context.emotional_arc = data.get("emotional_arc", "")
+                context.prev_chapter_summary = data.get("prev_chapter_summary", "")
+                result = ChapterWriterHandler().write_chapter(context)
+                if result.get("success"):
+                    job.status = "done"
+                    job.content = result["content"]
+                    job.word_count = result.get("word_count", 0)
+                    job.save(update_fields=["status", "content", "word_count"])
+                else:
+                    job.status = "failed"
+                    job.error = result.get("error", "Generierung fehlgeschlagen")
+                    job.save(update_fields=["status", "error"])
+            except Exception as sync_exc:
+                logger.exception("Synchrone Generierung fehlgeschlagen: %s", sync_exc)
+                job.status = "failed"
+                job.error = str(sync_exc)
+                job.save(update_fields=["status", "error"])
 
         return Response(
-            {"job_id": str(job.id), "status": "pending"},
+            {"job_id": str(job.id), "status": job.status},
             status=status.HTTP_202_ACCEPTED,
         )
 

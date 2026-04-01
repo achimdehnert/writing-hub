@@ -227,6 +227,22 @@ FRAMEWORKS = [
             ("Literaturverzeichnis", 90, 100),
         ],
     },
+    {
+        "key": "scientific_essay",
+        "name": "Wissenschaftlicher Aufsatz",
+        "subtitle": "Argumentativ-hermeneutischer Zeitschriftenartikel oder Buchbeitrag",
+        "icon": "bi-file-earmark-text",
+        "order": 160,
+        "beats": [
+            ("Titel & Abstract", 0, 5),
+            ("Einleitung & Fragestellung", 5, 18),
+            ("Forschungsstand & Einordnung", 18, 35),
+            ("Hauptargument / Analyse", 35, 65),
+            ("Diskussion & Einwände", 65, 80),
+            ("Schluss & Fazit", 80, 92),
+            ("Literaturverzeichnis", 92, 100),
+        ],
+    },
 ]
 
 
