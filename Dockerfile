@@ -28,7 +28,7 @@ RUN chmod +x /app/docker/entrypoint.web.sh
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/livez/')" || exit 1
+# HEALTHCHECK removed — ADR-022: Healthchecks belong in docker-compose.prod.yml per service,
+# not in Dockerfile (would apply to all containers including worker/beat which have no web server)
 
 CMD ["/app/docker/entrypoint.web.sh"]
