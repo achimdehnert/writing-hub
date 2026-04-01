@@ -1,0 +1,558 @@
+{% extends "base.html" %}
+{% block title %}Quellen & Zitation — {{ project.title }} — Writing Hub{% endblock %}
+{% block nav_projects %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+.cit-card { background:#0d1117; border:1px solid #2d3748; border-radius:.5rem; }
+.cit-card .card-header { background:#131929; border-bottom:1px solid #2d3748; color:#e2e8f0; }
+.cit-badge { font-size:.7rem; padding:.25rem .5rem; border-radius:3px; }
+.bib-output { background:#0a0f1a; color:#a5b4fc; font-family:monospace; font-size:.85rem;
+    border:1px solid #334155; border-radius:.4rem; white-space:pre-wrap; word-break:break-word; }
+.bibtex-output { background:#0a0f1a; color:#86efac; font-family:monospace; font-size:.8rem;
+    border:1px solid #334155; border-radius:.4rem; white-space:pre-wrap; word-break:break-word; }
+.inp-dark { background:#131929!important; color:#f1f5f9!important; border:1px solid #475569!important; border-radius:.4rem; }
+.inp-dark::placeholder { color:#64748b!important; }
+.inp-dark:focus { border-color:#6366f1!important; box-shadow:0 0 0 2px rgba(99,102,241,.25)!important;
+    background:#131929!important; color:#f1f5f9!important; }
+.inp-dark option { background:#1e2235; color:#f1f5f9; }
+.style-pill { cursor:pointer; }
+.style-pill.active { background:#4f46e5!important; color:#fff!important; border-color:#4f46e5!important; }
+.citation-row { border-bottom:1px solid #1e2235; }
+.citation-row:last-child { border-bottom:none; }
+.source-badge { font-size:.65rem; padding:.2rem .45rem; border-radius:3px; font-weight:600; letter-spacing:.03em; }
+.paper-card { background:#0d1117; border:1px solid #2d3748; border-radius:.4rem; transition:border-color .2s; }
+.paper-card:hover { border-color:#6366f1; }
+.search-spinner { display:none; }
+.search-spinner.active { display:inline-block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:1100px;margin:0 auto;">
+
+<!-- Header -->
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <a href="{% url 'projects:detail' project.pk %}" class="btn btn-link text-muted ps-0">
+            <i class="bi bi-arrow-left me-1"></i>{{ project.title }}
+        </a>
+        <h1 class="h3 mb-0" style="color:#e2e8f0;">
+            <i class="bi bi-journal-bookmark me-2 text-primary"></i>Quellen &amp; Zitation
+        </h1>
+        <small class="text-muted">
+            {{ citations|length }} Quelle{% if citations|length != 1 %}n{% endif %}
+            &nbsp;·&nbsp;
+            <span class="badge" style="background:#1a2a1a;color:#86efac;">
+                {{ project.get_content_type_display }}
+            </span>
+        </small>
+    </div>
+    {% if citations %}
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="clear_all">
+        <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Alle Quellen entfernen?')">
+            <i class="bi bi-trash me-1"></i>Alle löschen
+        </button>
+    </form>
+    {% endif %}
+</div>
+
+<!-- Messages -->
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show py-2">
+    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- KI-Literaturrecherche Panel -->
+<div class="cit-card mb-4">
+    <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-robot" style="color:#7dd3fc;"></i>
+        <strong style="color:#7dd3fc;">KI-Literaturrecherche</strong>
+        <span class="ms-auto text-muted small">arXiv · Semantic Scholar · PubMed · OpenAlex</span>
+    </div>
+    <div class="card-body p-3">
+        <div class="row g-2 align-items-end mb-3">
+            <div class="col-md-7">
+                <label class="form-label small text-muted mb-1">Forschungsthema / Suchbegriff</label>
+                <input id="searchQuery" type="text" class="form-control form-control-sm inp-dark"
+                       placeholder="z.B. deep learning medical imaging, CRISPR gene editing, climate change economics"
+                       autocomplete="off">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Max. Treffer</label>
+                <select id="searchMaxResults" class="form-select form-select-sm inp-dark">
+                    <option value="10">10 Treffer</option>
+                    <option value="20" selected>20 Treffer</option>
+                    <option value="30">30 Treffer</option>
+                    <option value="50">50 Treffer</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button id="searchBtn" class="btn btn-sm w-100" style="background:#1a3a5a;border-color:#7dd3fc;color:#7dd3fc;"
+                        onclick="runLiteraturrecherche()">
+                    <span class="search-spinner spinner-border spinner-border-sm me-1" id="searchSpinner" role="status"></span>
+                    <i class="bi bi-search me-1" id="searchIcon"></i>Suchen
+                </button>
+            </div>
+        </div>
+        <!-- Quellenfilter -->
+        <div class="d-flex gap-2 flex-wrap mb-3">
+            <small class="text-muted align-self-center">Quellen:</small>
+            {% for src_id, src_label, src_color in search_sources %}
+            <div class="form-check form-check-inline mb-0">
+                <input class="form-check-input search-source-cb" type="checkbox"
+                       id="src_{{ src_id }}" value="{{ src_id }}" checked>
+                <label class="form-check-label small" for="src_{{ src_id }}"
+                       style="color:{{ src_color }};">{{ src_label }}</label>
+            </div>
+            {% endfor %}
+        </div>
+        <!-- Ergebnisse -->
+        <div id="searchResults" style="display:none;">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <small class="text-muted"><span id="searchCount">0</span> Treffer für "<span id="searchQueryDisplay"></span>"</small>
+                <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted">Klick auf <strong>+ Hinzufügen</strong> um Quelle zu übernehmen</small>
+                    <button id="summarizeBtn" class="btn btn-sm"
+                            style="background:#1a1a4a;border-color:#6366f1;color:#818cf8;font-size:.75rem;padding:.2rem .6rem;"
+                            onclick="runSummarize()">
+                        <i class="bi bi-stars me-1"></i>KI-Zusammenfassung
+                    </button>
+                </div>
+            </div>
+            <!-- Stil-Auswahl für Zusammenfassung -->
+            <div id="summaryControls" class="d-flex gap-2 align-items-center mb-2 flex-wrap">
+                <small class="text-muted">Stil:</small>
+                <select id="summaryStyle" class="form-select form-select-sm inp-dark" style="width:auto;">
+                    <option value="scientific">Wissenschaftlich</option>
+                    <option value="complex">Komplex / Fachpublikum</option>
+                    <option value="medium" selected>Allgemein informiert</option>
+                    <option value="simple">Einfache Sprache</option>
+                </select>
+                <select id="citationStyle" class="form-select form-select-sm inp-dark" style="width:auto;">
+                    <option value="inline">Inline [Autor Jahr]</option>
+                    <option value="bibliography">Literaturliste [1][2]</option>
+                    <option value="none">Ohne Zitate</option>
+                </select>
+            </div>
+            <div id="searchResultsList" style="max-height:400px;overflow-y:auto;"></div>
+            <!-- Zusammenfassung -->
+            <div id="summaryResult" style="display:none;" class="mt-3">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <i class="bi bi-stars" style="color:#818cf8;"></i>
+                    <strong style="color:#a5b4fc;font-size:.9rem;">KI-Zusammenfassung</strong>
+                    <span id="summaryAiBadge" class="badge ms-1" style="background:#1a1a3a;color:#818cf8;font-size:.65rem;display:none;">KI</span>
+                    <span id="summarySourceCount" class="text-muted small ms-auto"></span>
+                    <span class="search-spinner spinner-border spinner-border-sm" id="summarySpinner" role="status"></span>
+                </div>
+                <pre id="summaryText" class="bib-output p-3 mb-2" style="border-color:#312e81;color:#c7d2fe;max-height:350px;overflow-y:auto;"></pre>
+                <div id="summaryKeyPoints" style="display:none;" class="mb-2">
+                    <small class="text-muted d-block mb-1">Kernpunkte:</small>
+                    <ul id="summaryKpList" style="list-style:none;padding:0;margin:0;color:#94a3b8;font-size:.82rem;"></ul>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary"
+                        onclick="navigator.clipboard.writeText(document.getElementById('summaryText').textContent); this.textContent='✓ Kopiert!'; setTimeout(()=>this.textContent='Zusammenfassung kopieren',2000)">
+                    <i class="bi bi-clipboard me-1"></i>Zusammenfassung kopieren
+                </button>
+            </div>
+        </div>
+        <div id="searchEmpty" style="display:none;" class="text-center text-muted py-3">
+            <i class="bi bi-search fs-4 d-block mb-1"></i>
+            Keine Treffer gefunden. Versuche andere Suchbegriffe oder andere Quellen.
+        </div>
+        <div id="searchError" style="display:none;" class="alert alert-danger py-2 mb-0 small"></div>
+    </div>
+</div>
+
+<div class="row g-4">
+
+<!-- LEFT: Quellen hinzufügen -->
+<div class="col-lg-5">
+
+    <!-- DOI Lookup -->
+    <div class="cit-card mb-3">
+        <div class="card-header d-flex align-items-center gap-2">
+            <i class="bi bi-search text-primary"></i>
+            <strong>DOI nachschlagen</strong>
+            <span class="ms-auto text-muted small">CrossRef API</span>
+        </div>
+        <div class="card-body p-3">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="resolve_doi">
+                <div class="d-flex gap-2">
+                    <input name="doi" class="form-control form-control-sm inp-dark flex-grow-1"
+                           placeholder="z.B. 10.1038/s41586-021-03819-2" autocomplete="off">
+                    <button class="btn btn-sm btn-primary px-3">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+                <div class="mt-1"><small class="text-muted">DOI ohne https://doi.org/ Prefix eingeben</small></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ISBN Lookup -->
+    <div class="cit-card mb-3">
+        <div class="card-header d-flex align-items-center gap-2">
+            <i class="bi bi-book text-success"></i>
+            <strong>ISBN nachschlagen</strong>
+            <span class="ms-auto text-muted small">OpenLibrary API</span>
+        </div>
+        <div class="card-body p-3">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="resolve_isbn">
+                <div class="d-flex gap-2">
+                    <input name="isbn" class="form-control form-control-sm inp-dark flex-grow-1"
+                           placeholder="z.B. 978-3-16-148410-0 oder 9783161484100" autocomplete="off">
+                    <button class="btn btn-sm btn-success px-3">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+                <div class="mt-1"><small class="text-muted">ISBN-10 oder ISBN-13, mit oder ohne Bindestriche</small></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- BibTeX Import -->
+    <div class="cit-card mb-3">
+        <div class="card-header d-flex align-items-center gap-2">
+            <i class="bi bi-file-earmark-code text-warning"></i>
+            <strong>BibTeX importieren</strong>
+        </div>
+        <div class="card-body p-3">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="import_bibtex">
+                <textarea name="bibtex" class="form-control form-control-sm inp-dark mb-2"
+                          rows="7" placeholder="@article{key,
+  author = {Müller, Hans},
+  title  = {Titel der Arbeit},
+  journal = {Journal Name},
+  year   = {2024},
+  doi    = {10.1000/xyz123}
+}"></textarea>
+                <button class="btn btn-sm btn-warning w-100">
+                    <i class="bi bi-upload me-1"></i>BibTeX importieren
+                </button>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+<!-- RIGHT: Quellenliste + Bibliographie -->
+<div class="col-lg-7">
+
+    <!-- Quellenliste -->
+    <div class="cit-card mb-3">
+        <div class="card-header d-flex align-items-center gap-2">
+            <i class="bi bi-list-ul text-primary"></i>
+            <strong>Quellenliste</strong>
+            <span class="badge bg-secondary ms-1">{{ citations|length }}</span>
+        </div>
+        <div class="card-body p-0">
+            {% if citations %}
+            {% for c in citations %}
+            <div class="citation-row p-3">
+                <div class="d-flex align-items-start gap-2">
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold" style="color:#e2e8f0;font-size:.9rem;">
+                            {{ c.title|truncatechars:80 }}
+                        </div>
+                        <div class="text-muted small mt-1">
+                            {% for a in c.authors %}
+                                {% if forloop.counter <= 3 %}
+                                    {{ a.family }}{% if a.given %}, {{ a.given|slice:":1" }}.{% endif %}{% if not forloop.last %}; {% endif %}
+                                {% endif %}
+                            {% endfor %}
+                            {% if c.authors|length > 3 %} et al.{% endif %}
+                            {% if c.year %}&nbsp;({{ c.year }}){% endif %}
+                        </div>
+                        <div class="mt-1 d-flex flex-wrap gap-1">
+                            {% if c.source_type %}
+                            <span class="cit-badge" style="background:#1a2a3a;color:#7dd3fc;">{{ c.source_type }}</span>
+                            {% endif %}
+                            {% if c.journal %}
+                            <span class="cit-badge" style="background:#1a1a2e;color:#a5b4fc;">{{ c.journal|truncatechars:30 }}</span>
+                            {% endif %}
+                            {% if c.doi %}
+                            <span class="cit-badge" style="background:#1a2a1a;color:#86efac;">DOI</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <form method="post" class="ms-2 flex-shrink-0">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="remove">
+                        <input type="hidden" name="index" value="{{ forloop.counter0 }}">
+                        <button class="btn btn-sm btn-outline-danger" title="Entfernen">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="p-4 text-center text-muted">
+                <i class="bi bi-journal-x fs-3 d-block mb-2"></i>
+                Noch keine Quellen hinzugefügt.<br>
+                <small>DOI oder ISBN nachschlagen oder BibTeX importieren.</small>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Bibliographie -->
+    {% if citations %}
+    <div class="cit-card mb-3">
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-text-left text-primary"></i>
+                <strong>Bibliographie</strong>
+            </div>
+            <!-- Stil-Auswahl -->
+            <form method="post" class="d-flex gap-1 align-items-center">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="clear_all" style="display:none!important">
+                <select name="style" class="form-select form-select-sm inp-dark" style="width:auto;"
+                        onchange="this.form.action='{% url 'projects:citations' project.pk %}?style='+this.value; this.form.method='get'; this.form.submit();">
+                    {% for val, label in citation_styles %}
+                    <option value="{{ val }}" {% if val == active_style %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+        <div class="card-body p-3">
+            {% if bibliography %}
+            <pre class="bib-output p-3 mb-2">{{ bibliography }}</pre>
+            <button class="btn btn-sm btn-outline-secondary w-100"
+                    onclick="navigator.clipboard.writeText(document.querySelector('.bib-output').textContent); this.textContent='✓ Kopiert!'; setTimeout(()=>this.textContent='Bibliographie kopieren',2000)">
+                <i class="bi bi-clipboard me-1"></i>Bibliographie kopieren
+            </button>
+            {% else %}
+            <p class="text-muted small mb-0">Keine formatierten Einträge — bitte Quellen hinzufügen.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- BibTeX Export -->
+    <div class="cit-card mb-3">
+        <div class="card-header d-flex align-items-center gap-2">
+            <i class="bi bi-file-earmark-code text-warning"></i>
+            <strong>BibTeX Export</strong>
+        </div>
+        <div class="card-body p-3">
+            {% if bibtex_export %}
+            <pre class="bibtex-output p-3 mb-2" style="max-height:250px;overflow-y:auto;">{{ bibtex_export }}</pre>
+            <button class="btn btn-sm btn-outline-warning w-100"
+                    onclick="navigator.clipboard.writeText(document.querySelector('.bibtex-output').textContent); this.textContent='✓ Kopiert!'; setTimeout(()=>this.textContent='BibTeX kopieren',2000)">
+                <i class="bi bi-clipboard me-1"></i>BibTeX kopieren
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+</div>
+
+</div>
+
+<script>
+const SEARCH_URL = "{% url 'projects:citation_search' project.pk %}";
+const SUMMARIZE_URL = "{% url 'projects:citation_summarize' project.pk %}";
+const ADD_URL = "{% url 'projects:citations' project.pk %}";
+const CSRF = "{{ csrf_token }}";
+
+const SOURCE_COLORS = {
+    arxiv: "#f59e0b",
+    semantic_scholar: "#a78bfa",
+    pubmed: "#34d399",
+    openalex: "#60a5fa"
+};
+const SOURCE_LABELS = {
+    arxiv: "arXiv",
+    semantic_scholar: "Semantic Scholar",
+    pubmed: "PubMed",
+    openalex: "OpenAlex"
+};
+
+async function runLiteraturrecherche() {
+    const query = document.getElementById("searchQuery").value.trim();
+    if (!query) {
+        document.getElementById("searchQuery").focus();
+        return;
+    }
+    const maxResults = document.getElementById("searchMaxResults").value;
+    const sources = Array.from(document.querySelectorAll(".search-source-cb:checked"))
+        .map(cb => cb.value).join(",");
+
+    document.getElementById("searchBtn").disabled = true;
+    document.getElementById("searchSpinner").classList.add("active");
+    document.getElementById("searchIcon").style.display = "none";
+    document.getElementById("searchResults").style.display = "none";
+    document.getElementById("searchEmpty").style.display = "none";
+    document.getElementById("searchError").style.display = "none";
+
+    const body = new FormData();
+    body.append("csrfmiddlewaretoken", CSRF);
+    body.append("query", query);
+    body.append("sources", sources);
+    body.append("max_results", maxResults);
+
+    try {
+        const resp = await fetch(SEARCH_URL, {method: "POST", body});
+        const data = await resp.json();
+
+        document.getElementById("searchBtn").disabled = false;
+        document.getElementById("searchSpinner").classList.remove("active");
+        document.getElementById("searchIcon").style.display = "";
+
+        if (!data.ok) {
+            document.getElementById("searchError").textContent = data.error || "Fehler bei der Suche";
+            document.getElementById("searchError").style.display = "";
+            return;
+        }
+        document.getElementById("searchCount").textContent = data.count;
+        document.getElementById("searchQueryDisplay").textContent = query;
+
+        if (data.count === 0) {
+            document.getElementById("searchEmpty").style.display = "";
+            return;
+        }
+        document.getElementById("searchResults").style.display = "";
+        renderPapers(data.papers);
+    } catch (err) {
+        document.getElementById("searchBtn").disabled = false;
+        document.getElementById("searchSpinner").classList.remove("active");
+        document.getElementById("searchIcon").style.display = "";
+        document.getElementById("searchError").textContent = "Netzwerkfehler: " + err.message;
+        document.getElementById("searchError").style.display = "";
+    }
+}
+
+function renderPapers(papers) {
+    const list = document.getElementById("searchResultsList");
+    list.innerHTML = papers.map((p, i) => {
+        const src = p.source || "";
+        const srcColor = SOURCE_COLORS[src] || "#94a3b8";
+        const srcLabel = SOURCE_LABELS[src] || src;
+        const authors = (p.authors || []).slice(0, 3).join("; ");
+        const authMore = p.authors && p.authors.length > 3 ? " et al." : "";
+        const year = (p.publication_date || "").slice(0, 4);
+        const cites = p.citation_count != null ? `<span class="cit-badge ms-1" style="background:#1a2a3a;color:#94a3b8;"><i class="bi bi-quote me-1"></i>${p.citation_count}</span>` : "";
+        const pdfBtn = p.pdf_url ? `<a href="${p.pdf_url}" target="_blank" class="btn btn-xs btn-outline-secondary ms-1" style="font-size:.7rem;padding:.15rem .4rem;"><i class="bi bi-file-pdf"></i> PDF</a>` : "";
+        const doiBtn = p.doi ? `<a href="https://doi.org/${p.doi}" target="_blank" class="btn btn-xs btn-outline-secondary ms-1" style="font-size:.7rem;padding:.15rem .4rem;">DOI</a>` : "";
+        const abstract = p.abstract ? `<div class="mt-1 text-muted" style="font-size:.75rem;line-height:1.4;">${p.abstract.slice(0,240)}${p.abstract.length > 240 ? "…" : ""}</div>` : "";
+
+        return `<div class="paper-card p-3 mb-2">
+            <div class="d-flex align-items-start gap-2">
+                <div class="flex-grow-1">
+                    <div class="fw-semibold" style="color:#e2e8f0;font-size:.88rem;">${p.title || "Kein Titel"}</div>
+                    <div class="text-muted small mt-1">${authors}${authMore}${year ? " (" + year + ")" : ""}
+                        ${p.journal ? `&nbsp;·&nbsp;<em>${p.journal.slice(0,40)}</em>` : ""}
+                    </div>
+                    <div class="mt-1 d-flex flex-wrap align-items-center gap-1">
+                        <span class="source-badge" style="background:#111827;color:${srcColor};border:1px solid ${srcColor}33;">${srcLabel}</span>
+                        ${cites}${pdfBtn}${doiBtn}
+                    </div>
+                    ${abstract}
+                </div>
+                <button class="btn btn-sm flex-shrink-0" style="background:#1a3a1a;border-color:#86efac;color:#86efac;white-space:nowrap;"
+                        onclick="addPaperToList(${i})">
+                    <i class="bi bi-plus-lg me-1"></i>Hinzufügen
+                </button>
+            </div>
+        </div>`;
+    }).join("");
+    list._papers = papers;
+}
+
+async function runSummarize() {
+    const list = document.getElementById("searchResultsList");
+    const papers = list._papers;
+    if (!papers || papers.length === 0) return;
+
+    const style = document.getElementById("summaryStyle").value;
+    const citStyle = document.getElementById("citationStyle").value;
+    const query = document.getElementById("searchQueryDisplay").textContent;
+
+    const resultDiv = document.getElementById("summaryResult");
+    const spinner = document.getElementById("summarySpinner");
+    const summaryText = document.getElementById("summaryText");
+    const kpDiv = document.getElementById("summaryKeyPoints");
+    const kpList = document.getElementById("summaryKpList");
+    const aiBadge = document.getElementById("summaryAiBadge");
+    const srcCount = document.getElementById("summarySourceCount");
+
+    document.getElementById("summarizeBtn").disabled = true;
+    spinner.classList.add("active");
+    summaryText.textContent = "Analysiere " + papers.length + " Quellen…";
+    resultDiv.style.display = "";
+    kpDiv.style.display = "none";
+
+    const body = new FormData();
+    body.append("csrfmiddlewaretoken", CSRF);
+    body.append("papers_json", JSON.stringify(papers));
+    body.append("query", query);
+    body.append("style", style);
+    body.append("citation_style", citStyle);
+
+    try {
+        const resp = await fetch(SUMMARIZE_URL, {method: "POST", body});
+        const data = await resp.json();
+
+        spinner.classList.remove("active");
+        document.getElementById("summarizeBtn").disabled = false;
+
+        if (!data.ok) {
+            summaryText.textContent = "Fehler: " + (data.error || "Unbekannter Fehler");
+            return;
+        }
+
+        summaryText.textContent = data.summary || "(Keine Zusammenfassung)";
+        srcCount.textContent = data.source_count + " Quellen analysiert";
+
+        if (data.ai_generated) {
+            aiBadge.style.display = "";
+        }
+
+        if (data.key_points && data.key_points.length > 0) {
+            kpList.innerHTML = data.key_points
+                .map(kp => `<li>→ ${kp}</li>`).join("");
+            kpDiv.style.display = "";
+        }
+    } catch (err) {
+        spinner.classList.remove("active");
+        document.getElementById("summarizeBtn").disabled = false;
+        summaryText.textContent = "Netzwerkfehler: " + err.message;
+    }
+}
+
+async function addPaperToList(idx) {
+    const papers = document.getElementById("searchResultsList")._papers;
+    if (!papers || !papers[idx]) return;
+    const paper = papers[idx];
+
+    const body = new FormData();
+    body.append("csrfmiddlewaretoken", CSRF);
+    body.append("action", "add_from_search");
+    body.append("paper", JSON.stringify(paper));
+
+    const resp = await fetch(ADD_URL, {method: "POST", body});
+    if (resp.redirected || resp.ok) {
+        window.location.reload();
+    }
+}
+
+document.getElementById("searchQuery").addEventListener("keydown", e => {
+    if (e.key === "Enter") runLiteraturrecherche();
+});
+</script>
+{% endblock %}

@@ -164,6 +164,22 @@ LOGOUT_REDIRECT_URL = "/accounts/login/"
 
 ADMIN_MEDIA_PREFIX = "/static/admin/"
 
+# --- KI-Dienste ---
+
+
+def _read_secret(path: str) -> str:
+    try:
+        return Path(path).read_text().strip()
+    except (OSError, FileNotFoundError):
+        return ""
+
+
+TOGETHER_API_KEY = (
+    os.environ.get("TOGETHER_API_KEY")
+    or _read_secret("/home/dehnert/.secrets/together_api_key")
+    or ""
+)
+
 # --- authentik OIDC (ADR-142) ---
 OIDC_RP_CLIENT_ID = os.environ.get("OIDC_RP_CLIENT_ID", "")
 OIDC_RP_CLIENT_SECRET = os.environ.get("OIDC_RP_CLIENT_SECRET", "")
