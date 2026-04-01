@@ -16,6 +16,8 @@ CONTENT_TYPES = [
     ("Essay", "essay"),
     ("Novelle", "novelle"),
     ("Graphic Novel", "graphic-novel"),
+    ("Akademische Arbeit", "academic"),
+    ("Wissenschaftliches Paper", "scientific"),
 ]
 
 GENRES = [
