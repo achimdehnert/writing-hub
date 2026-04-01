@@ -52,7 +52,7 @@ def _build_project_context(ctx):
         return None
 
     title = ctx.title or "Unbekanntes Projekt"
-    genre = ctx.genre or ""
+    genre = ctx.genre or ctx.content_type or "Allgemein"  # Fallback für leeres Genre
     description = ctx.description or ""
 
     # Logline aus description ableiten wenn nicht vorhanden
@@ -71,7 +71,7 @@ def _build_project_context(ctx):
     if ctx.worlds:
         setting = ctx.worlds[0].get("name", "") or ctx.worlds[0].get("description", "")[:100]
     if not setting:
-        setting = genre or "Unbekannte Welt"
+        setting = description[:100] if description else genre
 
     # Versuche verschiedene Signaturen (outlinefw kann unterschiedliche Versionen haben)
     attempts = [
