@@ -20,6 +20,7 @@ from .services.citation_service import (
     parse_bibtex,
     resolve_doi,
     resolve_isbn,
+    search_papers,
 )
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,13 @@ CITATION_STYLES = [
     ("harvard", "Harvard"),
     ("ieee", "IEEE"),
     ("vancouver", "Vancouver"),
+]
+
+SEARCH_SOURCES = [
+    ("arxiv", "arXiv", "#f59e0b"),
+    ("semantic_scholar", "Semantic Scholar", "#a78bfa"),
+    ("pubmed", "PubMed", "#34d399"),
+    ("openalex", "OpenAlex", "#60a5fa"),
 ]
 
 
@@ -68,6 +76,7 @@ class CitationDashboardView(LoginRequiredMixin, View):
             "citation_styles": CITATION_STYLES,
             "active_style": style,
             "bibtex_export": export_bibtex(citations) if citations else "",
+            "search_sources": SEARCH_SOURCES,
         })
 
     def post(self, request, pk):
@@ -137,6 +146,47 @@ class CitationDashboardView(LoginRequiredMixin, View):
             except (ValueError, IndexError):
                 pass
 
+        elif action == "add_from_search":
+            paper_json = request.POST.get("paper", "")
+            try:
+                paper = json.loads(paper_json)
+                title = paper.get("title", "")
+                doi = paper.get("doi", "")
+                if doi and any(c.get("doi") == doi for c in citations):
+                    messages.warning(request, "Diese Quelle ist bereits in der Liste.")
+                elif title and any(c.get("title") == title for c in citations):
+                    messages.warning(request, "Diese Quelle ist bereits in der Liste.")
+                else:
+                    authors_raw = paper.get("authors", [])
+                    if authors_raw and isinstance(authors_raw[0], str):
+                        authors = [
+                            {"family": a.split()[-1] if a.split() else a,
+                             "given": " ".join(a.split()[:-1]) if len(a.split()) > 1 else "",
+                             "orcid": ""}
+                            for a in authors_raw
+                        ]
+                    else:
+                        authors = authors_raw
+                    year = paper.get("publication_date", "")[:4] if paper.get("publication_date") else None
+                    citation = {
+                        "title": title,
+                        "authors": authors,
+                        "year": int(year) if year and year.isdigit() else None,
+                        "source_type": "journal",
+                        "journal": paper.get("journal", ""),
+                        "volume": "", "issue": "", "pages": "",
+                        "publisher": "", "place": "",
+                        "doi": doi or "",
+                        "url": paper.get("url", ""),
+                        "abstract": paper.get("abstract", ""),
+                        "keywords": paper.get("categories", []),
+                    }
+                    citations.append(citation)
+                    self._save_citations(request, citations)
+                    messages.success(request, f"Quelle hinzugefügt: {title[:60]}")
+            except (json.JSONDecodeError, KeyError):
+                messages.error(request, "Fehler beim Hinzufügen der Quelle.")
+
         elif action == "clear_all":
             self._save_citations(request, [])
             messages.success(request, "Alle Quellen entfernt.")
@@ -150,6 +200,7 @@ class CitationDashboardView(LoginRequiredMixin, View):
             "citation_styles": CITATION_STYLES,
             "active_style": style,
             "bibtex_export": export_bibtex(citations) if citations else "",
+            "search_sources": SEARCH_SOURCES,
         })
 
 
@@ -177,3 +228,39 @@ class CitationISBNLookupAjaxView(LoginRequiredMixin, View):
         if result:
             return JsonResponse({"ok": True, "citation": result})
         return JsonResponse({"ok": False, "error": f"ISBN nicht gefunden: {isbn}"})
+
+
+class LiteraturrechercheAjaxView(LoginRequiredMixin, View):
+    """
+    AJAX: KI-gestützte Literaturrecherche.
+
+    POST-Parameter:
+        query       — Suchbegriff / Forschungsfrage
+        sources     — komma-getrennt: arxiv,semantic_scholar,pubmed,openalex
+        max_results — int, Standard 20
+    """
+
+    VALID_SOURCES = {"arxiv", "semantic_scholar", "pubmed", "openalex"}
+
+    def post(self, request, pk):
+        query = request.POST.get("query", "").strip()
+        if not query:
+            return JsonResponse({"ok": False, "error": "Suchbegriff fehlt"})
+
+        sources_raw = request.POST.get("sources", "")
+        if sources_raw:
+            sources = [
+                s.strip() for s in sources_raw.split(",")
+                if s.strip() in self.VALID_SOURCES
+            ] or None
+        else:
+            sources = None
+
+        try:
+            max_results = int(request.POST.get("max_results", 20))
+            max_results = max(5, min(max_results, 50))
+        except (ValueError, TypeError):
+            max_results = 20
+
+        papers = search_papers(query, sources=sources, max_results=max_results)
+        return JsonResponse({"ok": True, "papers": papers, "count": len(papers)})

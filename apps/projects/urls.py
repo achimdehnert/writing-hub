@@ -81,6 +81,7 @@ urlpatterns = [
     path("<uuid:pk>/citations/", views_citations.CitationDashboardView.as_view(), name="citations"),
     path("<uuid:pk>/citations/doi/", views_citations.CitationDOILookupAjaxView.as_view(), name="citation_doi"),
     path("<uuid:pk>/citations/isbn/", views_citations.CitationISBNLookupAjaxView.as_view(), name="citation_isbn"),
+    path("<uuid:pk>/citations/search/", views_citations.LiteraturrechercheAjaxView.as_view(), name="citation_search"),
     # REST API
     path("api/", views.BookProjectListView.as_view(), name="api_list"),
     path("api/<uuid:pk>/", views.BookProjectDetailView.as_view(), name="api_detail"),

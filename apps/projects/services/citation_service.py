@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from iil_researchfw import Citation, CitationService, CitationStyle, Author, SourceType
+    from iil_researchfw.search import AcademicSearchService
     _RESEARCHFW_AVAILABLE = True
 except ImportError:
     _RESEARCHFW_AVAILABLE = False
@@ -120,6 +121,48 @@ def export_bibtex(citations_data: list[dict[str, Any]]) -> str:
     citations = [_dict_to_citation(d) for d in citations_data]
     svc = CitationService()
     return svc.export_bibtex(citations)
+
+
+def search_papers(
+    query: str,
+    sources: list[str] | None = None,
+    max_results: int = 20,
+) -> list[dict[str, Any]]:
+    """
+    KI-gestützte Literaturrecherche über mehrere akademische Datenbanken.
+
+    Sucht parallel in: arXiv, Semantic Scholar, PubMed, OpenAlex.
+    Gibt deduplizierte Liste von Paper-Dicts zurück.
+
+    Args:
+        query: Suchbegriff (Thema, Forschungsfrage, Stichworte)
+        sources: Optional — Teilmenge aus ['arxiv','semantic_scholar','pubmed','openalex']
+        max_results: Max. Treffer gesamt (Standard: 20)
+
+    Returns empty list if researchfw not available.
+    """
+    if not _RESEARCHFW_AVAILABLE:
+        return []
+    svc = AcademicSearchService()
+    papers = _run_async(svc.search(query, sources=sources, max_results=max_results))
+    return [_paper_to_dict(p) for p in papers]
+
+
+def _paper_to_dict(p: Any) -> dict[str, Any]:
+    return {
+        "title": p.title,
+        "authors": p.authors,
+        "abstract": p.abstract,
+        "url": p.url,
+        "source": p.source,
+        "doi": p.doi,
+        "arxiv_id": p.arxiv_id,
+        "publication_date": p.publication_date,
+        "journal": p.journal,
+        "citation_count": p.citation_count,
+        "pdf_url": p.pdf_url,
+        "categories": p.categories,
+    }
 
 
 def _citation_to_dict(c: Any) -> dict[str, Any]:
