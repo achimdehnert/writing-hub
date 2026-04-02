@@ -214,9 +214,8 @@ class OutlineGeneratorService:
         try:
             generator = OutlineGenerator(router=self._adapter)
             result = generator.generate(
+                framework_key=framework,
                 context=ctx,
-                framework=framework,
-                chapter_count=chapter_count,
                 quality=quality,
             )
             return result
