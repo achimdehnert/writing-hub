@@ -190,8 +190,35 @@ class OutlineGeneratorService:
             version_id = svc.save_outline(project_id, result.nodes, framework="save_the_cat", user=user)
     """
 
+    # Mapping von writing-hub Frameworks zu outlinefw-Keys
+    # outlinefw unterstützt: three_act, save_the_cat, heros_journey, five_act, dan_harmon
+    FRAMEWORK_MAP = {
+        # Direkte Mappings (1:1)
+        "three_act": "three_act",
+        "save_the_cat": "save_the_cat",
+        "heros_journey": "heros_journey",
+        "five_act": "five_act",
+        "dan_harmon": "dan_harmon",
+        # Fallback-Mappings für writing-hub spezifische Frameworks
+        "scientific_essay": "three_act",  # Wissenschaftlich → 3-Akt (Einleitung, Hauptteil, Schluss)
+        "essay": "three_act",
+        "article": "three_act",
+        "novella": "three_act",
+        "short_story": "three_act",
+    }
+    DEFAULT_FRAMEWORK = "three_act"
+
     def __init__(self) -> None:
         self._adapter = _OutlineLLMRouterAdapter()
+
+    def _map_framework(self, framework: str) -> str:
+        """Map writing-hub framework key to outlinefw-compatible key."""
+        mapped = self.FRAMEWORK_MAP.get(framework)
+        if mapped:
+            return mapped
+        # Fallback: wenn nicht gemappt, versuche direkt oder nutze Default
+        logger.info("Framework '%s' not in map, using default '%s'", framework, self.DEFAULT_FRAMEWORK)
+        return self.DEFAULT_FRAMEWORK
 
     def generate_outline(
         self,
@@ -211,10 +238,13 @@ class OutlineGeneratorService:
                 error_message="Projektkontext konnte nicht erstellt werden. Bitte Projektbeschreibung ergänzen."
             )
 
+        # Map framework to outlinefw-compatible key
+        outlinefw_key = self._map_framework(framework)
+
         try:
             generator = OutlineGenerator(router=self._adapter)
             result = generator.generate(
-                framework_key=framework,
+                framework_key=outlinefw_key,
                 context=ctx,
                 quality=quality,
             )
