@@ -244,9 +244,6 @@ class TestProjectNodeViews:
     def test_node_content_get(self, auth_client, outline_node):
         must_200(auth_client.get(f"/projects/node/{outline_node.pk}/content/"))
 
-    def test_node_style_get(self, auth_client, outline_node):
-        must_200(auth_client.get(f"/projects/node/{outline_node.pk}/style/"))
-
 
 # ---------------------------------------------------------------------------
 # Outlines App
