@@ -27,15 +27,33 @@ class _OutlineLLMRouterAdapter:
     """
     Adapter: outlinefw erwartet ein LLM-Router-Interface mit .completion().
     Wir leiten an LLMRouter weiter und versuchen verschiedene action_codes.
+
+    Parameter-Mapping:
+    - outlinefw verwendet 'quality' (LLMQuality enum)
+    - LLMRouter verwendet 'quality_level' (int)
     """
 
     def __init__(self):
         self._router = LLMRouter()
 
     def completion(self, messages, action_code="outline.generate", **kwargs):
+        # Map outlinefw parameters to LLMRouter parameters
+        router_kwargs = {}
+        if "quality" in kwargs:
+            # outlinefw.LLMQuality -> int (1=LOW, 2=STANDARD, 3=HIGH)
+            quality = kwargs.pop("quality")
+            if hasattr(quality, "value"):
+                router_kwargs["quality_level"] = quality.value
+            elif isinstance(quality, int):
+                router_kwargs["quality_level"] = quality
+        if "priority" in kwargs:
+            router_kwargs["priority"] = kwargs.pop("priority")
+        # Ignore unknown kwargs to prevent API errors
+        # (don't pass remaining kwargs to LLMRouter)
+
         for code in [action_code, "outline.generate", "outline_generate", "chapter_outline"]:
             try:
-                return self._router.completion(messages=messages, action_code=code, **kwargs)
+                return self._router.completion(messages=messages, action_code=code, **router_kwargs)
             except Exception as exc:
                 last_exc = exc
                 logger.debug("LLM fallback from %s: %s", code, exc)
