@@ -41,7 +41,7 @@ class TestOutlineGeneratorServiceContract:
 
         # Execute
         service = OutlineGeneratorService()
-        service.generate(
+        service.generate_outline(
             project_id="test-project-id",
             framework="save_the_cat",
             chapter_count=12,
@@ -77,7 +77,7 @@ class TestOutlineGeneratorServiceContract:
         mock_instance.generate.return_value = mock_result
 
         service = OutlineGeneratorService()
-        service.generate(
+        service.generate_outline(
             project_id="test-id",
             framework="heros_journey",
             chapter_count=15,
@@ -95,7 +95,7 @@ class TestOutlineGeneratorServiceContract:
         mock_ctx_from_db.return_value = None
 
         service = OutlineGeneratorService()
-        result = service.generate(
+        result = service.generate_outline(
             project_id="nonexistent",
             framework="save_the_cat",
             chapter_count=12,
