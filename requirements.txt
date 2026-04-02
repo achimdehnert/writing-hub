@@ -46,7 +46,8 @@ iil-authoringfw>=0.6.0,<1
 iil-weltenfw[django]>=0.1.0,<1
 
 # Story Outline Framework — schemas, beat frameworks, LLM generator, ABC adapter
-iil-outlinefw>=0.1.0,<1
+# git URL until v0.3.1 is published to PyPI
+iil-outlinefw @ git+https://github.com/achimdehnert/outlinefw.git@main
 
 # ============================================================================
 # Database
