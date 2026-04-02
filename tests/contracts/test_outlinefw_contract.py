@@ -98,14 +98,15 @@ class TestFrameworksContract:
         for key in expected:
             assert key in FRAMEWORKS, f"Expected framework '{key}' not found"
 
-    def test_scientific_essay_not_in_outlinefw(self, outlinefw_available):
-        """Verify scientific_essay is NOT in outlinefw (needs mapping)."""
+    def test_nonfiction_frameworks_in_outlinefw(self, outlinefw_available):
+        """Verify nonfiction frameworks are natively available in outlinefw v0.3.1+."""
         from outlinefw.frameworks import FRAMEWORKS
 
-        # This is intentional - writing-hub has this framework but outlinefw doesn't
-        # OutlineGeneratorService.FRAMEWORK_MAP handles the mapping
-        assert "scientific_essay" not in FRAMEWORKS, \
-            "scientific_essay should NOT be in outlinefw - it's a writing-hub specific framework"
+        # Since v0.3.1 outlinefw ships nonfiction frameworks natively (no mapping needed)
+        nonfiction_frameworks = ["scientific_essay", "academic_essay", "essay"]
+        for key in nonfiction_frameworks:
+            assert key in FRAMEWORKS, \
+                f"Expected nonfiction framework '{key}' in outlinefw v0.3.1+"
 
 
 class TestProjectContextContract:
