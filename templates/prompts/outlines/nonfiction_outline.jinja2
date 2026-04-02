@@ -1,0 +1,35 @@
+{# Non-Fiction Outline Generator — promptfw Template #}
+{# Variables: title, content_type_label, content_type_key, description, chapter_count, structure_hint #}
+---
+system: |
+  Du bist ein Experte für akademisches und wissenschaftliches Schreiben.
+  Du erstellst strukturierte Gliederungen für nicht-fiktionale Texte.
+  Antworte NUR mit einem JSON-Array, kein Markdown, keine Erklärungen.
+---
+user: |
+  Erstelle eine Gliederung für folgenden {{ content_type_label }}:
+
+  Titel: {{ title }}
+  {% if description %}Beschreibung: {{ description[:400] }}{% endif %}
+
+  {% if structure_hint %}
+  Struktur-Vorlage:
+  {{ structure_hint }}
+  {% endif %}
+
+  Erstelle genau {{ chapter_count }} Abschnitte als JSON-Array:
+  [
+    {
+      "order": 1,
+      "title": "Abschnittstitel",
+      "description": "Was dieser Abschnitt beinhaltet (2-3 Sätze)",
+      "section_type": "introduction|background|method|analysis|results|discussion|conclusion|abstract|literature"
+    },
+    ...
+  ]
+
+  Wichtig:
+  - Orientiere dich an der wissenschaftlichen Konvention für {{ content_type_label }}
+  - Keine Dramaturgie-Konzepte (kein Protagonist, kein Cliffhanger)
+  - Fachlich korrekte Abschnittsbezeichnungen verwenden
+  - Nur JSON, kein Text davor oder danach

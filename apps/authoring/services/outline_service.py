@@ -7,7 +7,10 @@ Public API:
     version_id = svc.save_outline(project_id, result.nodes, name="...", user=user)
 """
 
+import json
 import logging
+import re
+from dataclasses import dataclass
 
 from apps.authoring.services.llm_router import LLMRouter
 
@@ -208,6 +211,56 @@ class OutlineGeneratorService:
             version_id = svc.save_outline(project_id, result.nodes, framework="save_the_cat", user=user)
     """
 
+    # Non-Fiction Frameworks — werden NICHT über outlinefw generiert
+    NONFICTION_FRAMEWORKS = {
+        "scientific_essay", "essay", "article", "academic_paper",
+        "imrad", "review_article", "thesis", "dissertation",
+    }
+
+    # Non-Fiction Content Types (BookProject.content_type)
+    NONFICTION_CONTENT_TYPES = {
+        "academic", "scientific", "nonfiction",
+    }
+
+    # Strukturvorlagen für Non-Fiction Typen
+    NONFICTION_STRUCTURES = {
+        "scientific_essay": (
+            "Typische Struktur: Einleitung (These, Problemstellung) → "
+            "Theoretischer Rahmen → Argumentation/Hauptteil (2-4 Abschnitte) → "
+            "Diskussion → Fazit/Schluss"
+        ),
+        "article": (
+            "Typische Struktur: Abstract → Einleitung → Methoden (IMRaD) → "
+            "Ergebnisse → Diskussion → Schlussfolgerung → Literatur"
+        ),
+        "imrad": (
+            "IMRaD-Struktur: Abstract → Introduction → Methods → "
+            "Results → Discussion → Conclusion"
+        ),
+        "thesis": (
+            "Typische Struktur: Abstract → Einleitung → Forschungsstand → "
+            "Methodik → Analyse/Ergebnisse → Diskussion → Fazit → Anhang"
+        ),
+        "essay": (
+            "Typische Struktur: Einleitung (These) → "
+            "Argumentation (Hauptteil mit 2-4 Abschnitten) → Gegenargumente → Fazit"
+        ),
+    }
+
+    # Labels für Non-Fiction Typen (für den Prompt)
+    NONFICTION_LABELS = {
+        "scientific_essay": "wissenschaftlichen Aufsatz",
+        "article": "wissenschaftlichen Artikel (IMRaD)",
+        "imrad": "IMRaD-Artikel",
+        "thesis": "wissenschaftliche Arbeit (Thesis/Dissertation)",
+        "essay": "akademischen Essay",
+        "academic_paper": "akademisches Paper",
+        "review_article": "Review-Artikel",
+        "academic": "akademische Arbeit",
+        "scientific": "wissenschaftliche Arbeit",
+        "nonfiction": "Sachbuch",
+    }
+
     # Mapping von writing-hub Frameworks zu outlinefw-Keys
     # outlinefw unterstützt: three_act, save_the_cat, heros_journey, five_act, dan_harmon
     FRAMEWORK_MAP = {
@@ -234,9 +287,75 @@ class OutlineGeneratorService:
         mapped = self.FRAMEWORK_MAP.get(framework)
         if mapped:
             return mapped
-        # Fallback: wenn nicht gemappt, versuche direkt oder nutze Default
         logger.info("Framework '%s' not in map, using default '%s'", framework, self.DEFAULT_FRAMEWORK)
         return self.DEFAULT_FRAMEWORK
+
+    def _is_nonfiction(self, framework: str, content_type: str = "") -> bool:
+        """Prüfe ob Non-Fiction Pfad verwendet werden soll."""
+        return (
+            framework in self.NONFICTION_FRAMEWORKS
+            or content_type in self.NONFICTION_CONTENT_TYPES
+        )
+
+    def _get_project_content_type(self, project_id: str) -> str:
+        """Lese content_type direkt aus der DB."""
+        try:
+            from apps.projects.models import BookProject
+            project = BookProject.objects.get(pk=project_id)
+            return project.content_type or ""
+        except Exception:
+            return ""
+
+    def _generate_nonfiction_outline(self, project_id: str, framework: str, chapter_count: int) -> _NonfictionResult:
+        """Generiere Outline für Non-Fiction mit content-type-spezifischen Prompts."""
+        from apps.authoring.services.project_context_service import ProjectContextService
+        from apps.core.prompt_utils import render_prompt
+
+        ctx = ProjectContextService().get_context(project_id)
+        structure_hint = self.NONFICTION_STRUCTURES.get(framework, "")
+        content_type_label = self.NONFICTION_LABELS.get(framework, "wissenschaftlichen Text")
+
+        prompt_msgs = render_prompt(
+            "outlines/nonfiction_outline",
+            title=ctx.title,
+            content_type_label=content_type_label,
+            content_type_key=framework,
+            description=ctx.description or "",
+            chapter_count=chapter_count,
+            structure_hint=structure_hint,
+        )
+        if not prompt_msgs:
+            prompt_msgs = [
+                {"role": "system", "content": "Du bist ein Experte für wissenschaftliches Schreiben. Antworte NUR mit JSON."},
+                {"role": "user", "content": (
+                    f"Erstelle eine Gliederung für {content_type_label}: '{ctx.title}'.\n"
+                    f"{structure_hint}\n"
+                    f"Genau {chapter_count} Abschnitte als JSON-Array mit title, description, section_type."
+                )},
+            ]
+
+        try:
+            raw = self._adapter._router.completion(
+                action_code="chapter_outline",
+                messages=prompt_msgs,
+            )
+            match = re.search(r"\[.*\]", raw, re.DOTALL)
+            if not match:
+                return _NonfictionResult(error_message="LLM returned no JSON array")
+            items = json.loads(match.group())
+            nodes = [
+                _SimpleNode(
+                    title=item.get("title", f"Abschnitt {i+1}"),
+                    description=item.get("description", ""),
+                    section_type=item.get("section_type", "chapter"),
+                    order=i + 1,
+                )
+                for i, item in enumerate(items[:50])
+            ]
+            return _NonfictionResult(nodes=nodes)
+        except Exception as exc:
+            logger.exception("_generate_nonfiction_outline failed: %s", exc)
+            return _NonfictionResult(error_message=str(exc))
 
     def generate_outline(
         self,
@@ -245,6 +364,18 @@ class OutlineGeneratorService:
         chapter_count: int = 12,
         quality: str = "standard",
     ):
+        # Projekttyp aus DB lesen für Content-Type-Erkennung
+        content_type = self._get_project_content_type(project_id)
+
+        # Non-Fiction Pfad: bypassed outlinefw komplett
+        if self._is_nonfiction(framework, content_type):
+            logger.info(
+                "Non-Fiction Pfad für framework='%s', content_type='%s'",
+                framework, content_type,
+            )
+            return self._generate_nonfiction_outline(project_id, framework, chapter_count)
+
+        # Fiction Pfad: outlinefw
         if not _OUTLINEFW_AVAILABLE:
             logger.warning("outlinefw not available")
             return _FallbackResult(success=False, error_message="outlinefw not installed")
@@ -256,7 +387,6 @@ class OutlineGeneratorService:
                 error_message="Projektkontext konnte nicht erstellt werden. Bitte Projektbeschreibung ergänzen."
             )
 
-        # Map framework to outlinefw-compatible key
         outlinefw_key = self._map_framework(framework)
 
         try:
@@ -292,4 +422,29 @@ class _FallbackResult:
     def __init__(self, success=False, error_message=""):
         self.success = success
         self.nodes = []
+        self.error_message = error_message
+
+
+@dataclass
+class _SimpleNode:
+    """Einfacher Outline-Node für Non-Fiction Generierung."""
+    title: str
+    description: str = ""
+    section_type: str = "chapter"
+    order: int = 0
+
+    @property
+    def act(self):
+        return self.section_type
+
+    @property
+    def summary(self):
+        return self.description
+
+
+class _NonfictionResult:
+    """Ergebnis-Objekt für Non-Fiction Outline Generierung."""
+    def __init__(self, nodes=None, error_message=""):
+        self.nodes = nodes or []
+        self.success = bool(self.nodes)
         self.error_message = error_message
