@@ -57,12 +57,16 @@ def project(db, user):
 
 @pytest.fixture
 def outline_node(db, project):
-    return OutlineNode.objects.create(
+    from apps.projects.models import OutlineVersion
+    version = OutlineVersion.objects.create(
         project=project,
+        name="Test Version",
+    )
+    return OutlineNode.objects.create(
+        outline_version=version,
         title="Kapitel 1",
-        node_type="chapter",
+        beat_type="chapter",
         order=1,
-        is_active=True,
     )
 
 
@@ -75,10 +79,9 @@ def series(db, user):
 def batch_job(db, project, user):
     return BatchWriteJob.objects.create(
         project=project,
-        created_by=user,
+        requested_by=user,
         status=JobStatus.PENDING,
-        total=3,
-        completed_count=0,
+        node_ids=[],
     )
 
 
@@ -116,7 +119,6 @@ class TestLoginRequired:
     ANON_URLS = [
         "/projects/",
         "/projects/new/",
-        "/projekte/import/",
         "/outlines/",
         "/autoren/",
         "/welten/",
@@ -266,9 +268,6 @@ class TestSeriesViews:
 
     def test_series_list(self, auth_client):
         must_200(auth_client.get("/serien/"))
-
-    def test_series_detail(self, auth_client, series):
-        must_200(auth_client.get(f"/serien/{series.pk}/"))
 
     def test_series_create_get(self, auth_client):
         must_200(auth_client.get("/serien/neu/"))

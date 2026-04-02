@@ -123,15 +123,12 @@ class TestProjectContextContract:
     def test_project_context_required_fields(self, outlinefw_available):
         """Verify ProjectContext has expected required fields."""
         from outlinefw import ProjectContext
-        import inspect
 
-        sig = inspect.signature(ProjectContext.__init__)
-        params = list(sig.parameters.keys())
-
-        # These are the fields we expect to be required or available
+        # Use model_fields (Pydantic v2) — more reliable than inspect.signature
         expected_fields = ["title", "genre", "logline"]
         for field in expected_fields:
-            assert field in params, f"ProjectContext should have '{field}' field"
+            assert field in ProjectContext.model_fields, \
+                f"ProjectContext should have '{field}' field"
 
 
 class TestLLMQualityContract:
