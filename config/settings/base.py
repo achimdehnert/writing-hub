@@ -3,14 +3,15 @@ Writing Hub — Base Settings (ADR-083)
 """
 import os
 from pathlib import Path
+from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-writing-hub-dev-key")
+SECRET_KEY = config("DJANGO_SECRET_KEY", default="django-insecure-writing-hub-dev-key")
 
-DEBUG = os.environ.get("DEBUG", "True").lower() in ("true", "1", "yes")
+DEBUG = config("DEBUG", default="True").lower() in ("true", "1", "yes")
 
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1").split(",")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -73,11 +74,11 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DB_NAME", "writing_hub"),
-        "USER": os.environ.get("DB_USER", "dehnert"),
-        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
-        "HOST": os.environ.get("DB_HOST", "localhost"),
-        "PORT": os.environ.get("DB_PORT", "5434"),
+        "NAME": config("DB_NAME", default="writing_hub"),
+        "USER": config("DB_USER", default="dehnert"),
+        "PASSWORD": config("DB_PASSWORD", default=""),
+        "HOST": config("DB_HOST", default="localhost"),
+        "PORT": config("DB_PORT", default="5434"),
     }
 }
 
@@ -124,10 +125,10 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 20,
 }
 
-WELTENHUB_URL = os.environ.get("WELTENHUB_URL", "https://weltenforger.com/api/v1")
-WELTENHUB_TOKEN = os.environ.get("WELTENHUB_TOKEN", "")
-WELTENHUB_LOOKUP_TTL = int(os.environ.get("WELTENHUB_LOOKUP_TTL", "3600"))
-WELTENHUB_TIMEOUT = float(os.environ.get("WELTENHUB_TIMEOUT", "30.0"))
+WELTENHUB_URL = config("WELTENHUB_URL", default="https://weltenforger.com/api/v1")
+WELTENHUB_TOKEN = config("WELTENHUB_TOKEN", default="")
+WELTENHUB_LOOKUP_TTL = int(config("WELTENHUB_LOOKUP_TTL", default="3600"))
+WELTENHUB_TIMEOUT = float(config("WELTENHUB_TIMEOUT", default="30.0"))
 
 PROMPT_TEMPLATES_DIR = str(BASE_DIR / "templates" / "prompts")
 
@@ -175,7 +176,7 @@ def _read_secret(path: str) -> str:
 
 
 TOGETHER_API_KEY = (
-    os.environ.get("TOGETHER_API_KEY")
+    config("TOGETHER_API_KEY", default="")
     or _read_secret("/home/dehnert/.secrets/together_api_key")
     or ""
 )
@@ -189,9 +190,9 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TASK_TRACK_STARTED = True
 
 # --- authentik OIDC (ADR-142) ---
-OIDC_RP_CLIENT_ID = os.environ.get("OIDC_RP_CLIENT_ID", "")
-OIDC_RP_CLIENT_SECRET = os.environ.get("OIDC_RP_CLIENT_SECRET", "")
-_OIDC_APP_SLUG = os.environ.get("OIDC_APP_SLUG", "writing-hub")
+OIDC_RP_CLIENT_ID = config("OIDC_RP_CLIENT_ID", default="")
+OIDC_RP_CLIENT_SECRET = config("OIDC_RP_CLIENT_SECRET", default="")
+_OIDC_APP_SLUG = config("OIDC_APP_SLUG", default="writing-hub")
 _IDP = "https://id.iil.pet/application/o"
 OIDC_OP_AUTHORIZATION_ENDPOINT = f"{_IDP}/authorize/"
 OIDC_OP_TOKEN_ENDPOINT = f"{_IDP}/token/"

@@ -4,6 +4,7 @@ Writing Hub — Staging Settings
 import os
 
 from .base import *  # noqa: F401, F403
+from decouple import config
 
 DEBUG = False
 
@@ -15,11 +16,11 @@ ALLOWED_HOSTS = os.environ.get(
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DB_NAME", "writing_hub_staging_db"),
-        "USER": os.environ.get("DB_USER", "writing_hub"),
-        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
-        "HOST": os.environ.get("DB_HOST", "writing_hub_staging_db"),
-        "PORT": os.environ.get("DB_PORT", "5432"),
+        "NAME": config("DB_NAME", default="writing_hub_staging_db"),
+        "USER": config("DB_USER", default="writing_hub"),
+        "PASSWORD": config("DB_PASSWORD", default=""),
+        "HOST": config("DB_HOST", default="writing_hub_staging_db"),
+        "PORT": config("DB_PORT", default="5432"),
         "CONN_MAX_AGE": 60,
     }
 }
