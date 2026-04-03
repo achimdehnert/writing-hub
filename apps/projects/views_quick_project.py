@@ -51,6 +51,9 @@ class QuickProjectView(LoginRequiredMixin, View):
 class QuickProjectStartView(LoginRequiredMixin, View):
     """POST: Projekt erstellen + Pipeline-Task starten."""
 
+    def get(self, request):
+        return redirect("projects:quick_project")
+
     def post(self, request):
         title = request.POST.get("title", "").strip()
         if not title:
