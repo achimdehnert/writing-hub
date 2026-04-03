@@ -1,0 +1,136 @@
+"""
+Quick Project Views — Autonome Essay-Pipeline mit Web-UI.
+
+Form → Celery Task → Progress-Polling → Projekt-Detail.
+"""
+from __future__ import annotations
+
+import json
+
+from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views import View
+
+from .models import BookProject, ContentTypeLookup, OutlineFramework
+
+
+CONTENT_TYPE_MAP = {
+    "academic_essay": "academic",
+    "scientific_essay": "scientific",
+    "imrad": "scientific",
+    "dissertation": "academic",
+    "expose": "academic",
+    "systematic_review": "scientific",
+    "research_proposal": "academic",
+    "essay": "essay",
+    "three_act": "novel",
+}
+
+
+class QuickProjectView(LoginRequiredMixin, View):
+    """GET: Quick-Project-Formular anzeigen."""
+
+    template_name = "projects/quick_project.html"
+
+    def get(self, request):
+        frameworks = OutlineFramework.objects.all().order_by("order", "name")
+
+        fw_beats = {}
+        for fw in frameworks:
+            beats = list(fw.beats.order_by("order").values_list("name", flat=True))
+            fw_beats[fw.key] = beats
+
+        return render(request, self.template_name, {
+            "frameworks": frameworks,
+            "fw_beats_json": json.dumps(fw_beats),
+        })
+
+
+class QuickProjectStartView(LoginRequiredMixin, View):
+    """POST: Projekt erstellen + Pipeline-Task starten."""
+
+    def post(self, request):
+        title = request.POST.get("title", "").strip()
+        if not title:
+            messages.error(request, "Bitte einen Titel eingeben.")
+            return redirect("projects:quick_project")
+
+        topic = request.POST.get("topic", "").strip()
+        framework = request.POST.get("framework", "academic_essay")
+        target_words = request.POST.get("target_words", "5000")
+        do_research = bool(request.POST.get("do_research"))
+        do_review = bool(request.POST.get("do_review"))
+
+        try:
+            target_words = int(target_words)
+        except ValueError:
+            target_words = 5000
+
+        content_type = CONTENT_TYPE_MAP.get(framework, "academic")
+        ct_lookup = ContentTypeLookup.objects.filter(
+            slug__in=["academic", "wissenschaftlich", "scientific"]
+        ).first()
+
+        project = BookProject.objects.create(
+            owner=request.user,
+            title=title,
+            description=topic or title,
+            content_type=content_type,
+            content_type_lookup=ct_lookup,
+            target_word_count=target_words,
+            is_active=True,
+        )
+
+        from apps.authoring.models_jobs import EssayPipelineJob
+        from apps.authoring.tasks import run_essay_pipeline
+
+        job = EssayPipelineJob.objects.create(
+            project=project,
+            requested_by=request.user,
+            framework=framework,
+            do_research=do_research,
+            do_review=do_review,
+        )
+        job.add_log(f"Projekt erstellt: {title}")
+
+        run_essay_pipeline.delay(str(job.pk))
+
+        return redirect("projects:quick_project_progress", pk=project.pk, job_id=job.pk)
+
+
+class QuickProjectProgressView(LoginRequiredMixin, View):
+    """GET: Progress-Seite mit Auto-Polling."""
+
+    template_name = "projects/quick_project_progress.html"
+
+    def get(self, request, pk, job_id):
+        project = get_object_or_404(BookProject, pk=pk, owner=request.user)
+        from apps.authoring.models_jobs import EssayPipelineJob
+        job = get_object_or_404(EssayPipelineJob, pk=job_id, project=project)
+        return render(request, self.template_name, {
+            "project": project,
+            "job": job,
+        })
+
+
+class QuickProjectStatusView(LoginRequiredMixin, View):
+    """GET: JSON-Status fuer Polling."""
+
+    def get(self, request, pk, job_id):
+        project = get_object_or_404(BookProject, pk=pk, owner=request.user)
+        from apps.authoring.models_jobs import EssayPipelineJob
+        job = get_object_or_404(EssayPipelineJob, pk=job_id, project=project)
+        return JsonResponse({
+            "status": job.status,
+            "step": job.current_step,
+            "step_label": job.get_current_step_display(),
+            "progress": job.progress_pct,
+            "total_chapters": job.total_chapters,
+            "completed_chapters": job.completed_chapters,
+            "current_chapter": job.current_chapter_title,
+            "log": job.log_messages[-10:],
+            "error": job.error,
+            "is_done": job.is_terminal,
+        })

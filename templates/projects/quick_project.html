@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}Quick Project — Writing Hub{% endblock %}
+{% block nav_projects %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+.qp-form .form-label { color: #cbd5e1 !important; font-weight: 500; margin-bottom: .35rem; }
+.qp-form .form-control, .qp-form .form-select {
+    background-color: #131929 !important; color: #f1f5f9 !important;
+    border: 1px solid #475569 !important; border-radius: .4rem;
+}
+.qp-form .form-control::placeholder { color: #64748b !important; }
+.qp-form .form-control:focus, .qp-form .form-select:focus {
+    border-color: #6366f1 !important;
+    box-shadow: 0 0 0 2px rgba(99,102,241,.25) !important;
+}
+.qp-form .form-select option { background: #1e2235; color: #f1f5f9; }
+.qp-form .form-text { color: #94a3b8 !important; }
+.qp-form .form-check-input { background-color: #131929; border-color: #475569; }
+.qp-form .form-check-input:checked { background-color: #6366f1; border-color: #6366f1; }
+.qp-form .form-check-label { color: #cbd5e1; }
+.qp-hero { border: 1px solid #2d3748; border-radius: .5rem; padding: 1.5rem; background: linear-gradient(135deg, #0d1117 0%, #131929 100%); }
+.qp-hero h4 { color: #e2e8f0; }
+.qp-hero p { color: #94a3b8; }
+.beats-preview { background: #0d1117; border: 1px solid #2d3748; border-radius: .4rem; padding: .75rem 1rem; max-height: 220px; overflow-y: auto; }
+.beats-preview .beat-item { color: #94a3b8; font-size: .85rem; padding: .2rem 0; border-bottom: 1px solid #1e2235; }
+.beats-preview .beat-item:last-child { border-bottom: none; }
+.beats-preview .beat-num { color: #6366f1; font-weight: 600; width: 1.5rem; display: inline-block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-lg-8">
+
+<a href="{% url 'projects:list' %}" class="btn btn-link text-muted ps-0 mb-3">
+    <i class="bi bi-arrow-left me-1"></i> Projekte
+</a>
+
+<div class="qp-hero mb-4 text-center">
+    <h4><i class="bi bi-lightning-charge-fill text-warning me-2"></i>Quick Project</h4>
+    <p class="mb-0">Titel eingeben, Framework auswaehlen — KI generiert Outline, recherchiert, schreibt und reviewt autonom.</p>
+</div>
+
+<div class="card" style="background:#0d1117;border-color:#2d3748;">
+<div class="card-body p-4 qp-form">
+
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+<form method="post" action="{% url 'projects:quick_project_start' %}" novalidate>
+{% csrf_token %}
+
+<div class="mb-4">
+    <label class="form-label" for="id_title"><i class="bi bi-type me-1"></i>Titel *</label>
+    <input type="text" name="title" id="id_title" class="form-control"
+           placeholder="z.B. KI-gestuetzte Automatisierung in der Baubranche" required autofocus>
+</div>
+
+<div class="mb-4">
+    <label class="form-label" for="id_topic"><i class="bi bi-text-paragraph me-1"></i>Thema / Forschungsfrage</label>
+    <textarea name="topic" id="id_topic" rows="3" class="form-control"
+              placeholder="Detaillierte Beschreibung, Abstract oder zentrale Fragestellung..."></textarea>
+    <div class="form-text">Je praeziser das Thema, desto besser die KI-Ergebnisse.</div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-7">
+        <label class="form-label" for="id_framework"><i class="bi bi-diagram-3 me-1"></i>Framework</label>
+        <select name="framework" id="id_framework" class="form-select">
+            {% for fw in frameworks %}
+            <option value="{{ fw.key }}" {% if fw.key == "scientific_essay" %}selected{% endif %}>
+                {{ fw.name }}{% if fw.subtitle %} — {{ fw.subtitle|truncatechars:60 }}{% endif %}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-5">
+        <label class="form-label" for="id_words"><i class="bi bi-123 me-1"></i>Ziel-Wortanzahl</label>
+        <input type="number" name="target_words" id="id_words" class="form-control"
+               value="5000" min="1000" max="50000" step="500">
+    </div>
+</div>
+
+<div class="mb-4">
+    <label class="form-label"><i class="bi bi-list-nested me-1"></i>Outline-Vorschau</label>
+    <div class="beats-preview" id="beats-preview">
+        <div class="text-muted small text-center py-2">Framework auswaehlen um Kapitelstruktur zu sehen</div>
+    </div>
+</div>
+
+<div class="mb-4">
+    <label class="form-label d-block"><i class="bi bi-gear me-1"></i>Optionen</label>
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="do_research" id="id_research" checked>
+                <label class="form-check-label" for="id_research">
+                    <i class="bi bi-search me-1"></i>Literaturrecherche
+                    <div class="form-text mt-0">arXiv, Semantic Scholar, PubMed</div>
+                </label>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="do_review" id="id_review">
+                <label class="form-check-label" for="id_review">
+                    <i class="bi bi-clipboard2-check me-1"></i>Peer Review
+                    <div class="form-text mt-0">4-Agenten wissenschaftliches Review</div>
+                </label>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex gap-2 justify-content-end">
+    <a href="{% url 'projects:list' %}" class="btn btn-outline-secondary">Abbrechen</a>
+    <button type="submit" class="btn btn-primary px-4" id="btn-start">
+        <i class="bi bi-lightning-charge me-1"></i>Pipeline starten
+    </button>
+</div>
+
+</form>
+</div>
+</div>
+
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const FW_BEATS = {{ fw_beats_json|safe }};
+
+function updateBeatsPreview() {
+    const sel = document.getElementById('id_framework');
+    const key = sel.value;
+    const container = document.getElementById('beats-preview');
+    const beats = FW_BEATS[key] || [];
+
+    if (beats.length === 0) {
+        container.innerHTML = '<div class="text-muted small text-center py-2">Keine vordefinierten Kapitel fuer dieses Framework</div>';
+        return;
+    }
+
+    let html = '';
+    beats.forEach(function(name, i) {
+        html += '<div class="beat-item"><span class="beat-num">' + (i + 1) + '.</span> ' + name + '</div>';
+    });
+    container.innerHTML = html;
+}
+
+document.getElementById('id_framework').addEventListener('change', updateBeatsPreview);
+document.addEventListener('DOMContentLoaded', updateBeatsPreview);
+
+document.getElementById('btn-start').closest('form').addEventListener('submit', function() {
+    const btn = document.getElementById('btn-start');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Pipeline wird gestartet...';
+});
+</script>
+{% endblock %}

@@ -11,7 +11,9 @@ from . import (
     views_knowledge,
     views_lektorat,
     views_manuscript,
+    views_peer_review,
     views_publishing,
+    views_quick_project,
     views_research_summary,
     views_review,
     views_versions,
@@ -86,6 +88,16 @@ urlpatterns = [
     path("<uuid:pk>/citations/summarize/", views_research_summary.ResearchSummarizeAjaxView.as_view(), name="citation_summarize"),
     path("<uuid:pk>/outline-research/", views_research_summary.OutlineResearchView.as_view(), name="outline_research"),
     path("<uuid:pk>/outline-research/node/", views_research_summary.OutlineNodeResearchAjaxView.as_view(), name="outline_node_research"),
+    # Peer Review (wissenschaftliche Projekte)
+    path("<uuid:pk>/peer-review/", views_peer_review.PeerReviewDashboardView.as_view(), name="peer_review"),
+    path("<uuid:pk>/peer-review/start/", views_peer_review.PeerReviewStartView.as_view(), name="peer_review_start"),
+    path("<uuid:pk>/peer-review/<uuid:session_pk>/", views_peer_review.PeerReviewSessionView.as_view(), name="peer_review_session"),
+    path("<uuid:pk>/peer-review/finding/<uuid:finding_pk>/resolve/", views_peer_review.PeerReviewFindingResolveView.as_view(), name="peer_review_resolve"),
+    # Quick Project (autonome Essay-Pipeline)
+    path("quick/", views_quick_project.QuickProjectView.as_view(), name="quick_project"),
+    path("quick/start/", views_quick_project.QuickProjectStartView.as_view(), name="quick_project_start"),
+    path("quick/<uuid:pk>/<uuid:job_id>/", views_quick_project.QuickProjectProgressView.as_view(), name="quick_project_progress"),
+    path("quick/<uuid:pk>/<uuid:job_id>/status/", views_quick_project.QuickProjectStatusView.as_view(), name="quick_project_status"),
     # REST API
     path("api/", views.BookProjectListView.as_view(), name="api_list"),
     path("api/<uuid:pk>/", views.BookProjectDetailView.as_view(), name="api_detail"),

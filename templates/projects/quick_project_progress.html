@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% block title %}Pipeline laeuft — {{ project.title }} — Writing Hub{% endblock %}
+{% block nav_projects %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+.pipeline-card { background: #0d1117; border: 1px solid #2d3748; border-radius: .5rem; }
+.pipeline-header { color: #e2e8f0; }
+.pipeline-step { padding: .6rem 1rem; border-bottom: 1px solid #1e2235; display: flex; align-items: center; gap: .75rem; }
+.pipeline-step:last-child { border-bottom: none; }
+.pipeline-step .step-icon { width: 2rem; text-align: center; font-size: 1.1rem; }
+.pipeline-step .step-label { color: #94a3b8; flex-grow: 1; }
+.pipeline-step .step-status { font-size: .8rem; }
+.pipeline-step.active .step-label { color: #e2e8f0; font-weight: 600; }
+.pipeline-step.active .step-icon { color: #6366f1; }
+.pipeline-step.done .step-icon { color: #22c55e; }
+.pipeline-step.done .step-label { color: #86efac; }
+.pipeline-step.pending .step-icon { color: #475569; }
+.pipeline-step.failed .step-icon { color: #ef4444; }
+.pipeline-step.failed .step-label { color: #fca5a5; }
+.log-panel { background: #0a0e14; border: 1px solid #2d3748; border-radius: .4rem; padding: .75rem; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: .8rem; }
+.log-line { color: #94a3b8; padding: .1rem 0; }
+.log-line:last-child { color: #e2e8f0; }
+.progress-bar-animated { transition: width .5s ease; }
+.result-card { background: #0d1117; border: 2px solid #22c55e; border-radius: .5rem; }
+.result-card.error { border-color: #ef4444; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-lg-8">
+
+<a href="{% url 'projects:list' %}" class="btn btn-link text-muted ps-0 mb-3">
+    <i class="bi bi-arrow-left me-1"></i> Projekte
+</a>
+
+<div class="pipeline-card p-4 mb-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h5 class="pipeline-header mb-0">
+            <i class="bi bi-lightning-charge-fill text-warning me-2"></i>
+            {{ project.title }}
+        </h5>
+        <span class="badge" id="status-badge" style="background:#1e2235;color:#94a3b8;">Wird gestartet...</span>
+    </div>
+
+    <div class="progress mb-3" style="height:8px;background:#1e2235;">
+        <div class="progress-bar progress-bar-animated" id="progress-bar"
+             role="progressbar" style="width:5%;background:#6366f1;" aria-valuenow="5" aria-valuemin="0" aria-valuemax="100"></div>
+    </div>
+    <div class="text-end mb-3" style="color:#94a3b8;font-size:.8rem;">
+        <span id="progress-text">5%</span>
+    </div>
+
+    <div class="mb-3">
+        <div class="pipeline-step pending" id="step-created">
+            <div class="step-icon"><i class="bi bi-folder-plus"></i></div>
+            <div class="step-label">Projekt erstellt</div>
+            <div class="step-status" id="step-created-status"></div>
+        </div>
+        <div class="pipeline-step pending" id="step-outline">
+            <div class="step-icon"><i class="bi bi-diagram-3"></i></div>
+            <div class="step-label">Outline generieren</div>
+            <div class="step-status" id="step-outline-status"></div>
+        </div>
+        <div class="pipeline-step pending" id="step-research" {% if not job.do_research %}style="display:none"{% endif %}>
+            <div class="step-icon"><i class="bi bi-search"></i></div>
+            <div class="step-label">Literaturrecherche</div>
+            <div class="step-status" id="step-research-status"></div>
+        </div>
+        <div class="pipeline-step pending" id="step-writing">
+            <div class="step-icon"><i class="bi bi-pencil-square"></i></div>
+            <div class="step-label">Kapitel schreiben</div>
+            <div class="step-status" id="step-writing-status"></div>
+        </div>
+        <div class="pipeline-step pending" id="step-review" {% if not job.do_review %}style="display:none"{% endif %}>
+            <div class="step-icon"><i class="bi bi-clipboard2-check"></i></div>
+            <div class="step-label">Peer Review</div>
+            <div class="step-status" id="step-review-status"></div>
+        </div>
+    </div>
+
+    <div class="mb-3" id="current-info" style="display:none;">
+        <div class="d-flex align-items-center gap-2" style="color:#94a3b8;font-size:.85rem;">
+            <span class="spinner-border spinner-border-sm text-primary"></span>
+            <span id="current-chapter-text"></span>
+        </div>
+    </div>
+
+    <div class="log-panel" id="log-panel">
+        <div class="log-line">Pipeline gestartet...</div>
+    </div>
+</div>
+
+<div class="d-none" id="result-success">
+    <div class="result-card p-4 text-center">
+        <h4 style="color:#22c55e;"><i class="bi bi-check-circle-fill me-2"></i>Fertig!</h4>
+        <p style="color:#94a3b8;" id="result-summary"></p>
+        <div class="d-flex gap-2 justify-content-center mt-3">
+            <a href="{% url 'projects:detail' pk=project.pk %}" class="btn btn-primary">
+                <i class="bi bi-eye me-1"></i>Projekt anzeigen
+            </a>
+            <a href="{% url 'projects:quick_project' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-plus me-1"></i>Neues Quick Project
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="d-none" id="result-error">
+    <div class="result-card error p-4 text-center">
+        <h4 style="color:#ef4444;"><i class="bi bi-exclamation-triangle-fill me-2"></i>Fehler</h4>
+        <p style="color:#fca5a5;" id="error-message"></p>
+        <div class="d-flex gap-2 justify-content-center mt-3">
+            <a href="{% url 'projects:detail' pk=project.pk %}" class="btn btn-outline-primary">
+                <i class="bi bi-eye me-1"></i>Projekt trotzdem anzeigen
+            </a>
+            <a href="{% url 'projects:quick_project' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>Nochmal versuchen
+            </a>
+        </div>
+    </div>
+</div>
+
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const POLL_URL = "{% url 'projects:quick_project_status' pk=project.pk job_id=job.pk %}";
+const STEPS_ORDER = ['created', 'outline', 'research', 'writing', 'review', 'done'];
+
+let pollTimer = null;
+
+function updateUI(data) {
+    // Progress bar
+    const pct = data.progress;
+    document.getElementById('progress-bar').style.width = pct + '%';
+    document.getElementById('progress-text').textContent = pct + '%';
+
+    // Status badge
+    const badge = document.getElementById('status-badge');
+    if (data.status === 'running') {
+        badge.textContent = data.step_label;
+        badge.style.background = '#1e1b4b';
+        badge.style.color = '#a5b4fc';
+    } else if (data.status === 'done') {
+        badge.textContent = 'Fertig';
+        badge.style.background = '#14532d';
+        badge.style.color = '#86efac';
+    } else if (data.status === 'failed') {
+        badge.textContent = 'Fehler';
+        badge.style.background = '#450a0a';
+        badge.style.color = '#fca5a5';
+    }
+
+    // Update step states
+    const currentIdx = STEPS_ORDER.indexOf(data.step);
+    STEPS_ORDER.forEach(function(step, idx) {
+        const el = document.getElementById('step-' + step);
+        if (!el) return;
+        el.className = 'pipeline-step';
+        if (data.is_done && data.status === 'done') {
+            if (idx <= currentIdx || step === 'done') el.className += ' done';
+        } else if (data.is_done && data.status === 'failed') {
+            if (idx < currentIdx) el.className += ' done';
+            else if (idx === currentIdx) el.className += ' failed';
+            else el.className += ' pending';
+        } else {
+            if (idx < currentIdx) el.className += ' done';
+            else if (idx === currentIdx) el.className += ' active';
+            else el.className += ' pending';
+        }
+    });
+
+    // Chapter progress in writing/research steps
+    if (data.step === 'writing' || data.step === 'research') {
+        const statusEl = document.getElementById('step-' + data.step + '-status');
+        if (statusEl && data.total_chapters > 0) {
+            statusEl.textContent = data.completed_chapters + '/' + data.total_chapters;
+        }
+    }
+
+    // Current chapter info
+    const infoEl = document.getElementById('current-info');
+    if (data.current_chapter && !data.is_done) {
+        infoEl.style.display = 'block';
+        document.getElementById('current-chapter-text').textContent = data.current_chapter;
+    } else {
+        infoEl.style.display = 'none';
+    }
+
+    // Log
+    const logPanel = document.getElementById('log-panel');
+    if (data.log && data.log.length > 0) {
+        logPanel.innerHTML = data.log.map(function(line) {
+            return '<div class="log-line">' + line + '</div>';
+        }).join('');
+        logPanel.scrollTop = logPanel.scrollHeight;
+    }
+
+    // Done / Error
+    if (data.is_done) {
+        clearInterval(pollTimer);
+        if (data.status === 'done') {
+            document.getElementById('result-success').className = '';
+            const lastLog = data.log[data.log.length - 1] || '';
+            document.getElementById('result-summary').textContent = lastLog;
+        } else {
+            document.getElementById('result-error').className = '';
+            document.getElementById('error-message').textContent = data.error || 'Unbekannter Fehler';
+        }
+    }
+}
+
+function poll() {
+    fetch(POLL_URL)
+        .then(function(r) { return r.json(); })
+        .then(updateUI)
+        .catch(function(err) { console.error('Poll error:', err); });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    poll();
+    pollTimer = setInterval(poll, 3000);
+});
+</script>
+{% endblock %}

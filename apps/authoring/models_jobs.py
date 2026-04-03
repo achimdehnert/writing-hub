@@ -135,3 +135,88 @@ class BatchWriteJob(models.Model):
     @property
     def is_running(self) -> bool:
         return self.status == JobStatus.RUNNING
+
+
+class EssayPipelineJob(models.Model):
+    """
+    Quick-Project Pipeline: Outline → Recherche → Schreiben → Review.
+
+    Tracking-Model für die autonome Essay-Generierung.
+    Status-Polling via JSON-Endpunkt (alle 3s).
+    """
+
+    class PipelineStep(models.TextChoices):
+        CREATED     = "created",     "Projekt erstellt"
+        OUTLINE     = "outline",     "Outline wird generiert"
+        RESEARCH    = "research",    "Literaturrecherche"
+        WRITING     = "writing",     "Kapitel werden geschrieben"
+        REVIEW      = "review",      "Peer Review"
+        DONE        = "done",        "Fertig"
+        FAILED      = "failed",      "Fehlgeschlagen"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        "projects.BookProject",
+        on_delete=models.CASCADE,
+        related_name="essay_pipeline_jobs",
+    )
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="essay_pipeline_jobs",
+    )
+    status = models.CharField(
+        max_length=10, choices=JobStatus.choices, default=JobStatus.PENDING,
+        db_index=True,
+    )
+    current_step = models.CharField(
+        max_length=20, choices=PipelineStep.choices, default=PipelineStep.CREATED,
+    )
+    framework = models.CharField(max_length=50, default="academic_essay")
+    do_research = models.BooleanField(default=False)
+    do_review = models.BooleanField(default=False)
+    total_chapters = models.PositiveSmallIntegerField(default=0)
+    completed_chapters = models.PositiveSmallIntegerField(default=0)
+    current_chapter_title = models.CharField(max_length=300, blank=True, default="")
+    log_messages = models.JSONField(default=list)
+    error = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "wh_essay_pipeline_jobs"
+        ordering = ["-created_at"]
+        verbose_name = "Essay-Pipeline-Job"
+        verbose_name_plural = "Essay-Pipeline-Jobs"
+
+    def __str__(self):
+        return f"EssayPipeline {self.pk} ({self.status}/{self.current_step}) — {self.project}"
+
+    @property
+    def progress_pct(self) -> int:
+        step_weights = {
+            "created": 5,
+            "outline": 15,
+            "research": 30,
+            "writing": 85,
+            "review": 95,
+            "done": 100,
+            "failed": 0,
+        }
+        base = step_weights.get(self.current_step, 0)
+        if self.current_step == "writing" and self.total_chapters > 0:
+            chapter_pct = self.completed_chapters / self.total_chapters
+            base = 30 + int(chapter_pct * 55)
+        elif self.current_step == "research" and self.total_chapters > 0:
+            chapter_pct = self.completed_chapters / self.total_chapters
+            base = 15 + int(chapter_pct * 15)
+        return min(base, 100)
+
+    @property
+    def is_terminal(self) -> bool:
+        return self.status in (JobStatus.DONE, JobStatus.FAILED, JobStatus.CANCELED)
+
+    def add_log(self, message: str):
+        self.log_messages.append(message)
+        self.save(update_fields=["log_messages", "updated_at"])
