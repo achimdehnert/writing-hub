@@ -16,7 +16,7 @@ urlpatterns = [
         path("oidc/", include("mozilla_django_oidc.urls")),
     path("accounts/", include("django.contrib.auth.urls")),
     path("", include("apps.core.urls", namespace="core")),
-    path("projects/", include("apps.projects.urls", namespace="projects")),
+    path("projekte/", include("apps.projects.urls", namespace="projects")),
     path("outlines/", include("apps.outlines.urls", namespace="outlines")),
     path("serien/", include("apps.series.urls_html", namespace="series_html")),
     path("ideen/", include("apps.idea_import.urls_html", namespace="ideas")),
