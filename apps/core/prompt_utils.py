@@ -31,13 +31,15 @@ class PromptRenderError(RuntimeError):
     """Raised when a prompt template cannot be found or rendered."""
 
 # promptfw.frontmatter is the SSoT for YAML-frontmatter rendering.
-# Fallback only if promptfw is not installed (should not happen in production).
+# We import yaml/jinja2 directly to avoid a parameter name collision
+# in render_frontmatter_string (its first param is named 'content',
+# which collides with template variables named 'content').
 try:
-    from promptfw.frontmatter import render_frontmatter_string
+    import yaml
+    from jinja2 import Template as _Jinja2Template
     _PROMPTFW_AVAILABLE = True
 except ImportError:
     _PROMPTFW_AVAILABLE = False
-    render_frontmatter_string = None
 
 
 def render_prompt(template_name: str, **context: Any) -> list[dict]:
@@ -64,11 +66,11 @@ def render_prompt(template_name: str, **context: Any) -> list[dict]:
         try:
             raw_tpl = template_path.read_text()
             # Strip leading Jinja2 comments ({# ... #}) before frontmatter
-            lines = raw_tpl.split("\n")
-            while lines and lines[0].strip().startswith("{#"):
-                lines.pop(0)
-            raw_tpl = "\n".join(lines)
-            messages = render_frontmatter_string(raw_tpl, **context)
+            tpl_lines = raw_tpl.split("\n")
+            while tpl_lines and tpl_lines[0].strip().startswith("{#"):
+                tpl_lines.pop(0)
+            raw_tpl = "\n".join(tpl_lines)
+            messages = _render_frontmatter(raw_tpl, context)
         except Exception as exc:
             raise PromptRenderError(
                 f"promptfw render failed for '{template_name}': {exc}"
@@ -79,39 +81,39 @@ def render_prompt(template_name: str, **context: Any) -> list[dict]:
             )
         return messages
 
-    # CI / dev without promptfw — try minimal YAML fallback
-    messages = _fallback_render(template_path, context)
-    if not messages:
-        raise PromptRenderError(
-            f"Fallback render produced no messages for '{template_name}'"
+    # yaml/jinja2 not available — should not happen (Django deps)
+    raise PromptRenderError(
+        f"yaml/jinja2 not installed — cannot render '{template_name}'"
+    )
+
+
+def _render_frontmatter(template_str: str, ctx: dict) -> list[dict]:
+    """Render YAML-frontmatter template to messages.
+
+    Same logic as promptfw.frontmatter.render_frontmatter_string but accepts
+    context as a dict to avoid the 'content' parameter name collision.
+    """
+    if not template_str.strip().startswith("---"):
+        raise ValueError("Template must start with YAML frontmatter (---)")
+
+    parts = template_str.split("---", 2)
+    if len(parts) < 3:
+        raise ValueError("Invalid frontmatter: expected --- ... --- format")
+
+    frontmatter = yaml.safe_load(parts[1])
+    if not isinstance(frontmatter, dict):
+        raise ValueError(
+            f"Frontmatter must be a YAML dict, got {type(frontmatter).__name__}"
         )
+
+    messages: list[dict[str, str]] = []
+    for role in ("system", "user", "assistant"):
+        if role in frontmatter:
+            tpl = _Jinja2Template(str(frontmatter[role]))
+            rendered = tpl.render(**ctx).strip()
+            if rendered:
+                messages.append({"role": role, "content": rendered})
     return messages
-
-
-def _fallback_render(template_path: Path, context: dict) -> list[dict]:
-    """Minimal fallback if promptfw is not installed (dev/CI only)."""
-    try:
-        import yaml
-        from jinja2 import Template
-
-        content = template_path.read_text()
-        if not content.startswith("---"):
-            return []
-        parts = content.split("---", 2)
-        if len(parts) < 3:
-            return []
-        frontmatter = yaml.safe_load(parts[1])
-        messages = []
-        for role in ("system", "user"):
-            if role in frontmatter:
-                tpl = Template(str(frontmatter[role]))
-                rendered = tpl.render(**context).strip()
-                if rendered:
-                    messages.append({"role": role, "content": rendered})
-        return messages
-    except Exception as exc:
-        logger.warning("Fallback render failed for %s: %s", template_path, exc)
-        return []
 
 
 def prompt_exists(template_name: str) -> bool:
