@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # OCI Labels (ADR-022 konform)
 ARG APP_NAME=writing-hub
@@ -24,8 +24,11 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY . /app
 
-RUN chmod +x /app/docker/entrypoint.web.sh
+RUN chmod +x /app/docker/entrypoint.web.sh \
+    && groupadd -g 1000 app && useradd -u 1000 -g app -m app \
+    && chown -R app:app /app
 
+USER app:1000
 EXPOSE 8000
 
 # HEALTHCHECK removed — ADR-022: Healthchecks belong in docker-compose.prod.yml per service,
