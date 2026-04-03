@@ -272,7 +272,7 @@
     <!-- Outline -->
     <div class="col-md-4">
         <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
-             data-bs-toggle="modal" data-bs-target="#outlineModal">
+             {% if selected_outline %}onclick="location.href='{% url 'outlines:detail' selected_outline.pk %}'"{% else %}data-bs-toggle="modal" data-bs-target="#outlineModal"{% endif %}>
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-list-ol me-2" style="color:#6366f1;font-size:1.2rem;"></i>
