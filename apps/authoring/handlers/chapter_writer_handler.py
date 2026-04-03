@@ -148,24 +148,26 @@ class ChapterContext:
         Charaktere und Welten kommen aus worlds.WorldCharacter / worlds.World.
         """
         from apps.projects.models import BookProject
-        from apps.worlds.models import World, WorldCharacter
 
         try:
             project = BookProject.objects.get(pk=project_id)
         except BookProject.DoesNotExist:
             return cls(project_id=project_id, chapter_ref=chapter_ref)
 
-        characters = list(
-            WorldCharacter.objects.filter(
-                world__project_worlds__project=project
-            ).values("name", "role", "description", "motivation", "personality")[:10]
-        )
-
-        worlds = list(
-            World.objects.filter(
-                project_worlds__project=project
-            ).values("name", "description", "setting_era", "culture")[:3]
-        )
+        characters: list = []
+        worlds: list = []
+        try:
+            from apps.worlds.models import ProjectCharacterLink, ProjectWorldLink
+            for link in ProjectWorldLink.objects.filter(project=project)[:3]:
+                w = link.get_world()
+                if w:
+                    worlds.append({"name": getattr(w, "name", ""), "description": getattr(w, "description", "")})
+            for link in ProjectCharacterLink.objects.filter(project=project)[:10]:
+                c = link.get_character()
+                if c:
+                    characters.append({"name": getattr(c, "name", ""), "role": link.narrative_role or ""})
+        except Exception as exc:
+            logger.debug("World/character context not available: %s", exc)
 
         style_dna = None
         try:
