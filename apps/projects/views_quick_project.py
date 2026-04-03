@@ -63,6 +63,7 @@ class QuickProjectStartView(LoginRequiredMixin, View):
         topic = request.POST.get("topic", "").strip()
         framework = request.POST.get("framework", "academic_essay")
         target_words = request.POST.get("target_words", "5000")
+        audience = request.POST.get("audience", "Fachpublikum")
         do_research = bool(request.POST.get("do_research"))
         do_review = bool(request.POST.get("do_review"))
 
@@ -83,6 +84,7 @@ class QuickProjectStartView(LoginRequiredMixin, View):
             content_type=content_type,
             content_type_lookup=ct_lookup,
             target_word_count=target_words,
+            target_audience=audience,
             is_active=True,
         )
 

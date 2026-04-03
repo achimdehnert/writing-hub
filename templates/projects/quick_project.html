@@ -64,7 +64,7 @@
 </div>
 
 <div class="row g-3 mb-4">
-    <div class="col-md-7">
+    <div class="col-md-5">
         <label class="form-label" for="id_framework"><i class="bi bi-diagram-3 me-1"></i>Framework</label>
         <select name="framework" id="id_framework" class="form-select">
             {% for fw in frameworks %}
@@ -74,8 +74,17 @@
             {% endfor %}
         </select>
     </div>
-    <div class="col-md-5">
-        <label class="form-label" for="id_words"><i class="bi bi-123 me-1"></i>Ziel-Wortanzahl</label>
+    <div class="col-md-4">
+        <label class="form-label" for="id_audience"><i class="bi bi-people me-1"></i>Zielgruppe</label>
+        <select name="audience" id="id_audience" class="form-select">
+            <option value="Interessierte Leser">Interessierte (allgemeinverstaendlich)</option>
+            <option value="Fachpublikum" selected>Fachpublikum (fundiert, mit Fachbegriffen)</option>
+            <option value="Forschende Experten">Forschende Experten (hoechste Tiefe)</option>
+        </select>
+        <div class="form-text">Definiert Tiefe, Fachsprache und Qualitaet.</div>
+    </div>
+    <div class="col-md-3">
+        <label class="form-label" for="id_words"><i class="bi bi-123 me-1"></i>Ziel-Woerter</label>
         <input type="number" name="target_words" id="id_words" class="form-control"
                value="5000" min="1000" max="50000" step="500">
     </div>

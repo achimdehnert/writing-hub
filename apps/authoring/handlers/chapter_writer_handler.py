@@ -30,6 +30,8 @@ class ChapterContext:
     genre: str = ""
     premise: str = ""
     target_audience: str = ""
+    content_type: str = "novel"
+    citation_style: str = "APA"
     chapter_number: int = 1
     chapter_title: str = ""
     chapter_outline: str = ""
@@ -39,14 +41,22 @@ class ChapterContext:
     existing_content: str = ""
     prev_chapter_summary: str = ""
     next_chapter_outline: str = ""
+    research_notes: str = ""
     characters: list[dict] = field(default_factory=list)
     worlds: list[dict] = field(default_factory=list)
     all_chapters_outline: list[dict] = field(default_factory=list)
     style_dna: dict | None = None
 
+    @property
+    def is_academic(self) -> bool:
+        return self.content_type in ("academic", "scientific", "essay")
+
     def to_prompt_context(self) -> str:
         """Baut Kontext-String fuer LLM-Prompt."""
         parts = []
+
+        if self.is_academic:
+            return self._to_academic_context()
 
         parts.append("=" * 50)
         parts.append("BUCH-INFORMATIONEN")
@@ -141,6 +151,65 @@ class ChapterContext:
         parts.append("=" * 50)
         return "\n".join(parts)
 
+    def _to_academic_context(self) -> str:
+        """Akademischer/wissenschaftlicher Kontext — kein Fiction-Vokabular."""
+        parts = []
+        parts.append("=" * 50)
+        parts.append("AUFSATZ-INFORMATIONEN")
+        parts.append("=" * 50)
+        parts.append(f"Titel: {self.title}")
+        if self.premise:
+            parts.append(f"Forschungsfrage / These: {self.premise}")
+        if self.target_audience:
+            parts.append(f"Zielgruppe: {self.target_audience}")
+        parts.append(f"Zitierstil: {self.citation_style}")
+
+        parts.append("")
+        parts.append("=" * 50)
+        parts.append(f"ZU SCHREIBENDES KAPITEL: {self.chapter_number} - {self.chapter_title}")
+        parts.append("=" * 50)
+
+        if self.chapter_outline:
+            parts.append("\nKAPITEL-INHALT (WAS BEHANDELT WERDEN SOLL):")
+            parts.append(self.chapter_outline)
+        else:
+            parts.append("\nKein Outline vorhanden")
+
+        if self.chapter_beat:
+            parts.append(f"\nStruktur-Funktion: {self.chapter_beat}")
+        parts.append(f"Ziel-Wortanzahl: ca. {self.target_word_count} Woerter")
+
+        if self.prev_chapter_summary:
+            parts.append("")
+            parts.append("VORHERIGES KAPITEL (ZUSAMMENFASSUNG):")
+            parts.append(self.prev_chapter_summary[:600])
+
+        if self.research_notes:
+            parts.append("")
+            parts.append("=" * 50)
+            parts.append("RECHERCHE-ERGEBNISSE & QUELLEN")
+            parts.append("=" * 50)
+            parts.append(self.research_notes[:3000])
+
+        if self.style_dna:
+            parts.append("")
+            parts.append("=" * 50)
+            parts.append("SCHREIBSTIL-VORGABEN")
+            parts.append("=" * 50)
+            dna = self.style_dna
+            if dna.get("do_list"):
+                parts.append("\nDO:")
+                for item in dna["do_list"][:8]:
+                    parts.append(f"  - {item}")
+            if dna.get("dont_list"):
+                parts.append("\nDONT:")
+                for item in dna["dont_list"][:5]:
+                    parts.append(f"  - {item}")
+
+        parts.append("")
+        parts.append("=" * 50)
+        return "\n".join(parts)
+
     @classmethod
     def from_project(cls, project_id: str, chapter_ref: str) -> "ChapterContext":
         """
@@ -209,6 +278,19 @@ WICHTIG:
 - Schreibe auf Deutsch, lebendig und literarisch hochwertig
 - KEINE Metakommentare — NUR den Romantext!"""
 
+SYSTEM_WRITE_ACADEMIC = """Du bist ein erfahrener Wissenschaftler und Fachautor.
+
+DEINE AUFGABE: Schreibe ein vollstaendiges Kapitel eines wissenschaftlichen Aufsatzes.
+
+WICHTIG:
+- Schreibe in einem sachlichen, praezisen und wissenschaftlichen Stil
+- KEINE fiktiven Charaktere, Dialoge oder narrativen Elemente
+- Verwende Fachterminologie angemessen fuer die Zielgruppe
+- Zitiere relevante Quellen im angegebenen Zitierstil (z.B. APA: (Autor, Jahr))
+- Gliedere mit Zwischenueberschriften wo sinnvoll
+- Argumentiere logisch und belege Aussagen mit Quellen
+- KEINE Metakommentare — NUR den Fachtext!"""
+
 USER_WRITE = """# KAPITEL SCHREIBEN
 
 ## STORY-KONTEXT:
@@ -216,6 +298,20 @@ USER_WRITE = """# KAPITEL SCHREIBEN
 
 ## DEINE AUFGABE:
 Schreibe das vollstaendige Kapitel ({target_words} Woerter).
+
+BEGINNE JETZT MIT DEM KAPITELTEXT:"""
+
+USER_WRITE_ACADEMIC = """# KAPITEL SCHREIBEN
+
+## AUFSATZ-KONTEXT:
+{context}
+
+## DEINE AUFGABE:
+Schreibe das vollstaendige Kapitel ({target_words} Woerter).
+- Verwende einen wissenschaftlichen Schreibstil
+- Zitiere die angegebenen Quellen im Text
+- Verwende KEINE fiktiven Personen, Dialoge oder Erzaehlungen
+- Gib konkrete Fakten, Definitionen und Argumente
 
 BEGINNE JETZT MIT DEM KAPITELTEXT:"""
 
@@ -240,16 +336,23 @@ class ChapterWriterHandler:
             return self._write_chunked(context)
         return self._write_single(context)
 
+    def _select_prompts(self, context: ChapterContext) -> tuple[str, str]:
+        """Select system/user prompts based on content type."""
+        if context.is_academic:
+            return SYSTEM_WRITE_ACADEMIC, USER_WRITE_ACADEMIC
+        return SYSTEM_WRITE, USER_WRITE
+
     def _write_single(self, context: ChapterContext) -> dict[str, Any]:
         context_str = context.to_prompt_context()
         estimated_tokens = int(context.target_word_count * 1.5)
         max_tokens = min(max(estimated_tokens, 2000), self.MAX_TOKENS)
+        sys_prompt, usr_prompt = self._select_prompts(context)
 
         messages = [
-            {"role": "system", "content": SYSTEM_WRITE},
+            {"role": "system", "content": sys_prompt},
             {
                 "role": "user",
-                "content": USER_WRITE.format(
+                "content": usr_prompt.format(
                     context=context_str,
                     target_words=context.target_word_count,
                 ),
@@ -281,6 +384,8 @@ class ChapterWriterHandler:
         all_content: list[str] = []
         total_latency = 0
 
+        sys_prompt, _ = self._select_prompts(context)
+
         for chunk_num in range(num_chunks):
             is_first = chunk_num == 0
             is_last = chunk_num == num_chunks - 1
@@ -307,7 +412,7 @@ class ChapterWriterHandler:
                 )
 
             messages = [
-                {"role": "system", "content": SYSTEM_WRITE},
+                {"role": "system", "content": sys_prompt},
                 {"role": "user", "content": chunk_prompt},
             ]
             try:

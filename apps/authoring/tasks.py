@@ -403,6 +403,9 @@ def _pipeline_write_chapters(project, user, nodes, job):
                 project_id=str(project.pk),
                 chapter_ref=str(node.pk),
             )
+            context.content_type = project.content_type or "novel"
+            context.target_audience = project.target_audience or ""
+            context.premise = project.description or ""
             context.chapter_number = node.order
             context.chapter_title = node.title
             context.chapter_outline = node.description or ""
@@ -410,6 +413,7 @@ def _pipeline_write_chapters(project, user, nodes, job):
             context.chapter_beat = node.beat_phase or ""
             context.emotional_arc = node.emotional_arc or ""
             context.prev_chapter_summary = prev_content[-800:] if prev_content else ""
+            context.research_notes = node.notes or ""
 
             handler = ChapterWriterHandler()
             result = handler.write_chapter(context)
