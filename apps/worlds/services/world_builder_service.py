@@ -242,11 +242,6 @@ class WorldBuilderService:
             world_description=world.description or "",
             aspect=aspect,
         )
-        if not messages:
-            messages = [
-                {"role": "system", "content": f"Du bist ein Weltenbau-Experte fuer '{world.name}'."},
-                {"role": "user", "content": f"Vertiefe den Aspekt '{aspect}'."},
-            ]
 
         try:
             content = self._router.completion(
@@ -275,7 +270,8 @@ class WorldBuilderService:
         keywords: list[str],
         world_ctx_str: str,
     ) -> list[dict]:
-        messages = render_prompt(
+        """promptfw render_prompt() — raises PromptRenderError on failure."""
+        return render_prompt(
             "worlds/world_generate",
             world_ctx_str=world_ctx_str,
             project_title=project_title,
@@ -283,12 +279,6 @@ class WorldBuilderService:
             tone=tone,
             keywords=keywords,
         )
-        if not messages:
-            messages = [
-                {"role": "system", "content": "Du bist ein Weltenbau-Experte. Antworte mit JSON.\n\n" + (world_ctx_str or "")},
-                {"role": "user", "content": f"Erstelle eine Welt fuer: '{project_title}'."},
-            ]
-        return messages
 
     @staticmethod
     def _parse_world_response(raw: str) -> WorldBuildResult:

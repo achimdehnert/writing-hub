@@ -272,12 +272,6 @@ def _brainstorm_ideas(session: CreativeSession, count: int = 5) -> list[dict]:
         style_hint=session.style_dna_hint or "",
         count=count,
     )
-    if not messages:
-        # Fallback if template not found
-        messages = [
-            {"role": "system", "content": "Du bist ein kreativer Buchentwickler. Antworte NUR mit JSON."},
-            {"role": "user", "content": f"Generiere {count} Buchideen als JSON-Array."},
-        ]
     raw = router.completion(action_code="outline_generate", messages=messages)
     data = extract_json_list(raw)
     if data:
@@ -297,11 +291,6 @@ def _refine_idea(idea: BookIdea, session: CreativeSession) -> dict:
         hook=idea.hook,
         style_hint=session.style_dna_hint or "",
     )
-    if not messages:
-        messages = [
-            {"role": "system", "content": "Du bist ein Lektor. Antworte NUR mit JSON."},
-            {"role": "user", "content": f"Verfeinere: {idea.title}"},
-        ]
     raw = router.completion(action_code="outline_generate", messages=messages)
     return extract_json(raw) or {}
 
@@ -317,11 +306,6 @@ def _brainstorm_topics(session: CreativeSession, count: int = 5) -> list[dict]:
         inspiration=session.inspiration or "",
         count=count,
     )
-    if not messages:
-        messages = [
-            {"role": "system", "content": "Du bist ein Wissenschaftsberater. Antworte NUR mit JSON."},
-            {"role": "user", "content": f"Generiere {count} Themenvorschläge als JSON-Array."},
-        ]
     raw = router.completion(action_code="outline_generate", messages=messages)
     data = extract_json_list(raw)
     if data:
@@ -342,11 +326,6 @@ def _refine_topic(idea: BookIdea, session: CreativeSession) -> dict:
         hook=idea.hook,
         research_field=session.research_field or "",
     )
-    if not messages:
-        messages = [
-            {"role": "system", "content": "Du bist ein Wissenschaftsberater. Antworte NUR mit JSON."},
-            {"role": "user", "content": f"Verfeinere: {idea.title}"},
-        ]
     raw = router.completion(action_code="outline_generate", messages=messages)
     return extract_json(raw) or {}
 
@@ -365,12 +344,8 @@ def _generate_expose(idea: BookIdea, session: CreativeSession) -> str:
         themes=idea.themes or [],
         research_field=session.research_field or "",
     )
-    if not messages:
-        messages = [
-            {"role": "system", "content": "Du bist ein Wissenschaftsberater."},
-            {"role": "user", "content": f"Erstelle ein Exposé für: {idea.title}"},
-        ]
-    return router.completion(action_code="outline_generate", messages=messages)
+    raw = router.completion(action_code="outline_generate", messages=messages)
+    return raw
 
 
 def _generate_premise(idea: BookIdea, session: CreativeSession) -> str:
@@ -386,9 +361,5 @@ def _generate_premise(idea: BookIdea, session: CreativeSession) -> str:
         themes=idea.themes or [],
         style_hint=session.style_dna_hint or "",
     )
-    if not messages:
-        messages = [
-            {"role": "system", "content": "Du bist ein Buchentwickler."},
-            {"role": "user", "content": f"Erstelle eine Premise für: {idea.title}"},
-        ]
-    return router.completion(action_code="outline_generate", messages=messages)
+    raw = router.completion(action_code="outline_generate", messages=messages)
+    return raw

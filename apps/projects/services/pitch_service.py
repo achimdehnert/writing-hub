@@ -24,11 +24,6 @@ def generate_logline(project):
         inner_story=getattr(project, "inner_story", ""),
         theme=theme.core_question if theme else "",
     )
-    if not messages:
-        messages = [
-            {"role": "system", "content": "Du schreibst professionelle Loglines. Max. 35 Woerter."},
-            {"role": "user", "content": f"Logline fuer: {project.title}"},
-        ]
 
     result = _call_llm_messages(
         action_code="logline_generate",
@@ -63,11 +58,6 @@ def generate_expose_de(project):
         protagonist=f"{protagonist.want} / {protagonist.need}" if protagonist else "\u2014",
         antagonist=antagonist.antagonist_logic if antagonist else "\u2014",
     )
-    if not messages:
-        messages = [
-            {"role": "system", "content": "Du schreibst Verlagsexpos\u00e9s."},
-            {"role": "user", "content": f"Expos\u00e9 fuer: {project.title}"},
-        ]
 
     result = _call_llm_messages(
         action_code="expose_generate",
@@ -92,11 +82,6 @@ def generate_query(project):
         comp1=comps[0].to_comp_string() if len(comps) > 0 else "\u2014",
         comp2=comps[1].to_comp_string() if len(comps) > 1 else "\u2014",
     )
-    if not messages:
-        messages = [
-            {"role": "system", "content": "You write query letters for literary agents."},
-            {"role": "user", "content": f"Query letter for: {project.title}"},
-        ]
 
     result = _call_llm_messages(
         action_code="query_generate",

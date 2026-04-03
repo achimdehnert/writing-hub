@@ -183,11 +183,6 @@ class ChapterProductionService:
                 style_block=style_block,
                 node_text=node_text,
             )
-            if not messages:
-                messages = [
-                    {"role": "system", "content": "Du bist ein Buchschreib-Assistent.\n\n" + ctx_block},
-                    {"role": "user", "content": f"Schreib-Brief fuer:{node_text}"},
-                ]
 
             content = self._router.completion(
                 "chapter_brief", messages, quality_level=self._quality_level
@@ -207,20 +202,14 @@ class ChapterProductionService:
         ctx_block = self._get_context_block()
         style_block = self._get_style_constraints()
 
-        messages = render_prompt(
-            "authoring/chapter_write_production",
-            target_words=target_words,
-            ctx_block=ctx_block,
-            style_block=style_block,
-            brief=brief,
-        )
-        if not messages:
-            messages = [
-                {"role": "system", "content": f"Du bist ein Romanautor. Ca. {target_words} Woerter.\n\n" + ctx_block},
-                {"role": "user", "content": f"Schreibe das Kapitel:\n\n{brief}"},
-            ]
-
         try:
+            messages = render_prompt(
+                "authoring/chapter_write_production",
+                target_words=target_words,
+                ctx_block=ctx_block,
+                style_block=style_block,
+                brief=brief,
+            )
             content = self._router.completion(
                 "chapter_write", messages,
                 quality_level=self._quality_level, priority="quality"
@@ -237,19 +226,13 @@ class ChapterProductionService:
         ctx_block = self._get_context_block()
         style_block = self._get_style_constraints()
 
-        messages = render_prompt(
-            "authoring/chapter_analyze",
-            ctx_block=ctx_block,
-            style_block=style_block,
-            content=content,
-        )
-        if not messages:
-            messages = [
-                {"role": "system", "content": "Du bist ein Lektor.\n\n" + ctx_block},
-                {"role": "user", "content": content[:6000]},
-            ]
-
         try:
+            messages = render_prompt(
+                "authoring/chapter_analyze",
+                ctx_block=ctx_block,
+                style_block=style_block,
+                content=content,
+            )
             from promptfw.parsing import extract_json
             raw = self._router.completion(
                 "chapter_analyze", messages, quality_level=self._quality_level

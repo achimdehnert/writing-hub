@@ -264,11 +264,6 @@ class OutlineGenerateFullView(LoginRequiredMixin, View):
                 total=total,
                 target_word_count=project.target_word_count or total * target_per_chapter,
             )
-            if not prompt_msgs:
-                prompt_msgs = [
-                    {"role": "system", "content": "Du bist ein Story-Struktur-Experte. Antworte nur mit JSON."},
-                    {"role": "user", "content": f"Struktur für {total} Kapitel erstellen."},
-                ]
             raw = router.completion(
                 action_code="chapter_outline",
                 messages=prompt_msgs,
@@ -299,11 +294,6 @@ class OutlineGenerateFullView(LoginRequiredMixin, View):
                         target_words=node.target_words or 3000,
                         description=node.description or "(leer)",
                     )
-                    if not prompt_msgs:
-                        prompt_msgs = [
-                            {"role": "system", "content": "Du bist ein Romanautor. Antworte nur mit JSON."},
-                            {"role": "user", "content": f"Detail für Kapitel {node.order}: {node.title}"},
-                        ]
                     raw = router.completion(
                         action_code="chapter_outline",
                         messages=prompt_msgs,
@@ -358,11 +348,6 @@ class OutlineNodeEnrichView(LoginRequiredMixin, View):
                 target_words=node.target_words or 3000,
                 description=existing,
             )
-            if not prompt_msgs:
-                prompt_msgs = [
-                    {"role": "system", "content": "Du bist ein Romanautor. Antworte als JSON."},
-                    {"role": "user", "content": f"Erweitere Kapitel {node.order}: {node.title}"},
-                ]
             router = LLMRouter()
             raw = router.completion(
                 action_code="chapter_outline",

@@ -106,11 +106,6 @@ class IdeaGeneratorService:
             target_audience=target_audience,
             schema_json=json.dumps(schema, ensure_ascii=False),
         )
-        if not messages:
-            messages = [
-                {"role": "system", "content": "Du bist ein Buchideen-Entwickler. Antworte mit JSON-Array."},
-                {"role": "user", "content": f"Generiere {count} Buchideen."},
-            ]
 
         try:
             raw = self._router.completion(
@@ -148,11 +143,6 @@ class IdeaGeneratorService:
             protagonist=idea.protagonist or "",
             conflict=idea.conflict or "",
         )
-        if not messages:
-            messages = [
-                {"role": "system", "content": "Du bist ein Buchentwickler. Antworte mit JSON."},
-                {"role": "user", "content": f"Premise fuer: {idea.title}\n{idea.hook}"},
-            ]
 
         try:
             raw = self._router.completion(
@@ -180,11 +170,6 @@ class IdeaGeneratorService:
             "idea_import/generate_single_idea",
             keywords=keywords,
         )
-        if not messages:
-            messages = [
-                {"role": "system", "content": "Du bist ein Buchideen-Entwickler. Antworte mit JSON."},
-                {"role": "user", "content": f"Buchidee aus: {keywords}"},
-            ]
 
         try:
             raw = self._router.completion(

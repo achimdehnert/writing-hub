@@ -158,8 +158,6 @@ def _run_agents(session, project, chapters, agents) -> int:
             }
 
             prompt_msgs = render_prompt(agent["prompt_template"], **template_ctx)
-            if not prompt_msgs:
-                prompt_msgs = _fallback_prompt(agent, node, project)
 
             try:
                 raw = router.completion(
@@ -238,9 +236,6 @@ def _generate_verdict(session, project, chapters, total_findings: int):
         finding_summary="\n".join(finding_summary_parts) or f"{total_findings} Findings insgesamt.",
     )
 
-    if not prompt_msgs:
-        return
-
     try:
         router = LLMRouter()
         raw = router.completion(
@@ -277,32 +272,3 @@ def _parse_verdict(raw: str) -> dict[str, Any] | None:
     return extract_json(raw)
 
 
-def _fallback_prompt(agent: dict, node, project) -> list[dict[str, str]]:
-    """Generate fallback prompt if template rendering fails."""
-    role_map = {
-        "methodology": "Methodik-Prüfer für Forschungsdesign und Validität",
-        "argumentation": "Argumentationsprüfer für Logik und Evidenz",
-        "sources": "Quellenprüfer für Zitierpraxis und Literaturabdeckung",
-        "structure": "Strukturprüfer für Gliederung und akademische Konventionen",
-    }
-    role = role_map.get(agent["key"], "wissenschaftlicher Reviewer")
-    return [
-        {
-            "role": "system",
-            "content": (
-                f"Du bist ein erfahrener {role}.\n"
-                "Antworte als JSON-Array: "
-                '[{"type": "strength|weakness|suggestion|concern", '
-                '"category": "...", "severity": "minor|major|critical", '
-                '"feedback": "...", "text_ref": "..."}]'
-            ),
-        },
-        {
-            "role": "user",
-            "content": (
-                f"Projekt: {project.title}\n"
-                f"Abschnitt {node.order}: {node.title}\n\n"
-                f"{(node.content or '')[:8000]}"
-            ),
-        },
-    ]

@@ -80,11 +80,6 @@ class LektoratSessionStartView(LoginRequiredMixin, View):
                     title=node.title,
                     content=node.content,
                 )
-                if not messages:
-                    messages = [
-                        {"role": "system", "content": "Du bist ein Lektor. Antworte als JSON-Array."},
-                        {"role": "user", "content": f"Kapitel {node.order}: {node.title}\n\n{node.content[:6000]}"},
-                    ]
                 try:
                     raw = router.completion(
                         action_code="chapter_analyze",

@@ -306,15 +306,7 @@ class ChapterWriterHandler:
         """Render full write messages via promptfw template."""
         context_str = context.to_prompt_context()
         tpl = self._write_template(context)
-        messages = render_prompt(tpl, context=context_str, target_words=context.target_word_count)
-        if not messages:
-            logger.warning("Prompt template %s not found or empty, using inline fallback", tpl)
-            role = "Wissenschaftler" if context.is_academic else "Romanautor"
-            messages = [
-                {"role": "system", "content": f"Du bist ein erfahrener {role}. Schreibe ein vollstaendiges Kapitel."},
-                {"role": "user", "content": f"{context_str}\n\nSchreibe {context.target_word_count} Woerter."},
-            ]
-        return messages
+        return render_prompt(tpl, context=context_str, target_words=context.target_word_count)
 
     def _write_single(self, context: ChapterContext) -> dict[str, Any]:
         estimated_tokens = int(context.target_word_count * 1.5)
@@ -428,11 +420,6 @@ class ChapterWriterHandler:
             existing_content=context.existing_content,
             instruction=instruction,
         )
-        if not messages:
-            messages = [
-                {"role": "system", "content": "Du bist ein erfahrener Lektor. NUR den Text ausgeben."},
-                {"role": "user", "content": f"{context.existing_content}\n\n{instruction}"},
-            ]
         try:
             result: LLMResult = sync_completion("chapter_generation", messages, max_tokens=8000)
         except Exception as exc:
@@ -470,11 +457,6 @@ class ChapterWriterHandler:
             existing_content=context.existing_content,
             remaining_words=remaining,
         )
-        if not messages:
-            messages = [
-                {"role": "system", "content": "Du setzt einen begonnenen Text nahtlos fort."},
-                {"role": "user", "content": f"{context.existing_content}\n\nFortsetzung ({remaining} Woerter):"},
-            ]
         try:
             result: LLMResult = sync_completion(
                 "chapter_generation",
@@ -502,11 +484,6 @@ class ChapterWriterHandler:
             return ""
 
         messages = render_prompt(_TPL_SUMMARY, content=content)
-        if not messages:
-            messages = [
-                {"role": "system", "content": "Fasse den Text in 2-3 Saetzen zusammen."},
-                {"role": "user", "content": content[:3000]},
-            ]
         try:
             result: LLMResult = sync_completion("chapter_generation", messages, max_tokens=200)
             if result.success:

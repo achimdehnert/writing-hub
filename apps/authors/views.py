@@ -268,11 +268,6 @@ class SampleUpdateView(LoginRequiredMixin, View):
                     style_desc=style_desc,
                     situation_label=situation_label,
                 )
-                if not prompt_msgs:
-                    prompt_msgs = [
-                        {"role": "system", "content": "Du bist ein Romanautor. Antworte nur mit dem Text."},
-                        {"role": "user", "content": f"Schreibe einen Beispieltext für: {situation_label}"},
-                    ]
                 result = router.completion(
                     action_code="chapter_write",
                     messages=prompt_msgs,

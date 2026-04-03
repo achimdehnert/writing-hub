@@ -165,11 +165,6 @@ class PublishingKeywordsAIView(LoginRequiredMixin, View):
                 genre=genre,
                 description=project.description or "",
             )
-            if not messages:
-                messages = [
-                    {"role": "system", "content": "Du bist ein Buchmarketing-Experte."},
-                    {"role": "user", "content": f"Generiere 7 Keywords für: {project.title}"},
-                ]
             result = router.completion(
                 action_code="chapter_analyze",
                 messages=messages,

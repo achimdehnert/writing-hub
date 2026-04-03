@@ -43,11 +43,6 @@ def analyze_style(style: WritingStyle) -> bool:
         "authors/analyze_style",
         source_text=text,
     )
-    if not prompt_msgs:
-        prompt_msgs = [
-            {"role": "system", "content": "Du bist ein Literaturkritiker. Erstelle ein Stilprofil."},
-            {"role": "user", "content": f"Analysiere:\n\n{text[:4000]}"},
-        ]
 
     try:
         router = LLMRouter()
@@ -103,11 +98,6 @@ def extract_style_rules(style: WritingStyle) -> tuple[bool, dict]:
         "authors/extract_rules",
         source_text=source,
     )
-    if not prompt_msgs:
-        prompt_msgs = [
-            {"role": "system", "content": "Du bist ein Stilanalyst. Antworte NUR mit JSON."},
-            {"role": "user", "content": f"Extrahiere Stil-Regeln:\n\n{source[:3000]}"},
-        ]
 
     try:
         router = LLMRouter()
@@ -158,11 +148,6 @@ def generate_samples(style: WritingStyle) -> int:
                 style_desc=style_desc,
                 situation_label=situation_label,
             )
-            if not prompt_msgs:
-                prompt_msgs = [
-                    {"role": "system", "content": "Du bist ein Romanautor. Antworte nur mit dem Text."},
-                    {"role": "user", "content": f"Schreibe einen Beispieltext für: {situation_label}"},
-                ]
             result = router.completion(
                 action_code="chapter_write",
                 messages=prompt_msgs,

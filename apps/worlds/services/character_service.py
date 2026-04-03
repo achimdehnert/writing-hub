@@ -110,11 +110,6 @@ class WorldCharacterService:
         char_ctx = self._build_character_context(char)
 
         messages = render_prompt("worlds/character_enrich", char_ctx=char_ctx)
-        if not messages:
-            messages = [
-                {"role": "system", "content": "Du bist ein Experte für tiefe Romanfiguren. Antworte mit JSON."},
-                {"role": "user", "content": f"Charakter:\n{char_ctx}\n\nVertiefe: personality, backstory, goals, fears."},
-            ]
 
         try:
             raw = self._router.completion(
@@ -259,8 +254,8 @@ class WorldCharacterService:
         requirements: str,
         existing: list[str],
     ) -> list[dict]:
-        """promptfw render_to_messages() wenn verfügbar, sonst inline."""
-        messages = render_prompt(
+        """promptfw render_prompt() — raises PromptRenderError on failure."""
+        return render_prompt(
             "worlds/character_generate",
             world_ctx=world_ctx,
             project_ctx=project_ctx,
@@ -268,12 +263,6 @@ class WorldCharacterService:
             requirements=requirements,
             existing=existing,
         )
-        if not messages:
-            messages = [
-                {"role": "system", "content": "Du bist ein Charakter-Entwickler. Antworte mit JSON-Array.\n\n" + world_ctx},
-                {"role": "user", "content": f"Generiere {count} Charaktere."},
-            ]
-        return messages
 
     @staticmethod
     def _build_character_context(char) -> str:

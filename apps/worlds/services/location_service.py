@@ -198,20 +198,14 @@ class WorldLocationService:
         count: int,
         requirements: str,
     ) -> list[dict]:
-        """promptfw render_prompt() mit inline Fallback."""
-        messages = render_prompt(
+        """promptfw render_prompt() — raises PromptRenderError on failure."""
+        return render_prompt(
             "worlds/location_generate",
             world_ctx=world_ctx,
             project_ctx=project_ctx,
             count=count,
             requirements=requirements,
         )
-        if not messages:
-            messages = [
-                {"role": "system", "content": "Du bist ein Weltenbau-Experte. Antworte mit JSON-Array.\n\n" + world_ctx},
-                {"role": "user", "content": f"Generiere {count} Orte."},
-            ]
-        return messages
 
     @staticmethod
     def _parse_locations(raw: str) -> list[dict]:
@@ -362,20 +356,14 @@ class WorldSceneService:
         count: int,
         requirements: str,
     ) -> list[dict]:
-        """promptfw render_prompt() mit inline Fallback."""
-        messages = render_prompt(
+        """promptfw render_prompt() — raises PromptRenderError on failure."""
+        return render_prompt(
             "worlds/scene_generate",
             world_ctx=world_ctx,
             project_ctx=project_ctx,
             count=count,
             requirements=requirements,
         )
-        if not messages:
-            messages = [
-                {"role": "system", "content": "Du bist ein Drehbuch- und Romanautor. Antworte mit JSON-Array.\n\n" + world_ctx},
-                {"role": "user", "content": f"Generiere {count} Szenen."},
-            ]
-        return messages
 
     @staticmethod
     def _parse_scenes(raw: str) -> list[dict]:

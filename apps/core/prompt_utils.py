@@ -26,6 +26,10 @@ logger = logging.getLogger(__name__)
 # Prompt templates directory
 PROMPTS_DIR = Path(settings.BASE_DIR) / "templates" / "prompts"
 
+
+class PromptRenderError(RuntimeError):
+    """Raised when a prompt template cannot be found or rendered."""
+
 # promptfw.frontmatter is the SSoT for YAML-frontmatter rendering.
 # Fallback only if promptfw is not installed (should not happen in production).
 try:
@@ -52,18 +56,30 @@ def render_prompt(template_name: str, **context: Any) -> list[dict]:
     template_path = PROMPTS_DIR / f"{template_name}.jinja2"
 
     if not template_path.exists():
-        logger.warning("Prompt template not found: %s", template_path)
-        return []
+        raise PromptRenderError(
+            f"Prompt template not found: {template_path}"
+        )
 
     if _PROMPTFW_AVAILABLE:
         try:
-            return render_frontmatter_file(template_path, **context)
+            messages = render_frontmatter_file(template_path, **context)
         except Exception as exc:
-            logger.warning("promptfw render failed for %s: %s", template_name, exc)
-            return []
+            raise PromptRenderError(
+                f"promptfw render failed for '{template_name}': {exc}"
+            ) from exc
+        if not messages:
+            raise PromptRenderError(
+                f"promptfw returned empty messages for '{template_name}'"
+            )
+        return messages
 
-    logger.warning("promptfw not available, using inline fallback for %s", template_name)
-    return _fallback_render(template_path, context)
+    # CI / dev without promptfw — try minimal YAML fallback
+    messages = _fallback_render(template_path, context)
+    if not messages:
+        raise PromptRenderError(
+            f"Fallback render produced no messages for '{template_name}'"
+        )
+    return messages
 
 
 def _fallback_render(template_path: Path, context: dict) -> list[dict]:

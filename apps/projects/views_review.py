@@ -200,12 +200,6 @@ class ChapterAIReviewView(LoginRequiredMixin, View):
             title=node.title,
             content=node.content,
         )
-        if not prompt_msgs:
-            system_prompt = AGENT_PROMPTS.get(agent_key, AGENT_PROMPTS["lector"])
-            prompt_msgs = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Kapitel {node.order}: {node.title}\n\n{node.content[:8000]}"},
-            ]
 
         try:
             router = LLMRouter()
