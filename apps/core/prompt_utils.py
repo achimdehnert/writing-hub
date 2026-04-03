@@ -33,11 +33,11 @@ class PromptRenderError(RuntimeError):
 # promptfw.frontmatter is the SSoT for YAML-frontmatter rendering.
 # Fallback only if promptfw is not installed (should not happen in production).
 try:
-    from promptfw.frontmatter import render_frontmatter_file
+    from promptfw.frontmatter import render_frontmatter_string
     _PROMPTFW_AVAILABLE = True
 except ImportError:
     _PROMPTFW_AVAILABLE = False
-    render_frontmatter_file = None
+    render_frontmatter_string = None
 
 
 def render_prompt(template_name: str, **context: Any) -> list[dict]:
@@ -62,7 +62,13 @@ def render_prompt(template_name: str, **context: Any) -> list[dict]:
 
     if _PROMPTFW_AVAILABLE:
         try:
-            messages = render_frontmatter_file(template_path, **context)
+            content = template_path.read_text()
+            # Strip leading Jinja2 comments ({# ... #}) before frontmatter
+            lines = content.split("\n")
+            while lines and lines[0].strip().startswith("{#"):
+                lines.pop(0)
+            content = "\n".join(lines)
+            messages = render_frontmatter_string(content, **context)
         except Exception as exc:
             raise PromptRenderError(
                 f"promptfw render failed for '{template_name}': {exc}"
