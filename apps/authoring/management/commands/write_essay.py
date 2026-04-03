@@ -82,9 +82,15 @@ class Command(BaseCommand):
             help="Anzahl Kapitel (0 = Framework-Standard)",
         )
         parser.add_argument(
-            "--user",
+            "--owner",
             default="",
-            help="Username des Projekt-Owners (default: erster Superuser)",
+            help="Owner: username oder email (default: erster Superuser)",
+        )
+        parser.add_argument(
+            "--quality",
+            default="standard",
+            choices=["fast", "standard", "premium"],
+            help="LLM-Qualität: fast=gpt-4o-mini/4k, standard=gpt-4o-mini/8k, premium=gpt-4o/16k",
         )
         parser.add_argument(
             "--research",
@@ -144,9 +150,15 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("DRY RUN — keine Änderungen."))
             return
 
+        quality = options["quality"]
+
         # ── Step 0: User resolven ─────────────────────────────────
-        user = self._resolve_user(options["user"])
-        self.stdout.write(f"  Owner:       {user.username}")
+        user = self._resolve_user(options["owner"])
+        self.stdout.write(f"  Owner:       {user.username} ({user.email})")
+        self.stdout.write(f"  Qualität:    {quality}")
+
+        # ── Step 0b: LLM-Qualität anpassen ──────────────────────
+        self._apply_quality_settings(quality)
 
         # ── Step 1: Projekt anlegen ───────────────────────────────
         self.stdout.write(self.style.MIGRATE_HEADING("\n[1/6] Projekt anlegen..."))
@@ -195,18 +207,46 @@ class Command(BaseCommand):
 
     # ── Helpers ────────────────────────────────────────────────────
 
-    def _resolve_user(self, username: str):
-        if username:
-            try:
-                return User.objects.get(username=username)
-            except User.DoesNotExist:
-                raise CommandError(f"User '{username}' nicht gefunden.")
+    def _resolve_user(self, owner_ref: str):
+        """Resolve user by username, email, or fall back to first superuser."""
+        if owner_ref:
+            # Try username first, then email
+            user = User.objects.filter(username=owner_ref).first()
+            if not user:
+                user = User.objects.filter(email__iexact=owner_ref).first()
+            if not user:
+                raise CommandError(
+                    f"User '{owner_ref}' nicht gefunden (weder username noch email)."
+                )
+            return user
         user = User.objects.filter(is_superuser=True).first()
         if not user:
             user = User.objects.first()
         if not user:
-            raise CommandError("Kein User gefunden. Bitte --user angeben.")
+            raise CommandError("Kein User gefunden. Bitte --owner angeben.")
         return user
+
+    def _apply_quality_settings(self, quality: str):
+        """Adjust AIActionType max_tokens/model based on quality level."""
+        from aifw.models import AIActionType
+
+        QUALITY_PROFILES = {
+            "fast": {"chapter_write": {"max_tokens": 4000}},
+            "standard": {"chapter_write": {"max_tokens": 8000}},
+            "premium": {
+                "chapter_write": {"default_model": "openai:gpt-4o", "max_tokens": 16000},
+                "chapter_analyze": {"default_model": "openai:gpt-4o", "max_tokens": 4000},
+                "chapter_brief": {"default_model": "openai:gpt-4o", "max_tokens": 2000},
+            },
+        }
+
+        profile = QUALITY_PROFILES.get(quality, {})
+        for action_code, overrides in profile.items():
+            updated = AIActionType.objects.filter(code=action_code).update(**overrides)
+            if updated:
+                self.stdout.write(
+                    f"  → {action_code}: {overrides}"
+                )
 
     def _create_project(self, user, title, topic, framework, target_words):
         from apps.projects.models import BookProject, ContentTypeLookup
