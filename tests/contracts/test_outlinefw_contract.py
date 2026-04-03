@@ -14,7 +14,7 @@ class TestOutlineGeneratorContract:
     def outlinefw_available(self):
         """Skip if outlinefw not installed."""
         try:
-            from outlinefw import OutlineGenerator
+            from outlinefw import OutlineGenerator  # noqa: F401
             return True
         except ImportError:
             pytest.skip("outlinefw not installed")
@@ -85,7 +85,7 @@ class TestFrameworksContract:
     @pytest.fixture
     def outlinefw_available(self):
         try:
-            from outlinefw.frameworks import FRAMEWORKS
+            from outlinefw.frameworks import FRAMEWORKS  # noqa: F401
             return True
         except ImportError:
             pytest.skip("outlinefw not installed")
@@ -115,7 +115,7 @@ class TestProjectContextContract:
     @pytest.fixture
     def outlinefw_available(self):
         try:
-            from outlinefw import ProjectContext
+            from outlinefw import ProjectContext  # noqa: F401
             return True
         except ImportError:
             pytest.skip("outlinefw not installed")
@@ -137,7 +137,7 @@ class TestLLMQualityContract:
     @pytest.fixture
     def outlinefw_available(self):
         try:
-            from outlinefw import LLMQuality
+            from outlinefw import LLMQuality  # noqa: F401
             return True
         except ImportError:
             pytest.skip("outlinefw not installed")

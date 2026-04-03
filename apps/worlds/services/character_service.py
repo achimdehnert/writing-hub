@@ -13,9 +13,7 @@ Packages:
 """
 from __future__ import annotations
 
-import json
 import logging
-import re
 from dataclasses import dataclass, field
 from uuid import UUID
 
@@ -134,7 +132,8 @@ class WorldCharacterService:
                 "character_generate", messages,
                 quality_level=quality_level, priority="quality"
             )
-            data = self._extract_json_object(raw)
+            from promptfw.parsing import extract_json
+            data = extract_json(raw) or {}
             client.characters.update(
                 weltenhub_character_id,
                 CharacterUpdateInput(
@@ -329,27 +328,15 @@ class WorldCharacterService:
 
     @staticmethod
     def _parse_characters(raw: str) -> list[dict]:
-        raw = re.sub(r"```json\s*|```", "", raw).strip()
-        raw = re.sub(r"<think>[\s\S]*?</think>", "", raw).strip()
-        start = raw.find("[")
-        if start != -1:
-            raw = raw[start:]
-        try:
-            data = json.loads(raw)
-            if isinstance(data, dict):
-                data = data.get("characters", [data])
-            return [item for item in data if isinstance(item, dict) and item.get("name")]
-        except (json.JSONDecodeError, TypeError):
-            return []
+        from promptfw.parsing import extract_json, extract_json_list
+        data = extract_json_list(raw)
+        if not data:
+            obj = extract_json(raw)
+            data = obj.get("characters", [obj]) if obj else []
+        return [item for item in data if isinstance(item, dict) and item.get("name")]
 
     @staticmethod
     def _extract_json_object(raw: str) -> dict:
-        raw = re.sub(r"```json\s*|```", "", raw).strip()
-        raw = re.sub(r"<think>[\s\S]*?</think>", "", raw).strip()
-        start = raw.find("{")
-        if start != -1:
-            raw = raw[start:]
-        try:
-            return json.loads(raw)
-        except (json.JSONDecodeError, TypeError):
-            return {}
+        """Deprecated: use promptfw.parsing.extract_json() instead."""
+        from promptfw.parsing import extract_json
+        return extract_json(raw) or {}

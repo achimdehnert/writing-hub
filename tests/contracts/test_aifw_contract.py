@@ -3,7 +3,6 @@ Contract Tests: aifw/LLMRouter API (ADR-160)
 
 These tests verify that writing-hub's assumptions about LLMRouter's API are correct.
 """
-import pytest
 
 
 class TestLLMRouterContract:
@@ -51,7 +50,7 @@ class TestLLMRouterContract:
         sig = inspect.signature(LLMRouter.completion)
         # Check return annotation if available
         if sig.return_annotation != inspect.Signature.empty:
-            assert sig.return_annotation == str or "str" in str(sig.return_annotation), \
+            assert sig.return_annotation is str or "str" in str(sig.return_annotation), \
                 f"LLMRouter.completion should return str, got {sig.return_annotation}"
 
 

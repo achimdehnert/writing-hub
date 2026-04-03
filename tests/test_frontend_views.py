@@ -226,8 +226,13 @@ class TestProjectViews:
     def test_project_drama_dashboard(self, auth_client, project):
         must_200(auth_client.get(f"/projects/{project.pk}/drama/"))
 
+    def test_project_peer_review(self, auth_client, project):
+        project.content_type = "scientific"
+        project.save(update_fields=["content_type"])
+        must_200(auth_client.get(f"/projects/{project.pk}/peer-review/"))
+
     def test_project_other_user_detail_404(self, project):
-        other = User.objects.create_user(username="fe_other", password="pass123")
+        User.objects.create_user(username="fe_other", password="pass123")
         c = Client()
         c.login(username="fe_other", password="pass123")
         response = c.get(f"/projects/{project.pk}/")

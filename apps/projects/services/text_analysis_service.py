@@ -5,7 +5,6 @@ Strukturelle Manuskript-Analyse (regelbasiert, kein LLM).
 """
 from __future__ import annotations
 
-import json
 import re
 import statistics
 
@@ -203,12 +202,10 @@ def _check_voice_drift(project, nodes, snap):
             }],
         )
         if result.success:
-            try:
-                data = json.loads(result.content)
-                if data.get("drift"):
-                    drifted.append({"order": node.order, "reason": data.get("reason", "")})
-            except (json.JSONDecodeError, AttributeError):
-                pass
+            from promptfw.parsing import extract_json
+            data = extract_json(result.content)
+            if data and data.get("drift"):
+                drifted.append({"order": node.order, "reason": data.get("reason", "")})
 
     snap.voice_drift_checked = True
     snap.voice_drift_detected = bool(drifted)

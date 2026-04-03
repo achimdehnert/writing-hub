@@ -1,0 +1,43 @@
+<!-- Single Peer Review Finding Card -->
+<div class="card mb-2" style="background:#0d1117;border-color:#2d3748;border-left:3px solid {% if finding.severity == 'critical' %}#f87171{% elif finding.severity == 'major' %}#f59e0b{% else %}#60a5fa{% endif %};">
+    <div class="card-body py-2 px-3">
+        <div class="d-flex align-items-start justify-content-between">
+            <div class="flex-grow-1">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <!-- Agent Badge -->
+                    <span class="badge" style="background:#1e1b4b;color:#a5b4fc;font-size:.6rem;">
+                        {{ finding.get_agent_display }}
+                    </span>
+                    <!-- Severity -->
+                    <span class="badge" style="font-size:.6rem;background:{% if finding.severity == 'critical' %}#3a1a1a;color:#f87171{% elif finding.severity == 'major' %}#2d1e0a;color:#f59e0b{% else %}#0d1b2a;color:#60a5fa{% endif %};">
+                        {{ finding.severity }}
+                    </span>
+                    <!-- Type -->
+                    <span class="badge" style="font-size:.6rem;background:{% if finding.finding_type == 'strength' %}#1a3a1a;color:#22c55e{% elif finding.finding_type == 'weakness' %}#3a1a1a;color:#f87171{% elif finding.finding_type == 'concern' %}#2d1e0a;color:#f59e0b{% else %}#0d1b2a;color:#60a5fa{% endif %};">
+                        {{ finding.get_finding_type_display }}
+                    </span>
+                    {% if finding.category %}
+                    <span style="font-size:.6rem;color:#64748b;">{{ finding.category }}</span>
+                    {% endif %}
+                    <!-- Chapter -->
+                    <span style="font-size:.65rem;color:#64748b;">
+                        <i class="bi bi-bookmark me-1"></i>{{ finding.node.title|truncatechars:40 }}
+                    </span>
+                </div>
+                <div style="font-size:.82rem;color:#cbd5e1;">{{ finding.feedback }}</div>
+                {% if finding.text_reference %}
+                <div class="mt-1 ps-2" style="border-left:2px solid #2d3748;font-size:.75rem;color:#94a3b8;font-style:italic;">
+                    „{{ finding.text_reference|truncatechars:200 }}"
+                </div>
+                {% endif %}
+            </div>
+            <div class="ms-2 flex-shrink-0">
+                <button class="btn btn-sm px-2 py-0 peer-resolve-btn"
+                        data-url="{% url 'projects:peer_review_resolve' project.pk finding.pk %}"
+                        style="background:{% if finding.is_resolved %}#1a3a1a{% else %}#161b22{% endif %};border:1px solid #2d3748;color:{% if finding.is_resolved %}#22c55e{% else %}#64748b{% endif %};font-size:.7rem;">
+                    <i class="bi {% if finding.is_resolved %}bi-check-circle-fill{% else %}bi-circle{% endif %}"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

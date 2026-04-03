@@ -12,9 +12,7 @@ Packages:
 """
 from __future__ import annotations
 
-import json
 import logging
-import re
 from dataclasses import dataclass, field
 from uuid import UUID
 
@@ -237,18 +235,12 @@ class WorldLocationService:
 
     @staticmethod
     def _parse_locations(raw: str) -> list[dict]:
-        raw = re.sub(r"```json\s*|```", "", raw).strip()
-        raw = re.sub(r"<think>[\s\S]*?</think>", "", raw).strip()
-        start = raw.find("[")
-        if start != -1:
-            raw = raw[start:]
-        try:
-            data = json.loads(raw)
-            if isinstance(data, dict):
-                data = data.get("locations", [data])
-            return [item for item in data if isinstance(item, dict) and item.get("name")]
-        except (json.JSONDecodeError, TypeError):
-            return []
+        from promptfw.parsing import extract_json, extract_json_list
+        data = extract_json_list(raw)
+        if not data:
+            obj = extract_json(raw)
+            data = obj.get("locations", [obj]) if obj else []
+        return [item for item in data if isinstance(item, dict) and item.get("name")]
 
 
 class WorldSceneService:
@@ -427,15 +419,9 @@ class WorldSceneService:
 
     @staticmethod
     def _parse_scenes(raw: str) -> list[dict]:
-        raw = re.sub(r"```json\s*|```", "", raw).strip()
-        raw = re.sub(r"<think>[\s\S]*?</think>", "", raw).strip()
-        start = raw.find("[")
-        if start != -1:
-            raw = raw[start:]
-        try:
-            data = json.loads(raw)
-            if isinstance(data, dict):
-                data = data.get("scenes", [data])
-            return [item for item in data if isinstance(item, dict) and item.get("title")]
-        except (json.JSONDecodeError, TypeError):
-            return []
+        from promptfw.parsing import extract_json, extract_json_list
+        data = extract_json_list(raw)
+        if not data:
+            obj = extract_json(raw)
+            data = obj.get("scenes", [obj]) if obj else []
+        return [item for item in data if isinstance(item, dict) and item.get("title")]

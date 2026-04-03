@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% load project_filters %}
+{% block title %}Peer Review — {{ project.title }}{% endblock %}
+{% block nav_projects %}active{% endblock %}
+
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;">
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb" style="background:transparent;font-size:.85rem;">
+        <li class="breadcrumb-item"><a href="{% url 'projects:list' %}">Writing Hub</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'projects:detail' project.pk %}">{{ project.title }}</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'projects:peer_review' project.pk %}">Peer Review</a></li>
+        <li class="breadcrumb-item active">{{ session.created_at|date:"d.m.Y H:i" }}</li>
+    </ol>
+</nav>
+
+<!-- Verdict Header -->
+<div class="card mb-4" style="background:#0d1117;border-color:#2d3748;">
+    <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <h4 class="fw-bold mb-0" style="color:#e2e8f0;">
+                <i class="bi bi-journal-check me-2" style="color:#8b5cf6;"></i>Gutachten
+            </h4>
+            {% if session.verdict == 'accept' %}
+            <span class="badge px-3 py-2" style="background:#1a3a1a;color:#22c55e;font-size:.85rem;">
+                <i class="bi bi-check-circle me-1"></i>Accept
+            </span>
+            {% elif session.verdict == 'minor_revisions' %}
+            <span class="badge px-3 py-2" style="background:#1e2d1a;color:#86efac;font-size:.85rem;">
+                <i class="bi bi-pencil me-1"></i>Minor Revisions
+            </span>
+            {% elif session.verdict == 'major_revisions' %}
+            <span class="badge px-3 py-2" style="background:#2d1e0a;color:#f59e0b;font-size:.85rem;">
+                <i class="bi bi-exclamation-triangle me-1"></i>Major Revisions
+            </span>
+            {% elif session.verdict == 'reject' %}
+            <span class="badge px-3 py-2" style="background:#3a1a1a;color:#f87171;font-size:.85rem;">
+                <i class="bi bi-x-circle me-1"></i>Reject
+            </span>
+            {% endif %}
+        </div>
+
+        {% if session.summary %}
+        <p style="color:#cbd5e1;font-size:.9rem;">{{ session.summary }}</p>
+        {% endif %}
+
+        <!-- Scores -->
+        {% if session.scores %}
+        <div class="row g-2 mb-3">
+            {% for dim, score in session.scores.items %}
+            <div class="col">
+                <div class="text-center p-2 rounded" style="background:#161b22;border:1px solid #2d3748;">
+                    <div class="fw-bold" style="font-size:1.3rem;color:{% if score >= 8 %}#22c55e{% elif score >= 5 %}#f59e0b{% else %}#f87171{% endif %};">
+                        {{ score }}
+                    </div>
+                    <div style="font-size:.65rem;color:#64748b;text-transform:capitalize;">{{ dim }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Strengths + Issues -->
+        <div class="row g-3">
+            {% if session.strengths %}
+            <div class="col-md-6">
+                <h6 class="fw-semibold" style="color:#22c55e;"><i class="bi bi-check2-circle me-1"></i>Stärken</h6>
+                <ul class="list-unstyled mb-0">
+                    {% for s in session.strengths %}
+                    <li class="mb-1" style="font-size:.82rem;color:#cbd5e1;">
+                        <i class="bi bi-plus-circle me-1" style="color:#22c55e;font-size:.7rem;"></i>{{ s }}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            {% if session.main_issues %}
+            <div class="col-md-6">
+                <h6 class="fw-semibold" style="color:#f59e0b;"><i class="bi bi-exclamation-circle me-1"></i>Hauptkritikpunkte</h6>
+                <ul class="list-unstyled mb-0">
+                    {% for i in session.main_issues %}
+                    <li class="mb-1" style="font-size:.82rem;color:#cbd5e1;">
+                        <i class="bi bi-dash-circle me-1" style="color:#f59e0b;font-size:.7rem;"></i>{{ i }}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if session.recommendations %}
+        <div class="mt-3">
+            <h6 class="fw-semibold" style="color:#60a5fa;"><i class="bi bi-lightbulb me-1"></i>Empfehlungen</h6>
+            <ol class="mb-0" style="font-size:.82rem;color:#cbd5e1;padding-left:1.2rem;">
+                {% for r in session.recommendations %}
+                <li class="mb-1">{{ r }}</li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Statistik-Leiste -->
+<div class="row g-2 mb-4">
+    <div class="col">
+        <div class="text-center p-2 rounded" style="background:#0d1117;border:1px solid #2d3748;">
+            <div class="fw-bold" style="color:#f87171;">{{ critical_count }}</div>
+            <div style="font-size:.65rem;color:#64748b;">Critical</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="text-center p-2 rounded" style="background:#0d1117;border:1px solid #2d3748;">
+            <div class="fw-bold" style="color:#f59e0b;">{{ major_count }}</div>
+            <div style="font-size:.65rem;color:#64748b;">Major</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="text-center p-2 rounded" style="background:#0d1117;border:1px solid #2d3748;">
+            <div class="fw-bold" style="color:#60a5fa;">{{ minor_count }}</div>
+            <div style="font-size:.65rem;color:#64748b;">Minor</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="text-center p-2 rounded" style="background:#0d1117;border:1px solid #2d3748;">
+            <div class="fw-bold" style="color:#22c55e;">{{ resolved_count }}</div>
+            <div style="font-size:.65rem;color:#64748b;">Gelöst</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="text-center p-2 rounded" style="background:#0d1117;border:1px solid #2d3748;">
+            <div class="fw-bold" style="color:#e2e8f0;">{{ open_count }}</div>
+            <div style="font-size:.65rem;color:#64748b;">Offen</div>
+        </div>
+    </div>
+</div>
+
+<!-- Findings nach Agent -->
+<ul class="nav nav-tabs mb-3" id="reviewTabs" role="tablist" style="border-color:#2d3748;">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#tab-all" type="button"
+                style="color:#e2e8f0;background:transparent;border-color:#2d3748;">
+            Alle ({{ findings|length }})
+        </button>
+    </li>
+    {% for agent in agents %}
+    {% with agent_findings=findings_by_agent|get_item:agent.key %}
+    {% if agent_findings %}
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-{{ agent.key }}" type="button"
+                style="color:#94a3b8;background:transparent;border-color:#2d3748;">
+            <i class="bi {{ agent.icon }} me-1"></i>{{ agent.name }} ({{ agent_findings|length }})
+        </button>
+    </li>
+    {% endif %}
+    {% endwith %}
+    {% endfor %}
+</ul>
+
+<div class="tab-content" id="reviewTabContent">
+    <!-- Alle Findings -->
+    <div class="tab-pane fade show active" id="tab-all" role="tabpanel">
+        {% for finding in findings %}
+        {% include "projects/_peer_review_finding.html" with finding=finding %}
+        {% endfor %}
+    </div>
+
+    {% for agent in agents %}
+    {% with agent_findings=findings_by_agent|get_item:agent.key %}
+    {% if agent_findings %}
+    <div class="tab-pane fade" id="tab-{{ agent.key }}" role="tabpanel">
+        {% for finding in agent_findings %}
+        {% include "projects/_peer_review_finding.html" with finding=finding %}
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+    {% endfor %}
+</div>
+
+</div>
+{% endblock %}

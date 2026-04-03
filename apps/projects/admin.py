@@ -5,7 +5,8 @@ from .models import (
     BetaReaderSession, BookProject, ComparableTitle,
     ContentTypeLookup, GenreConventionProfile, GenreLookup,
     OutlineFramework, OutlineFrameworkBeat, OutlineNode,
-    OutlineSequence, OutlineVersion, PitchDocument,
+    OutlineSequence, OutlineVersion, PeerReviewFinding,
+    PeerReviewSession, PitchDocument,
     ProjectGenrePromise, ProjectTurningPoint,
     ResearchNote, SubplotArc, TextAnalysisSnapshot,
 )
@@ -295,5 +296,29 @@ class DialogueSceneAdmin(admin.ModelAdmin):
     search_fields = ["speaker_a_name", "speaker_b_name", "node__title"]
     raw_id_fields = ["node"]
     readonly_fields = ["id"]
+
+
+class PeerReviewFindingInline(admin.TabularInline):
+    model = PeerReviewFinding
+    extra = 0
+    fields = ["agent", "node", "finding_type", "severity", "category", "feedback", "is_resolved"]
+    readonly_fields = ["id", "created_at"]
+
+
+@admin.register(PeerReviewSession)
+class PeerReviewSessionAdmin(admin.ModelAdmin):
+    list_display = ["project", "status", "verdict", "finding_count", "chapter_count", "created_at"]
+    list_filter = ["status", "verdict"]
+    search_fields = ["project__title"]
+    readonly_fields = ["id", "created_at", "finished_at"]
+    inlines = [PeerReviewFindingInline]
+
+
+@admin.register(PeerReviewFinding)
+class PeerReviewFindingAdmin(admin.ModelAdmin):
+    list_display = ["session", "node", "agent", "finding_type", "severity", "is_resolved", "created_at"]
+    list_filter = ["agent", "finding_type", "severity", "is_resolved"]
+    search_fields = ["feedback", "node__title"]
+    readonly_fields = ["id", "created_at"]
 
 

@@ -1,8 +1,6 @@
 """
 Tests for apps.core.prompt_utils — promptfw integration.
 """
-import pytest
-from pathlib import Path
 
 
 class TestRenderPrompt:

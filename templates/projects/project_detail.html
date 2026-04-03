@@ -359,24 +359,24 @@
         </div>
     </div>
 
-    {% if project.content_type == 'academic' or project.content_type == 'scientific' %}
-    <!-- Peer Review (nur academic/scientific) -->
+    {% if project.content_type == 'academic' or project.content_type == 'scientific' or project.content_type == 'essay' %}
+    <!-- Peer Review (nur academic/scientific/essay) -->
     <div class="col-md-4">
         <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
-             onclick="location.href='{% url 'projects:review' project.pk %}'">
+             onclick="location.href='{% url 'projects:peer_review' project.pk %}'">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
-                    <i class="bi bi-people-fill me-2" style="color:#7dd3fc;font-size:1.2rem;"></i>
+                    <i class="bi bi-journal-check me-2" style="color:#8b5cf6;font-size:1.2rem;"></i>
                     <div>
                         <div class="fw-semibold small" style="color:#e2e8f0;">Peer Review</div>
-                        <div class="text-muted" style="font-size:.72rem;">Fachliche Begutachtung</div>
+                        <div class="text-muted" style="font-size:.72rem;">KI-Gutachten (Methodik, Quellen, Struktur)</div>
                     </div>
                 </div>
                 <div class="progress mb-1" style="height:3px;background:#1e2235;">
-                    <div class="progress-bar" style="width:0%;background:#7dd3fc;"></div>
+                    <div class="progress-bar" style="width:0%;background:#8b5cf6;"></div>
                 </div>
                 <div class="d-flex justify-content-between" style="font-size:.7rem;">
-                    <span style="color:#7dd3fc;">→ Review öffnen</span>
+                    <span style="color:#8b5cf6;">→ Peer Review öffnen</span>
                     <span class="text-muted">Ausstehend</span>
                 </div>
             </div>

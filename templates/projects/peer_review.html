@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Peer Review — {{ project.title }}{% endblock %}
+{% block nav_projects %}active{% endblock %}
+
+{% block content %}
+<div style="max-width:1100px;margin:0 auto;">
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb" style="background:transparent;font-size:.85rem;">
+        <li class="breadcrumb-item"><a href="{% url 'projects:list' %}">Writing Hub</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'projects:detail' project.pk %}">{{ project.title }}</a></li>
+        <li class="breadcrumb-item active">Peer Review</li>
+    </ol>
+</nav>
+
+<div class="mb-4">
+    <h3 class="fw-bold mb-1" style="color:#e2e8f0;">
+        <i class="bi bi-journal-check me-2" style="color:#8b5cf6;"></i>Wissenschaftliches Peer Review
+    </h3>
+    <div class="text-muted small">KI-gestütztes Gutachten für „{{ project.title }}"</div>
+</div>
+
+{% if not is_eligible %}
+<div class="alert" style="background:#1e1b2e;border-color:#4c1d95;color:#c4b5fd;" role="alert">
+    <i class="bi bi-info-circle me-2"></i>
+    <strong>Peer Review</strong> ist nur für wissenschaftliche, akademische oder Essay-Projekte verfügbar.
+    <br><span class="small">Aktueller Typ: <strong>{{ project.get_content_type_display }}</strong>.
+    Bitte Projekttyp unter <a href="{% url 'projects:edit' project.pk %}" style="color:#a78bfa;">Bearbeiten</a>
+    auf „Wissenschaftliches Paper", „Akademische Arbeit" oder „Essay" ändern.</span>
+</div>
+{% else %}
+
+<!-- Neues Review starten -->
+<div class="card mb-4" style="background:#0d1117;border-color:#2d3748;">
+    <div class="card-body">
+        <h5 class="fw-semibold mb-3" style="color:#e2e8f0;">
+            <i class="bi bi-play-circle me-2" style="color:#22c55e;"></i>Neues Peer Review starten
+        </h5>
+        <form method="post" action="{% url 'projects:peer_review_start' project.pk %}">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label small text-muted">Review-Agenten auswählen:</label>
+                <div class="row g-2">
+                    {% for agent in agents %}
+                    <div class="col-md-3">
+                        <div class="form-check p-3 rounded" style="background:#161b22;border:1px solid #2d3748;">
+                            <input class="form-check-input" type="checkbox" name="agents"
+                                   value="{{ agent.key }}" id="agent_{{ agent.key }}" checked>
+                            <label class="form-check-label" for="agent_{{ agent.key }}">
+                                <div class="fw-semibold" style="color:#e2e8f0;">
+                                    <i class="bi {{ agent.icon }} me-1" style="color:#8b5cf6;"></i>{{ agent.name }}
+                                </div>
+                                <div class="text-muted" style="font-size:.7rem;">{{ agent.description }}</div>
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <button type="submit" class="btn btn-sm px-4" style="background:#8b5cf6;color:#fff;border:none;">
+                <i class="bi bi-rocket-takeoff me-1"></i>Peer Review starten
+            </button>
+            <span class="text-muted small ms-3">Alle Kapitel werden von den ausgewählten Agenten analysiert.</span>
+        </form>
+    </div>
+</div>
+
+<!-- Bisherige Sessions -->
+{% if sessions %}
+<h5 class="fw-semibold mb-3" style="color:#e2e8f0;">Bisherige Reviews</h5>
+<div class="row g-3 mb-4">
+    {% for session in sessions %}
+    <div class="col-md-4">
+        <a href="{% url 'projects:peer_review_session' project.pk session.pk %}" class="text-decoration-none">
+            <div class="card h-100" style="background:#0d1117;border-color:#2d3748;transition:border-color .15s;"
+                 onmouseover="this.style.borderColor='#8b5cf6'" onmouseout="this.style.borderColor='#2d3748'">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="fw-semibold" style="color:#e2e8f0;">
+                            {{ session.created_at|date:"d.m.Y H:i" }}
+                        </span>
+                        {% if session.status == 'done' %}
+                            {% if session.verdict == 'accept' %}
+                            <span class="badge" style="background:#1a3a1a;color:#22c55e;font-size:.65rem;">Accept</span>
+                            {% elif session.verdict == 'minor_revisions' %}
+                            <span class="badge" style="background:#1e2d1a;color:#86efac;font-size:.65rem;">Minor Revisions</span>
+                            {% elif session.verdict == 'major_revisions' %}
+                            <span class="badge" style="background:#2d1e0a;color:#f59e0b;font-size:.65rem;">Major Revisions</span>
+                            {% elif session.verdict == 'reject' %}
+                            <span class="badge" style="background:#3a1a1a;color:#f87171;font-size:.65rem;">Reject</span>
+                            {% else %}
+                            <span class="badge" style="background:#1a3a1a;color:#22c55e;font-size:.65rem;">Done</span>
+                            {% endif %}
+                        {% elif session.status == 'running' %}
+                        <span class="badge" style="background:#1e1b4b;color:#a5b4fc;font-size:.65rem;">Läuft...</span>
+                        {% elif session.status == 'error' %}
+                        <span class="badge" style="background:#3a1a1a;color:#f87171;font-size:.65rem;">Fehler</span>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex gap-3 mt-2">
+                        <div class="text-center">
+                            <div class="fw-bold" style="color:#8b5cf6;">{{ session.finding_count }}</div>
+                            <div style="font-size:.65rem;color:#64748b;">Findings</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="fw-bold" style="color:#60a5fa;">{{ session.chapter_count }}</div>
+                            <div style="font-size:.65rem;color:#64748b;">Abschnitte</div>
+                        </div>
+                        {% if session.avg_score %}
+                        <div class="text-center">
+                            <div class="fw-bold" style="color:#fbbf24;">{{ session.avg_score }}/10</div>
+                            <div style="font-size:.65rem;color:#64748b;">Ø Score</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% if session.summary %}
+                    <div class="mt-2 text-muted" style="font-size:.72rem;">{{ session.summary|truncatechars:100 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="bi bi-journal-check" style="font-size:3rem;color:#2d3748;"></i>
+    <div class="text-muted mt-2">Noch kein Peer Review durchgeführt.</div>
+    <div class="text-muted small">Starte oben ein neues Review für dein Projekt.</div>
+</div>
+{% endif %}
+
+{% endif %}
+
+</div>
+{% endblock %}

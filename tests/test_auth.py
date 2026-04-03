@@ -18,7 +18,7 @@ class TestAuthRedirects:
         assert "/accounts/login" in response["Location"]
 
     def test_projects_list_accessible_when_logged_in(self):
-        user = User.objects.create_user(username="testuser", password="testpass123")
+        User.objects.create_user(username="testuser", password="testpass123")
         client = Client()
         client.login(username="testuser", password="testpass123")
         response = client.get("/projects/")

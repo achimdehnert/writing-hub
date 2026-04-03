@@ -1,7 +1,8 @@
 """
 Prompt Utilities — promptfw Integration (ADR-083)
 
-Zentraler Helper für PromptStack.render_to_messages() mit Fallback.
+Thin wrapper around promptfw.frontmatter (SSoT) for rendering
+.jinja2 YAML-frontmatter templates to OpenAI-format messages.
 
 Usage:
     from apps.core.prompt_utils import render_prompt
@@ -25,13 +26,14 @@ logger = logging.getLogger(__name__)
 # Prompt templates directory
 PROMPTS_DIR = Path(settings.BASE_DIR) / "templates" / "prompts"
 
-# Try to import promptfw
+# promptfw.frontmatter is the SSoT for YAML-frontmatter rendering.
+# Fallback only if promptfw is not installed (should not happen in production).
 try:
-    from promptfw import PromptStack
+    from promptfw.frontmatter import render_frontmatter_file
     _PROMPTFW_AVAILABLE = True
 except ImportError:
     _PROMPTFW_AVAILABLE = False
-    PromptStack = None
+    render_frontmatter_file = None
 
 
 def render_prompt(template_name: str, **context: Any) -> list[dict]:
@@ -45,62 +47,46 @@ def render_prompt(template_name: str, **context: Any) -> list[dict]:
     Returns:
         List of message dicts: [{"role": "system", "content": "..."}, {"role": "user", "content": "..."}]
 
-    Falls back to inline prompt if template not found or promptfw not available.
+    Delegates to promptfw.frontmatter.render_frontmatter_file() (SSoT).
     """
     template_path = PROMPTS_DIR / f"{template_name}.jinja2"
 
-    if not _PROMPTFW_AVAILABLE:
-        logger.debug("promptfw not available, using fallback for %s", template_name)
-        return _fallback_render(template_path, context)
-
     if not template_path.exists():
         logger.warning("Prompt template not found: %s", template_path)
-        return _fallback_render(template_path, context)
+        return []
 
-    try:
-        stack = PromptStack.from_file(str(template_path))
-        return stack.render_to_messages(**context)
-    except Exception as exc:
-        logger.warning("PromptStack render failed for %s: %s", template_name, exc)
-        return _fallback_render(template_path, context)
+    if _PROMPTFW_AVAILABLE:
+        try:
+            return render_frontmatter_file(template_path, **context)
+        except Exception as exc:
+            logger.warning("promptfw render failed for %s: %s", template_name, exc)
+            return []
+
+    logger.warning("promptfw not available, using inline fallback for %s", template_name)
+    return _fallback_render(template_path, context)
 
 
 def _fallback_render(template_path: Path, context: dict) -> list[dict]:
-    """
-    Fallback: Parse YAML frontmatter manually if promptfw not available.
-    """
-    if not template_path.exists():
-        # Return empty messages - caller should handle this
-        return []
-
+    """Minimal fallback if promptfw is not installed (dev/CI only)."""
     try:
         import yaml
         from jinja2 import Template
 
         content = template_path.read_text()
-
-        # Parse YAML frontmatter (between --- markers)
-        if content.startswith("---"):
-            parts = content.split("---", 2)
-            if len(parts) >= 3:
-                frontmatter = yaml.safe_load(parts[1])
-                # Render system and user with Jinja2
-                messages = []
-                if "system" in frontmatter:
-                    system_tpl = Template(frontmatter["system"])
-                    messages.append({
-                        "role": "system",
-                        "content": system_tpl.render(**context).strip()
-                    })
-                if "user" in frontmatter:
-                    user_tpl = Template(frontmatter["user"])
-                    messages.append({
-                        "role": "user",
-                        "content": user_tpl.render(**context).strip()
-                    })
-                return messages
-
-        return []
+        if not content.startswith("---"):
+            return []
+        parts = content.split("---", 2)
+        if len(parts) < 3:
+            return []
+        frontmatter = yaml.safe_load(parts[1])
+        messages = []
+        for role in ("system", "user"):
+            if role in frontmatter:
+                tpl = Template(str(frontmatter[role]))
+                rendered = tpl.render(**context).strip()
+                if rendered:
+                    messages.append({"role": role, "content": rendered})
+        return messages
     except Exception as exc:
         logger.warning("Fallback render failed for %s: %s", template_path, exc)
         return []

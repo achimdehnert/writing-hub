@@ -39,14 +39,14 @@ class TestWorldsAPIAuth:
         assert response.status_code in (401, 403)
 
     def test_worlds_api_authenticated_returns_200(self):
-        user = User.objects.create_user(username="worldapiuser", password="pass123")
+        User.objects.create_user(username="worldapiuser", password="pass123")
         client = Client()
         client.login(username="worldapiuser", password="pass123")
         response = client.get("/api/v1/worlds/")
         assert response.status_code == 200
 
     def test_worlds_api_returns_empty_list_for_new_user(self):
-        user = User.objects.create_user(username="worldapiuser2", password="pass123")
+        User.objects.create_user(username="worldapiuser2", password="pass123")
         client = Client()
         client.login(username="worldapiuser2", password="pass123")
         response = client.get("/api/v1/worlds/")

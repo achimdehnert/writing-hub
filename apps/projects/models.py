@@ -1253,6 +1253,124 @@ class BetaReaderFeedback(models.Model):
         return f"[{self.get_feedback_type_display()}] {self.text[:60]}"
 
 
+class PeerReviewSession(models.Model):
+    """
+    KI-gestütztes wissenschaftliches Peer Review — Gesamtsitzung.
+
+    Orchestriert mehrere Review-Agenten (Methodik, Argumentation,
+    Quellen, Struktur) und erzeugt ein Gesamtgutachten.
+    Nur für content_type in (academic, scientific, essay).
+    """
+
+    STATUS_CHOICES = [
+        ("pending", "Ausstehend"),
+        ("running", "Läuft"),
+        ("done", "Abgeschlossen"),
+        ("error", "Fehler"),
+    ]
+    VERDICT_CHOICES = [
+        ("accept", "Accept"),
+        ("minor_revisions", "Minor Revisions"),
+        ("major_revisions", "Major Revisions"),
+        ("reject", "Reject"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        BookProject, on_delete=models.CASCADE, related_name="peer_reviews",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True,
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    verdict = models.CharField(
+        max_length=20, choices=VERDICT_CHOICES, blank=True, default="",
+    )
+    summary = models.TextField(blank=True, default="")
+    strengths = models.JSONField(default=list)
+    main_issues = models.JSONField(default=list)
+    recommendations = models.JSONField(default=list)
+    scores = models.JSONField(
+        default=dict,
+        help_text="Dimension scores: originality, methodology, argumentation, sources, structure (1-10)",
+    )
+    agents_used = models.JSONField(default=list)
+    chapter_count = models.PositiveSmallIntegerField(default=0)
+    finding_count = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "wh_peer_review_sessions"
+        ordering = ["-created_at"]
+        verbose_name = "Peer Review Session"
+        verbose_name_plural = "Peer Review Sessions"
+
+    def __str__(self):
+        verdict = f" [{self.get_verdict_display()}]" if self.verdict else ""
+        return f"Peer Review: {self.project.title}{verdict}"
+
+    @property
+    def avg_score(self):
+        if not self.scores:
+            return 0
+        vals = [v for v in self.scores.values() if isinstance(v, (int, float))]
+        return round(sum(vals) / len(vals), 1) if vals else 0
+
+
+class PeerReviewFinding(models.Model):
+    """
+    Einzelnes Finding eines Peer-Review-Agenten.
+
+    Jeder Agent (methodology, argumentation, sources, structure) erzeugt
+    mehrere Findings pro Kapitel/Abschnitt.
+    """
+
+    FINDING_TYPES = [
+        ("strength", "Stärke"),
+        ("weakness", "Schwäche"),
+        ("suggestion", "Vorschlag"),
+        ("concern", "Bedenken"),
+    ]
+    SEVERITY_CHOICES = [
+        ("minor", "Minor"),
+        ("major", "Major"),
+        ("critical", "Critical"),
+    ]
+    AGENT_CHOICES = [
+        ("methodology", "Methodik-Prüfer"),
+        ("argumentation", "Argumentations-Prüfer"),
+        ("sources", "Quellen-Prüfer"),
+        ("structure", "Struktur-Prüfer"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    session = models.ForeignKey(
+        PeerReviewSession, on_delete=models.CASCADE, related_name="findings",
+    )
+    node = models.ForeignKey(
+        OutlineNode, on_delete=models.CASCADE, related_name="peer_findings",
+    )
+    agent = models.CharField(max_length=30, choices=AGENT_CHOICES)
+    finding_type = models.CharField(max_length=20, choices=FINDING_TYPES, default="suggestion")
+    category = models.CharField(max_length=50, blank=True, default="")
+    severity = models.CharField(max_length=10, choices=SEVERITY_CHOICES, default="minor")
+    feedback = models.TextField()
+    text_reference = models.TextField(blank=True, default="")
+    is_resolved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "wh_peer_review_findings"
+        ordering = ["session", "node__order", "-severity", "agent"]
+        verbose_name = "Peer Review Finding"
+        verbose_name_plural = "Peer Review Findings"
+
+    def __str__(self):
+        return f"[{self.get_agent_display()}] {self.feedback[:60]}"
+
+
 # ADR-158: DialogueScene discoverable machen
 from apps.projects.models_narrative import DialogueScene  # noqa: E402, F401
 

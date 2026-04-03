@@ -5,7 +5,7 @@ These tests verify the contract between writing-hub and iil-outlinefw.
 They would have caught the 'framework' vs 'framework_key' parameter mismatch.
 """
 import pytest
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 
 class TestOutlineGeneratorServiceContract:

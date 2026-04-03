@@ -10,7 +10,6 @@ Portiert aus bfagent.writing_hub.services.creative_agent_service.
 
 import json
 import logging
-import re
 from dataclasses import dataclass, field
 
 from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
@@ -231,59 +230,39 @@ class IdeaGeneratorService:
 
     @staticmethod
     def _parse_ideas(raw: str) -> list[IdeaResult]:
-        raw = re.sub(r"```json\s*|```", "", raw).strip()
-        raw = re.sub(r"<think>[\s\S]*?</think>", "", raw).strip()
-
-        # Array oder einzelnes Objekt
-        start_arr = raw.find("[")
-        start_obj = raw.find("{")
-        if start_arr != -1 and (start_obj == -1 or start_arr < start_obj):
-            raw = raw[start_arr:]
-        elif start_obj != -1:
-            raw = "[" + raw[start_obj:] + "]"
-
-        try:
-            data = json.loads(raw)
-            if isinstance(data, dict):
-                items = data.get("ideas") or [data]
+        from promptfw.parsing import extract_json, extract_json_list
+        items = extract_json_list(raw)
+        if not items:
+            obj = extract_json(raw)
+            if obj:
+                items = obj.get("ideas") or [obj]
             else:
-                items = data
-            return [
-                IdeaResult(
-                    success=True,
-                    title=item.get("title", ""),
-                    hook=item.get("hook", ""),
-                    genre=item.get("genre", ""),
-                    setting=item.get("setting", item.get("setting_sketch", "")),
-                    protagonist=item.get("protagonist", item.get("protagonist_sketch", "")),
-                    conflict=item.get("conflict", item.get("conflict_sketch", "")),
-                )
-                for item in items
-                if isinstance(item, dict) and item.get("title")
-            ]
-        except (json.JSONDecodeError, TypeError) as exc:
-            logger.warning("_parse_ideas JSON-Fehler: %s", exc)
-            return []
+                return []
+        return [
+            IdeaResult(
+                success=True,
+                title=item.get("title", ""),
+                hook=item.get("hook", ""),
+                genre=item.get("genre", ""),
+                setting=item.get("setting", item.get("setting_sketch", "")),
+                protagonist=item.get("protagonist", item.get("protagonist_sketch", "")),
+                conflict=item.get("conflict", item.get("conflict_sketch", "")),
+            )
+            for item in items
+            if isinstance(item, dict) and item.get("title")
+        ]
 
     @staticmethod
     def _parse_premise(raw: str) -> PremiseResult:
-        raw = re.sub(r"```json\s*|```", "", raw).strip()
-        raw = re.sub(r"<think>[\s\S]*?</think>", "", raw).strip()
-
-        start = raw.find("{")
-        if start != -1:
-            raw = raw[start:]
-
-        try:
-            data = json.loads(raw)
-            return PremiseResult(
-                success=True,
-                premise=data.get("premise", ""),
-                themes=data.get("themes", []),
-                unique_selling_points=data.get("unique_selling_points", []),
-                protagonist_detail=data.get("protagonist_detail", ""),
-                stakes=data.get("stakes", ""),
-            )
-        except (json.JSONDecodeError, TypeError) as exc:
-            logger.warning("_parse_premise JSON-Fehler: %s", exc)
-            return PremiseResult(success=False, error=str(exc))
+        from promptfw.parsing import extract_json
+        data = extract_json(raw)
+        if data is None:
+            return PremiseResult(success=False, error="Keine JSON-Antwort vom LLM")
+        return PremiseResult(
+            success=True,
+            premise=data.get("premise", ""),
+            themes=data.get("themes", []),
+            unique_selling_points=data.get("unique_selling_points", []),
+            protagonist_detail=data.get("protagonist_detail", ""),
+            stakes=data.get("stakes", ""),
+        )

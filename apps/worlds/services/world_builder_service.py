@@ -304,28 +304,20 @@ class WorldBuilderService:
 
     @staticmethod
     def _parse_world_response(raw: str) -> WorldBuildResult:
-        import json
-        import re
-
-        raw = re.sub(r"```json\s*|```", "", raw).strip()
-        raw = re.sub(r"<think>[\s\S]*?</think>", "", raw).strip()
-        start = raw.find("{")
-        if start != -1:
-            raw = raw[start:]
-        try:
-            data = json.loads(raw)
-            return WorldBuildResult(
-                success=True,
-                name=data.get("name", "Unbekannte Welt"),
-                description=data.get("description", ""),
-                geography=data.get("geography", ""),
-                culture=data.get("culture", ""),
-                magic_system=data.get("magic_system", ""),
-                technology_level=data.get("technology_level", ""),
-                politics=data.get("politics", ""),
-                history=data.get("history", ""),
-                inhabitants=data.get("inhabitants", ""),
-            )
-        except (json.JSONDecodeError, TypeError) as exc:
-            logger.warning("_parse_world_response JSON-Fehler: %s", exc)
-            return WorldBuildResult(success=False, error=str(exc))
+        from promptfw.parsing import extract_json
+        data = extract_json(raw)
+        if data is None:
+            logger.warning("_parse_world_response: keine JSON-Antwort")
+            return WorldBuildResult(success=False, error="Keine JSON-Antwort vom LLM")
+        return WorldBuildResult(
+            success=True,
+            name=data.get("name", "Unbekannte Welt"),
+            description=data.get("description", ""),
+            geography=data.get("geography", ""),
+            culture=data.get("culture", ""),
+            magic_system=data.get("magic_system", ""),
+            technology_level=data.get("technology_level", ""),
+            politics=data.get("politics", ""),
+            history=data.get("history", ""),
+            inhabitants=data.get("inhabitants", ""),
+        )
