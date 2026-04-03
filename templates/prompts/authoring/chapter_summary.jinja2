@@ -1,0 +1,10 @@
+{# Chapter Summary — promptfw Template #}
+{# Variables: content #}
+---
+system: |
+  Fasse den Text in 2-3 Saetzen zusammen. NUR die Zusammenfassung.
+---
+user: |
+  {{ content[:3000] }}
+
+  ZUSAMMENFASSUNG:

@@ -17,6 +17,8 @@ from typing import Any
 from aifw.service import sync_completion
 from aifw.schema import LLMResult
 
+from apps.core.prompt_utils import render_prompt
+
 logger = logging.getLogger(__name__)
 
 
@@ -268,52 +270,12 @@ class ChapterContext:
         )
 
 
-SYSTEM_WRITE = """Du bist ein preisgekroenter Romanautor, spezialisiert auf fesselnde Erzaehlungen.
-
-DEINE AUFGABE: Schreibe ein vollstaendiges Kapitel basierend auf dem gegebenen Outline und Kontext.
-
-WICHTIG:
-- Schreibe das Kapitel KOMPLETT NEU basierend auf dem Outline
-- Verwende die Charaktere und das Setting aus dem Kontext
-- Schreibe auf Deutsch, lebendig und literarisch hochwertig
-- KEINE Metakommentare — NUR den Romantext!"""
-
-SYSTEM_WRITE_ACADEMIC = """Du bist ein erfahrener Wissenschaftler und Fachautor.
-
-DEINE AUFGABE: Schreibe ein vollstaendiges Kapitel eines wissenschaftlichen Aufsatzes.
-
-WICHTIG:
-- Schreibe in einem sachlichen, praezisen und wissenschaftlichen Stil
-- KEINE fiktiven Charaktere, Dialoge oder narrativen Elemente
-- Verwende Fachterminologie angemessen fuer die Zielgruppe
-- Zitiere relevante Quellen im angegebenen Zitierstil (z.B. APA: (Autor, Jahr))
-- Gliedere mit Zwischenueberschriften wo sinnvoll
-- Argumentiere logisch und belege Aussagen mit Quellen
-- KEINE Metakommentare — NUR den Fachtext!"""
-
-USER_WRITE = """# KAPITEL SCHREIBEN
-
-## STORY-KONTEXT:
-{context}
-
-## DEINE AUFGABE:
-Schreibe das vollstaendige Kapitel ({target_words} Woerter).
-
-BEGINNE JETZT MIT DEM KAPITELTEXT:"""
-
-USER_WRITE_ACADEMIC = """# KAPITEL SCHREIBEN
-
-## AUFSATZ-KONTEXT:
-{context}
-
-## DEINE AUFGABE:
-Schreibe das vollstaendige Kapitel ({target_words} Woerter).
-- Verwende einen wissenschaftlichen Schreibstil
-- Zitiere die angegebenen Quellen im Text
-- Verwende KEINE fiktiven Personen, Dialoge oder Erzaehlungen
-- Gib konkrete Fakten, Definitionen und Argumente
-
-BEGINNE JETZT MIT DEM KAPITELTEXT:"""
+# Template names for promptfw-driven prompt rendering
+_TPL_WRITE_FICTION = "authoring/chapter_write_fiction"
+_TPL_WRITE_ACADEMIC = "authoring/chapter_write_academic"
+_TPL_REFINE = "authoring/chapter_refine"
+_TPL_CONTINUE = "authoring/chapter_continue"
+_TPL_SUMMARY = "authoring/chapter_summary"
 
 
 class ChapterWriterHandler:
@@ -336,28 +298,29 @@ class ChapterWriterHandler:
             return self._write_chunked(context)
         return self._write_single(context)
 
-    def _select_prompts(self, context: ChapterContext) -> tuple[str, str]:
-        """Select system/user prompts based on content type."""
-        if context.is_academic:
-            return SYSTEM_WRITE_ACADEMIC, USER_WRITE_ACADEMIC
-        return SYSTEM_WRITE, USER_WRITE
+    def _write_template(self, context: ChapterContext) -> str:
+        """Select promptfw template name based on content type."""
+        return _TPL_WRITE_ACADEMIC if context.is_academic else _TPL_WRITE_FICTION
+
+    def _render_write_messages(self, context: ChapterContext) -> list[dict]:
+        """Render full write messages via promptfw template."""
+        context_str = context.to_prompt_context()
+        tpl = self._write_template(context)
+        messages = render_prompt(tpl, context=context_str, target_words=context.target_word_count)
+        if not messages:
+            logger.warning("Prompt template %s not found or empty, using inline fallback", tpl)
+            role = "Wissenschaftler" if context.is_academic else "Romanautor"
+            messages = [
+                {"role": "system", "content": f"Du bist ein erfahrener {role}. Schreibe ein vollstaendiges Kapitel."},
+                {"role": "user", "content": f"{context_str}\n\nSchreibe {context.target_word_count} Woerter."},
+            ]
+        return messages
 
     def _write_single(self, context: ChapterContext) -> dict[str, Any]:
-        context_str = context.to_prompt_context()
         estimated_tokens = int(context.target_word_count * 1.5)
         max_tokens = min(max(estimated_tokens, 2000), self.MAX_TOKENS)
-        sys_prompt, usr_prompt = self._select_prompts(context)
 
-        messages = [
-            {"role": "system", "content": sys_prompt},
-            {
-                "role": "user",
-                "content": usr_prompt.format(
-                    context=context_str,
-                    target_words=context.target_word_count,
-                ),
-            },
-        ]
+        messages = self._render_write_messages(context)
         try:
             result: LLMResult = sync_completion(
                 "chapter_generation", messages, max_tokens=max_tokens
@@ -384,7 +347,8 @@ class ChapterWriterHandler:
         all_content: list[str] = []
         total_latency = 0
 
-        sys_prompt, _ = self._select_prompts(context)
+        write_msgs = self._render_write_messages(context)
+        sys_prompt = write_msgs[0]["content"] if write_msgs else "Schreibe ein Kapitel."
 
         for chunk_num in range(num_chunks):
             is_first = chunk_num == 0
@@ -458,20 +422,17 @@ class ChapterWriterHandler:
         if not context.existing_content:
             return {"success": False, "error": "Kein bestehender Inhalt zum Verfeinern"}
 
-        messages = [
-            {
-                "role": "system",
-                "content": "Du bist ein erfahrener Lektor. Verbessere den Text gemaess der Anweisung. NUR den Text ausgeben.",
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"## KONTEXT:\n{context.to_prompt_context()}\n\n"
-                    f"## AKTUELLER TEXT:\n{context.existing_content}\n\n"
-                    f"## AUFTRAG:\n{instruction}\n\nVERBESSERTER TEXT:"
-                ),
-            },
-        ]
+        messages = render_prompt(
+            _TPL_REFINE,
+            context=context.to_prompt_context(),
+            existing_content=context.existing_content,
+            instruction=instruction,
+        )
+        if not messages:
+            messages = [
+                {"role": "system", "content": "Du bist ein erfahrener Lektor. NUR den Text ausgeben."},
+                {"role": "user", "content": f"{context.existing_content}\n\n{instruction}"},
+            ]
         try:
             result: LLMResult = sync_completion("chapter_generation", messages, max_tokens=8000)
         except Exception as exc:
@@ -503,20 +464,17 @@ class ChapterWriterHandler:
             }
 
         remaining = context.target_word_count - current_words
-        messages = [
-            {
-                "role": "system",
-                "content": "Du setzt einen begonnenen Text nahtlos fort. NUR die Fortsetzung ausgeben.",
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"## KONTEXT:\n{context.to_prompt_context()}\n\n"
-                    f"## BISHERIGER TEXT:\n{context.existing_content}\n\n"
-                    f"Setze NAHTLOS fort ({remaining} Woerter):\nFORTSETZUNG:"
-                ),
-            },
-        ]
+        messages = render_prompt(
+            _TPL_CONTINUE,
+            context=context.to_prompt_context(),
+            existing_content=context.existing_content,
+            remaining_words=remaining,
+        )
+        if not messages:
+            messages = [
+                {"role": "system", "content": "Du setzt einen begonnenen Text nahtlos fort."},
+                {"role": "user", "content": f"{context.existing_content}\n\nFortsetzung ({remaining} Woerter):"},
+            ]
         try:
             result: LLMResult = sync_completion(
                 "chapter_generation",
@@ -543,13 +501,12 @@ class ChapterWriterHandler:
         if not content or len(content) < 100:
             return ""
 
-        messages = [
-            {
-                "role": "system",
-                "content": "Fasse den Text in 2-3 Saetzen zusammen. NUR die Zusammenfassung.",
-            },
-            {"role": "user", "content": content[:3000] + "\n\nZUSAMMENFASSUNG:"},
-        ]
+        messages = render_prompt(_TPL_SUMMARY, content=content)
+        if not messages:
+            messages = [
+                {"role": "system", "content": "Fasse den Text in 2-3 Saetzen zusammen."},
+                {"role": "user", "content": content[:3000]},
+            ]
         try:
             result: LLMResult = sync_completion("chapter_generation", messages, max_tokens=200)
             if result.success:

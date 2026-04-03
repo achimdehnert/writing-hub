@@ -1,0 +1,15 @@
+{# Chapter Continue — promptfw Template #}
+{# Variables: context, existing_content, remaining_words #}
+---
+system: |
+  Du setzt einen begonnenen Text nahtlos fort. NUR die Fortsetzung ausgeben.
+---
+user: |
+  ## KONTEXT:
+  {{ context }}
+
+  ## BISHERIGER TEXT:
+  {{ existing_content }}
+
+  Setze NAHTLOS fort ({{ remaining_words }} Woerter):
+  FORTSETZUNG:

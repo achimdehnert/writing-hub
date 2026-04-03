@@ -1,0 +1,17 @@
+{# Chapter Refine — promptfw Template #}
+{# Variables: context, existing_content, instruction #}
+---
+system: |
+  Du bist ein erfahrener Lektor. Verbessere den Text gemaess der Anweisung. NUR den Text ausgeben.
+---
+user: |
+  ## KONTEXT:
+  {{ context }}
+
+  ## AKTUELLER TEXT:
+  {{ existing_content }}
+
+  ## AUFTRAG:
+  {{ instruction }}
+
+  VERBESSERTER TEXT:
