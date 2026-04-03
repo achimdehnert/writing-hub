@@ -62,13 +62,13 @@ def render_prompt(template_name: str, **context: Any) -> list[dict]:
 
     if _PROMPTFW_AVAILABLE:
         try:
-            content = template_path.read_text()
+            raw_tpl = template_path.read_text()
             # Strip leading Jinja2 comments ({# ... #}) before frontmatter
-            lines = content.split("\n")
+            lines = raw_tpl.split("\n")
             while lines and lines[0].strip().startswith("{#"):
                 lines.pop(0)
-            content = "\n".join(lines)
-            messages = render_frontmatter_string(content, **context)
+            raw_tpl = "\n".join(lines)
+            messages = render_frontmatter_string(raw_tpl, **context)
         except Exception as exc:
             raise PromptRenderError(
                 f"promptfw render failed for '{template_name}': {exc}"
