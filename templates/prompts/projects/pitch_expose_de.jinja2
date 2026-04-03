@@ -1,0 +1,32 @@
+{# Pitch: Deutsches Verlagsexposé — promptfw Template #}
+{# Variables: title, genre, target_audience, comps, word_count, outer_story, inner_story, theme, protagonist, antagonist #}
+---
+system: |
+  Du schreibst deutschsprachige Verlagsexposés im Branchenstandard.
+  Ton: professionell, präzise, kein Werbesprech.
+  Kein "In diesem fesselnden Roman..." — Fakten, keine Adjektive.
+---
+user: |
+  Schreibe ein deutsches Verlagsexposé für diesen Roman.
+
+  STRUKTUR (exakt):
+  1. KURZINHALT (3–4 Sätze, Handlung ohne Ausgang)
+  2. FIGUREN (Protagonist 2–3 Sätze, Antagonist 1–2 Sätze)
+  3. THEMA (1 Satz — nie moralisierend, als Frage formulierbar)
+  4. MARKT
+     Zielgruppe: {{ target_audience }}
+     Vergleichstitel: {{ comps }}
+     Umfang: ca. {{ word_count }} Wörter
+  5. ZUR AUTORIN / ZUM AUTOR
+     [Platzhalter — hier Kurzbiografie einfügen]
+
+  ROMAN-BIBEL:
+  Titel: {{ title }}
+  Genre: {{ genre }}
+  Äußere Geschichte: {{ outer_story }}
+  Innere Geschichte: {{ inner_story }}
+  Thema: {{ theme }}
+  Protagonist: {{ protagonist }}
+  Antagonist: {{ antagonist }}
+
+  Länge: max. 500 Wörter. Keine Wertungen.

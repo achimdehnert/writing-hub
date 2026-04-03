@@ -21,6 +21,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from enum import Enum
 
+from apps.core.prompt_utils import render_prompt
 from .llm_router import LLMRouter, LLMRoutingError, get_quality_level_for_tier
 from .project_context_service import ProjectContextService
 
@@ -176,20 +177,17 @@ class ChapterProductionService:
             style_block = self._get_style_constraints()
             node_text = f"\nKapitel {node.order}: {node.title}\n{node.description}" if node else ""
 
-            messages = [
-                {
-                    "role": "system",
-                    "content": (
-                        "Du bist ein Buchschreib-Assistent. Erstelle einen praezisen Schreib-Brief.\n\n"
-                        + ctx_block
-                        + (f"\n\nStil-Vorgaben:\n{style_block}" if style_block else "")
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": f"Schreib-Brief fuer:{node_text}\nZiel: Produktionsziele, Ton, Charaktermomente, Szenenreihung.",
-                },
-            ]
+            messages = render_prompt(
+                "authoring/chapter_brief",
+                ctx_block=ctx_block,
+                style_block=style_block,
+                node_text=node_text,
+            )
+            if not messages:
+                messages = [
+                    {"role": "system", "content": "Du bist ein Buchschreib-Assistent.\n\n" + ctx_block},
+                    {"role": "user", "content": f"Schreib-Brief fuer:{node_text}"},
+                ]
 
             content = self._router.completion(
                 "chapter_brief", messages, quality_level=self._quality_level
@@ -209,24 +207,18 @@ class ChapterProductionService:
         ctx_block = self._get_context_block()
         style_block = self._get_style_constraints()
 
-        messages = [
-            {
-                "role": "system",
-                "content": (
-                    f"Du bist ein professioneller Romanautor. "
-                    f"Schreibe prosaisch, immersiv, ca. {target_words} Woerter.\n\n"
-                    + ctx_block
-                    + (f"\n\nStil-Vorgaben:\n{style_block}" if style_block else "")
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"Schreibe das Kapitel gemaess Brief:\n\n{brief}\n\n"
-                    f"Ziellaenge: ca. {target_words} Woerter. Nur Kapiteltext, kein Kommentar."
-                ),
-            },
-        ]
+        messages = render_prompt(
+            "authoring/chapter_write_production",
+            target_words=target_words,
+            ctx_block=ctx_block,
+            style_block=style_block,
+            brief=brief,
+        )
+        if not messages:
+            messages = [
+                {"role": "system", "content": f"Du bist ein Romanautor. Ca. {target_words} Woerter.\n\n" + ctx_block},
+                {"role": "user", "content": f"Schreibe das Kapitel:\n\n{brief}"},
+            ]
 
         try:
             content = self._router.completion(
@@ -245,34 +237,25 @@ class ChapterProductionService:
         ctx_block = self._get_context_block()
         style_block = self._get_style_constraints()
 
-        messages = [
-            {
-                "role": "system",
-                "content": (
-                    "Du bist ein Lektor. Analysiere nach: Stil, Tempo, Charakterkonsistenz, Dialog, Szene.\n\n"
-                    + ctx_block
-                    + (f"\n\nErwarteter Stil:\n{style_block}" if style_block else "")
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"{content[:6000]}\n\n"
-                    'JSON: {"overall_score": 7.5, "strengths": [...], '
-                    '"issues": [{"dimension": "...", "description": "..."}]}'
-                ),
-            },
-        ]
+        messages = render_prompt(
+            "authoring/chapter_analyze",
+            ctx_block=ctx_block,
+            style_block=style_block,
+            content=content,
+        )
+        if not messages:
+            messages = [
+                {"role": "system", "content": "Du bist ein Lektor.\n\n" + ctx_block},
+                {"role": "user", "content": content[:6000]},
+            ]
 
         try:
-            import json
-            import re
+            from promptfw.parsing import extract_json
             raw = self._router.completion(
                 "chapter_analyze", messages, quality_level=self._quality_level
             )
-            match = re.search(r"\{[\s\S]+\}", raw)
-            if match:
-                data = json.loads(match.group())
+            data = extract_json(raw)
+            if data:
                 return AnalyzeResult(
                     success=True,
                     overall_score=Decimal(str(data.get("overall_score", 7.0))),

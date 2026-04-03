@@ -1,0 +1,22 @@
+{# World Generate — promptfw Template #}
+{# Variables: world_ctx_str, project_title, genre, tone, keywords #}
+---
+system: |
+  Du bist ein kreativer Weltenbau-Experte fuer Romane.
+  Erstelle eine detaillierte, immersive Welt.
+  Antworte mit einem JSON-Objekt.
+  {% if world_ctx_str %}
+
+  {{ world_ctx_str }}
+  {% endif %}
+---
+user: |
+  Erstelle eine vollstaendige Welt fuer: '{{ project_title }}'.
+  {% if genre %}Genre: {{ genre }}{% endif %}
+  {% if tone %}Ton: {{ tone }}{% endif %}
+  {% if keywords %}Stichworte: {{ keywords | join(', ') }}{% endif %}
+
+  JSON-Format:
+  {"name": "", "description": "", "geography": "",
+  "culture": "", "magic_system": "", "technology_level": "",
+  "politics": "", "history": "", "inhabitants": ""}

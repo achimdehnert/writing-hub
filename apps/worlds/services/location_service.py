@@ -16,6 +16,7 @@ import logging
 from dataclasses import dataclass, field
 from uuid import UUID
 
+from apps.core.prompt_utils import render_prompt
 from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
 
 logger = logging.getLogger(__name__)
@@ -197,41 +198,20 @@ class WorldLocationService:
         count: int,
         requirements: str,
     ) -> list[dict]:
-        """promptfw render_to_messages() wenn verfügbar, sonst inline."""
-        try:
-            from promptfw import PromptStack
-            stack = PromptStack()
-            if stack.has_template("world_locations"):
-                return stack.render_to_messages(
-                    "world_locations",
-                    world_ctx=world_ctx,
-                    project_ctx=project_ctx,
-                    count=count,
-                    requirements=requirements,
-                )
-        except Exception:
-            pass
-        return [
-            {
-                "role": "system",
-                "content": (
-                    "Du bist ein kreativer Weltenbau-Experte für Romane.\n"
-                    "Erstelle detaillierte, atmosphärische Orte.\n"
-                    "Antworte ausschließlich mit einem JSON-Array.\n\n"
-                    + world_ctx + "\n" + project_ctx
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"Generiere {count} Orte für diese Welt."
-                    + (f" Anforderungen: {requirements}" if requirements else "")
-                    + "\n\nJSON-Array:\n"
-                    '[{"name": "", "description": "", "atmosphere": "", '
-                    '"significance": ""}]'
-                ),
-            },
-        ]
+        """promptfw render_prompt() mit inline Fallback."""
+        messages = render_prompt(
+            "worlds/location_generate",
+            world_ctx=world_ctx,
+            project_ctx=project_ctx,
+            count=count,
+            requirements=requirements,
+        )
+        if not messages:
+            messages = [
+                {"role": "system", "content": "Du bist ein Weltenbau-Experte. Antworte mit JSON-Array.\n\n" + world_ctx},
+                {"role": "user", "content": f"Generiere {count} Orte."},
+            ]
+        return messages
 
     @staticmethod
     def _parse_locations(raw: str) -> list[dict]:
@@ -382,40 +362,20 @@ class WorldSceneService:
         count: int,
         requirements: str,
     ) -> list[dict]:
-        """promptfw render_to_messages() wenn verfügbar, sonst inline."""
-        try:
-            from promptfw import PromptStack
-            stack = PromptStack()
-            if stack.has_template("scene_generate"):
-                return stack.render_to_messages(
-                    "scene_generate",
-                    world_ctx=world_ctx,
-                    project_ctx=project_ctx,
-                    count=count,
-                    requirements=requirements,
-                )
-        except Exception:
-            pass
-        return [
-            {
-                "role": "system",
-                "content": (
-                    "Du bist ein erfahrener Drehbuch- und Romanautor.\n"
-                    "Erstelle spannende, gut strukturierte Szenen.\n"
-                    "Antworte ausschließlich mit einem JSON-Array.\n\n"
-                    + world_ctx + "\n" + project_ctx
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"Generiere {count} Szenen."
-                    + (f" Anforderungen: {requirements}" if requirements else "")
-                    + "\n\nJSON-Array:\n"
-                    '[{"title": "", "summary": "", "goal": "", "disaster": ""}]'
-                ),
-            },
-        ]
+        """promptfw render_prompt() mit inline Fallback."""
+        messages = render_prompt(
+            "worlds/scene_generate",
+            world_ctx=world_ctx,
+            project_ctx=project_ctx,
+            count=count,
+            requirements=requirements,
+        )
+        if not messages:
+            messages = [
+                {"role": "system", "content": "Du bist ein Drehbuch- und Romanautor. Antworte mit JSON-Array.\n\n" + world_ctx},
+                {"role": "user", "content": f"Generiere {count} Szenen."},
+            ]
+        return messages
 
     @staticmethod
     def _parse_scenes(raw: str) -> list[dict]:

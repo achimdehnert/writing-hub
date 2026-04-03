@@ -1,7 +1,6 @@
 """
 Review & Redaktion — HTML Views (ADR-083)
 """
-import json
 import logging
 
 from django.contrib import messages
@@ -10,6 +9,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.views.generic import DetailView
+from promptfw.parsing import extract_json_list
 
 from .models import BookProject, OutlineNode, OutlineVersion
 
@@ -213,9 +213,8 @@ class ChapterAIReviewView(LoginRequiredMixin, View):
                 action_code="chapter_analyze",
                 messages=prompt_msgs,
             )
-            match = re.search(r"\[.*\]", raw, re.DOTALL)
-            if match:
-                items = json.loads(match.group())
+            items = extract_json_list(raw)
+            if items:
                 created = 0
                 for item in items[:10]:
                     fb = item.get("feedback", "").strip()
@@ -347,9 +346,8 @@ class ChapterAIEditingView(LoginRequiredMixin, View):
                     {"role": "user", "content": user_prompt},
                 ],
             )
-            match = re.search(r"\[.*\]", raw, re.DOTALL)
-            if match:
-                items = json.loads(match.group())
+            items = extract_json_list(raw)
+            if items:
                 created = 0
                 for item in items[:15]:
                     sug = item.get("suggestion", "").strip()

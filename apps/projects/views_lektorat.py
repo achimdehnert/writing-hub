@@ -1,9 +1,7 @@
 """
 Lektorat — Prüfungs-Framework (ADR-083)
 """
-import json
 import logging
-import re
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -12,6 +10,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.views import View
 from django.views.generic import DetailView
+from promptfw.parsing import extract_json_list
 
 from .models import BookProject, LektoratIssue, LektoratSession, OutlineVersion
 
@@ -91,9 +90,8 @@ class LektoratSessionStartView(LoginRequiredMixin, View):
                         action_code="chapter_analyze",
                         messages=messages,
                     )
-                    match = re.search(r"\[.*\]", raw, re.DOTALL)
-                    if match:
-                        items = json.loads(match.group())
+                    items = extract_json_list(raw)
+                    if items:
                         for item in items[:10]:
                             desc = item.get("description", "").strip()
                             if not desc:

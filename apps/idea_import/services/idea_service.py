@@ -12,6 +12,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 
+from apps.core.prompt_utils import render_prompt
 from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
 
 logger = logging.getLogger(__name__)
@@ -97,27 +98,19 @@ class IdeaGeneratorService:
             },
         }
 
-        messages = [
-            {
-                "role": "system",
-                "content": (
-                    "Du bist ein kreativer Buchideen-Entwickler. "
-                    "Antworte ausschliesslich mit einem validen JSON-Array."
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"Generiere {count} originelle, packende Buchideen."
-                    + (f" Genre: {genre}." if genre else "")
-                    + (f" Stichwoerter: {', '.join(keywords)}." if keywords else "")
-                    + (f" Zielgruppe: {target_audience}." if target_audience else "")
-                    + f"\n\nJSON-Schema: {json.dumps(schema, ensure_ascii=False)}\n"
-                    "Jede Idee braucht einen eingaengigen Arbeitstitel und "
-                    "einen packenden Hook (1-2 Saetze die das Buch unwiderstehlich machen)."
-                ),
-            },
-        ]
+        messages = render_prompt(
+            "idea_import/generate_ideas_service",
+            count=count,
+            genre=genre,
+            keywords=keywords or [],
+            target_audience=target_audience,
+            schema_json=json.dumps(schema, ensure_ascii=False),
+        )
+        if not messages:
+            messages = [
+                {"role": "system", "content": "Du bist ein Buchideen-Entwickler. Antworte mit JSON-Array."},
+                {"role": "user", "content": f"Generiere {count} Buchideen."},
+            ]
 
         try:
             raw = self._router.completion(
@@ -146,32 +139,20 @@ class IdeaGeneratorService:
             idea: Basis-Idee
             quality_level: ADR-095
         """
-        messages = [
-            {
-                "role": "system",
-                "content": (
-                    "Du bist ein erfahrener Buchentwickler. "
-                    "Entwickle die Idee zu einer vollstaendigen, verkaufbaren Premise aus. "
-                    "Antworte mit einem JSON-Objekt."
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"Buchidee:\nTitel: {idea.title}\nHook: {idea.hook}\n"
-                    + (f"Genre: {idea.genre}\n" if idea.genre else "")
-                    + (f"Setting: {idea.setting}\n" if idea.setting else "")
-                    + (f"Protagonist: {idea.protagonist}\n" if idea.protagonist else "")
-                    + (f"Konflikt: {idea.conflict}\n" if idea.conflict else "")
-                    + "\nAusarbeiten als JSON-Objekt mit: "
-                    "{\"premise\": \"vollstaendige Premise (min 100 Woerter)\", "
-                    "\"themes\": [\"...\"], "
-                    "\"unique_selling_points\": [\"...\"], "
-                    "\"protagonist_detail\": \"...\", "
-                    "\"stakes\": \"was steht auf dem Spiel\"}"
-                ),
-            },
-        ]
+        messages = render_prompt(
+            "idea_import/develop_premise_service",
+            title=idea.title,
+            hook=idea.hook,
+            genre=idea.genre or "",
+            setting=idea.setting or "",
+            protagonist=idea.protagonist or "",
+            conflict=idea.conflict or "",
+        )
+        if not messages:
+            messages = [
+                {"role": "system", "content": "Du bist ein Buchentwickler. Antworte mit JSON."},
+                {"role": "user", "content": f"Premise fuer: {idea.title}\n{idea.hook}"},
+            ]
 
         try:
             raw = self._router.completion(
@@ -195,25 +176,15 @@ class IdeaGeneratorService:
         quality_level: int | None = None,
     ) -> IdeaResult:
         """Einzelne Buchidee aus Freitext/Stichworten generieren."""
-        messages = [
-            {
-                "role": "system",
-                "content": (
-                    "Du bist ein kreativer Buchideen-Entwickler. "
-                    "Entwickle aus den gegebenen Stichworten eine Buchidee. "
-                    "Antworte mit einem JSON-Objekt."
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"Stichworte/Idee: {keywords}\n\n"
-                    "Generiere eine ausgearbeitete Buchidee als JSON: "
-                    "{\"title\": \"...\", \"hook\": \"...\", \"genre\": \"...\", "
-                    "\"setting\": \"...\", \"protagonist\": \"...\", \"conflict\": \"...\"}"
-                ),
-            },
-        ]
+        messages = render_prompt(
+            "idea_import/generate_single_idea",
+            keywords=keywords,
+        )
+        if not messages:
+            messages = [
+                {"role": "system", "content": "Du bist ein Buchideen-Entwickler. Antworte mit JSON."},
+                {"role": "user", "content": f"Buchidee aus: {keywords}"},
+            ]
 
         try:
             raw = self._router.completion(

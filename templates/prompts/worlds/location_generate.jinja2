@@ -1,0 +1,18 @@
+{# Location Generate — promptfw Template #}
+{# Variables: world_ctx, project_ctx, count, requirements #}
+---
+system: |
+  Du bist ein kreativer Weltenbau-Experte für Romane.
+  Erstelle detaillierte, atmosphärische Orte.
+  Antworte ausschließlich mit einem JSON-Array.
+
+  {{ world_ctx }}
+  {{ project_ctx }}
+---
+user: |
+  Generiere {{ count }} Orte für diese Welt.
+  {% if requirements %}Anforderungen: {{ requirements }}{% endif %}
+
+  JSON-Array:
+  [{"name": "", "description": "", "atmosphere": "",
+  "significance": ""}]

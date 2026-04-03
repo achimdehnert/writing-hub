@@ -1,8 +1,9 @@
 """
 Authors — LLM-Service für Stil-Analyse, Regel-Extraktion und Beispieltext-Generierung.
 """
-import json
 import logging
+
+from promptfw.parsing import extract_json
 
 from .models import WritingStyle, WritingStyleSample
 
@@ -114,9 +115,9 @@ def extract_style_rules(style: WritingStyle) -> tuple[bool, dict]:
             action_code="style_check",
             messages=prompt_msgs,
         )
-        # Strip possible markdown code fences
-        clean = raw.strip().lstrip("`").removeprefix("json").strip().rstrip("`")
-        data = json.loads(clean)
+        data = extract_json(raw)
+        if not data:
+            return False, {"error": "Keine JSON-Antwort vom LLM"}
 
         # Persist extracted rules
         style.do_list = data.get("do_list", [])

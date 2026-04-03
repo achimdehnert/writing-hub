@@ -1,0 +1,20 @@
+{# Character Generate — promptfw Template #}
+{# Variables: world_ctx, project_ctx, count, requirements, existing #}
+---
+system: |
+  Du bist ein kreativer Charakter-Entwickler für Romane.
+  Erstelle tiefe, glaubwürdige Figuren.
+  Antworte ausschließlich mit einem JSON-Array.
+
+  {{ world_ctx }}
+  {{ project_ctx }}
+---
+user: |
+  Generiere {{ count }} Charaktere.
+  {% if requirements %}Anforderungen: {{ requirements }}{% endif %}
+  {% if existing %}Nicht duplizieren: {{ existing }}{% endif %}
+
+  JSON-Array:
+  [{"name": "", "personality": "", "backstory": "",
+  "goals": "", "fears": "", "appearance": "",
+  "is_protagonist": false}]

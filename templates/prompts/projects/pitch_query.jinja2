@@ -1,0 +1,23 @@
+{# Pitch: Query Letter (English) — promptfw Template #}
+{# Variables: title, genre, word_count, logline, comp1, comp2 #}
+---
+system: |
+  You write query letters for US/UK literary agents.
+  Standard format: Hook → Pitch → Comps → Bio → Closing.
+  Present tense for the pitch. Max 250 words. No adjective inflation.
+---
+user: |
+  Write a query letter for this novel.
+
+  Title: {{ title }}
+  Genre: {{ genre }}
+  Word Count: {{ word_count }}
+  Logline: {{ logline }}
+  Comp 1: {{ comp1 }}
+  Comp 2: {{ comp2 }}
+
+  Bio placeholder: [Author bio here]
+
+  Hook: Start with the most compelling narrative moment or question.
+  Pitch: 2-3 sentences in present tense, include protagonist + stakes.
+  Comps: "For fans of [comp1] and [comp2]..."

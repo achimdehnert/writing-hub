@@ -11,12 +11,11 @@ Erzeugt anschließend ein Gesamtgutachten (Editor-in-Chief).
 """
 from __future__ import annotations
 
-import json
 import logging
-import re
 from typing import Any
 
 from django.utils import timezone
+from promptfw.parsing import extract_json, extract_json_list
 
 logger = logging.getLogger(__name__)
 
@@ -267,30 +266,15 @@ def _generate_verdict(session, project, chapters, total_findings: int):
 
 def _parse_findings(raw: str) -> list[dict[str, Any]]:
     """Parse JSON array of findings from LLM response."""
-    match = re.search(r"\[.*\]", raw, re.DOTALL)
-    if not match:
-        return []
-    try:
-        items = json.loads(match.group())
-        if isinstance(items, list):
-            return [i for i in items if isinstance(i, dict) and i.get("feedback")]
-    except (json.JSONDecodeError, TypeError):
-        pass
+    items = extract_json_list(raw)
+    if items:
+        return [i for i in items if isinstance(i, dict) and i.get("feedback")]
     return []
 
 
 def _parse_verdict(raw: str) -> dict[str, Any] | None:
     """Parse JSON verdict object from LLM response."""
-    match = re.search(r"\{.*\}", raw, re.DOTALL)
-    if not match:
-        return None
-    try:
-        data = json.loads(match.group())
-        if isinstance(data, dict):
-            return data
-    except (json.JSONDecodeError, TypeError):
-        pass
-    return None
+    return extract_json(raw)
 
 
 def _fallback_prompt(agent: dict, node, project) -> list[dict[str, str]]:

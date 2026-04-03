@@ -8,6 +8,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.views.generic import DetailView, ListView
+from promptfw.parsing import extract_json, extract_json_list
 
 from apps.projects.models import OutlineFramework, OutlineNode, OutlineVersion
 
@@ -272,9 +273,8 @@ class OutlineGenerateFullView(LoginRequiredMixin, View):
                 action_code="chapter_outline",
                 messages=prompt_msgs,
             )
-            match = re.search(r'\[.*\]', raw, re.DOTALL)
-            if match:
-                structure = json.loads(match.group())
+            structure = extract_json_list(raw)
+            if structure:
                 struct_map = {item["order"]: item for item in structure}
                 for node in nodes:
                     s = struct_map.get(node.order, {})
@@ -308,9 +308,8 @@ class OutlineGenerateFullView(LoginRequiredMixin, View):
                         action_code="chapter_outline",
                         messages=prompt_msgs,
                     )
-                    match = re.search(r'\{.*\}', raw, re.DOTALL)
-                    if match:
-                        data = json.loads(match.group())
+                    data = extract_json(raw)
+                    if data:
                         node.description = data.get("description", raw)
                         node.emotional_arc = data.get("emotional_arc", "")
                     else:
@@ -369,9 +368,8 @@ class OutlineNodeEnrichView(LoginRequiredMixin, View):
                 action_code="chapter_outline",
                 messages=prompt_msgs,
             )
-            match = re.search(r'\{.*\}', raw, re.DOTALL)
-            if match:
-                data = json.loads(match.group())
+            data = extract_json(raw)
+            if data:
                 node.description = data.get("description", raw)
                 node.emotional_arc = data.get("emotional_arc", node.emotional_arc)
             else:

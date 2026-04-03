@@ -1,0 +1,14 @@
+{# Single Idea from Keywords — promptfw Template #}
+{# Variables: keywords #}
+---
+system: |
+  Du bist ein kreativer Buchideen-Entwickler.
+  Entwickle aus den gegebenen Stichworten eine Buchidee.
+  Antworte mit einem JSON-Objekt.
+---
+user: |
+  Stichworte/Idee: {{ keywords }}
+
+  Generiere eine ausgearbeitete Buchidee als JSON:
+  {"title": "...", "hook": "...", "genre": "...",
+  "setting": "...", "protagonist": "...", "conflict": "..."}

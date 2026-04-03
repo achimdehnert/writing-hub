@@ -1,0 +1,16 @@
+{# Idea Generate (Service) — promptfw Template #}
+{# Variables: count, genre, keywords, target_audience, schema_json #}
+---
+system: |
+  Du bist ein kreativer Buchideen-Entwickler.
+  Antworte ausschliesslich mit einem validen JSON-Array.
+---
+user: |
+  Generiere {{ count }} originelle, packende Buchideen.
+  {% if genre %}Genre: {{ genre }}.{% endif %}
+  {% if keywords %}Stichwoerter: {{ keywords | join(', ') }}.{% endif %}
+  {% if target_audience %}Zielgruppe: {{ target_audience }}.{% endif %}
+
+  JSON-Schema: {{ schema_json }}
+  Jede Idee braucht einen eingaengigen Arbeitstitel und
+  einen packenden Hook (1-2 Saetze die das Buch unwiderstehlich machen).

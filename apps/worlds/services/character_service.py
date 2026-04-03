@@ -17,6 +17,7 @@ import logging
 from dataclasses import dataclass, field
 from uuid import UUID
 
+from apps.core.prompt_utils import render_prompt
 from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
 
 logger = logging.getLogger(__name__)
@@ -108,24 +109,12 @@ class WorldCharacterService:
 
         char_ctx = self._build_character_context(char)
 
-        messages = [
-            {
-                "role": "system",
-                "content": (
-                    "Du bist ein Experte für tiefe Romanfiguren. "
-                    "Bereichere den Charakter mit psychologischer Tiefe. "
-                    "Antworte mit einem JSON-Objekt."
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"Charakter:\n{char_ctx}\n\n"
-                    "Vertiefe: personality, backstory, goals, fears. "
-                    'JSON: {"personality": "", "backstory": "", "goals": "", "fears": ""}'
-                ),
-            },
-        ]
+        messages = render_prompt("worlds/character_enrich", char_ctx=char_ctx)
+        if not messages:
+            messages = [
+                {"role": "system", "content": "Du bist ein Experte für tiefe Romanfiguren. Antworte mit JSON."},
+                {"role": "user", "content": f"Charakter:\n{char_ctx}\n\nVertiefe: personality, backstory, goals, fears."},
+            ]
 
         try:
             raw = self._router.completion(
@@ -271,43 +260,20 @@ class WorldCharacterService:
         existing: list[str],
     ) -> list[dict]:
         """promptfw render_to_messages() wenn verfügbar, sonst inline."""
-        try:
-            from promptfw import PromptStack
-            stack = PromptStack()
-            if stack.has_template("character_generate"):
-                return stack.render_to_messages(
-                    "character_generate",
-                    world_ctx=world_ctx,
-                    project_ctx=project_ctx,
-                    count=count,
-                    requirements=requirements,
-                    existing=existing,
-                )
-        except Exception:
-            pass
-        return [
-            {
-                "role": "system",
-                "content": (
-                    "Du bist ein kreativer Charakter-Entwickler für Romane. "
-                    "Erstelle tiefe, glaubwürdige Figuren. "
-                    "Antworte ausschließlich mit einem JSON-Array.\n\n"
-                    + world_ctx + "\n" + project_ctx
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"Generiere {count} Charaktere."
-                    + (f" Anforderungen: {requirements}" if requirements else "")
-                    + (f" Nicht duplizieren: {existing}" if existing else "")
-                    + "\n\nJSON-Array:\n"
-                    '[{"name": "", "personality": "", "backstory": "", '
-                    '"goals": "", "fears": "", "appearance": "", '
-                    '"is_protagonist": false}]'
-                ),
-            },
-        ]
+        messages = render_prompt(
+            "worlds/character_generate",
+            world_ctx=world_ctx,
+            project_ctx=project_ctx,
+            count=count,
+            requirements=requirements,
+            existing=existing,
+        )
+        if not messages:
+            messages = [
+                {"role": "system", "content": "Du bist ein Charakter-Entwickler. Antworte mit JSON-Array.\n\n" + world_ctx},
+                {"role": "user", "content": f"Generiere {count} Charaktere."},
+            ]
+        return messages
 
     @staticmethod
     def _build_character_context(char) -> str:

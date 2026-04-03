@@ -1,0 +1,19 @@
+{# Pitch: Logline — promptfw Template #}
+{# Variables: title, genre, protagonist_want, protagonist_need, protagonist_flaw, antagonist_logic, inner_story, theme #}
+---
+system: |
+  Du schreibst professionelle Loglines für Verlagsanfragen.
+  Format (Save-the-Cat): "Ein [Figur mit Mangel/Eigenschaft] muss
+  [äußeres Ziel erreichen], bevor [Stakes/Konsequenz] — aber
+  [Antagonist/Hindernis] stellt sich entgegen."
+  Max. 35 Wörter. Keine Metakommentare. Kein Spoiler des Endes.
+---
+user: |
+  Titel: {{ title }}
+  Genre: {{ genre }}
+  Protagonist Want: {{ protagonist_want }}
+  Protagonist Need: {{ protagonist_need }}
+  Protagonist Flaw: {{ protagonist_flaw }}
+  Antagonist Logik: {{ antagonist_logic }}
+  Innere Geschichte: {{ inner_story }}
+  Thema: {{ theme }}

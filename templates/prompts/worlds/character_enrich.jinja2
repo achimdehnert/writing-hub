@@ -1,0 +1,14 @@
+{# Character Enrich — promptfw Template #}
+{# Variables: char_ctx #}
+---
+system: |
+  Du bist ein Experte für tiefe Romanfiguren.
+  Bereichere den Charakter mit psychologischer Tiefe.
+  Antworte mit einem JSON-Objekt.
+---
+user: |
+  Charakter:
+  {{ char_ctx }}
+
+  Vertiefe: personality, backstory, goals, fears.
+  JSON: {"personality": "", "backstory": "", "goals": "", "fears": ""}

@@ -18,6 +18,7 @@ import logging
 from dataclasses import dataclass
 from uuid import UUID
 
+from apps.core.prompt_utils import render_prompt
 from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
 
 logger = logging.getLogger(__name__)
@@ -235,20 +236,17 @@ class WorldBuilderService:
         except Exception:
             return ""
 
-        messages = [
-            {
-                "role": "system",
-                "content": (
-                    f"Du bist ein Weltenbau-Experte fuer die Welt '{world.name}'.\n"
-                    f"Beschreibung: {world.description or ''}\n"
-                    "Vertiefe den angeforderten Aspekt in 3-5 Absaetzen."
-                ),
-            },
-            {
-                "role": "user",
-                "content": f"Vertiefe den Aspekt '{aspect}' der Welt '{world.name}'.",
-            },
-        ]
+        messages = render_prompt(
+            "worlds/world_expand",
+            world_name=world.name,
+            world_description=world.description or "",
+            aspect=aspect,
+        )
+        if not messages:
+            messages = [
+                {"role": "system", "content": f"Du bist ein Weltenbau-Experte fuer '{world.name}'."},
+                {"role": "user", "content": f"Vertiefe den Aspekt '{aspect}'."},
+            ]
 
         try:
             content = self._router.completion(
@@ -277,30 +275,20 @@ class WorldBuilderService:
         keywords: list[str],
         world_ctx_str: str,
     ) -> list[dict]:
-        return [
-            {
-                "role": "system",
-                "content": (
-                    "Du bist ein kreativer Weltenbau-Experte fuer Romane. "
-                    "Erstelle eine detaillierte, immersive Welt. "
-                    "Antworte mit einem JSON-Objekt.\n\n"
-                    + (world_ctx_str if world_ctx_str else "")
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"Erstelle eine vollstaendige Welt fuer: '{project_title}'.\n"
-                    + (f"Genre: {genre}\n" if genre else "")
-                    + (f"Ton: {tone}\n" if tone else "")
-                    + (f"Stichworte: {', '.join(keywords)}\n" if keywords else "")
-                    + "\nJSON-Format:\n"
-                    '{"name": "", "description": "", "geography": "", '
-                    '"culture": "", "magic_system": "", "technology_level": "", '
-                    '"politics": "", "history": "", "inhabitants": ""}'
-                ),
-            },
-        ]
+        messages = render_prompt(
+            "worlds/world_generate",
+            world_ctx_str=world_ctx_str,
+            project_title=project_title,
+            genre=genre,
+            tone=tone,
+            keywords=keywords,
+        )
+        if not messages:
+            messages = [
+                {"role": "system", "content": "Du bist ein Weltenbau-Experte. Antworte mit JSON.\n\n" + (world_ctx_str or "")},
+                {"role": "user", "content": f"Erstelle eine Welt fuer: '{project_title}'."},
+            ]
+        return messages
 
     @staticmethod
     def _parse_world_response(raw: str) -> WorldBuildResult:

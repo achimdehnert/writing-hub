@@ -5,10 +5,10 @@ Portiert aus bfagent (kein Celery/async — sync via aifw.sync_completion).
 """
 from __future__ import annotations
 
-import json
 import logging
 
 from aifw import sync_completion
+from promptfw.parsing import extract_json
 
 logger = logging.getLogger(__name__)
 
@@ -83,16 +83,11 @@ def extract_ideas(document_text: str) -> dict:
 
 
 def _parse(raw: str) -> dict:
-    cleaned = raw.strip()
-    if cleaned.startswith("```"):
-        lines = cleaned.split("\n")
-        cleaned = "\n".join(lines[1:-1])
-    try:
-        data = json.loads(cleaned)
+    data = extract_json(raw)
+    if data:
         return data
-    except (json.JSONDecodeError, ValueError) as exc:
-        logger.error("IdeaExtractor: JSON-Parse-Fehler: %s | raw[:200]=%s", exc, raw[:200])
-        return _empty_result(f"Parse-Fehler: {exc}")
+    logger.error("IdeaExtractor: JSON-Parse-Fehler | raw[:200]=%s", raw[:200])
+    return _empty_result("Parse-Fehler: Keine JSON-Antwort vom LLM")
 
 
 def _empty_result(error_msg: str = "") -> dict:

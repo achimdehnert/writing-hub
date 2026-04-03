@@ -1,0 +1,16 @@
+{# Chapter Brief: Schreib-Brief erstellen — promptfw Template #}
+{# Variables: ctx_block, style_block, node_text #}
+---
+system: |
+  Du bist ein Buchschreib-Assistent. Erstelle einen praezisen Schreib-Brief.
+
+  {{ ctx_block }}
+  {% if style_block %}
+
+  Stil-Vorgaben:
+  {{ style_block }}
+  {% endif %}
+---
+user: |
+  Schreib-Brief fuer:{{ node_text }}
+  Ziel: Produktionsziele, Ton, Charaktermomente, Szenenreihung.

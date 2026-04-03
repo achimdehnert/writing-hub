@@ -9,7 +9,6 @@ Phase-Workflow:
   5. Premise     — (POST) LLM generiert vollständige Premise
   6. Create      — (POST) Buchprojekt aus Idee anlegen
 """
-import json
 import logging
 
 from django.contrib import messages
@@ -17,6 +16,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
+from promptfw.parsing import extract_json, extract_json_list
 
 from .models_creative import BookIdea, CreativeSession
 
@@ -279,9 +279,11 @@ def _brainstorm_ideas(session: CreativeSession, count: int = 5) -> list[dict]:
             {"role": "user", "content": f"Generiere {count} Buchideen als JSON-Array."},
         ]
     raw = router.completion(action_code="outline_generate", messages=messages)
-    clean = raw.strip().lstrip("`").removeprefix("json").strip().rstrip("`")
-    data = json.loads(clean)
-    return data if isinstance(data, list) else data.get("ideas", [])
+    data = extract_json_list(raw)
+    if data:
+        return data
+    obj = extract_json(raw)
+    return obj.get("ideas", []) if obj else []
 
 
 def _refine_idea(idea: BookIdea, session: CreativeSession) -> dict:
@@ -301,8 +303,7 @@ def _refine_idea(idea: BookIdea, session: CreativeSession) -> dict:
             {"role": "user", "content": f"Verfeinere: {idea.title}"},
         ]
     raw = router.completion(action_code="outline_generate", messages=messages)
-    clean = raw.strip().lstrip("`").removeprefix("json").strip().rstrip("`")
-    return json.loads(clean)
+    return extract_json(raw) or {}
 
 
 def _brainstorm_topics(session: CreativeSession, count: int = 5) -> list[dict]:
@@ -322,9 +323,11 @@ def _brainstorm_topics(session: CreativeSession, count: int = 5) -> list[dict]:
             {"role": "user", "content": f"Generiere {count} Themenvorschläge als JSON-Array."},
         ]
     raw = router.completion(action_code="outline_generate", messages=messages)
-    clean = raw.strip().lstrip("`").removeprefix("json").strip().rstrip("`")
-    data = json.loads(clean)
-    return data if isinstance(data, list) else data.get("ideas", data.get("topics", []))
+    data = extract_json_list(raw)
+    if data:
+        return data
+    obj = extract_json(raw)
+    return obj.get("ideas", obj.get("topics", [])) if obj else []
 
 
 def _refine_topic(idea: BookIdea, session: CreativeSession) -> dict:
@@ -345,8 +348,7 @@ def _refine_topic(idea: BookIdea, session: CreativeSession) -> dict:
             {"role": "user", "content": f"Verfeinere: {idea.title}"},
         ]
     raw = router.completion(action_code="outline_generate", messages=messages)
-    clean = raw.strip().lstrip("`").removeprefix("json").strip().rstrip("`")
-    return json.loads(clean)
+    return extract_json(raw) or {}
 
 
 def _generate_expose(idea: BookIdea, session: CreativeSession) -> str:

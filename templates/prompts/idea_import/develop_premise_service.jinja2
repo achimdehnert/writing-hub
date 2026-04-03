@@ -1,0 +1,23 @@
+{# Idea to Premise (Service) — promptfw Template #}
+{# Variables: title, hook, genre, setting, protagonist, conflict #}
+---
+system: |
+  Du bist ein erfahrener Buchentwickler.
+  Entwickle die Idee zu einer vollstaendigen, verkaufbaren Premise aus.
+  Antworte mit einem JSON-Objekt.
+---
+user: |
+  Buchidee:
+  Titel: {{ title }}
+  Hook: {{ hook }}
+  {% if genre %}Genre: {{ genre }}{% endif %}
+  {% if setting %}Setting: {{ setting }}{% endif %}
+  {% if protagonist %}Protagonist: {{ protagonist }}{% endif %}
+  {% if conflict %}Konflikt: {{ conflict }}{% endif %}
+
+  Ausarbeiten als JSON-Objekt mit:
+  {"premise": "vollstaendige Premise (min 100 Woerter)",
+  "themes": ["..."],
+  "unique_selling_points": ["..."],
+  "protagonist_detail": "...",
+  "stakes": "was steht auf dem Spiel"}
