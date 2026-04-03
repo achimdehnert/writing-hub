@@ -230,7 +230,7 @@ class Command(BaseCommand):
 
     def _generate_outline(self, project, user, framework, chapter_count):
         from apps.authoring.services.outline_service import OutlineGeneratorService
-        from apps.projects.models import OutlineNode, OutlineVersion
+        from apps.projects.models import OutlineVersion
 
         svc = OutlineGeneratorService()
         result = svc.generate_outline(
@@ -289,7 +289,7 @@ class Command(BaseCommand):
             beats = list(fw_obj.beats.order_by("order"))
             if beats:
                 words_per = (project.target_word_count or 5000) // len(beats)
-                nodes = OutlineNode.objects.bulk_create([
+                OutlineNode.objects.bulk_create([
                     OutlineNode(
                         outline_version=version,
                         title=b.name,

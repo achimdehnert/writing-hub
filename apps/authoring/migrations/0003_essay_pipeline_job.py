@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('authoring', '0002_batch_write_job'),
-        ('projects', '0016_text_analysis_snapshot'),
+        ('projects', '0024_peer_review_models'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
