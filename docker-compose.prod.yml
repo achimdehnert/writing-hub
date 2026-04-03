@@ -11,6 +11,8 @@ services:
     depends_on:
       writing_hub_db:
         condition: service_healthy
+      writing_hub_redis:
+        condition: service_healthy
     ports:
       - "127.0.0.1:8097:8000"
     healthcheck:
@@ -65,6 +67,56 @@ services:
           memory: 512M
         reservations:
           memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - writing_hub_net
+
+  writing_hub_redis:
+    image: redis:7-alpine
+    container_name: writing_hub_redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    networks:
+      - writing_hub_net
+
+  writing_hub_worker:
+    image: ghcr.io/achimdehnert/writing-hub:${IMAGE_TAG:-latest}
+    container_name: writing_hub_worker
+    restart: unless-stopped
+    command: celery -A config worker -l info --concurrency=2
+    env_file:
+      - .env.prod
+    volumes:
+      - writing_hub_media:/app/media
+    depends_on:
+      writing_hub_db:
+        condition: service_healthy
+      writing_hub_redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+        reservations:
+          memory: 128M
     logging:
       driver: json-file
       options:
