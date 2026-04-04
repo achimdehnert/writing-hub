@@ -155,10 +155,10 @@ class Command(BaseCommand):
         # ── Step 0: User resolven ─────────────────────────────────
         user = self._resolve_user(options["owner"])
         self.stdout.write(f"  Owner:       {user.username} ({user.email})")
+        llm_overrides = self._build_llm_overrides(quality)
         self.stdout.write(f"  Qualität:    {quality}")
-
-        # ── Step 0b: LLM-Qualität anpassen ──────────────────────
-        self._apply_quality_settings(quality)
+        if llm_overrides:
+            self.stdout.write(f"  LLM:         {llm_overrides}")
 
         # ── Step 1: Projekt anlegen ───────────────────────────────
         self.stdout.write(self.style.MIGRATE_HEADING("\n[1/6] Projekt anlegen..."))
@@ -189,7 +189,7 @@ class Command(BaseCommand):
         # ── Step 4: Kapitel schreiben ─────────────────────────────
         if not skip_write:
             self.stdout.write(self.style.MIGRATE_HEADING("\n[4/6] Kapitel schreiben..."))
-            self._write_chapters(project, user, nodes, max_iterations)
+            self._write_chapters(project, user, nodes, max_iterations, llm_overrides)
         else:
             self.stdout.write(self.style.MIGRATE_HEADING("\n[4/6] Schreiben übersprungen"))
 
@@ -226,27 +226,16 @@ class Command(BaseCommand):
             raise CommandError("Kein User gefunden. Bitte --owner angeben.")
         return user
 
-    def _apply_quality_settings(self, quality: str):
-        """Adjust AIActionType max_tokens/model based on quality level."""
-        from aifw.models import AIActionType
+    def _build_llm_overrides(self, quality: str) -> dict:
+        """Build per-call LLM overrides based on quality level.
 
-        QUALITY_PROFILES = {
-            "fast": {"chapter_write": {"max_tokens": 4000}},
-            "standard": {"chapter_write": {"max_tokens": 8000}},
-            "premium": {
-                "chapter_write": {"default_model": "openai:gpt-4o", "max_tokens": 16000},
-                "chapter_analyze": {"default_model": "openai:gpt-4o", "max_tokens": 4000},
-                "chapter_brief": {"default_model": "openai:gpt-4o", "max_tokens": 2000},
-            },
-        }
-
-        profile = QUALITY_PROFILES.get(quality, {})
-        for action_code, overrides in profile.items():
-            updated = AIActionType.objects.filter(code=action_code).update(**overrides)
-            if updated:
-                self.stdout.write(
-                    f"  → {action_code}: {overrides}"
-                )
+        max_tokens is calculated dynamically from target_words in
+        ChapterProductionService.write_chapter(), so we only need
+        model overrides here for premium quality.
+        """
+        if quality == "premium":
+            return {"model": "openai:gpt-4o"}
+        return {}
 
     def _create_project(self, user, title, topic, framework, target_words):
         from apps.projects.models import BookProject, ContentTypeLookup
@@ -401,12 +390,14 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR(f" ✗ ({exc})"))
                 logger.warning("Research failed for node %s: %s", node.title, exc)
 
-    def _write_chapters(self, project, user, nodes, max_iterations):
+    def _write_chapters(self, project, user, nodes, max_iterations, llm_overrides=None):
         from apps.authoring.services.chapter_production_service import (
             ChapterProductionService,
         )
 
-        svc = ChapterProductionService(project_id=str(project.pk), user=user)
+        svc = ChapterProductionService(
+            project_id=str(project.pk), user=user, llm_overrides=llm_overrides,
+        )
         total_words = 0
 
         for node in nodes:

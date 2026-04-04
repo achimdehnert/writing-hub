@@ -92,7 +92,7 @@ class ChapterProductionService:
         result = svc.produce_chapter(chapter_id)
     """
 
-    def __init__(self, project_id: str, user=None):
+    def __init__(self, project_id: str, user=None, llm_overrides: dict | None = None):
         self._project_id = str(project_id)
         self.user = user
         self._router = LLMRouter()
@@ -100,6 +100,7 @@ class ChapterProductionService:
         self._quality_level: int | None = self._resolve_quality_level()
         self._prompt_stack = self._build_prompt_stack()
         self._style_profile = self._load_style_profile()
+        self._llm_overrides: dict = llm_overrides or {}
 
     def _build_prompt_stack(self):
         """promptfw.PromptStack laden."""
@@ -185,7 +186,8 @@ class ChapterProductionService:
             )
 
             content = self._router.completion(
-                "chapter_brief", messages, quality_level=self._quality_level
+                "chapter_brief", messages, quality_level=self._quality_level,
+                **{k: v for k, v in self._llm_overrides.items() if k == "model"},
             )
             return BriefResult(success=True, brief=content)
 
@@ -210,9 +212,14 @@ class ChapterProductionService:
                 style_block=style_block,
                 brief=brief,
             )
+            # Dynamic max_tokens: ~2 tokens/word (German), minimum 4000
+            dynamic_max_tokens = max(4000, int(target_words * 2))
+            write_overrides = {"max_tokens": dynamic_max_tokens}
+            write_overrides.update(self._llm_overrides)
             content = self._router.completion(
                 "chapter_write", messages,
-                quality_level=self._quality_level, priority="quality"
+                quality_level=self._quality_level, priority="quality",
+                **write_overrides,
             )
             return WriteResult(success=True, content=content, word_count=len(content.split()))
         except LLMRoutingError as exc:
@@ -235,7 +242,8 @@ class ChapterProductionService:
             )
             from promptfw.parsing import extract_json
             raw = self._router.completion(
-                "chapter_analyze", messages, quality_level=self._quality_level
+                "chapter_analyze", messages, quality_level=self._quality_level,
+                **{k: v for k, v in self._llm_overrides.items() if k == "model"},
             )
             data = extract_json(raw)
             if data:
@@ -319,5 +327,9 @@ class ChapterProductionService:
         )
 
 
-def get_chapter_production_service(project_id: str, user=None) -> ChapterProductionService:
-    return ChapterProductionService(project_id=project_id, user=user)
+def get_chapter_production_service(
+    project_id: str, user=None, llm_overrides: dict | None = None,
+) -> ChapterProductionService:
+    return ChapterProductionService(
+        project_id=project_id, user=user, llm_overrides=llm_overrides,
+    )
