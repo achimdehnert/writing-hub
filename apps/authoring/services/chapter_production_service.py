@@ -200,33 +200,133 @@ class ChapterProductionService:
     def write_chapter(
         self, chapter_id: str, brief: str, target_words: int = 2000
     ) -> WriteResult:
-        """Stage 2: Kapitel schreiben via aifw action_code=chapter_write."""
+        """Stage 2: Kapitel schreiben via aifw action_code=chapter_write.
+
+        Uses chunked generation (authoringfw pattern) for chapters
+        exceeding single-call token capacity (~2500 words).
+        """
+        from authoringfw.writing.chunked import compute_max_tokens, compute_words_per_chunk
+
         ctx_block = self._get_context_block()
         style_block = self._get_style_constraints()
+        dynamic_max_tokens = compute_max_tokens(target_words)
+        words_per_chunk = compute_words_per_chunk(min(dynamic_max_tokens, 4096))
 
         try:
-            messages = render_prompt(
-                "authoring/chapter_write_production",
-                target_words=target_words,
-                ctx_block=ctx_block,
-                style_block=style_block,
-                brief=brief,
+            if target_words <= words_per_chunk:
+                return self._write_single(
+                    brief, target_words, ctx_block, style_block, dynamic_max_tokens,
+                )
+            return self._write_chunked(
+                brief, target_words, ctx_block, style_block,
+                dynamic_max_tokens, words_per_chunk,
             )
-            # Dynamic max_tokens: ~2 tokens/word (German), minimum 4000
-            dynamic_max_tokens = max(4000, int(target_words * 2))
-            write_overrides = {"max_tokens": dynamic_max_tokens}
-            write_overrides.update(self._llm_overrides)
-            content = self._router.completion(
-                "chapter_write", messages,
-                quality_level=self._quality_level, priority="quality",
-                **write_overrides,
-            )
-            return WriteResult(success=True, content=content, word_count=len(content.split()))
         except LLMRoutingError as exc:
             return WriteResult(success=False, error=str(exc))
         except Exception as exc:
             logger.exception("write_chapter Fehler")
             return WriteResult(success=False, error=str(exc))
+
+    def _write_single(
+        self, brief: str, target_words: int,
+        ctx_block: str, style_block: str, max_tokens: int,
+    ) -> WriteResult:
+        """Single-shot chapter generation."""
+        messages = render_prompt(
+            "authoring/chapter_write_production",
+            target_words=target_words,
+            ctx_block=ctx_block,
+            style_block=style_block,
+            brief=brief,
+        )
+        write_overrides = {"max_tokens": max_tokens}
+        write_overrides.update(self._llm_overrides)
+        content = self._router.completion(
+            "chapter_write", messages,
+            quality_level=self._quality_level, priority="quality",
+            **write_overrides,
+        )
+        return WriteResult(success=True, content=content, word_count=len(content.split()))
+
+    def _write_chunked(
+        self, brief: str, target_words: int,
+        ctx_block: str, style_block: str,
+        max_tokens: int, words_per_chunk: int,
+    ) -> WriteResult:
+        """Multi-chunk chapter generation for long chapters."""
+        num_chunks = (target_words // words_per_chunk) + 1
+        logger.info(
+            "Chunked generation: %d words in %d chunks of ~%d words",
+            target_words, num_chunks, words_per_chunk,
+        )
+
+        all_parts: list[str] = []
+        for chunk_num in range(num_chunks):
+            is_first = chunk_num == 0
+            is_last = chunk_num == num_chunks - 1
+
+            if is_first:
+                chunk_brief = (
+                    f"{brief}\n\nSchreibe etwa {words_per_chunk} Wörter "
+                    f"(Teil 1/{num_chunks}). Beginne mit einer fesselnden "
+                    "Eröffnung. ENDE NICHT — das Kapitel wird fortgesetzt."
+                )
+            elif is_last:
+                prev_excerpt = "\n\n".join(all_parts[-2:])[-3000:]
+                chunk_brief = (
+                    f"BISHERIGER INHALT (Auszug):\n{prev_excerpt}\n\n"
+                    f"Schreibe das ENDE des Kapitels (~{words_per_chunk} Wörter, "
+                    f"Teil {chunk_num + 1}/{num_chunks}). "
+                    "Schließe das Kapitel befriedigend ab."
+                )
+            else:
+                prev_excerpt = "\n\n".join(all_parts[-2:])[-3000:]
+                chunk_brief = (
+                    f"BISHERIGER INHALT (Auszug):\n{prev_excerpt}\n\n"
+                    f"Setze die Erzählung fort (~{words_per_chunk} Wörter, "
+                    f"Teil {chunk_num + 1}/{num_chunks}). "
+                    "Führe die Handlung nahtlos weiter. ENDE NICHT."
+                )
+
+            messages = render_prompt(
+                "authoring/chapter_write_production",
+                target_words=words_per_chunk,
+                ctx_block=ctx_block,
+                style_block=style_block,
+                brief=chunk_brief,
+            )
+            write_overrides = {"max_tokens": max_tokens}
+            write_overrides.update(self._llm_overrides)
+
+            try:
+                chunk_content = self._router.completion(
+                    "chapter_write", messages,
+                    quality_level=self._quality_level, priority="quality",
+                    **write_overrides,
+                )
+                all_parts.append(chunk_content.strip())
+                logger.info(
+                    "Chunk %d/%d: %d words",
+                    chunk_num + 1, num_chunks, len(chunk_content.split()),
+                )
+            except (LLMRoutingError, Exception) as exc:
+                if all_parts:
+                    logger.warning(
+                        "Chunk %d/%d failed, returning partial: %s",
+                        chunk_num + 1, num_chunks, exc,
+                    )
+                    partial = "\n\n".join(all_parts)
+                    return WriteResult(
+                        success=True, content=partial,
+                        word_count=len(partial.split()),
+                    )
+                raise
+
+        full_content = "\n\n".join(all_parts)
+        return WriteResult(
+            success=True, content=full_content,
+            word_count=len(full_content.split()),
+        )
 
     def analyze_chapter(self, chapter_id: str, content: str) -> AnalyzeResult:
         """Stage 3: Qualitaetsanalyse via aifw action_code=chapter_analyze."""

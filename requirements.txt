@@ -41,7 +41,7 @@ iil-aifw>=0.6.0,<1
 iil-promptfw @ git+https://github.com/achimdehnert/promptfw.git@main
 
 # Domain schemas — StyleProfile, CharacterProfile, WorldContext
-iil-authoringfw>=0.6.0,<1
+iil-authoringfw @ git+https://github.com/achimdehnert/authoringfw.git@main
 
 # WeltenHub REST client — WeltenClient, worlds/characters API
 iil-weltenfw[django]>=0.1.0,<1
