@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "crispy_bootstrap5",
     "aifw",
     "weltenfw.django",
+    "promptfw.contrib.django",
     "apps.core.apps.CoreConfig",
     "apps.worlds.apps.WorldsConfig",
     "apps.projects.apps.ProjectsConfig",
@@ -131,6 +132,12 @@ WELTENHUB_LOOKUP_TTL = int(config("WELTENHUB_LOOKUP_TTL", default="3600"))
 WELTENHUB_TIMEOUT = float(config("WELTENHUB_TIMEOUT", default="30.0"))
 
 PROMPT_TEMPLATES_DIR = str(BASE_DIR / "templates" / "prompts")
+
+# promptfw.contrib.django — DB-backed prompt management (ADR-146)
+PROMPTFW_PROMPTS_DIR = BASE_DIR / "templates" / "prompts"
+PROMPTFW_CACHE_TTL = 300
+PROMPTFW_FILE_FALLBACK = True
+PROMPTFW_MULTI_TENANT = False
 
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
