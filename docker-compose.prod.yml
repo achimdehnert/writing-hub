@@ -4,6 +4,7 @@ services:
     container_name: writing_hub_web
     restart: unless-stopped
     env_file:
+      - /opt/shared-secrets/api-keys.env
       - .env.prod
     volumes:
       - writing_hub_media:/app/media
@@ -102,6 +103,7 @@ services:
     restart: unless-stopped
     command: celery -A config worker -l info --concurrency=2
     env_file:
+      - /opt/shared-secrets/api-keys.env
       - .env.prod
     volumes:
       - writing_hub_media:/app/media
@@ -131,6 +133,7 @@ services:
     restart: unless-stopped
     command: celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     env_file:
+      - /opt/shared-secrets/api-keys.env
       - .env.prod
     depends_on:
       writing_hub_db:
@@ -158,6 +161,7 @@ services:
     restart: "no"
     command: python manage.py migrate --noinput
     env_file:
+      - /opt/shared-secrets/api-keys.env
       - .env.prod
     depends_on:
       writing_hub_db:
