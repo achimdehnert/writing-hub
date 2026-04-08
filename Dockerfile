@@ -20,6 +20,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt /app/requirements.txt
+
+# iil-fieldprefill — not on PyPI yet, install from git (ADR-107)
+ARG PROJECT_PAT=""
+RUN if [ -n "$PROJECT_PAT" ]; then \
+      git clone --depth=1 "https://x-access-token:${PROJECT_PAT}@github.com/achimdehnert/iil-fieldprefill.git" /tmp/iil-fieldprefill \
+      && pip install --no-cache-dir "/tmp/iil-fieldprefill[all]" \
+      && rm -rf /tmp/iil-fieldprefill \
+      && echo "OK: iil-fieldprefill"; \
+    else echo "SKIP: iil-fieldprefill (no PAT)"; fi
+
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY . /app
