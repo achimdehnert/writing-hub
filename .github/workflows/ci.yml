@@ -9,6 +9,5 @@ jobs:
   ci:
     uses: achimdehnert/platform/.github/workflows/_ci-python.yml@main
     with:
-      skip_tests: true
       django_settings_module: "config.settings.test"
     secrets: inherit
