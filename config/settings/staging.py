@@ -1,16 +1,14 @@
 """
 Writing Hub — Staging Settings
 """
-import os
-
 from .base import *  # noqa: F401, F403
 from decouple import config
 
 DEBUG = False
 
-ALLOWED_HOSTS = os.environ.get(
+ALLOWED_HOSTS = config(
     "ALLOWED_HOSTS",
-    "staging.writing.iil.pet,localhost,127.0.0.1",
+    default="staging.writing.iil.pet,localhost,127.0.0.1",
 ).split(",")
 
 DATABASES = {

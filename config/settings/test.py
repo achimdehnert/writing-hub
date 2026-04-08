@@ -1,9 +1,8 @@
 """
 Writing Hub — Test Settings (ADR-141: PostgreSQL-Only Testing)
 """
-import os
-
 from .base import *  # noqa: F401, F403
+from decouple import config
 
 DEBUG = False
 
@@ -11,11 +10,11 @@ DEBUG = False
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("TEST_DB_NAME", "writing_hub_test"),
-        "USER": os.environ.get("TEST_DB_USER", "dehnert"),
-        "PASSWORD": os.environ.get("TEST_DB_PASSWORD", ""),
-        "HOST": os.environ.get("TEST_DB_HOST", "localhost"),
-        "PORT": os.environ.get("TEST_DB_PORT", "5434"),
+        "NAME": config("TEST_DB_NAME", default="writing_hub_test"),
+        "USER": config("TEST_DB_USER", default="dehnert"),
+        "PASSWORD": config("TEST_DB_PASSWORD", default=""),
+        "HOST": config("TEST_DB_HOST", default="localhost"),
+        "PORT": config("TEST_DB_PORT", default="5434"),
         "TEST": {"NAME": "test_writing_hub"},
     }
 }
