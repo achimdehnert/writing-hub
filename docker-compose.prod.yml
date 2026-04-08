@@ -125,6 +125,46 @@ services:
     networks:
       - writing_hub_net
 
+  writing_hub_beat:
+    image: ghcr.io/achimdehnert/writing-hub:${IMAGE_TAG:-latest}
+    container_name: writing_hub_beat
+    restart: unless-stopped
+    command: celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    env_file:
+      - .env.prod
+    depends_on:
+      writing_hub_db:
+        condition: service_healthy
+      writing_hub_redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.25"
+        reservations:
+          memory: 64M
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    networks:
+      - writing_hub_net
+
+  writing_hub_migrate:
+    image: ghcr.io/achimdehnert/writing-hub:${IMAGE_TAG:-latest}
+    container_name: writing_hub_migrate
+    restart: "no"
+    command: python manage.py migrate --noinput
+    env_file:
+      - .env.prod
+    depends_on:
+      writing_hub_db:
+        condition: service_healthy
+    networks:
+      - writing_hub_net
+
 volumes:
   writing_hub_pgdata:
   writing_hub_media:
