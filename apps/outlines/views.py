@@ -8,7 +8,6 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.views.generic import DetailView, ListView
-from promptfw.parsing import extract_json, extract_json_list
 
 from apps.projects.models import OutlineFramework, OutlineNode, OutlineVersion
 
@@ -221,99 +220,21 @@ class OutlineGenerateFullView(LoginRequiredMixin, View):
     """
 
     def post(self, request, pk):
-        import json
-        import re
-
-        from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
-        from apps.authoring.services.project_context_service import ProjectContextService
+        from apps.outlines.services import OutlineGenerationService
 
         outline = get_object_or_404(OutlineVersion, pk=pk, project__owner=request.user)
-        project = outline.project
         detail_level = request.POST.get("detail_level", "full")
 
-        try:
-            ctx_svc = ProjectContextService()
-            proj_ctx = ctx_svc.get_context(str(project.pk))
-            context_block = proj_ctx.to_prompt_block()
-        except Exception:
-            context_block = f"Projekt: {project.title}\nGenre: {project.genre}"
+        svc = OutlineGenerationService()
+        result = svc.generate_full(outline, detail_level=detail_level)
 
-        nodes = list(outline.nodes.order_by("order"))
-        if not nodes:
+        if result["total"] == 0:
             messages.warning(request, "Keine Kapitel vorhanden. Zuerst Outline anlegen.")
-            return redirect("outlines:detail", pk=pk)
-
-        router = LLMRouter()
-        fw_name = outline.source
-        total = len(nodes)
-        updated = 0
-
-        # Schritt 1: Struktur-Pass
-        try:
-            target_per_chapter = (
-                round(project.target_word_count / total)
-                if project.target_word_count else 3000
+        else:
+            messages.success(
+                request,
+                f'Outline vollständig generiert: {result["updated"]}/{result["total"]} Kapitel mit Details.'
             )
-            from apps.core.prompt_utils import render_prompt
-            chapters_list = [{"order": n.order, "title": n.title} for n in nodes]
-            prompt_msgs = render_prompt(
-                "outlines/structure_pass",
-                context_block=context_block,
-                framework=fw_name,
-                chapters=chapters_list,
-                total=total,
-                target_word_count=project.target_word_count or total * target_per_chapter,
-            )
-            raw = router.completion(
-                action_code="chapter_outline",
-                messages=prompt_msgs,
-            )
-            structure = extract_json_list(raw)
-            if structure:
-                struct_map = {item["order"]: item for item in structure}
-                for node in nodes:
-                    s = struct_map.get(node.order, {})
-                    node.beat_phase = s.get("beat_phase", node.beat_phase)
-                    node.act = s.get("act", node.act)
-                    node.target_words = s.get("target_words") or node.target_words
-                    node.save(update_fields=["beat_phase", "act", "target_words"])
-        except (LLMRoutingError, Exception) as exc:
-            logger.warning("OutlineGenerateFull Step1 error: %s", exc)
-
-        # Schritt 2: Detail-Pass
-        if detail_level in ("full", "detail"):
-            for node in nodes:
-                try:
-                    prompt_msgs = render_prompt(
-                        "outlines/detail_pass",
-                        context_block=context_block,
-                        beat_phase=node.beat_phase or "",
-                        act=node.act or "",
-                        order=node.order,
-                        title=node.title,
-                        target_words=node.target_words or 3000,
-                        description=node.description or "(leer)",
-                    )
-                    raw = router.completion(
-                        action_code="chapter_outline",
-                        messages=prompt_msgs,
-                    )
-                    data = extract_json(raw)
-                    if data:
-                        node.description = data.get("description", raw)
-                        node.emotional_arc = data.get("emotional_arc", "")
-                    else:
-                        node.description = raw
-                    node.save(update_fields=["description", "emotional_arc"])
-                    updated += 1
-                except (LLMRoutingError, Exception) as exc:
-                    logger.warning("OutlineGenerateFull Step2 node=%s: %s", node.order, exc)
-                    continue
-
-        messages.success(
-            request,
-            f'Outline vollständig generiert: {updated}/{total} Kapitel mit Details.'
-        )
         return redirect("outlines:detail", pk=pk)
 
 
@@ -321,51 +242,18 @@ class OutlineNodeEnrichView(LoginRequiredMixin, View):
     """KI-Verfeinerung eines einzelnen Outline-Nodes."""
 
     def post(self, request, pk):
-        import json
-        import re
-
-        from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
-        from apps.authoring.services.project_context_service import ProjectContextService
+        from apps.outlines.services import OutlineGenerationService
 
         node = get_object_or_404(
             OutlineNode, pk=pk, outline_version__project__owner=request.user
         )
-        project = node.outline_version.project
 
-        try:
-            ctx_svc = ProjectContextService()
-            ctx = ctx_svc.get_context(str(project.pk))
-            context_block = ctx.to_prompt_block()
-            existing = node.description.strip() or "(noch kein Inhalt)"
-            from apps.core.prompt_utils import render_prompt
-            prompt_msgs = render_prompt(
-                "outlines/enrich_node",
-                context_block=context_block,
-                beat_phase=node.beat_phase or "",
-                act=node.act or "",
-                order=node.order,
-                title=node.title,
-                target_words=node.target_words or 3000,
-                description=existing,
-            )
-            router = LLMRouter()
-            raw = router.completion(
-                action_code="chapter_outline",
-                messages=prompt_msgs,
-            )
-            data = extract_json(raw)
-            if data:
-                node.description = data.get("description", raw)
-                node.emotional_arc = data.get("emotional_arc", node.emotional_arc)
-            else:
-                node.description = raw
-            node.save(update_fields=["description", "emotional_arc"])
+        svc = OutlineGenerationService()
+        result = svc.enrich_node(node)
+
+        if result["success"]:
             messages.success(request, f'Kapitel „{node.title}" KI-verfeinert.')
-        except LLMRoutingError as exc:
-            logger.warning("OutlineNodeEnrich LLMRoutingError node=%s: %s", pk, exc)
-            messages.warning(request, f"KI nicht verfügbar: {exc}")
-        except Exception as exc:
-            logger.exception("OutlineNodeEnrich error node=%s: %s", pk, exc)
-            messages.error(request, f"Fehler: {exc}")
+        else:
+            messages.warning(request, result["error"])
 
         return redirect("outlines:detail", pk=node.outline_version.pk)
