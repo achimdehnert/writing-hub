@@ -59,7 +59,7 @@
                  id="chapter-item-{{ chapter.id }}"
                  data-chapter-id="{{ chapter.id }}"
                  style="cursor:pointer;border-left:3px solid transparent;border-bottom:1px solid #1e2235;"
-                 onclick="selectChapter('{{ chapter.id }}')">
+                 data-action="select-chapter" data-chapter-id="{{ chapter.id }}">
                 <div class="d-flex align-items-start justify-content-between gap-1">
                     <div style="min-width:0;">
                         <span class="text-muted" style="font-size:.68rem;">{{ chapter.order }}.</span>
@@ -72,7 +72,7 @@
                     </div>
                     <button class="btn btn-sm py-0 px-1 flex-shrink-0"
                             style="background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3;font-size:.6rem;"
-                            onclick="event.stopPropagation(); startGeneration('{{ chapter.id }}')" title="KI generieren">
+                            data-action="generate-chapter" data-chapter-id="{{ chapter.id }}" title="KI generieren">
                         <i class="bi bi-stars"></i>
                     </button>
                 </div>
@@ -97,10 +97,10 @@
                 <span class="text-muted small" id="word-count">0 Wörter</span>
                 <span style="font-size:.72rem;color:#94a3b8;" id="save-status"></span>
                 <button class="btn btn-sm" style="background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3;"
-                        id="btn-generate-main" onclick="startGenerationCurrent()" disabled>
+                        id="btn-generate-main" data-action="generate-current" disabled>
                     <i class="bi bi-stars me-1"></i>Mit KI generieren
                 </button>
-                <button class="btn btn-success btn-sm" id="btn-save" onclick="saveContent()" disabled>
+                <button class="btn btn-success btn-sm" id="btn-save" data-action="save-content" disabled>
                     <i class="bi bi-check-lg me-1"></i>Speichern
                 </button>
             </div>
@@ -115,7 +115,7 @@
         <div id="chapter-outline-panel" class="d-none px-3 pt-2 pb-1 border-bottom" style="background:#0d1117;border-color:#1e2235!important;">
             <div class="d-flex align-items-center gap-2 mb-1">
                 <span style="color:#f59e0b;font-size:.72rem;"><i class="bi bi-lightbulb-fill me-1"></i>Outline für dieses Kapitel:</span>
-                <button class="btn btn-link p-0 ms-auto" style="font-size:.68rem;color:#64748b;" onclick="toggleOutlinePanel()">ein-/ausklappen</button>
+                <button class="btn btn-link p-0 ms-auto" style="font-size:.68rem;color:#64748b;" data-action="toggle-outline">ein-/ausklappen</button>
             </div>
             <div id="outline-panel-body">
                 <div class="d-flex flex-wrap gap-1 mb-1" id="outline-meta-row"></div>
@@ -124,13 +124,12 @@
         </div>
 
         <div class="flex-grow-1 d-flex flex-column p-3" style="overflow:hidden;">
-            <textarea id="chapter-content"
-                class="flex-grow-1 border-0 w-100"
+            <textarea class="flex-grow-1 border-0 w-100"
                 style="background:#0f1117;color:#e2e8f0;resize:none;
                        font-family:'Georgia',serif;font-size:1rem;line-height:1.9;
                        outline:none;height:100%;padding:1rem;"
                 placeholder="Beginne hier mit dem Schreiben..."
-                oninput="onContentChange()"></textarea>
+                id="chapter-content"></textarea>
         </div>
     </div>
 
@@ -144,7 +143,7 @@
                 {% if project_styles %}
                 <select id="chapter-style-select" class="form-select form-select-sm"
                         style="background:#1a1f2e;color:#e2e8f0;border-color:#2d3748;"
-                        onchange="setChapterStyle(this.value)">
+                        data-action="set-style">
                     <option value="">&#8212; Projekt-Standard</option>
                     {% for s in project_styles %}
                     <option value="{{ s.pk }}">{{ s.author.name }}: {{ s.name }}</option>
@@ -166,10 +165,10 @@
                     style="background:#1a1f2e;color:#e2e8f0;border-color:#2d3748;"
                     value="3000" min="500" max="20000" step="500">
                 <div class="d-flex gap-1 mt-1 flex-wrap">
-                    <button class="btn btn-outline-secondary py-0 px-1" style="font-size:.63rem;" onclick="document.getElementById('target-words').value='2000'">2k</button>
-                    <button class="btn btn-outline-secondary py-0 px-1" style="font-size:.63rem;" onclick="document.getElementById('target-words').value='5000'">5k</button>
-                    <button class="btn btn-outline-secondary py-0 px-1" style="font-size:.63rem;" onclick="document.getElementById('target-words').value='7000'">7k</button>
-                    <button class="btn btn-outline-secondary py-0 px-1" style="font-size:.63rem;" onclick="document.getElementById('target-words').value='10000'">10k</button>
+                    <button class="btn btn-outline-secondary py-0 px-1" style="font-size:.63rem;" data-action="set-words" data-value="2000">2k</button>
+                    <button class="btn btn-outline-secondary py-0 px-1" style="font-size:.63rem;" data-action="set-words" data-value="5000">5k</button>
+                    <button class="btn btn-outline-secondary py-0 px-1" style="font-size:.63rem;" data-action="set-words" data-value="7000">7k</button>
+                    <button class="btn btn-outline-secondary py-0 px-1" style="font-size:.63rem;" data-action="set-words" data-value="10000">10k</button>
                 </div>
             </div>
 
@@ -221,7 +220,7 @@
             <div class="mb-3">
                 <div class="small text-muted fw-semibold mb-2"><i class="bi bi-stars me-1"></i>KI-AKTIONEN</div>
                 <button class="btn w-100 mb-2" style="background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3;"
-                        onclick="generateAll()" id="btn-gen-all">
+                        data-action="generate-all" id="btn-gen-all">
                     <i class="bi bi-lightning-fill me-1"></i>Alle Kapitel generieren
                 </button>
                 <div class="text-muted" style="font-size:.7rem;">Generiert KI-Inhalte für alle Kapitel basierend auf Outline, Charakteren und Welten.</div>
@@ -470,6 +469,24 @@ function updateWordCount(t) { const c = t.trim() ? t.trim().split(/\s+/).length 
 function resetBtn() { const btn = document.getElementById('btn-generate-main'); btn.disabled = false; btn.innerHTML = '<i class="bi bi-stars me-1"></i>Mit KI generieren'; }
 
 window.addEventListener('DOMContentLoaded', () => {
+    // Event delegation — replaces all inline onclick/onchange/oninput handlers
+    document.addEventListener('click', (e) => {
+        const el = e.target.closest('[data-action]');
+        if (!el) return;
+        const action = el.dataset.action;
+        if (action === 'select-chapter') { selectChapter(el.dataset.chapterId); }
+        else if (action === 'generate-chapter') { e.stopPropagation(); startGeneration(el.dataset.chapterId); }
+        else if (action === 'generate-current') { startGenerationCurrent(); }
+        else if (action === 'save-content') { saveContent(); }
+        else if (action === 'toggle-outline') { toggleOutlinePanel(); }
+        else if (action === 'set-words') { document.getElementById('target-words').value = el.dataset.value; }
+        else if (action === 'generate-all') { generateAll(); }
+    });
+    const styleSelect = document.getElementById('chapter-style-select');
+    if (styleSelect) styleSelect.addEventListener('change', () => setChapterStyle(styleSelect.value));
+    const contentArea = document.getElementById('chapter-content');
+    if (contentArea) contentArea.addEventListener('input', () => onContentChange());
+
     const params = new URLSearchParams(window.location.search);
     const cId = params.get('chapter');
     if (cId && CHAPTER_MAP[cId]) selectChapter(cId);
