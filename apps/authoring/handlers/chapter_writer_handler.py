@@ -343,11 +343,16 @@ class ChapterWriterHandler:
         }
 
     def _write_chunked(self, context: ChapterContext) -> dict[str, Any]:
+        from authoringfw import get_content_type_config
+
         words_per_chunk = int(self.MAX_TOKENS / 1.5) - 200
         num_chunks = (context.target_word_count // words_per_chunk) + 1
         context_str = context.to_prompt_context()
         all_content: list[str] = []
         total_latency = 0
+
+        ct_config = get_content_type_config(context.content_type)
+        vocab = ct_config.chunk_vocab
 
         write_msgs = self._render_write_messages(context)
         sys_prompt = write_msgs[0]["content"] if write_msgs else "Schreibe ein Kapitel."
@@ -358,23 +363,25 @@ class ChapterWriterHandler:
 
             if is_first:
                 chunk_prompt = (
-                    f"Schreibe den ANFANG von Kapitel {context.chapter_number}.\n\n"
-                    f"{context_str}\n\nSchreibe etwa {words_per_chunk} Woerter. "
-                    f"Teil 1 von {num_chunks}. ENDE NICHT mit dem Kapitel."
+                    f"{context_str}\n\nSchreibe etwa {words_per_chunk} Woerter "
+                    f"(Teil 1/{num_chunks}). Beginne mit einer "
+                    f"{vocab['opening']}. ENDE NICHT — das Kapitel wird fortgesetzt."
                 )
             elif is_last:
                 prev = "\n\n".join(all_content[-2:])[-3000:]
                 chunk_prompt = (
-                    f"Schreibe das ENDE von Kapitel {context.chapter_number}.\n\n"
-                    f"BISHERIGER INHALT:\n{prev}\n\nSchreibe etwa {words_per_chunk} Woerter. "
-                    f"Letzter Teil ({chunk_num + 1} von {num_chunks})."
+                    f"BISHERIGER INHALT (Auszug):\n{prev}\n\n"
+                    f"Schreibe das ENDE des Kapitels (~{words_per_chunk} Woerter, "
+                    f"Teil {chunk_num + 1}/{num_chunks}). "
+                    "Schliesse das Kapitel ab."
                 )
             else:
                 prev = "\n\n".join(all_content[-2:])[-3000:]
                 chunk_prompt = (
-                    f"Setze Kapitel {context.chapter_number} fort.\n\n"
-                    f"BISHERIGER INHALT:\n{prev}\n\nSchreibe etwa {words_per_chunk} Woerter. "
-                    f"Teil {chunk_num + 1} von {num_chunks}. ENDE NICHT."
+                    f"BISHERIGER INHALT (Auszug):\n{prev}\n\n"
+                    f"{vocab['mid']} (~{words_per_chunk} Woerter, "
+                    f"Teil {chunk_num + 1}/{num_chunks}). "
+                    f"{vocab['mid_detail']}. ENDE NICHT."
                 )
 
             messages = [
