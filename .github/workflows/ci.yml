@@ -1,13 +1,14 @@
-name: _disabled_ci
+name: CI
+
 on:
+  pull_request:
+    branches: [main]
   workflow_dispatch:
-    inputs:
-      reason:
-        description: 'This workflow is disabled — use ci-cd.yml instead'
-        required: false
+
 jobs:
-  noop:
-    runs-on: ubuntu-latest
-    if: false
-    steps:
-      - run: echo "disabled"
+  ci:
+    uses: achimdehnert/platform/.github/workflows/_ci-python.yml@main
+    with:
+      skip_tests: true
+      django_settings_module: "config.settings.test"
+    secrets: inherit
