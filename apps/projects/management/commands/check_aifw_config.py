@@ -10,8 +10,7 @@ Diagnostiziert die aktuelle aifw-DB-Konfiguration und zeigt:
 Usage:
     python manage.py check_aifw_config
 """
-import os
-
+from decouple import config as decouple_config
 from django.core.management.base import BaseCommand
 
 WRITING_HUB_CODES = [
@@ -34,9 +33,8 @@ class Command(BaseCommand):
         self.stdout.write(self.style.MIGRATE_HEADING("\n=== aifw Diagnose ==="))
 
         # API Key
-        api_key = os.environ.get("OPENAI_API_KEY", "")
-        if api_key:
-            self.stdout.write(self.style.SUCCESS(f"OPENAI_API_KEY: gesetzt ({len(api_key)} Zeichen)"))
+        if decouple_config("OPENAI_API_KEY", default=""):
+            self.stdout.write(self.style.SUCCESS("OPENAI_API_KEY: gesetzt"))
         else:
             self.stdout.write(self.style.ERROR("OPENAI_API_KEY: NICHT GESETZT -- LLM-Calls werden scheitern!"))
 

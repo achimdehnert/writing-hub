@@ -19,6 +19,7 @@ class ProjectContext:
     genre: str = ""
     description: str = ""
     content_type: str = "novel"
+    target_audience: str = ""
     target_word_count: int = 0
 
     premise: str = ""
@@ -36,8 +37,12 @@ class ProjectContext:
     def to_prompt_block(self) -> str:
         """Kontext als kompakter Text-Block fuer LLM-System-Prompt."""
         lines = [f"# Buchprojekt: {self.title}"]
+        if self.content_type:
+            lines.append(f"Inhaltstyp: {self.content_type}")
         if self.genre:
             lines.append(f"Genre: {self.genre}")
+        if self.target_audience:
+            lines.append(f"Zielgruppe: {self.target_audience}")
         if self.description:
             lines.append(f"Beschreibung: {self.description}")
         if self.premise:
@@ -97,6 +102,7 @@ class ProjectContextService:
             genre=genre_name,
             description=project.description,
             content_type=project.content_type,
+            target_audience=project.target_audience or "",
             target_word_count=project.target_word_count or 0,
         )
 

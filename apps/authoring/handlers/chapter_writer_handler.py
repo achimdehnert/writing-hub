@@ -270,12 +270,10 @@ class ChapterContext:
         )
 
 
-# Template names for promptfw-driven prompt rendering
-_TPL_WRITE_FICTION = "authoring/chapter_write_fiction"
-_TPL_WRITE_ACADEMIC = "authoring/chapter_write_academic"
 _TPL_REFINE = "authoring/chapter_refine"
 _TPL_CONTINUE = "authoring/chapter_continue"
 _TPL_SUMMARY = "authoring/chapter_summary"
+_DEFAULT_WRITE_TPL = "authoring/chapter_write_default"
 
 
 class ChapterWriterHandler:
@@ -299,14 +297,26 @@ class ChapterWriterHandler:
         return self._write_single(context)
 
     def _write_template(self, context: ChapterContext) -> str:
-        """Select promptfw template name based on content type."""
-        return _TPL_WRITE_ACADEMIC if context.is_academic else _TPL_WRITE_FICTION
+        """Convention: chapter_write_{content_type}, fallback to default."""
+        from apps.core.prompt_utils import prompt_exists
+        ct_tpl = f"authoring/chapter_write_{context.content_type}"
+        if prompt_exists(ct_tpl):
+            return ct_tpl
+        return _DEFAULT_WRITE_TPL
 
     def _render_write_messages(self, context: ChapterContext) -> list[dict]:
-        """Render full write messages via promptfw template."""
-        context_str = context.to_prompt_context()
+        """Render write messages via convention-based template (unified interface)."""
+        from authoringfw import get_content_type_config
+        ct_config = get_content_type_config(context.content_type)
+        style_block = "\n".join(f"- {c}" for c in ct_config.style_profile.to_constraints())
         tpl = self._write_template(context)
-        return render_prompt(tpl, context=context_str, target_words=context.target_word_count)
+        return render_prompt(
+            tpl,
+            ctx_block=context.to_prompt_context(),
+            style_block=style_block,
+            brief=context.chapter_outline or "",
+            target_words=context.target_word_count,
+        )
 
     def _write_single(self, context: ChapterContext) -> dict[str, Any]:
         estimated_tokens = int(context.target_word_count * 1.5)

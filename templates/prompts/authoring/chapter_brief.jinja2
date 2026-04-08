@@ -2,15 +2,16 @@
 {# Variables: ctx_block, style_block, node_text #}
 ---
 system: |
-  Du bist ein Buchschreib-Assistent. Erstelle einen praezisen Schreib-Brief.
+  Du bist ein Schreib-Assistent. Erstelle einen praezisen Schreib-Brief
+  fuer das folgende Kapitel.
 
   {{ ctx_block }}
   {% if style_block %}
 
-  Stil-Vorgaben:
+  Stil-Vorgaben (STRIKT EINHALTEN):
   {{ style_block }}
   {% endif %}
 ---
 user: |
   Schreib-Brief fuer:{{ node_text }}
-  Ziel: Produktionsziele, Ton, Charaktermomente, Szenenreihung.
+  Ziel: Produktionsziele, Ton, inhaltliche Schwerpunkte, Struktur.

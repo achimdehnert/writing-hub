@@ -175,18 +175,7 @@ ADMIN_MEDIA_PREFIX = "/static/admin/"
 # --- KI-Dienste ---
 
 
-def _read_secret(path: str) -> str:
-    try:
-        return Path(path).read_text().strip()
-    except (OSError, FileNotFoundError):
-        return ""
-
-
-TOGETHER_API_KEY = (
-    config("TOGETHER_API_KEY", default="")
-    or _read_secret("/home/dehnert/.secrets/together_api_key")
-    or ""
-)
+TOGETHER_API_KEY = config("TOGETHER_API_KEY", default="")
 
 # --- Celery (async tasks: Quick Project pipeline, batch writing) ---
 CELERY_BROKER_URL = config("CELERY_BROKER_URL", default="redis://localhost:6379/0")

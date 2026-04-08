@@ -41,7 +41,7 @@ iil-aifw>=0.6.0,<1
 iil-promptfw[django]>=0.7.0,<1
 
 # Domain schemas — StyleProfile, CharacterProfile, WorldContext
-iil-authoringfw>=0.8.0,<1
+iil-authoringfw>=0.10.0,<1
 
 # WeltenHub REST client — WeltenClient, worlds/characters API
 iil-weltenfw[django]>=0.1.0,<1

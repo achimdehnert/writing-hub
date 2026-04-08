@@ -14,8 +14,8 @@ Usage:
     python manage.py setup_aifw_actions --model gpt-4o
 """
 import logging
-import os
 
+from decouple import config as decouple_config
 from django.core.management.base import BaseCommand
 
 logger = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ class Command(BaseCommand):
             return
 
         api_key_env = "OPENAI_API_KEY" if provider_name == "openai" else "LLM_API_KEY"
-        if not os.environ.get(api_key_env):
+        if not decouple_config(api_key_env, default=""):
             self.stdout.write(self.style.WARNING(
                 f"Hinweis: {api_key_env} nicht gesetzt."
             ))

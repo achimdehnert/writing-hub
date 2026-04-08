@@ -27,6 +27,8 @@ from .project_context_service import ProjectContextService
 
 logger = logging.getLogger(__name__)
 
+_DEFAULT_TEMPLATE = "authoring/chapter_write_default"
+
 
 class ProductionStage(str, Enum):
     BRIEF = "brief"
@@ -97,10 +99,33 @@ class ChapterProductionService:
         self.user = user
         self._router = LLMRouter()
         self._ctx_service = ProjectContextService()
+        self._content_type = self._resolve_content_type()
+        self._ct_config = self._load_content_type_config()
         self._quality_level: int | None = self._resolve_quality_level()
         self._prompt_stack = self._build_prompt_stack()
-        self._style_profile = self._load_style_profile()
+        self._style_profile = self._ct_config.style_profile
         self._llm_overrides: dict = llm_overrides or {}
+
+    def _resolve_content_type(self) -> str:
+        try:
+            from apps.projects.models import BookProject
+            project = BookProject.objects.get(pk=self._project_id)
+            return project.content_type or "novel"
+        except Exception:
+            return "novel"
+
+    def _load_content_type_config(self):
+        """Load style + chunk_vocab from authoringfw bundled YAML."""
+        from authoringfw import get_content_type_config
+        return get_content_type_config(self._content_type)
+
+    def _write_template(self) -> str:
+        """Convention: chapter_write_{content_type}, fallback to default."""
+        from apps.core.prompt_utils import prompt_exists
+        ct_template = f"authoring/chapter_write_{self._content_type}"
+        if prompt_exists(ct_template):
+            return ct_template
+        return _DEFAULT_TEMPLATE
 
     def _build_prompt_stack(self):
         """promptfw.PromptStack laden."""
@@ -112,23 +137,6 @@ class ChapterProductionService:
             if templates_dir and os.path.isdir(templates_dir):
                 return PromptStack.from_directory(templates_dir)
             return PromptStack()
-        except Exception:
-            return None
-
-    def _load_style_profile(self):
-        """
-        authoringfw.StyleProfile fuer den Projekt-Autor laden.
-        Wird in Schreib-Prompts injiziert.
-        """
-        try:
-            from authoringfw import StyleProfile
-            from apps.projects.models import BookProject
-            project = BookProject.objects.get(pk=self._project_id)
-            return StyleProfile(
-                tone=getattr(project, "tone", "") or "neutral",
-                pov="third_limited",
-                tense="past",
-            )
         except Exception:
             return None
 
@@ -176,7 +184,11 @@ class ChapterProductionService:
 
             ctx_block = self._get_context_block()
             style_block = self._get_style_constraints()
-            node_text = f"\nKapitel {node.order}: {node.title}\n{node.description}" if node else ""
+            node_text = ""
+            if node:
+                node_text = f"\nKapitel {node.order}: {node.title}\n{node.description}"
+                if node.notes:
+                    node_text += f"\n\nRecherche-Notizen:\n{node.notes}"
 
             messages = render_prompt(
                 "authoring/chapter_brief",
@@ -233,7 +245,7 @@ class ChapterProductionService:
     ) -> WriteResult:
         """Single-shot chapter generation."""
         messages = render_prompt(
-            "authoring/chapter_write_production",
+            self._write_template(),
             target_words=target_words,
             ctx_block=ctx_block,
             style_block=style_block,
@@ -260,6 +272,8 @@ class ChapterProductionService:
             target_words, num_chunks, words_per_chunk,
         )
 
+        vocab = self._ct_config.chunk_vocab
+        tpl = self._write_template()
         all_parts: list[str] = []
         for chunk_num in range(num_chunks):
             is_first = chunk_num == 0
@@ -268,8 +282,8 @@ class ChapterProductionService:
             if is_first:
                 chunk_brief = (
                     f"{brief}\n\nSchreibe etwa {words_per_chunk} Wörter "
-                    f"(Teil 1/{num_chunks}). Beginne mit einer fesselnden "
-                    "Eröffnung. ENDE NICHT — das Kapitel wird fortgesetzt."
+                    f"(Teil 1/{num_chunks}). Beginne mit einer "
+                    f"{vocab['opening']}. ENDE NICHT — das Kapitel wird fortgesetzt."
                 )
             elif is_last:
                 prev_excerpt = "\n\n".join(all_parts[-2:])[-3000:]
@@ -277,19 +291,19 @@ class ChapterProductionService:
                     f"BISHERIGER INHALT (Auszug):\n{prev_excerpt}\n\n"
                     f"Schreibe das ENDE des Kapitels (~{words_per_chunk} Wörter, "
                     f"Teil {chunk_num + 1}/{num_chunks}). "
-                    "Schließe das Kapitel befriedigend ab."
+                    "Schließe das Kapitel ab."
                 )
             else:
                 prev_excerpt = "\n\n".join(all_parts[-2:])[-3000:]
                 chunk_brief = (
                     f"BISHERIGER INHALT (Auszug):\n{prev_excerpt}\n\n"
-                    f"Setze die Erzählung fort (~{words_per_chunk} Wörter, "
+                    f"{vocab['mid']} (~{words_per_chunk} Wörter, "
                     f"Teil {chunk_num + 1}/{num_chunks}). "
-                    "Führe die Handlung nahtlos weiter. ENDE NICHT."
+                    f"{vocab['mid_detail']}. ENDE NICHT."
                 )
 
             messages = render_prompt(
-                "authoring/chapter_write_production",
+                tpl,
                 target_words=words_per_chunk,
                 ctx_block=ctx_block,
                 style_block=style_block,

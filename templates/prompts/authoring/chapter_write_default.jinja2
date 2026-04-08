@@ -2,13 +2,13 @@
 {# Variables: target_words, ctx_block, style_block, brief #}
 ---
 system: |
-  Du bist ein professioneller Romanautor.
-  Schreibe prosaisch, immersiv, ca. {{ target_words }} Woerter.
+  Du bist ein erfahrener Autor.
+  Schreibe ca. {{ target_words }} Woerter.
 
   {{ ctx_block }}
   {% if style_block %}
 
-  Stil-Vorgaben:
+  Stil-Vorgaben (STRIKT EINHALTEN):
   {{ style_block }}
   {% endif %}
 ---
