@@ -301,12 +301,19 @@ def research_outline_node(
     }
 
 
+def _fix_paper_url(url: str) -> str:
+    """Fix API URLs to web URLs (e.g. Semantic Scholar api→www)."""
+    if url and "api.semanticscholar.org/paper/" in url:
+        return url.replace("api.semanticscholar.org/paper/", "www.semanticscholar.org/paper/")
+    return url
+
+
 def _paper_to_dict(p: Any) -> dict[str, Any]:
     return {
         "title": p.title,
         "authors": p.authors,
         "abstract": p.abstract,
-        "url": p.url,
+        "url": _fix_paper_url(p.url),
         "source": p.source,
         "doi": p.doi,
         "arxiv_id": p.arxiv_id,
