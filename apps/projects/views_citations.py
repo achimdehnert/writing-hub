@@ -13,7 +13,12 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views import View
 
-from .constants import BIBLIOGRAPHY_STYLES, SEARCH_SOURCES, VALID_SEARCH_SOURCES
+from .constants import (
+    BIBLIOGRAPHY_STYLES,
+    FORMAT_PROFILES,
+    SEARCH_SOURCES,
+    VALID_SEARCH_SOURCES,
+)
 from .models import BookProject
 from .services.citation_service import (
     export_bibtex,
@@ -50,7 +55,9 @@ class CitationDashboardView(LoginRequiredMixin, View):
     def get(self, request, pk):
         project = self._get_project(request, pk)
         citations = self._get_citations(request)
-        style = request.GET.get("style", "apa")
+        profile = FORMAT_PROFILES.get(project.content_type, {})
+        default_style = profile.get("default_bib_style", "apa")
+        style = request.GET.get("style", default_style)
         bibliography = ""
         if citations:
             bibliography = format_bibliography(citations, style=style)

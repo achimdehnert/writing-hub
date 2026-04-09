@@ -312,6 +312,37 @@ CONTENT_TYPE_GROUPS = {
     "nonfiction": "nonfiction",
 }
 
+# ── Seed Defaults: Genres & Audiences ─────────────────────────────
+
+DEFAULT_GENRES = [
+    "Fantasy",
+    "Science-Fiction",
+    "Thriller",
+    "Krimi",
+    "Romantik",
+    "Horror",
+    "Historischer Roman",
+    "Literarische Fiktion",
+    "Young Adult",
+    "Kinderbuch",
+    "Autobiografie",
+    "Sachbuch",
+    "Reisebericht",
+    "Humor",
+    "Mystery",
+]
+
+DEFAULT_AUDIENCES = [
+    "Erwachsene (18+)",
+    "Jugendliche (14–17)",
+    "Kinder (8–13)",
+    "Kinder (bis 7)",
+    "Alle Altersgruppen",
+    "Frauen ab 25",
+    "Männer ab 25",
+    "Business / Fachpublikum",
+]
+
 # ── Framework Fallbacks ───────────────────────────────────────────
 
 FW_BEATS_FALLBACK = {

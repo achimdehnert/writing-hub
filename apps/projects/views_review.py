@@ -11,7 +11,7 @@ from django.views import View
 from django.views.generic import DetailView
 from promptfw.parsing import extract_json_list
 
-from .constants import AI_REVIEW_AGENTS
+from .constants import AI_REVIEW_AGENTS, FORMAT_PROFILES
 from .models import BookProject, OutlineNode, OutlineVersion
 
 logger = logging.getLogger(__name__)
@@ -57,6 +57,7 @@ class ProjectReviewView(LoginRequiredMixin, DetailView):
         ctx["done_reviews"] = done_reviews
         ctx["review_map"] = review_map
         ctx["ai_agents"] = AI_REVIEW_AGENTS
+        ctx["format_profile"] = FORMAT_PROFILES.get(project.content_type)
         return ctx
 
 
@@ -137,6 +138,9 @@ class ChapterAIReviewView(LoginRequiredMixin, View):
             messages.warning(request, "Kapitel hat noch keinen Inhalt zum Reviewen.")
             return redirect("projects:review_chapter", pk=pk, node_pk=node_pk)
 
+        project = node.outline_version.project
+        profile = FORMAT_PROFILES.get(project.content_type, {})
+
         from apps.core.prompt_utils import render_prompt
         template_map = {
             "story_editor": "projects/review_story_editor",
@@ -151,6 +155,8 @@ class ChapterAIReviewView(LoginRequiredMixin, View):
             order=node.order,
             title=node.title,
             content=node.content,
+            quality_criteria=profile.get("quality_criteria", ""),
+            content_type_label=profile.get("label", ""),
         )
 
         try:
@@ -267,9 +273,15 @@ class ChapterAIEditingView(LoginRequiredMixin, View):
             messages.warning(request, "Kapitel hat noch keinen Inhalt zum Analysieren.")
             return redirect("projects:editing_chapter", pk=pk, node_pk=node_pk)
 
+        project = node.outline_version.project
+        profile = FORMAT_PROFILES.get(project.content_type, {})
+        quality_hint = profile.get("quality_criteria", "")
+        quality_line = f"\nQualitätskriterien für diesen Texttyp: {quality_hint}\n" if quality_hint else ""
+
         system_prompt = (
             "Du bist ein professioneller Lektor und Stilberater.\n"
             "Erstelle konkrete Verbesserungsvorschläge für den Text.\n"
+            f"{quality_line}"
             "Für jeden Vorschlag: Original-Textstelle, Verbesserung, Erklärung, Typ.\n"
             "Antworte als JSON-Array:\n"
             "[{\"type\": \"style|clarity|consistency|grammar|pacing|character\",\n"

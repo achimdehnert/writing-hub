@@ -14,7 +14,12 @@ from django.views import View
 from django.views.generic import DetailView, ListView, UpdateView
 
 from apps.series.models import BookSeries
-from .constants import DEFAULT_CONTENT_TYPES, FW_BEATS_FALLBACK, FW_LABELS_FALLBACK
+from .constants import (
+    DEFAULT_CONTENT_TYPES,
+    FORMAT_PROFILES,
+    FW_BEATS_FALLBACK,
+    FW_LABELS_FALLBACK,
+)
 from .models import (
     AudienceLookup, BookProject,
     ContentTypeLookup, GenreLookup, OutlineFramework,
@@ -291,6 +296,7 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
             min(100, round(written_chapters / total_chapters * 100)) if total_chapters > 0 else 0
         )
         ctx["project_styles"] = project.get_all_styles()
+        ctx["format_profile"] = FORMAT_PROFILES.get(project.content_type)
         return ctx
 
 
