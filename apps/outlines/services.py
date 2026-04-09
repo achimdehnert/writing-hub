@@ -127,87 +127,73 @@ class OutlineGenerationService:
         """
         AI-enrich a single outline node with detailed description.
 
-        Uses fieldprefill (ADR-107) with registered retrievers for
-        project context and sibling nodes. Same pattern as risk-hub
-        ai_analysis/services.py — gather context, call LLM, map results.
+        Uses DB-backed prompt templates (OutlinePromptTemplate) with
+        content-type-aware dispatch (fiction/academic/nonfiction).
+        Falls back to .jinja2 files if no DB template exists.
 
         Returns:
-            {"success": True} or {"success": False, "error": str}
+            {"success": True, "template_id": int|None} or
+            {"success": False, "error": str}
         """
-        from fieldprefill import prefill_fields
+        from promptfw.parsing import extract_json
+
+        from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
+        from apps.authoring.services.project_context_service import (
+            ProjectContextService,
+        )
+        from apps.outlines.prompt_dispatch import (
+            get_active_template,
+            render_outline_prompt,
+        )
 
         project = node.outline_version.project
         existing = node.description.strip() or "(noch kein Inhalt)"
 
-        is_academic = project.content_type in ("academic", "scientific", "essay", "nonfiction")
-
-        if is_academic:
-            instruction = (
-                f"Abschnitt {node.order}: {node.title}\n"
-                f"Beat/Phase: {node.beat_phase or 'k.A.'}\n"
-                f"Ziel-Wörter: {node.target_words or 3000}\n\n"
-                f"Bisheriger Inhalt (VERBESSERE diesen, erfinde NICHTS Neues):\n{existing}\n\n"
-                "Erstelle eine STRUKTURIERTE Gliederung fuer diesen wissenschaftlichen Abschnitt. "
-                "KEIN Fliesstext, KEINE Prosa.\n\n"
-                "Antworte als JSON:\n"
-                '{"description": "1) These/Forschungsfrage: ... '
-                "2) Unterabschnitte: a) ... b) ... "
-                "3) Methodik/Vorgehen: ... 4) Ueberleitung: ... 5) Quellen: ...\",\n"
-                ' "emotional_arc": "Argumentativer Bogen: von X ueber Y zu Z"}'
-            )
-        else:
-            instruction = (
-                f"Kapitel {node.order}: {node.title}\n"
-                f"Beat/Phase: {node.beat_phase or 'k.A.'}\n"
-                f"Akt: {node.act or 'k.A.'}\n"
-                f"Ziel-Wörter: {node.target_words or 3000}\n\n"
-                f"Bisheriger Inhalt (VERBESSERE diesen, erfinde NICHTS Neues):\n{existing}\n\n"
-                "Erstelle ein STRUKTURIERTES Kapitel-Outline. "
-                "KEIN Prosa-Text, KEINE ausgeschriebene Szene.\n\n"
-                "Antworte als JSON:\n"
-                '{"description": "1) Kernkonflikt: ... '
-                "2) Szenen-Aufteilung (2-4 Szenen als Stichpunkte): ... "
-                "3) Wichtige Plot-Punkte: ... 4) Kapitel-Ziel/Cliffhanger: ...\",\n"
-                ' "emotional_arc": "Emotionaler Bogen in max 2 Saetzen"}'
-            )
+        # Build context block from ProjectContextService
+        try:
+            ctx_svc = ProjectContextService()
+            ctx = ctx_svc.get_context(str(project.pk))
+            context_block = ctx.to_prompt_block()
+        except Exception:
+            context_block = f"Projekt: {project.title}\nGenre: {project.genre}"
 
         try:
-            result = prefill_fields(
-                field_keys=["description", "emotional_arc"],
-                prompt=instruction,
-                action_code="chapter_outline",
-                sources=["project_context", "outline_siblings"],
-                context={
-                    "beat_phase": node.beat_phase or "",
-                    "act": node.act or "",
-                    "title": node.title,
-                    "order": str(node.order),
-                },
-                scope="writing.outline_enrichment",
-                tenant_id=project.owner_id,
-                instance=node,
-                max_tokens=2048,
+            prompt_msgs = render_outline_prompt(
+                template_key="enrich_node",
+                content_type=project.content_type,
+                context_block=context_block,
+                beat_phase=node.beat_phase or "",
+                act=node.act or "",
+                order=node.order,
+                title=node.title,
+                target_words=node.target_words or 3000,
+                description=existing,
             )
 
-            if result.error:
-                logger.warning("enrich_node prefill error node=%s: %s", node.pk, result.error)
-                return {"success": False, "error": f"KI nicht verfügbar: {result.error}"}
-
-            # Map structured JSON fields back to DB
-            data = result.as_dict()
+            router = LLMRouter()
+            raw = router.completion(
+                action_code="chapter_outline",
+                messages=prompt_msgs,
+            )
+            data = extract_json(raw)
             if data:
-                node.description = data.get("description", result.content)
+                node.description = data.get("description", raw)
                 arc = data.get("emotional_arc", node.emotional_arc)
-                node.emotional_arc = arc[:300] if arc else node.emotional_arc
+                node.emotional_arc = arc if arc else node.emotional_arc
             else:
-                node.description = result.content
+                node.description = raw
 
             node.save(update_fields=["description", "emotional_arc"])
-            logger.info(
-                "enrich_node ok node=%s model=%s tokens=%d latency=%dms",
-                node.pk, result.model, result.tokens_used, result.latency_ms,
-            )
-            return {"success": True}
+
+            # Track which template version was used (for quality feedback loop)
+            active_tpl = get_active_template("enrich_node", project.content_type)
+            tpl_id = active_tpl.pk if active_tpl else None
+
+            logger.info("enrich_node ok node=%s tpl=%s", node.pk, tpl_id)
+            return {"success": True, "template_id": tpl_id}
+        except LLMRoutingError as exc:
+            logger.warning("enrich_node LLM error node=%s: %s", node.pk, exc)
+            return {"success": False, "error": f"KI nicht verfügbar: {exc}"}
         except Exception as exc:
             logger.exception("enrich_node error node=%s: %s", node.pk, exc)
             return {"success": False, "error": str(exc)}

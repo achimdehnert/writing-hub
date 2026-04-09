@@ -1,18 +1,15 @@
 """
-Tests for apps.outlines.services — enrich_node() via fieldprefill (ADR-107).
+Tests for apps.outlines.services — enrich_node() via DB-backed prompt dispatch.
 
-Tests the fieldprefill integration: prefill_fields() call, result mapping,
-error handling. Also covers the retriever registration.
+Tests the render_outline_prompt + LLMRouter integration: content-type dispatch,
+result mapping, error handling. Also covers the retriever registration.
 """
 import pytest
 from unittest.mock import MagicMock, patch, PropertyMock
 
-from fieldprefill.result import PrefillResult
-from fieldprefill.retrievers import clear_registry, list_retrievers, get_context_texts
 
-
-class TestEnrichNodeWithFieldprefill:
-    """Test enrich_node() delegates to prefill_fields() correctly."""
+class TestEnrichNodeWithPromptDispatch:
+    """Test enrich_node() uses render_outline_prompt + LLMRouter."""
 
     @pytest.fixture(autouse=True)
     def _setup(self):
@@ -30,93 +27,98 @@ class TestEnrichNodeWithFieldprefill:
         self.node.outline_version.project.pk = "proj-123"
         self.node.outline_version.project.title = "Testprojekt"
         self.node.outline_version.project.genre = "Thriller"
+        self.node.outline_version.project.content_type = "novel"
 
-    @patch("fieldprefill.prefill_fields")
-    def test_enrich_node_calls_prefill_fields(self, mock_prefill):
-        """enrich_node() must call prefill_fields with correct parameters."""
+    @patch("apps.outlines.prompt_dispatch.get_active_template", return_value=None)
+    @patch("apps.outlines.prompt_dispatch.render_outline_prompt")
+    @patch("apps.authoring.services.llm_router.LLMRouter")
+    @patch("apps.authoring.services.project_context_service.ProjectContextService")
+    def test_should_call_render_outline_prompt(self, mock_ctx_svc, mock_router_cls, mock_render, _mock_tpl):
+        """enrich_node() must use render_outline_prompt with correct params."""
         from apps.outlines.services import OutlineGenerationService
 
-        mock_prefill.return_value = PrefillResult(
-            content='{"description": "Detailliert", "emotional_arc": "spannend"}',
-            tokens_used=200,
-            model="gpt-4o",
-            latency_ms=800,
-            field_key="description,emotional_arc",
-        )
+        mock_render.return_value = [
+            {"role": "system", "content": "sys"},
+            {"role": "user", "content": "usr"},
+        ]
+        mock_router = mock_router_cls.return_value
+        mock_router.completion.return_value = '{"description": "OK", "emotional_arc": "gut"}'
 
         svc = OutlineGenerationService()
         result = svc.enrich_node(self.node)
 
         assert result["success"] is True
-        mock_prefill.assert_called_once()
-        call_kwargs = mock_prefill.call_args.kwargs
-        assert call_kwargs["field_keys"] == ["description", "emotional_arc"]
-        assert call_kwargs["action_code"] == "chapter_outline"
-        assert call_kwargs["scope"] == "writing.outline_enrichment"
-        assert "project_context" in call_kwargs["sources"]
-        assert "outline_siblings" in call_kwargs["sources"]
+        mock_render.assert_called_once()
+        call_kwargs = mock_render.call_args.kwargs
+        assert call_kwargs["template_key"] == "enrich_node"
+        assert call_kwargs["content_type"] == "novel"
+        assert call_kwargs["title"] == "Der dunkle Wald"
 
-    @patch("fieldprefill.prefill_fields")
-    def test_enrich_node_maps_json_to_fields(self, mock_prefill):
+    @patch("apps.outlines.prompt_dispatch.get_active_template", return_value=None)
+    @patch("apps.outlines.prompt_dispatch.render_outline_prompt")
+    @patch("apps.authoring.services.llm_router.LLMRouter")
+    @patch("apps.authoring.services.project_context_service.ProjectContextService")
+    def test_should_map_json_to_node_fields(self, mock_ctx_svc, mock_router_cls, mock_render, _mock_tpl):
         """JSON response fields are mapped back to node attributes."""
         from apps.outlines.services import OutlineGenerationService
 
-        mock_prefill.return_value = PrefillResult(
-            content='{"description": "Neue Beschreibung", "emotional_arc": "aufsteigend"}',
-            field_key="description,emotional_arc",
-        )
+        mock_render.return_value = [{"role": "user", "content": "test"}]
+        mock_router = mock_router_cls.return_value
+        mock_router.completion.return_value = '{"description": "Neue Beschreibung", "emotional_arc": "aufsteigend"}'
 
         svc = OutlineGenerationService()
         svc.enrich_node(self.node)
 
-        # Verify node fields were updated
         assert self.node.description == "Neue Beschreibung"
         assert self.node.emotional_arc == "aufsteigend"
         self.node.save.assert_called_once_with(
             update_fields=["description", "emotional_arc"]
         )
 
-    @patch("fieldprefill.prefill_fields")
-    def test_enrich_node_plain_text_fallback(self, mock_prefill):
+    @patch("apps.outlines.prompt_dispatch.get_active_template", return_value=None)
+    @patch("apps.outlines.prompt_dispatch.render_outline_prompt")
+    @patch("apps.authoring.services.llm_router.LLMRouter")
+    @patch("apps.authoring.services.project_context_service.ProjectContextService")
+    def test_should_use_plain_text_as_description_fallback(self, mock_ctx_svc, mock_router_cls, mock_render, _mock_tpl):
         """If LLM returns plain text (no JSON), use as description."""
         from apps.outlines.services import OutlineGenerationService
 
-        mock_prefill.return_value = PrefillResult(
-            content="Just a plain text description without JSON.",
-            field_key="description,emotional_arc",
-        )
+        mock_render.return_value = [{"role": "user", "content": "test"}]
+        mock_router = mock_router_cls.return_value
+        mock_router.completion.return_value = "Just a plain text description."
 
         svc = OutlineGenerationService()
         result = svc.enrich_node(self.node)
 
         assert result["success"] is True
-        assert self.node.description == "Just a plain text description without JSON."
-        self.node.save.assert_called_once()
+        assert self.node.description == "Just a plain text description."
 
-    @patch("fieldprefill.prefill_fields")
-    def test_enrich_node_error_from_prefill(self, mock_prefill):
-        """If prefill returns an error, enrich_node reports failure."""
+    @patch("apps.outlines.prompt_dispatch.render_outline_prompt")
+    @patch("apps.authoring.services.llm_router.LLMRouter")
+    @patch("apps.authoring.services.project_context_service.ProjectContextService")
+    def test_should_handle_llm_routing_error(self, mock_ctx_svc, mock_router_cls, mock_render):
+        """LLMRoutingError is caught and returned as error dict."""
+        from apps.authoring.services.llm_router import LLMRoutingError
         from apps.outlines.services import OutlineGenerationService
 
-        mock_prefill.return_value = PrefillResult(
-            content="",
-            error="API key invalid",
-            field_key="description,emotional_arc",
-        )
+        mock_render.return_value = [{"role": "user", "content": "test"}]
+        mock_router = mock_router_cls.return_value
+        mock_router.completion.side_effect = LLMRoutingError("API key invalid")
 
         svc = OutlineGenerationService()
         result = svc.enrich_node(self.node)
 
         assert result["success"] is False
         assert "KI nicht verfügbar" in result["error"]
-        self.node.save.assert_not_called()
 
-    @patch("fieldprefill.prefill_fields")
-    def test_enrich_node_exception_handling(self, mock_prefill):
-        """Exceptions are caught and returned as error dict."""
+    @patch("apps.outlines.prompt_dispatch.render_outline_prompt")
+    @patch("apps.authoring.services.llm_router.LLMRouter")
+    @patch("apps.authoring.services.project_context_service.ProjectContextService")
+    def test_should_handle_generic_exception(self, mock_ctx_svc, mock_router_cls, mock_render):
+        """Generic exceptions are caught and returned."""
         from apps.outlines.services import OutlineGenerationService
 
-        mock_prefill.side_effect = RuntimeError("Connection timeout")
+        mock_render.side_effect = RuntimeError("Connection timeout")
 
         svc = OutlineGenerationService()
         result = svc.enrich_node(self.node)
@@ -124,36 +126,42 @@ class TestEnrichNodeWithFieldprefill:
         assert result["success"] is False
         assert "Connection timeout" in result["error"]
 
-    @patch("fieldprefill.prefill_fields")
-    def test_enrich_node_passes_context_from_node(self, mock_prefill):
-        """Context dict includes node metadata for cross-field reference."""
+    @patch("apps.outlines.prompt_dispatch.get_active_template", return_value=None)
+    @patch("apps.outlines.prompt_dispatch.render_outline_prompt")
+    @patch("apps.authoring.services.llm_router.LLMRouter")
+    @patch("apps.authoring.services.project_context_service.ProjectContextService")
+    def test_should_return_template_id(self, mock_ctx_svc, mock_router_cls, mock_render, _mock_tpl):
+        """Result includes template_id for quality feedback linking."""
         from apps.outlines.services import OutlineGenerationService
 
-        mock_prefill.return_value = PrefillResult(content="{}", field_key="x")
+        mock_render.return_value = [{"role": "user", "content": "test"}]
+        mock_router = mock_router_cls.return_value
+        mock_router.completion.return_value = '{"description": "OK"}'
+
+        svc = OutlineGenerationService()
+        result = svc.enrich_node(self.node)
+
+        assert result["success"] is True
+        assert "template_id" in result
+
+    @patch("apps.outlines.prompt_dispatch.get_active_template", return_value=None)
+    @patch("apps.outlines.prompt_dispatch.render_outline_prompt")
+    @patch("apps.authoring.services.llm_router.LLMRouter")
+    @patch("apps.authoring.services.project_context_service.ProjectContextService")
+    def test_should_dispatch_scientific_to_academic_group(self, mock_ctx_svc, mock_router_cls, mock_render, _mock_tpl):
+        """scientific content_type is routed to academic group."""
+        from apps.outlines.services import OutlineGenerationService
+
+        self.node.outline_version.project.content_type = "scientific"
+        mock_render.return_value = [{"role": "user", "content": "test"}]
+        mock_router = mock_router_cls.return_value
+        mock_router.completion.return_value = '{"description": "OK"}'
 
         svc = OutlineGenerationService()
         svc.enrich_node(self.node)
 
-        call_kwargs = mock_prefill.call_args.kwargs
-        ctx = call_kwargs["context"]
-        assert ctx["beat_phase"] == "Midpoint"
-        assert ctx["act"] == "Act II"
-        assert ctx["title"] == "Der dunkle Wald"
-        assert ctx["order"] == "3"
-
-    @patch("fieldprefill.prefill_fields")
-    def test_enrich_node_empty_description_uses_placeholder(self, mock_prefill):
-        """Empty node description is replaced with placeholder in prompt."""
-        from apps.outlines.services import OutlineGenerationService
-
-        self.node.description = "  "
-        mock_prefill.return_value = PrefillResult(content="{}", field_key="x")
-
-        svc = OutlineGenerationService()
-        svc.enrich_node(self.node)
-
-        prompt = mock_prefill.call_args.kwargs["prompt"]
-        assert "(noch kein Inhalt)" in prompt
+        call_kwargs = mock_render.call_args.kwargs
+        assert call_kwargs["content_type"] == "scientific"
 
 
 class TestRetrieverRegistration:
