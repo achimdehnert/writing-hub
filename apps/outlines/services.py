@@ -148,8 +148,14 @@ class OutlineGenerationService:
                     f"Akt: {node.act or 'k.A.'}\n"
                     f"Ziel-Wörter: {node.target_words or 3000}\n\n"
                     f"Bisheriger Inhalt:\n{existing}\n\n"
-                    "Erstelle ein DETAILLIERTES Kapitel-Outline mit 2-4 Szenen, "
-                    "Dialog-Hinweisen, innerem Monolog und Cliffhanger."
+                    "Erstelle ein STRUKTURIERTES Kapitel-Outline. "
+                    "KEIN Prosa-Text, KEINE ausgeschriebene Szene.\n\n"
+                    "Antworte als JSON:\n"
+                    '{"description": "Strukturiertes Outline mit: '
+                    "1) Kernkonflikt, 2) Szenen-Aufteilung (2-4 Szenen als Stichpunkte), "
+                    "3) Wichtige Plot-Punkte, 4) Kapitel-Ziel/Cliffhanger\",\n"
+                    ' "emotional_arc": "Kurze Beschreibung des emotionalen Bogens '
+                    '(max 2 Sätze)"}'
                 ),
                 action_code="chapter_outline",
                 sources=["project_context", "outline_siblings"],
@@ -161,7 +167,7 @@ class OutlineGenerationService:
                 },
                 scope="writing.outline_enrichment",
                 tenant_id=project.owner_id,
-                instance=project,
+                instance=node,
                 max_tokens=2048,
             )
 

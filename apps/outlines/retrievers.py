@@ -21,25 +21,29 @@ def _get_project_context(owner_id, instance=None):
 
     Args:
         owner_id: User PK (used as tenant_id in fieldprefill).
-        instance: BookProject model instance.
+        instance: BookProject or OutlineNode model instance.
 
     Returns:
         List with a single context block string, or empty list.
     """
     if instance is None:
         return []
+    # Resolve project from either BookProject or OutlineNode
+    project = instance
+    if hasattr(instance, "outline_version"):
+        project = instance.outline_version.project
     try:
         from apps.authoring.services.project_context_service import ProjectContextService
         ctx_svc = ProjectContextService()
-        proj_ctx = ctx_svc.get_context(str(instance.pk))
+        proj_ctx = ctx_svc.get_context(str(project.pk))
         block = proj_ctx.to_prompt_block()
         if block:
             return [block]
     except Exception as exc:
         logger.warning("project_context retriever failed: %s", exc)
     # Fallback: minimal context from model fields
-    title = getattr(instance, "title", "Unbekannt")
-    genre = getattr(instance, "genre", "")
+    title = getattr(project, "title", "Unbekannt")
+    genre = getattr(project, "genre", "")
     return [f"Projekt: {title}\nGenre: {genre}"]
 
 
@@ -84,9 +88,11 @@ def register_all():
     register_system_prompt(
         scope="writing.outline_enrichment",
         prompt=(
-            "Du bist ein erfahrener Romanautor und Story-Entwickler. "
-            "Du erweiterst kurze Kapitel-Outlines zu detaillierten Szenenplanungen. "
-            "Antworte NUR mit dem angeforderten JSON, keine Erklärungen oder Einleitungen."
+            "Du bist ein erfahrener Story-Planer und Lektor. "
+            "Du erstellst STRUKTURIERTE Kapitel-Outlines als Planungsdokument. "
+            "Schreibe NIEMALS Prosa, ausgeschriebene Szenen oder erzählenden Text. "
+            "Verwende stattdessen: Stichpunkte, Szenen-Nummern, Kernkonflikte, Plot-Punkte. "
+            "Antworte AUSSCHLIESSLICH mit dem angeforderten JSON-Objekt."
         ),
     )
 
