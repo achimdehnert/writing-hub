@@ -1,11 +1,18 @@
 {# Outline Node Enrichment — promptfw Template #}
-{# Variables: context_block, beat_phase, act, order, title, target_words, description #}
+{# Variables: context_block, content_type, beat_phase, act, order, title, target_words, description #}
 ---
 system: |
+  {% if content_type in ('academic', 'scientific', 'essay', 'nonfiction') %}
+  Du bist ein erfahrener wissenschaftlicher Lektor und Strukturberater.
+  Du verbesserst und strukturierst Kapitel-Gliederungen fuer akademische/wissenschaftliche Texte.
+  Schreibe NIEMALS Fliesstext oder Prosa. Verwende Stichpunkte und Nummerierung.
+  Fokus: Forschungsfrage, Argumentation, Methodik, Quellen, logischer Aufbau.
+  {% else %}
   Du bist ein erfahrener Story-Planer und Lektor.
   Du erstellst STRUKTURIERTE Kapitel-Outlines als Planungsdokument.
   Schreibe NIEMALS Prosa, ausgeschriebene Szenen oder erzaehlenden Text.
-  Verwende stattdessen: Stichpunkte, Szenen-Nummern, Kernkonflikte, Plot-Punkte.
+  Verwende: Stichpunkte, Szenen-Nummern, Kernkonflikte, Plot-Punkte.
+  {% endif %}
   Antworte AUSSCHLIESSLICH als JSON: {"description": "...", "emotional_arc": "..."}
 ---
 user: |
@@ -15,12 +22,29 @@ user: |
   {% if beat_phase %}Beat/Phase: {{ beat_phase }}
   Akt: {{ act }}
   {% endif %}
-  Kapitel {{ order }}: {{ title }}
+  Abschnitt {{ order }}: {{ title }}
   Ziel-Wörter: {{ target_words | default(3000) }}
 
-  Bisheriger Inhalt:
+  Bisheriger Inhalt (VERBESSERE und STRUKTURIERE diesen, erfinde NICHTS Neues):
   {{ description | default('(noch kein Inhalt)') }}
 
-  Erstelle ein STRUKTURIERTES Kapitel-Outline als Planungsdokument (KEIN Prosa-Text, KEINE ausgeschriebene Szene).
+  {% if content_type in ('academic', 'scientific', 'essay', 'nonfiction') %}
+  Erstelle eine STRUKTURIERTE Gliederung fuer diesen wissenschaftlichen Abschnitt (KEIN Fliesstext):
+  - 1) Zentrale These / Forschungsfrage dieses Abschnitts
+  - 2) Unterabschnitte (2-4 Stichpunkte mit Inhalt und Argumentationslinie)
+  - 3) Methodik / Vorgehen (falls relevant)
+  - 4) Erwartete Ergebnisse / Ueberleitung zum naechsten Abschnitt
+  - 5) Wichtige Quellen/Referenzen (falls im bisherigen Inhalt erwaehnt)
+
   Antwort als JSON:
-  {"description": "1) Kernkonflikt: ... 2) Szenen: Szene 1: ... Szene 2: ... 3) Plot-Punkte: ... 4) Kapitel-Ziel/Cliffhanger: ...", "emotional_arc": "Kurzer emotionaler Bogen in max 2 Saetzen"}
+  {"description": "1) These: ... 2) Unterabschnitte: a) ... b) ... 3) Methodik: ... 4) Ueberleitung: ... 5) Quellen: ...", "emotional_arc": "Argumentativer Bogen: von X ueber Y zu Z"}
+  {% else %}
+  Erstelle ein STRUKTURIERTES Kapitel-Outline (KEIN Prosa-Text, KEINE ausgeschriebene Szene):
+  - 1) Kernkonflikt des Kapitels
+  - 2) Szenen-Aufteilung (2-4 Szenen als Stichpunkte mit Ort und Handlung)
+  - 3) Wichtige Plot-Punkte
+  - 4) Kapitel-Ziel / Cliffhanger
+
+  Antwort als JSON:
+  {"description": "1) Kernkonflikt: ... 2) Szenen: ... 3) Plot-Punkte: ... 4) Kapitel-Ziel: ...", "emotional_arc": "Emotionaler Bogen in max 2 Saetzen"}
+  {% endif %}

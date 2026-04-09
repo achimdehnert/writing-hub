@@ -139,24 +139,42 @@ class OutlineGenerationService:
         project = node.outline_version.project
         existing = node.description.strip() or "(noch kein Inhalt)"
 
+        is_academic = project.content_type in ("academic", "scientific", "essay", "nonfiction")
+
+        if is_academic:
+            instruction = (
+                f"Abschnitt {node.order}: {node.title}\n"
+                f"Beat/Phase: {node.beat_phase or 'k.A.'}\n"
+                f"Ziel-Wörter: {node.target_words or 3000}\n\n"
+                f"Bisheriger Inhalt (VERBESSERE diesen, erfinde NICHTS Neues):\n{existing}\n\n"
+                "Erstelle eine STRUKTURIERTE Gliederung fuer diesen wissenschaftlichen Abschnitt. "
+                "KEIN Fliesstext, KEINE Prosa.\n\n"
+                "Antworte als JSON:\n"
+                '{"description": "1) These/Forschungsfrage: ... '
+                "2) Unterabschnitte: a) ... b) ... "
+                "3) Methodik/Vorgehen: ... 4) Ueberleitung: ... 5) Quellen: ...\",\n"
+                ' "emotional_arc": "Argumentativer Bogen: von X ueber Y zu Z"}'
+            )
+        else:
+            instruction = (
+                f"Kapitel {node.order}: {node.title}\n"
+                f"Beat/Phase: {node.beat_phase or 'k.A.'}\n"
+                f"Akt: {node.act or 'k.A.'}\n"
+                f"Ziel-Wörter: {node.target_words or 3000}\n\n"
+                f"Bisheriger Inhalt (VERBESSERE diesen, erfinde NICHTS Neues):\n{existing}\n\n"
+                "Erstelle ein STRUKTURIERTES Kapitel-Outline. "
+                "KEIN Prosa-Text, KEINE ausgeschriebene Szene.\n\n"
+                "Antworte als JSON:\n"
+                '{"description": "1) Kernkonflikt: ... '
+                "2) Szenen-Aufteilung (2-4 Szenen als Stichpunkte): ... "
+                "3) Wichtige Plot-Punkte: ... 4) Kapitel-Ziel/Cliffhanger: ...\",\n"
+                ' "emotional_arc": "Emotionaler Bogen in max 2 Saetzen"}'
+            )
+
         try:
             result = prefill_fields(
                 field_keys=["description", "emotional_arc"],
-                prompt=(
-                    f"Kapitel {node.order}: {node.title}\n"
-                    f"Beat/Phase: {node.beat_phase or 'k.A.'}\n"
-                    f"Akt: {node.act or 'k.A.'}\n"
-                    f"Ziel-Wörter: {node.target_words or 3000}\n\n"
-                    f"Bisheriger Inhalt:\n{existing}\n\n"
-                    "Erstelle ein STRUKTURIERTES Kapitel-Outline. "
-                    "KEIN Prosa-Text, KEINE ausgeschriebene Szene.\n\n"
-                    "Antworte als JSON:\n"
-                    '{"description": "Strukturiertes Outline mit: '
-                    "1) Kernkonflikt, 2) Szenen-Aufteilung (2-4 Szenen als Stichpunkte), "
-                    "3) Wichtige Plot-Punkte, 4) Kapitel-Ziel/Cliffhanger\",\n"
-                    ' "emotional_arc": "Kurze Beschreibung des emotionalen Bogens '
-                    '(max 2 Sätze)"}'
-                ),
+                prompt=instruction,
                 action_code="chapter_outline",
                 sources=["project_context", "outline_siblings"],
                 context={
