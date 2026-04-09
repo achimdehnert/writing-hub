@@ -17,44 +17,14 @@ from typing import Any
 from django.utils import timezone
 from promptfw.parsing import extract_json, extract_json_list
 
+from apps.projects.constants import (
+    PEER_REVIEW_AGENTS,
+    SCIENTIFIC_CONTENT_TYPES,
+    VALID_FINDING_TYPES,
+    VALID_SEVERITIES,
+)
+
 logger = logging.getLogger(__name__)
-
-PEER_REVIEW_AGENTS = [
-    {
-        "key": "methodology",
-        "name": "Methodik-Prüfer",
-        "icon": "bi-clipboard-data",
-        "description": "Prüft Forschungsdesign, Validität, Reliabilität und Reproduzierbarkeit",
-        "prompt_template": "projects/peer_review_methodology",
-    },
-    {
-        "key": "argumentation",
-        "name": "Argumentations-Prüfer",
-        "icon": "bi-diagram-3",
-        "description": "Prüft Logik, Evidenz, Kausalität und Bias",
-        "prompt_template": "projects/peer_review_argumentation",
-    },
-    {
-        "key": "sources",
-        "name": "Quellen-Prüfer",
-        "icon": "bi-journal-bookmark",
-        "description": "Prüft Quellenabdeckung, Aktualität und Zitierethik",
-        "prompt_template": "projects/peer_review_sources",
-    },
-    {
-        "key": "structure",
-        "name": "Struktur-Prüfer",
-        "icon": "bi-list-nested",
-        "description": "Prüft Gliederung, Kohärenz und akademische Konventionen",
-        "prompt_template": "projects/peer_review_structure",
-    },
-]
-
-VALID_FINDING_TYPES = {"strength", "weakness", "suggestion", "concern"}
-VALID_SEVERITIES = {"minor", "major", "critical"}
-
-# Content types that support peer review
-SCIENTIFIC_CONTENT_TYPES = {"scientific", "academic", "essay"}
 
 
 def is_peer_review_eligible(project) -> bool:

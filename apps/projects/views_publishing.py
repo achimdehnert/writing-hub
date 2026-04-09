@@ -12,57 +12,14 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 from django.views.generic import DetailView
 
+from .constants import (
+    AGE_CHOICES,
+    BISAC_CHOICES,
+    LANGUAGE_CHOICES,
+    PUBLISHING_STATUS_CHOICES,
+    PUBLISHING_STATUS_COLORS,
+)
 from .models import BookProject, PublishingProfile
-
-
-LANGUAGE_CHOICES = [
-    ("de", "Deutsch"),
-    ("en", "Englisch"),
-    ("fr", "Franz\u00f6sisch"),
-    ("es", "Spanisch"),
-    ("it", "Italienisch"),
-    ("nl", "Niederl\u00e4ndisch"),
-    ("pt", "Portugiesisch"),
-]
-
-AGE_CHOICES = [
-    ("0", "Allgemein (ab 0)"),
-    ("6", "Kinder (ab 6)"),
-    ("10", "Kinder (ab 10)"),
-    ("12", "Jugendliche (ab 12)"),
-    ("16", "Jugendliche (ab 16)"),
-    ("18", "Erwachsene (ab 18)"),
-]
-
-BISAC_CHOICES = [
-    ("FIC000000", "Fiction / General"),
-    ("FIC002000", "Fiction / Action & Adventure"),
-    ("FIC009000", "Fiction / Fantasy"),
-    ("FIC010000", "Fiction / Historical"),
-    ("FIC022000", "Fiction / Mystery & Detective"),
-    ("FIC028000", "Fiction / Science Fiction"),
-    ("FIC027000", "Fiction / Romance"),
-    ("FIC031000", "Fiction / Thrillers / General"),
-    ("NON000000", "Nonfiction / General"),
-    ("SEL000000", "Self-Help"),
-    ("BIO000000", "Biography & Autobiography"),
-    ("JUV000000", "Juvenile Fiction"),
-    ("YAF000000", "Young Adult Fiction"),
-]
-
-STATUS_CHOICES = [
-    ("draft", "Entwurf"),
-    ("review", "In Review"),
-    ("ready", "Druckfertig"),
-    ("published", "Ver\u00f6ffentlicht"),
-]
-
-STATUS_COLORS = {
-    "draft": "#f59e0b",
-    "review": "#6366f1",
-    "ready": "#22c55e",
-    "published": "#0ea5e9",
-}
 
 
 def _get_or_create_profile(project: BookProject) -> PublishingProfile:
@@ -98,8 +55,8 @@ class ProjectPublishingView(LoginRequiredMixin, DetailView):
         ctx["language_choices"] = LANGUAGE_CHOICES
         ctx["age_choices"] = AGE_CHOICES
         ctx["bisac_choices"] = BISAC_CHOICES
-        ctx["status_choices"] = STATUS_CHOICES
-        ctx["status_color"] = STATUS_COLORS.get(profile.status, "#64748b")
+        ctx["status_choices"] = PUBLISHING_STATUS_CHOICES
+        ctx["status_color"] = PUBLISHING_STATUS_COLORS.get(profile.status, "#64748b")
         return ctx
 
     def post(self, request, pk):

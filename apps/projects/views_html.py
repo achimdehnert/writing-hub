@@ -14,6 +14,7 @@ from django.views import View
 from django.views.generic import DetailView, ListView, UpdateView
 
 from apps.series.models import BookSeries
+from .constants import DEFAULT_CONTENT_TYPES, FW_BEATS_FALLBACK, FW_LABELS_FALLBACK
 from .models import (
     AudienceLookup, BookProject,
     ContentTypeLookup, GenreLookup, OutlineFramework,
@@ -21,50 +22,6 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
-
-FW_BEATS_FALLBACK = {
-    "three_act": 6, "save_the_cat": 15, "heros_journey": 12,
-    "five_act": 5, "dan_harmon": 8, "blank": 0,
-}
-
-FW_LABELS_FALLBACK = {
-    "three_act": "Drei-Akt-Struktur",
-    "save_the_cat": "Save the Cat",
-    "heros_journey": "Heldenreise",
-    "five_act": "Fünf-Akt-Struktur",
-    "dan_harmon": "Dan Harmon Story Circle",
-    "blank": "Leere Kapitel",
-}
-
-DEFAULT_CONTENT_TYPES = [
-    {"slug": "roman", "name": "Roman", "icon": "bi-book",
-     "subtitle": "Erzählung mit Charakteren & Weltenbau",
-     "workflow_hint": "Konzept → Charaktere → Outline → Schreiben"},
-    {"slug": "sachbuch", "name": "Sachbuch", "icon": "bi-journal-text",
-     "subtitle": "Ratgeber, Biographie, How-To oder Sachtext",
-     "workflow_hint": "Thema → Struktur → Kapitel → Schreiben"},
-    {"slug": "kurzgeschichte", "name": "Kurzgeschichte", "icon": "bi-file-text",
-     "subtitle": "Kurze Erzählung mit klarer Pointe",
-     "workflow_hint": "Idee → Outline → Schreiben"},
-    {"slug": "drehbuch", "name": "Drehbuch", "icon": "bi-camera-video",
-     "subtitle": "Skript für Film, Serie oder Theater",
-     "workflow_hint": "Konzept → Struktur → Szenen → Schreiben"},
-    {"slug": "essay", "name": "Essay", "icon": "bi-pencil-square",
-     "subtitle": "Argumentativer Text zu einem Thema",
-     "workflow_hint": "These → Recherche → Gliederung → Schreiben"},
-    {"slug": "novelle", "name": "Novelle", "icon": "bi-journal",
-     "subtitle": "Mittellange Erzählung mit einem Wendepunkt",
-     "workflow_hint": "Konzept → Outline → Schreiben"},
-    {"slug": "graphic-novel", "name": "Graphic Novel", "icon": "bi-image",
-     "subtitle": "Bild-Text-Erzählung, Comic-Format",
-     "workflow_hint": "Story → Panels → Dialoge → Zeichnung"},
-    {"slug": "academic", "name": "Akademische Arbeit", "icon": "bi-mortarboard",
-     "subtitle": "Monographie, Dissertation, Abschlussarbeit",
-     "workflow_hint": "Thema → Recherche → Gliederung → Schreiben"},
-    {"slug": "scientific", "name": "Wissenschaftliches Paper", "icon": "bi-journals",
-     "subtitle": "IMRaD-Struktur, Fachartikel",
-     "workflow_hint": "Hypothese → Methodik → Ergebnisse → Diskussion"},
-]
 
 
 def _get_frameworks():

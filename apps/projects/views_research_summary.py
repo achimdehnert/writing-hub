@@ -13,6 +13,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views import View
 
+from .constants import SUMMARY_CITATION_FORMATS, SUMMARY_STYLES
 from .models import BookProject, OutlineNode, OutlineVersion
 from .services.citation_service import (
     research_outline_node,
@@ -20,19 +21,6 @@ from .services.citation_service import (
 )
 
 logger = logging.getLogger(__name__)
-
-SUMMARY_STYLES = [
-    ("scientific", "Wissenschaftlich", "#7dd3fc"),
-    ("complex", "Komplex / Fachpublikum", "#a78bfa"),
-    ("medium", "Allgemein informiert", "#86efac"),
-    ("simple", "Einfache Sprache", "#fbbf24"),
-]
-
-CITATION_STYLES = [
-    ("inline", "Inline [Autor Jahr]"),
-    ("bibliography", "Literaturliste [1][2]"),
-    ("none", "Keine Zitate"),
-]
 
 
 class ResearchSummarizeAjaxView(LoginRequiredMixin, View):
@@ -121,7 +109,7 @@ class OutlineResearchView(LoginRequiredMixin, View):
             "outline": outline,
             "nodes": nodes,
             "summary_styles": SUMMARY_STYLES,
-            "citation_styles_list": CITATION_STYLES,
+            "citation_styles_list": SUMMARY_CITATION_FORMATS,
             "has_llm": bool(getattr(settings, "TOGETHER_API_KEY", "")),
         })
 

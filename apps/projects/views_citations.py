@@ -13,6 +13,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views import View
 
+from .constants import BIBLIOGRAPHY_STYLES, SEARCH_SOURCES, VALID_SEARCH_SOURCES
 from .models import BookProject
 from .services.citation_service import (
     export_bibtex,
@@ -24,22 +25,6 @@ from .services.citation_service import (
 )
 
 logger = logging.getLogger(__name__)
-
-CITATION_STYLES = [
-    ("apa", "APA 7"),
-    ("mla", "MLA 9"),
-    ("chicago", "Chicago 17"),
-    ("harvard", "Harvard"),
-    ("ieee", "IEEE"),
-    ("vancouver", "Vancouver"),
-]
-
-SEARCH_SOURCES = [
-    ("arxiv", "arXiv", "#f59e0b"),
-    ("semantic_scholar", "Semantic Scholar", "#a78bfa"),
-    ("pubmed", "PubMed", "#34d399"),
-    ("openalex", "OpenAlex", "#60a5fa"),
-]
 
 
 class CitationDashboardView(LoginRequiredMixin, View):
@@ -73,7 +58,7 @@ class CitationDashboardView(LoginRequiredMixin, View):
             "project": project,
             "citations": citations,
             "bibliography": bibliography,
-            "citation_styles": CITATION_STYLES,
+            "citation_styles": BIBLIOGRAPHY_STYLES,
             "active_style": style,
             "bibtex_export": export_bibtex(citations) if citations else "",
             "search_sources": SEARCH_SOURCES,
@@ -197,7 +182,7 @@ class CitationDashboardView(LoginRequiredMixin, View):
             "project": project,
             "citations": citations,
             "bibliography": bibliography,
-            "citation_styles": CITATION_STYLES,
+            "citation_styles": BIBLIOGRAPHY_STYLES,
             "active_style": style,
             "bibtex_export": export_bibtex(citations) if citations else "",
             "search_sources": SEARCH_SOURCES,
@@ -240,8 +225,6 @@ class LiteraturrechercheAjaxView(LoginRequiredMixin, View):
         max_results — int, Standard 20
     """
 
-    VALID_SOURCES = {"arxiv", "semantic_scholar", "pubmed", "openalex"}
-
     def post(self, request, pk):
         query = request.POST.get("query", "").strip()
         if not query:
@@ -251,7 +234,7 @@ class LiteraturrechercheAjaxView(LoginRequiredMixin, View):
         if sources_raw:
             sources = [
                 s.strip() for s in sources_raw.split(",")
-                if s.strip() in self.VALID_SOURCES
+                if s.strip() in VALID_SEARCH_SOURCES
             ] or None
         else:
             sources = None

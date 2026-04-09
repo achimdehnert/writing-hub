@@ -11,22 +11,10 @@ from django.views import View
 from django.views.generic import DetailView
 from promptfw.parsing import extract_json_list
 
+from .constants import AI_REVIEW_AGENTS
 from .models import BookProject, OutlineNode, OutlineVersion
 
 logger = logging.getLogger(__name__)
-
-AI_REVIEW_AGENTS = [
-    {"key": "style_critic", "name": "Stil-Kritiker", "icon": "bi-brush",
-     "description": "Analysiert Schreibstil, Sprache und Ausdrucksweise"},
-    {"key": "story_editor", "name": "Story-Editor", "icon": "bi-diagram-3",
-     "description": "Prüft Handlung, Charakterkonsistenz und Pacing"},
-    {"key": "lector", "name": "Lektor", "icon": "bi-check2-square",
-     "description": "Findet Fehler, Widersprüche und Schwachstellen"},
-    {"key": "beta_reader", "name": "Beta-Leser", "icon": "bi-person-raised-hand",
-     "description": "Gibt Leserperspektive und emotionale Reaktion"},
-    {"key": "genre_expert", "name": "Genre-Experte", "icon": "bi-award",
-     "description": "Bewertet Genre-Konventionen und Erwartungen"},
-]
 
 
 def _get_project(user, pk):
