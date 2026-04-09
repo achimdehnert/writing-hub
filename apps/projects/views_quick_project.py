@@ -13,20 +13,8 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 
+from .constants import FRAMEWORK_TO_CONTENT_TYPE
 from .models import BookProject, ContentTypeLookup, OutlineFramework
-
-
-CONTENT_TYPE_MAP = {
-    "academic_essay": "academic",
-    "scientific_essay": "scientific",
-    "imrad": "scientific",
-    "dissertation": "academic",
-    "expose": "academic",
-    "systematic_review": "scientific",
-    "research_proposal": "academic",
-    "essay": "essay",
-    "three_act": "novel",
-}
 
 
 class QuickProjectView(LoginRequiredMixin, View):
@@ -72,7 +60,7 @@ class QuickProjectStartView(LoginRequiredMixin, View):
         except ValueError:
             target_words = 5000
 
-        content_type = CONTENT_TYPE_MAP.get(framework, "academic")
+        content_type = FRAMEWORK_TO_CONTENT_TYPE.get(framework, "academic")
         ct_lookup = ContentTypeLookup.objects.filter(
             slug__in=["academic", "wissenschaftlich", "scientific"]
         ).first()

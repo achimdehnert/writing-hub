@@ -17,26 +17,15 @@ Content-Type Groups:
 from django.conf import settings
 from django.db import models
 
+from apps.projects.constants import CONTENT_TYPE_GROUPS
 from apps.projects.models import OutlineNode
-
-
-# ── Content-Type → Group mapping ────────────────────────────────────
-CONTENT_TYPE_TO_GROUP = {
-    "novel": "fiction",
-    "short_story": "fiction",
-    "screenplay": "fiction",
-    "academic": "academic",
-    "scientific": "academic",
-    "essay": "nonfiction",
-    "nonfiction": "nonfiction",
-}
 
 DEFAULT_GROUP = "fiction"
 
 
 def get_content_type_group(content_type: str) -> str:
     """Map a BookProject.content_type value to a prompt group."""
-    return CONTENT_TYPE_TO_GROUP.get(content_type, DEFAULT_GROUP)
+    return CONTENT_TYPE_GROUPS.get(content_type, DEFAULT_GROUP)
 
 
 # ── Prompt Template Model ───────────────────────────────────────────

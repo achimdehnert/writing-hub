@@ -6,19 +6,8 @@ Aufruf: python manage.py seed_project_lookups
 """
 from django.core.management.base import BaseCommand
 
+from apps.projects.constants import DEFAULT_CONTENT_TYPES
 from apps.projects.models import AudienceLookup, ContentTypeLookup, GenreLookup
-
-CONTENT_TYPES = [
-    ("Roman", "roman", "bi-book", "Erzählung mit Charakteren & Weltenbau"),
-    ("Sachbuch", "sachbuch", "bi-journal-text", "Ratgeber, Biographie, How-To oder Sachtext"),
-    ("Kurzgeschichte", "kurzgeschichte", "bi-file-text", "Kurze Erzählung mit klarer Pointe"),
-    ("Drehbuch", "drehbuch", "bi-camera-video", "Skript für Film, Serie oder Theater"),
-    ("Essay", "essay", "bi-pencil-square", "Argumentativer Text zu einem Thema"),
-    ("Novelle", "novelle", "bi-journal", "Mittellange Erzählung mit einem Wendepunkt"),
-    ("Graphic Novel", "graphic-novel", "bi-image", "Bild-Text-Erzählung, Comic-Format"),
-    ("Akademische Arbeit", "academic", "bi-mortarboard", "Monographie, Dissertation, Abschlussarbeit"),
-    ("Wissenschaftliches Paper", "scientific", "bi-journals", "IMRaD-Struktur, Fachartikel"),
-]
 
 GENRES = [
     "Fantasy",
@@ -55,10 +44,13 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         created_ct = 0
-        for i, (name, slug, icon, subtitle) in enumerate(CONTENT_TYPES):
+        for i, ct in enumerate(DEFAULT_CONTENT_TYPES):
             _, created = ContentTypeLookup.objects.get_or_create(
-                slug=slug,
-                defaults={"name": name, "order": i, "icon": icon, "subtitle": subtitle},
+                slug=ct["slug"],
+                defaults={
+                    "name": ct["name"], "order": i,
+                    "icon": ct["icon"], "subtitle": ct["subtitle"],
+                },
             )
             if created:
                 created_ct += 1

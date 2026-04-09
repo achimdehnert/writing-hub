@@ -142,7 +142,7 @@ VALID_FINDING_TYPES = frozenset({"strength", "weakness", "suggestion", "concern"
 VALID_SEVERITIES = frozenset({"minor", "major", "critical"})
 SCIENTIFIC_CONTENT_TYPES = frozenset({"scientific", "academic", "essay"})
 
-# ── Content Types (fallback when DB lookups unavailable) ──────────
+# ── Content Types (fallback when DB ContentTypeLookup is empty) ───
 
 DEFAULT_CONTENT_TYPES = [
     {"slug": "roman", "name": "Roman", "icon": "bi-book",
@@ -173,6 +173,144 @@ DEFAULT_CONTENT_TYPES = [
      "subtitle": "IMRaD-Struktur, Fachartikel",
      "workflow_hint": "Hypothese → Methodik → Ergebnisse → Diskussion"},
 ]
+
+# ── Slug-Mapping: ContentTypeLookup.slug → BookProject.ContentType ─
+#
+# ContentTypeLookup (DB) uses German slugs for UI display.
+# BookProject.content_type (CharField) uses English enum values.
+# This dict bridges the two systems.
+
+LOOKUP_SLUG_TO_MODEL_CONTENT_TYPE = {
+    "roman": "novel",
+    "sachbuch": "nonfiction",
+    "kurzgeschichte": "short_story",
+    "drehbuch": "screenplay",
+    "essay": "essay",
+    "novelle": "novel",
+    "graphic-novel": "novel",
+    "academic": "academic",
+    "scientific": "scientific",
+}
+
+# ── Framework → BookProject.ContentType (Quick-Project Pipeline) ──
+
+FRAMEWORK_TO_CONTENT_TYPE = {
+    "academic_essay": "academic",
+    "scientific_essay": "scientific",
+    "imrad": "scientific",
+    "dissertation": "academic",
+    "expose": "academic",
+    "systematic_review": "scientific",
+    "research_proposal": "academic",
+    "essay": "essay",
+    "three_act": "novel",
+}
+
+# ── Format-Profile (aus universal_writing_prompt_framework.md) ────
+#
+# Keyed by BookProject.ContentType values.
+# Encodiert die Profil-Metadaten aus dem Universal Writing Prompt Framework.
+
+FORMAT_PROFILES = {
+    "novel": {
+        "profile": "A",
+        "label": "Roman / Kurzgeschichte",
+        "structure": "Akt | Kapitel | Szene",
+        "pflicht_meta": [
+            "genre", "pov", "zeitform", "ton", "hauptfigur",
+            "antagonist", "setting", "kernthema", "zielgruppe",
+        ],
+        "quality_criteria": "show-don't-tell, subtext, sensorische Details",
+        "citation": "keine",
+        "outline_logic": "Drei-Akt | Heldenreise | Fünf-Akt | Snowflake",
+    },
+    "short_story": {
+        "profile": "A",
+        "label": "Kurzgeschichte",
+        "structure": "Akt | Szene",
+        "pflicht_meta": [
+            "genre", "pov", "zeitform", "ton", "hauptfigur",
+            "setting", "kernthema", "zielgruppe",
+        ],
+        "quality_criteria": "show-don't-tell, subtext, sensorische Details",
+        "citation": "keine",
+        "outline_logic": "Drei-Akt | Heldenreise | Snowflake",
+    },
+    "essay": {
+        "profile": "B",
+        "label": "Essay (akademisch / literarisch)",
+        "structure": "Einleitung | Hauptteil (Argumente) | Schluss",
+        "pflicht_meta": [
+            "these", "zielgruppe", "ton", "sprache", "zitationsstil",
+        ],
+        "quality_criteria": "argumentative Dichte, Originalität, Stilsicherheit",
+        "citation": "optional (akademisch: Pflicht)",
+        "outline_logic": "These → Argument → Gegenargument → Synthese",
+    },
+    "scientific": {
+        "profile": "C",
+        "label": "Wissenschaftlicher Aufsatz / Paper",
+        "structure": "IMRaD | Einleitung–Theorie–Methode–Ergebnis–Diskussion–Fazit",
+        "pflicht_meta": [
+            "forschungsfrage", "methode", "fachgebiet", "zielgruppe",
+            "zitationsstil", "wortlimit", "keywords",
+        ],
+        "quality_criteria": "Präzision, Replizierbarkeit, Belegpflicht, Objektivität",
+        "citation": "Pflicht (APA 7 | IEEE | Chicago | Vancouver)",
+        "outline_logic": "Forschungsfrage → Lücke → Methode → Befund → Implikation",
+        "default_bib_style": "apa",
+    },
+    "academic": {
+        "profile": "E",
+        "label": "Dissertation / Monographie / Seminararbeit",
+        "structure": "Kapitel (typ. 5–8) + Anhang + Literaturverzeichnis",
+        "pflicht_meta": [
+            "forschungsfrage", "forschungsluecke", "methode", "fachgebiet",
+            "betreuer", "universitaet", "zitationsstil", "sprache",
+            "umfang_seiten", "keywords",
+        ],
+        "quality_criteria": "methodische Strenge, theoretische Tiefe, empirische Fundierung",
+        "citation": "Pflicht (konsistentes System)",
+        "outline_logic": "Forschungslücke → Theorierahmen → Methodik → Empirie → Diskussion",
+        "default_bib_style": "apa",
+    },
+    "nonfiction": {
+        "profile": "F",
+        "label": "Sachbuch / Ratgeber / Handbuch",
+        "structure": "Kapitel | Unterkapitel | Praxisboxen",
+        "pflicht_meta": [
+            "thema", "zielgruppe", "ton", "kernbotschaft", "usp",
+            "kapitelanzahl", "zitationsstil",
+        ],
+        "quality_criteria": "Zugänglichkeit, Praxisrelevanz, klare Sprache",
+        "citation": "optional (Quellenangaben empfohlen)",
+        "outline_logic": "Problem → Lösung → Praxis → Vertiefung",
+    },
+    "screenplay": {
+        "profile": "A",
+        "label": "Drehbuch / Skript",
+        "structure": "Akte | Szenen | Beats",
+        "pflicht_meta": [
+            "genre", "ton", "hauptfigur", "antagonist",
+            "setting", "kernthema", "zielgruppe",
+        ],
+        "quality_criteria": "show-don't-tell, Dialog-Authentizität, Visual Storytelling",
+        "citation": "keine",
+        "outline_logic": "Drei-Akt | Save the Cat | Fünf-Akt",
+    },
+}
+
+# ── Content-Type Groups (for outline prompt dispatch) ─────────────
+
+CONTENT_TYPE_GROUPS = {
+    "novel": "fiction",
+    "short_story": "fiction",
+    "screenplay": "fiction",
+    "academic": "academic",
+    "scientific": "academic",
+    "essay": "nonfiction",
+    "nonfiction": "nonfiction",
+}
 
 # ── Framework Fallbacks ───────────────────────────────────────────
 
