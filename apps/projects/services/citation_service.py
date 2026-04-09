@@ -156,6 +156,8 @@ def smart_search_papers(
     sources: list[str] | None = None,
     max_results: int = 20,
     relevance_threshold: float = 7.0,
+    expand_citations: bool = False,
+    search_rounds: int = 1,
 ) -> dict[str, Any]:
     """
     LLM-gesteuerte Literaturrecherche (ADR-160).
@@ -165,8 +167,10 @@ def smart_search_papers(
     2. Multi-Source-Suche (arXiv, Semantic Scholar, PubMed, OpenAlex)
     3. LLM-Relevanz-Scoring (Batch à 10, Score 0-10)
     4. Filter auf relevance_threshold
+    5. (Optional) Citation Graph Expansion via Semantic Scholar
+    6. (Optional) Iterative Gap Analysis mit LLM
 
-    Fallback: Bei fehlendem LLM-Key → normales search_papers().
+    Fallback: Bei fehlendem LLM-Key -> normales search_papers().
 
     Returns dict mit 'papers', 'queries_used', 'total_found', 'total_after_filter'.
     """
@@ -190,6 +194,8 @@ def smart_search_papers(
     svc = SmartSearchService(
         llm_fn=llm_fn,
         relevance_threshold=relevance_threshold,
+        expand_citations=expand_citations,
+        search_rounds=search_rounds,
     )
     result = _run_async(svc.search(topic, max_results=max_results, sources=sources))
 
@@ -389,7 +395,7 @@ def research_chapter_sources(
         query_parts.append(project.title)
     topic = " ".join(query_parts)
 
-    result = smart_search_papers(topic, max_results=max_results)
+    result = smart_search_papers(topic, max_results=max_results, search_rounds=2)
     papers = result["papers"]
     if not papers:
         return {"paper_count": 0, "notes_preview": "", "papers": []}
