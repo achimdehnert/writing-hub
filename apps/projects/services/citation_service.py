@@ -398,7 +398,10 @@ def format_research_notes(papers: list[dict[str, Any]], chapter_title: str) -> s
 
 
 def _fix_paper_url(url: str) -> str:
-    """Fix API URLs to web URLs (e.g. Semantic Scholar api→www)."""
+    """Fix API URLs to web URLs (e.g. Semantic Scholar api→www).
+
+    NOTE: Fixed upstream in iil-researchfw>=0.4.0 — this remains as safety net.
+    """
     if url and "api.semanticscholar.org/paper/" in url:
         return url.replace("api.semanticscholar.org/paper/", "www.semanticscholar.org/paper/")
     return url
