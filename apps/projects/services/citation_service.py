@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 try:
     from iil_researchfw import Citation, CitationService, CitationStyle, Author, SourceType
     from iil_researchfw.search import AcademicSearchService
+    from iil_researchfw.search.smart import SmartSearchService
     from iil_researchfw.analysis.summary import AISummaryService, make_together_llm
     from iil_researchfw.analysis.relevance import RelevanceScorer
     _RESEARCHFW_AVAILABLE = True
@@ -148,6 +149,61 @@ def search_papers(
     svc = AcademicSearchService()
     papers = _run_async(svc.search(query, sources=sources, max_results=max_results))
     return [_paper_to_dict(p) for p in papers]
+
+
+def smart_search_papers(
+    topic: str,
+    sources: list[str] | None = None,
+    max_results: int = 20,
+    relevance_threshold: float = 7.0,
+) -> dict[str, Any]:
+    """
+    LLM-gesteuerte Literaturrecherche (ADR-160).
+
+    Nutzt SmartSearchService für:
+    1. LLM-Query-Expansion (3-4 optimierte Suchbegriffe)
+    2. Multi-Source-Suche (arXiv, Semantic Scholar, PubMed, OpenAlex)
+    3. LLM-Relevanz-Scoring (Batch à 10, Score 0-10)
+    4. Filter auf relevance_threshold
+
+    Fallback: Bei fehlendem LLM-Key → normales search_papers().
+
+    Returns dict mit 'papers', 'queries_used', 'total_found', 'total_after_filter'.
+    """
+    if not _RESEARCHFW_AVAILABLE:
+        return {"papers": [], "queries_used": [], "total_found": 0, "total_after_filter": 0}
+
+    from django.conf import settings
+    api_key = getattr(settings, "TOGETHER_API_KEY", "") or getattr(settings, "OPENAI_API_KEY", "")
+
+    if not api_key:
+        logger.info("smart_search_papers: no LLM key configured, falling back to search_papers()")
+        papers = search_papers(topic, sources=sources, max_results=max_results)
+        return {
+            "papers": papers,
+            "queries_used": [topic],
+            "total_found": len(papers),
+            "total_after_filter": len(papers),
+        }
+
+    llm_fn = make_together_llm(api_key=api_key)
+    svc = SmartSearchService(
+        llm_fn=llm_fn,
+        relevance_threshold=relevance_threshold,
+    )
+    result = _run_async(svc.search(topic, max_results=max_results, sources=sources))
+
+    papers = [_paper_to_dict(sp.paper) for sp in result.papers]
+    for paper_dict, scored in zip(papers, result.papers):
+        paper_dict["relevance_score"] = scored.relevance_score
+        paper_dict["relevance_reason"] = scored.relevance_reason
+
+    return {
+        "papers": papers,
+        "queries_used": result.queries_used,
+        "total_found": result.total_found,
+        "total_after_filter": result.total_after_filter,
+    }
 
 
 def summarize_papers(
@@ -331,9 +387,10 @@ def research_chapter_sources(
         query_parts.append(keywords)
     if project.title:
         query_parts.append(project.title)
-    query = " ".join(query_parts)
+    topic = " ".join(query_parts)
 
-    papers = search_papers(query, max_results=max_results)
+    result = smart_search_papers(topic, max_results=max_results)
+    papers = result["papers"]
     if not papers:
         return {"paper_count": 0, "notes_preview": "", "papers": []}
 
