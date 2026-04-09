@@ -375,7 +375,7 @@ class OutlineNode(models.Model):
     beat_phase = models.CharField(max_length=100, blank=True, default="")
     act = models.CharField(max_length=100, blank=True, default="")
     target_words = models.PositiveIntegerField(null=True, blank=True)
-    emotional_arc = models.CharField(max_length=300, blank=True, default="")
+    emotional_arc = models.TextField(blank=True, default="")
     writing_style = models.ForeignKey(
         "authors.WritingStyle",
         on_delete=models.SET_NULL,

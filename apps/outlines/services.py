@@ -102,9 +102,8 @@ class OutlineGenerationService:
 
                 # Map tension → emotional_arc
                 if tension:
-                    node.emotional_arc = _TENSION_TO_ARC.get(
-                        str(tension), str(tension)
-                    )
+                    arc = _TENSION_TO_ARC.get(str(tension), str(tension))
+                    node.emotional_arc = arc[:300]
 
                 # Distribute target words evenly
                 if project.target_word_count and not node.target_words:
@@ -174,7 +173,8 @@ class OutlineGenerationService:
             data = result.as_dict()
             if data:
                 node.description = data.get("description", result.content)
-                node.emotional_arc = data.get("emotional_arc", node.emotional_arc)
+                arc = data.get("emotional_arc", node.emotional_arc)
+                node.emotional_arc = arc[:300] if arc else node.emotional_arc
             else:
                 node.description = result.content
 
