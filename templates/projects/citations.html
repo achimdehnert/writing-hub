@@ -454,7 +454,7 @@ function renderPapers(papers) {
         return `<div class="paper-card p-3 mb-2">
             <div class="d-flex align-items-start gap-2">
                 <div class="flex-grow-1">
-                    <div class="fw-semibold" style="color:#e2e8f0;font-size:.88rem;">${p.title || "Kein Titel"}</div>
+                    <div class="fw-semibold" style="font-size:.88rem;">${(p.url || p.doi) ? `<a href="${p.url || ('https://doi.org/' + p.doi)}" target="_blank" rel="noopener" style="color:#e2e8f0;text-decoration:none;" onmouseover="this.style.color='#818cf8';this.style.textDecoration='underline'" onmouseout="this.style.color='#e2e8f0';this.style.textDecoration='none'">${p.title || 'Kein Titel'} <i class="bi bi-box-arrow-up-right" style="font-size:.7rem;opacity:.5;"></i></a>` : (p.title || "Kein Titel")}</div>
                     <div class="text-muted small mt-1">${authors}${authMore}${year ? " (" + year + ")" : ""}
                         ${p.journal ? `&nbsp;·&nbsp;<em>${p.journal.slice(0,40)}</em>` : ""}
                     </div>
