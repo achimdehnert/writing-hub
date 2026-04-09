@@ -135,7 +135,6 @@ class ChapterAIReviewView(LoginRequiredMixin, View):
     """KI-Review für ein Kapitel mit ausgewähltem Agent."""
 
     def post(self, request, pk, node_pk):
-        import re
         from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
         from .models import ChapterReview
 
@@ -149,41 +148,6 @@ class ChapterAIReviewView(LoginRequiredMixin, View):
         if not node.content or not node.content.strip():
             messages.warning(request, "Kapitel hat noch keinen Inhalt zum Reviewen.")
             return redirect("projects:review_chapter", pk=pk, node_pk=node_pk)
-
-        AGENT_PROMPTS = {
-            "style_critic": (
-                "Du bist ein erfahrener Literaturkritiker mit Fokus auf Schreibstil.\n"
-                "Analysiere den Text auf: Satzrhythmus, Wortwahl, Metaphern, Showvs.Tell, "
-                "stilistische Stärken und Schwächen.\n"
-                "Antworte als JSON-Array: [{\"type\": \"positive|suggestion|issue\", "
-                "\"feedback\": \"...\", \"text_ref\": \"...\"}]"
-            ),
-            "story_editor": (
-                "Du bist ein Story-Editor.\n"
-                "Analysiere: Handlungslogik, Charakterkonsistenz, Pacing, Spannung, Szenenaufbau.\n"
-                "Antworte als JSON-Array: [{\"type\": \"positive|suggestion|issue\", "
-                "\"feedback\": \"...\", \"text_ref\": \"...\"}]"
-            ),
-            "lector": (
-                "Du bist ein professioneller Lektor.\n"
-                "Finde: Logikfehler, Widersprüche, unklare Stellen, fehlende Übergänge, Schwachstellen.\n"
-                "Antworte als JSON-Array: [{\"type\": \"positive|suggestion|issue\", "
-                "\"feedback\": \"...\", \"text_ref\": \"...\"}]"
-            ),
-            "beta_reader": (
-                "Du bist ein Beta-Leser ohne Fachkenntnisse.\n"
-                "Gib deine ehrliche Leserperspektive: Was hat dich bewegt? Wo warst du verwirrt? "
-                "Was hat dich gelangweilt oder begeistert?\n"
-                "Antworte als JSON-Array: [{\"type\": \"positive|suggestion|issue\", "
-                "\"feedback\": \"...\", \"text_ref\": \"...\"}]"
-            ),
-            "genre_expert": (
-                "Du bist ein Genre-Experte.\n"
-                "Analysiere: Einhaltung von Genre-Konventionen, Lesererwartungen, Tropes, Originalität.\n"
-                "Antworte als JSON-Array: [{\"type\": \"positive|suggestion|issue\", "
-                "\"feedback\": \"...\", \"text_ref\": \"...\"}]"
-            ),
-        }
 
         from apps.core.prompt_utils import render_prompt
         template_map = {
@@ -304,7 +268,6 @@ class ChapterAIEditingView(LoginRequiredMixin, View):
     """KI-Editing: Analysiert ein Kapitel und erstellt Verbesserungsvorschläge."""
 
     def post(self, request, pk, node_pk):
-        import re
         from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
         from .models import ChapterEditing
 

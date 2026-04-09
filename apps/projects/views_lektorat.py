@@ -74,7 +74,7 @@ class LektoratSessionStartView(LoginRequiredMixin, View):
                 if not node.content or not node.content.strip():
                     continue
                 from apps.core.prompt_utils import render_prompt
-                messages = render_prompt(
+                prompt_msgs = render_prompt(
                     "projects/lektorat_analyze",
                     order=node.order,
                     title=node.title,
@@ -83,7 +83,7 @@ class LektoratSessionStartView(LoginRequiredMixin, View):
                 try:
                     raw = router.completion(
                         action_code="chapter_analyze",
-                        messages=messages,
+                        messages=prompt_msgs,
                     )
                     items = extract_json_list(raw)
                     if items:

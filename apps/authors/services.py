@@ -118,7 +118,7 @@ def extract_style_rules(style: WritingStyle) -> tuple[bool, dict]:
 
         return True, data
 
-    except (json.JSONDecodeError, LLMRoutingError, Exception) as exc:
+    except (ValueError, LLMRoutingError, Exception) as exc:
         logger.warning("extract_style_rules error style=%s: %s", style.pk, exc)
         return False, {"error": str(exc)}
 

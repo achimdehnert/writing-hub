@@ -1,8 +1,6 @@
 """
 Writing Hub — Production Settings
 """
-import os
-
 from .base import *  # noqa: F401, F403
 from decouple import config
 

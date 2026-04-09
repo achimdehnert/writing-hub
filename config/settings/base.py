@@ -1,7 +1,6 @@
 """
 Writing Hub — Base Settings (ADR-083)
 """
-import os
 from pathlib import Path
 from decouple import config
 
