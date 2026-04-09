@@ -31,7 +31,9 @@
     "writing_style_id": "{% if ch.writing_style %}{{ ch.writing_style.pk }}{% endif %}",
     "writing_style_name": "{% if ch.writing_style %}{{ ch.writing_style|escapejs }}{% elif project.writing_style %}{{ project.writing_style|escapejs }}{% endif %}",
     "save_url": "{% url 'projects:node_content' ch.id %}",
-    "style_url": "{% url 'projects:node_style' ch.id %}"
+    "style_url": "{% url 'projects:node_style' ch.id %}",
+    "research_url": "{% url 'projects:node_research' ch.id %}",
+    "has_notes": {% if ch.notes %}true{% else %}false{% endif %}
   }{% if not forloop.last %},{% endif %}
 {% endfor %}
 ]
@@ -70,11 +72,18 @@
                         <span style="font-size:.6rem;color:#f59e0b;">0 W</span>
                         {% endif %}
                     </div>
-                    <button class="btn btn-sm py-0 px-1 flex-shrink-0"
-                            style="background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3;font-size:.6rem;"
-                            data-action="generate-chapter" data-chapter-id="{{ chapter.id }}" title="KI generieren">
-                        <i class="bi bi-stars"></i>
-                    </button>
+                    <div class="d-flex gap-1 flex-shrink-0">
+                        <button class="btn btn-sm py-0 px-1"
+                                style="background:#1a2a3a;color:#7dd3fc;border:1px solid #1e3a5f;font-size:.6rem;"
+                                data-action="research-chapter" data-chapter-id="{{ chapter.id }}" title="Literaturrecherche">
+                            <i class="bi bi-journal-bookmark"></i>
+                        </button>
+                        <button class="btn btn-sm py-0 px-1"
+                                style="background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3;font-size:.6rem;"
+                                data-action="generate-chapter" data-chapter-id="{{ chapter.id }}" title="KI generieren">
+                            <i class="bi bi-stars"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
             {% empty %}
@@ -216,14 +225,25 @@
                 {% endif %}
             </div>
 
+            <!-- Recherche-Status -->
+            <div class="mb-3" id="research-status-panel" style="display:none;">
+                <div class="small text-muted fw-semibold mb-1"><i class="bi bi-journal-bookmark me-1"></i>RECHERCHE</div>
+                <div id="research-status-text" class="small" style="color:#7dd3fc;"></div>
+                <div id="research-notes-preview" class="mt-1" style="font-size:.72rem;color:#94a3b8;max-height:120px;overflow-y:auto;white-space:pre-wrap;"></div>
+            </div>
+
             <!-- KI-Aktionen -->
             <div class="mb-3">
                 <div class="small text-muted fw-semibold mb-2"><i class="bi bi-stars me-1"></i>KI-AKTIONEN</div>
+                <button class="btn w-100 mb-2" style="background:#1a2a3a;color:#7dd3fc;border:1px solid #1e3a5f;"
+                        data-action="research-all" id="btn-research-all">
+                    <i class="bi bi-journal-bookmark me-1"></i>Alle Kapitel recherchieren
+                </button>
                 <button class="btn w-100 mb-2" style="background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3;"
                         data-action="generate-all" id="btn-gen-all">
                     <i class="bi bi-lightning-fill me-1"></i>Alle Kapitel generieren
                 </button>
-                <div class="text-muted" style="font-size:.7rem;">Generiert KI-Inhalte für alle Kapitel basierend auf Outline, Charakteren und Welten.</div>
+                <div class="text-muted" style="font-size:.7rem;">1. Recherche: Sucht 10-15 Quellen pro Kapitel.<br>2. Generieren: Schreibt Kapitel mit Quellen-Kontext.</div>
             </div>
 
             <!-- Tipps -->
@@ -312,6 +332,18 @@ function selectChapter(id) {
 
     document.getElementById('btn-generate-main').disabled = false;
     document.getElementById('btn-save').disabled = false;
+
+    // Research status
+    const resPanel = document.getElementById('research-status-panel');
+    const resText = document.getElementById('research-status-text');
+    const resPreview = document.getElementById('research-notes-preview');
+    if (ch.has_notes) {
+        resPanel.style.display = '';
+        resText.innerHTML = '<i class="bi bi-check-circle me-1" style="color:#22c55e;"></i>Quellen vorhanden';
+        resPreview.textContent = '';
+    } else {
+        resPanel.style.display = 'none';
+    }
 
     setSaveStatus('Lade...');
     fetch(currentSaveUrl)
@@ -468,6 +500,66 @@ function showGenError(msg) { document.getElementById('gen-status-text').textCont
 function updateWordCount(t) { const c = t.trim() ? t.trim().split(/\s+/).length : 0; document.getElementById('word-count').textContent = c.toLocaleString('de-DE') + ' Wörter'; }
 function resetBtn() { const btn = document.getElementById('btn-generate-main'); btn.disabled = false; btn.innerHTML = '<i class="bi bi-stars me-1"></i>Mit KI generieren'; }
 
+let researchAllQueue = [];
+
+function startResearch(chapterId) {
+    const ch = CHAPTER_MAP[chapterId];
+    if (!ch || !ch.research_url) return;
+
+    const panel = document.getElementById('research-status-panel');
+    const statusText = document.getElementById('research-status-text');
+    const preview = document.getElementById('research-notes-preview');
+
+    if (currentChapterId !== chapterId) selectChapter(chapterId);
+    panel.style.display = '';
+    statusText.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Recherchiere Quellen für "' + ch.title + '"...';
+    preview.textContent = '';
+
+    fetch(ch.research_url, {
+        method: 'POST',
+        headers: {'X-CSRFToken': CSRF()},
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) {
+            ch.has_notes = true;
+            statusText.innerHTML = '<i class="bi bi-check-circle me-1" style="color:#22c55e;"></i>' + data.paper_count + ' Quellen gefunden';
+            preview.textContent = data.notes_preview || '';
+        } else {
+            statusText.innerHTML = '<i class="bi bi-x-circle me-1" style="color:#ef4444;"></i>Fehler: ' + (data.error || 'Unbekannt');
+        }
+        if (researchAllQueue.length > 0) setTimeout(processResearchAllQueue, 500);
+    })
+    .catch(err => {
+        statusText.innerHTML = '<i class="bi bi-x-circle me-1" style="color:#ef4444;"></i>Netzwerkfehler: ' + err.message;
+        if (researchAllQueue.length > 0) setTimeout(processResearchAllQueue, 500);
+    });
+}
+
+function researchAll() {
+    if (!confirm('Für alle ' + CHAPTERS.length + ' Kapitel Literatur recherchieren?\n\nDas kann einige Minuten dauern.')) return;
+    researchAllQueue = CHAPTERS.map(c => c.id);
+    const btn = document.getElementById('btn-research-all');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Recherchiert... (0/' + CHAPTERS.length + ')';
+    processResearchAllQueue();
+}
+
+function processResearchAllQueue() {
+    const total = CHAPTERS.length;
+    const done = total - researchAllQueue.length;
+    const btn = document.getElementById('btn-research-all');
+
+    if (researchAllQueue.length === 0) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-journal-bookmark me-1"></i>Alle Kapitel recherchieren';
+        return;
+    }
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Recherchiert... (' + done + '/' + total + ')';
+    const nextId = researchAllQueue.shift();
+    startResearch(nextId);
+}
+
 window.addEventListener('DOMContentLoaded', () => {
     // Event delegation — replaces all inline onclick/onchange/oninput handlers
     document.addEventListener('click', (e) => {
@@ -481,6 +573,8 @@ window.addEventListener('DOMContentLoaded', () => {
         else if (action === 'toggle-outline') { toggleOutlinePanel(); }
         else if (action === 'set-words') { document.getElementById('target-words').value = el.dataset.value; }
         else if (action === 'generate-all') { generateAll(); }
+        else if (action === 'research-chapter') { e.stopPropagation(); startResearch(el.dataset.chapterId); }
+        else if (action === 'research-all') { researchAll(); }
     });
     const styleSelect = document.getElementById('chapter-style-select');
     if (styleSelect) styleSelect.addEventListener('change', () => setChapterStyle(styleSelect.value));

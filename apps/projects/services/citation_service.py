@@ -301,6 +301,102 @@ def research_outline_node(
     }
 
 
+def research_chapter_sources(
+    node_id: str,
+    max_results: int = 15,
+) -> dict[str, Any]:
+    """
+    Recherchiert Quellen für ein OutlineNode und speichert als Notizen.
+
+    Liest Titel, Beschreibung und Projekt-Thema aus dem Node,
+    ruft search_papers() auf und formatiert die Ergebnisse als
+    strukturierte Recherche-Notizen in node.notes.
+
+    Args:
+        node_id: UUID des OutlineNode
+        max_results: Max. Treffer (Standard: 15)
+
+    Returns dict mit 'paper_count', 'notes_preview', 'papers'.
+    """
+    from apps.projects.models import OutlineNode
+
+    node = OutlineNode.objects.select_related(
+        "outline_version__project"
+    ).get(pk=node_id)
+    project = node.outline_version.project
+
+    query_parts = [node.title]
+    if node.description:
+        keywords = node.description[:200]
+        query_parts.append(keywords)
+    if project.title:
+        query_parts.append(project.title)
+    query = " ".join(query_parts)
+
+    papers = search_papers(query, max_results=max_results)
+    if not papers:
+        return {"paper_count": 0, "notes_preview": "", "papers": []}
+
+    notes = format_research_notes(papers, node.title)
+    node.notes = notes
+    node.save(update_fields=["notes"])
+
+    return {
+        "paper_count": len(papers),
+        "notes_preview": notes[:500],
+        "papers": papers,
+    }
+
+
+def format_research_notes(papers: list[dict[str, Any]], chapter_title: str) -> str:
+    """
+    Formatiert Paper-Ergebnisse als strukturierte Recherche-Notizen.
+
+    Format für LLM-Kontext (wird vom Brief-Generator gelesen):
+    - Quellenübersicht mit Autoren, Jahr, DOI
+    - Kurze Abstracts für Kontext
+    """
+    lines = [f"## Recherche-Quellen: {chapter_title}\n"]
+    lines.append(f"{len(papers)} Quellen gefunden.\n")
+
+    for i, p in enumerate(papers, 1):
+        title = p.get("title", "Ohne Titel")
+        authors = p.get("authors", [])
+        if isinstance(authors, list) and authors:
+            if isinstance(authors[0], str):
+                author_str = "; ".join(authors[:3])
+            else:
+                author_str = "; ".join(
+                    a.get("family", "") for a in authors[:3]
+                )
+            if len(authors) > 3:
+                author_str += " et al."
+        else:
+            author_str = ""
+        year = (p.get("publication_date") or "")[:4]
+        doi = p.get("doi", "")
+        source = p.get("source", "")
+        abstract = (p.get("abstract") or "")[:300]
+
+        lines.append(f"### [{i}] {title}")
+        meta_parts = []
+        if author_str:
+            meta_parts.append(author_str)
+        if year:
+            meta_parts.append(f"({year})")
+        if source:
+            meta_parts.append(f"[{source}]")
+        if doi:
+            meta_parts.append(f"DOI: {doi}")
+        if meta_parts:
+            lines.append(" ".join(meta_parts))
+        if abstract:
+            lines.append(f"  {abstract}{'…' if len(p.get('abstract', '')) > 300 else ''}")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
 def _fix_paper_url(url: str) -> str:
     """Fix API URLs to web URLs (e.g. Semantic Scholar api→www)."""
     if url and "api.semanticscholar.org/paper/" in url:

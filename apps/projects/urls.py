@@ -33,6 +33,7 @@ urlpatterns = [
     path("<uuid:pk>/outline/generate/", views_html.OutlineGenerateView.as_view(), name="outline_generate"),
     path("node/<uuid:node_pk>/content/", views_html.ChapterContentView.as_view(), name="node_content"),
     path("node/<uuid:node_pk>/style/", views_html.ChapterNodeStyleView.as_view(), name="node_style"),
+    path("node/<uuid:node_pk>/research/", views_html.ChapterResearchView.as_view(), name="node_research"),
     # Manuskript
     path("<uuid:pk>/manuscript/", views_manuscript.ProjectManuscriptView.as_view(), name="manuscript"),
     # Publishing

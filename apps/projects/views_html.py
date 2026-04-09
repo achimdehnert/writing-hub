@@ -557,6 +557,27 @@ class ChapterNodeStyleView(LoginRequiredMixin, View):
         return JsonResponse({"ok": True, "style_id": str(style_id) if style_id else None})
 
 
+class ChapterResearchView(LoginRequiredMixin, View):
+    """Recherchiert Quellen für ein Kapitel und speichert in node.notes."""
+
+    def post(self, request, node_pk):
+        node = get_object_or_404(
+            OutlineNode, pk=node_pk, outline_version__project__owner=request.user
+        )
+        from .services.citation_service import research_chapter_sources
+        try:
+            result = research_chapter_sources(str(node.pk), max_results=15)
+        except Exception as exc:
+            logger.exception("ChapterResearchView error for node %s", node_pk)
+            return JsonResponse({"ok": False, "error": str(exc)})
+
+        return JsonResponse({
+            "ok": True,
+            "paper_count": result.get("paper_count", 0),
+            "notes_preview": result.get("notes_preview", ""),
+        })
+
+
 class ChapterContentView(LoginRequiredMixin, View):
     def _get_node(self, request, node_pk):
         return get_object_or_404(
