@@ -122,8 +122,8 @@
         <div class="row g-3 mb-3">
             <div class="col-md-4" style="border-right:1px solid #2d3748;">
                 <div class="text-muted small mb-1">AKTUELLER STATUS</div>
-                <div class="fw-semibold" style="color:{% if workflow_status == 'fertig' %}#22c55e{% elif workflow_status == 'entwurf' %}#f59e0b{% else %}#94a3b8{% endif %}">
-                    {% if workflow_status == 'fertig' %}Fertig{% elif workflow_status == 'entwurf' %}Entwurf{% else %}Leer{% endif %}
+                <div class="fw-semibold" style="color:{% if workflow_status == 'fertig' %}#22c55e{% elif workflow_status == 'pruefung' %}#6366f1{% elif workflow_status == 'entwurf' %}#f59e0b{% else %}#94a3b8{% endif %}">
+                    {% if workflow_status == 'fertig' %}Fertig{% elif workflow_status == 'pruefung' %}Prüfung{% elif workflow_status == 'entwurf' %}Entwurf{% else %}Leer{% endif %}
                 </div>
             </div>
             <div class="col-md-4" style="border-right:1px solid #2d3748;">
@@ -171,31 +171,59 @@
         <div class="mt-3">
             <div class="text-muted small mb-2">Workflow-Fortschritt:</div>
             <div class="d-flex align-items-center gap-2 flex-wrap">
+                {% if workflow_status == 'entwurf' or workflow_status == 'pruefung' or workflow_status == 'fertig' %}
                 <span class="badge px-3 py-2" style="background:#1e3a8a;color:#a5b4fc;">
                     <i class="bi bi-check-circle-fill me-1"></i>Entwurf
                 </span>
+                {% else %}
+                <span class="badge px-3 py-2" style="background:#1e3a8a;color:#a5b4fc;border:2px solid #6366f1;">
+                    <i class="bi bi-circle me-1"></i>Entwurf
+                </span>
+                {% endif %}
                 <i class="bi bi-arrow-right text-muted"></i>
+                {% if workflow_status == 'pruefung' %}
+                <span class="badge px-3 py-2" style="background:#1e3a8a;color:#a5b4fc;border:2px solid #6366f1;">
+                    <i class="bi bi-pencil-square me-1"></i>Prüfung
+                </span>
+                {% elif workflow_status == 'fertig' %}
+                <span class="badge px-3 py-2" style="background:#1e3a8a;color:#a5b4fc;">
+                    <i class="bi bi-check-circle-fill me-1"></i>Prüfung
+                </span>
+                {% else %}
                 <span class="badge px-3 py-2" style="background:#1e2235;color:#94a3b8;">Prüfung</span>
+                {% endif %}
                 <i class="bi bi-arrow-right text-muted"></i>
-                <span class="badge px-3 py-2" style="background:#1e2235;color:#94a3b8;">Freigegeben</span>
-                <i class="bi bi-arrow-right text-muted"></i>
-                <span class="badge px-3 py-2" style="background:#1e2235;color:#94a3b8;">Finalisiert</span>
+                {% if workflow_status == 'fertig' %}
+                <span class="badge px-3 py-2" style="background:#1e3a8a;color:#a5b4fc;border:2px solid #6366f1;">
+                    <i class="bi bi-pen me-1"></i>Schreiben
+                </span>
+                {% else %}
+                <span class="badge px-3 py-2" style="background:#1e2235;color:#94a3b8;">Schreiben</span>
+                {% endif %}
+                {% if workflow_status == 'pruefung' or workflow_status == 'fertig' %}
                 <i class="bi bi-dash text-muted"></i>
                 <a href="{% url 'projects:chapter_writer' project.pk %}" class="badge px-3 py-2 text-decoration-none"
                    style="background:#1e1b4b;color:#a5b4fc;">
                     <i class="bi bi-pen me-1"></i>Kapitel schreiben
                 </a>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
 
-<!-- Framework-Wahl -->
+<!-- Framework-Wahl / KI-Generierung -->
 <div class="card mb-4" style="background:#0d1117;border-color:#2d3748;">
-    <div class="card-header py-2" style="border-color:#2d3748;">
-        <span class="fw-semibold"><i class="bi bi-diagram-3 me-2"></i>Struktur wählen</span>
+    <div class="card-header py-2" style="border-color:#2d3748;{% if has_outline_content %}cursor:pointer;{% endif %}"
+         {% if has_outline_content %}onclick="var b=document.getElementById('fw-body');var c=this.querySelector('.bi-chevron-down,.bi-chevron-up');if(b.style.display==='none'){b.style.display='';c.className=c.className.replace('chevron-down','chevron-up');}else{b.style.display='none';c.className=c.className.replace('chevron-up','chevron-down');}"{% endif %}>
+        <span class="fw-semibold">
+            <i class="bi bi-diagram-3 me-2"></i>Struktur {% if has_outline_content %}&amp; KI-Generierung{% else %}wählen{% endif %}
+        </span>
+        {% if has_outline_content %}
+        <i class="bi bi-chevron-down ms-1 small text-muted"></i>
+        {% endif %}
     </div>
-    <div class="card-body">
+    <div class="card-body" id="fw-body" {% if has_outline_content %}style="display:none;"{% endif %}>
         <div class="row g-4">
             <div class="col-md-5">
                 <label class="form-label small text-muted">Framework ({{ frameworks|length }} verfügbar)</label>

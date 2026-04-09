@@ -68,15 +68,21 @@ class OutlineDetailView(LoginRequiredMixin, DetailView):
         target = project.target_word_count or 0
         ctx["progress_pct"] = min(100, round(total_words / target * 100)) if target > 0 else 0
 
+        described = sum(1 for n in nodes if n.description and n.description.strip())
+
         if written == len(nodes) and len(nodes) > 0:
             ctx["workflow_status"] = "fertig"
             ctx["next_step"] = "Kapitel schreiben"
+        elif described > 0 and len(nodes) > 0:
+            ctx["workflow_status"] = "pruefung"
+            ctx["next_step"] = "Outline prüfen & bearbeiten"
         elif len(nodes) > 0:
             ctx["workflow_status"] = "entwurf"
             ctx["next_step"] = "Outline fertigstellen"
         else:
             ctx["workflow_status"] = "leer"
             ctx["next_step"] = "Framework wählen & generieren"
+        ctx["has_outline_content"] = described > 0
 
         return ctx
 
