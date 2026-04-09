@@ -343,6 +343,15 @@ DEFAULT_AUDIENCES = [
     "Business / Fachpublikum",
 ]
 
+# ── Outline Enrichment ────────────────────────────────────────────
+
+TENSION_TO_ARC = {
+    "low": "ruhig / reflektiv",
+    "medium": "aufbauend",
+    "high": "intensiv / spannend",
+    "peak": "Höhepunkt / Klimax",
+}
+
 # ── Framework Fallbacks ───────────────────────────────────────────
 
 FW_BEATS_FALLBACK = {

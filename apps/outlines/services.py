@@ -11,18 +11,10 @@ Extracted from views.py per platform service-layer convention (ADR-041).
 """
 import logging
 
+from apps.projects.constants import FORMAT_PROFILES, TENSION_TO_ARC
 from apps.projects.models import OutlineNode, OutlineVersion
 
 logger = logging.getLogger(__name__)
-
-
-# outlinefw node field → DB OutlineNode field mapping
-_TENSION_TO_ARC = {
-    "low": "ruhig / reflektiv",
-    "medium": "aufbauend",
-    "high": "intensiv / spannend",
-    "peak": "Höhepunkt / Klimax",
-}
 
 
 class OutlineGenerationService:
@@ -102,7 +94,7 @@ class OutlineGenerationService:
 
                 # Map tension → emotional_arc
                 if tension:
-                    arc = _TENSION_TO_ARC.get(str(tension), str(tension))
+                    arc = TENSION_TO_ARC.get(str(tension), str(tension))
                     node.emotional_arc = arc[:300]
 
                 # Distribute target words evenly
@@ -157,6 +149,8 @@ class OutlineGenerationService:
         except Exception:
             context_block = f"Projekt: {project.title}\nGenre: {project.genre}"
 
+        profile = FORMAT_PROFILES.get(project.content_type, {})
+
         try:
             prompt_msgs = render_outline_prompt(
                 template_key="enrich_node",
@@ -168,6 +162,8 @@ class OutlineGenerationService:
                 title=node.title,
                 target_words=node.target_words or 3000,
                 description=existing,
+                quality_criteria=profile.get("quality_criteria", ""),
+                outline_logic=profile.get("outline_logic", ""),
             )
 
             router = LLMRouter()

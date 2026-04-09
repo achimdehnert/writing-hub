@@ -80,23 +80,40 @@ def _get_outline_siblings(owner_id, instance=None):
 
 
 def register_all():
-    """Register domain system prompt for outline enrichment.
+    """Register domain system prompts for outline enrichment.
 
     Retrievers are auto-registered via @register_retriever decorators above.
-    This function registers the domain-specific system prompt.
+    This function registers content-type-group-specific system prompts.
     """
+    _BASE = (
+        "Du erstellst STRUKTURIERTE Kapitel-Outlines als Planungsdokument. "
+        "Schreibe NIEMALS Prosa, ausgeschriebene Szenen oder erzählenden Text. "
+        "Antworte AUSSCHLIESSLICH mit dem angeforderten JSON-Objekt."
+    )
+
     register_system_prompt(
         scope="writing.outline_enrichment",
         prompt=(
-            "Du bist ein erfahrener Story-Planer und Lektor. "
-            "Du erstellst STRUKTURIERTE Kapitel-Outlines als Planungsdokument. "
-            "Schreibe NIEMALS Prosa, ausgeschriebene Szenen oder erzählenden Text. "
-            "Verwende stattdessen: Stichpunkte, Szenen-Nummern, Kernkonflikte, Plot-Punkte. "
-            "Antworte AUSSCHLIESSLICH mit dem angeforderten JSON-Objekt."
+            "Du bist ein erfahrener Story-Planer und Lektor. " + _BASE + " "
+            "Verwende: Stichpunkte, Szenen-Nummern, Kernkonflikte, Plot-Punkte."
+        ),
+    )
+    register_system_prompt(
+        scope="writing.outline_enrichment.academic",
+        prompt=(
+            "Du bist ein erfahrener wissenschaftlicher Methodiker und Lektor. " + _BASE + " "
+            "Verwende: Forschungsfragen, Methodik-Stichpunkte, Argumentationslinien, Quellenbezüge."
+        ),
+    )
+    register_system_prompt(
+        scope="writing.outline_enrichment.nonfiction",
+        prompt=(
+            "Du bist ein erfahrener Sachbuch-Lektor und Strukturberater. " + _BASE + " "
+            "Verwende: Kernaussagen, Praxisbeispiele, Lernziele, Kapitelziele."
         ),
     )
 
     logger.info(
         "fieldprefill retrievers registered (project_context, outline_siblings) + "
-        "system prompt for scope 'writing.outline_enrichment'"
+        "system prompts for scope 'writing.outline_enrichment[.*]'"
     )
