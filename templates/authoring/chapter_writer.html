@@ -146,6 +146,54 @@
     <div class="col-md-3 border-start d-flex flex-column" style="overflow-y:auto;background:#0d1117;border-color:#2d3748!important;">
         <div class="p-3">
 
+            {% if prep_status.steps %}
+            <!-- Vorbereitung Pipeline -->
+            <div class="mb-3">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small text-muted fw-semibold"><i class="bi bi-list-check me-1"></i>VORBEREITUNG</span>
+                    <span class="badge" style="background:{% if prep_status.completed_count == prep_status.total_count %}#065f46{% else %}#1e2235{% endif %};color:{% if prep_status.completed_count == prep_status.total_count %}#6ee7b7{% else %}#94a3b8{% endif %};font-size:.6rem;">
+                        {{ prep_status.completed_count }}/{{ prep_status.total_count }}
+                    </span>
+                </div>
+                {% for step in prep_status.steps %}
+                <div class="d-flex align-items-center gap-2 py-1" style="border-bottom:1px solid #1e2235;">
+                    {% if step.done %}
+                    <i class="bi bi-check-circle-fill" style="color:#22c55e;font-size:.8rem;"></i>
+                    {% else %}
+                    <i class="bi bi-circle" style="color:{% if step.recommended %}#f59e0b{% else %}#4b5563{% endif %};font-size:.8rem;"></i>
+                    {% endif %}
+                    <div class="flex-grow-1" style="min-width:0;">
+                        <div class="d-flex align-items-center gap-1">
+                            <i class="bi bi-{{ step.icon }}" style="font-size:.7rem;color:#6366f1;"></i>
+                            <span class="small" style="color:{% if step.done %}#22c55e{% else %}#e2e8f0{% endif %};">{{ step.label }}</span>
+                            {% if step.recommended and not step.done %}
+                            <span class="badge" style="background:#451a03;color:#fbbf24;font-size:.5rem;">empfohlen</span>
+                            {% endif %}
+                        </div>
+                        {% if step.detail %}
+                        <span style="font-size:.62rem;color:#64748b;">{{ step.detail }}</span>
+                        {% endif %}
+                    </div>
+                    {% if not step.done %}
+                    {% if step.resolved_url %}
+                    <a href="{{ step.resolved_url }}" class="btn btn-sm py-0 px-1"
+                       style="background:#1a2a3a;color:#7dd3fc;border:1px solid #1e3a5f;font-size:.58rem;"
+                       title="{{ step.label }}">
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
+                    {% elif step.key == "research" or step.key == "facts" %}
+                    <button class="btn btn-sm py-0 px-1"
+                            style="background:#1a2a3a;color:#7dd3fc;border:1px solid #1e3a5f;font-size:.58rem;"
+                            data-action="research-all" title="{{ step.label }}">
+                        <i class="bi bi-play-fill"></i>
+                    </button>
+                    {% endif %}
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
             <!-- Schreibstil für dieses Kapitel -->
             <div class="mb-3">
                 <div class="small text-muted fw-semibold mb-1"><i class="bi bi-person-badge me-1"></i>SCHREIBSTIL</div>

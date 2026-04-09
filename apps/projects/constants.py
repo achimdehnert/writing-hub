@@ -312,6 +312,33 @@ CONTENT_TYPE_GROUPS = {
     "nonfiction": "nonfiction",
 }
 
+# ── Preparation Steps per Content-Type Group ─────────────────────
+# Each step: key (used for completion check), label, icon, recommended flag,
+# scope: "chapter" (per node) or "project" (global).
+# url_name: Django URL name for the action (None = inline in chapter writer).
+
+PREPARATION_STEPS = {
+    "academic": [
+        {"key": "research", "label": "Literaturrecherche", "icon": "journal-bookmark",
+         "recommended": True, "scope": "chapter", "url_name": None},
+    ],
+    "fiction": [
+        {"key": "characters", "label": "Charaktere entwickeln", "icon": "people",
+         "recommended": True, "scope": "project", "url_name": "worlds:list"},
+        {"key": "worlds", "label": "Welten entwickeln", "icon": "globe2",
+         "recommended": True, "scope": "project", "url_name": "worlds:list"},
+        {"key": "research", "label": "Literaturrecherche", "icon": "journal-bookmark",
+         "recommended": False, "scope": "chapter", "url_name": None},
+    ],
+    "nonfiction": [
+        {"key": "research", "label": "Literaturrecherche", "icon": "journal-bookmark",
+         "recommended": False, "scope": "chapter", "url_name": None},
+        {"key": "facts", "label": "Faktenrecherche", "icon": "search",
+         "recommended": True, "scope": "chapter", "url_name": None},
+    ],
+}
+
+
 # ── Seed Defaults: Genres & Audiences ─────────────────────────────
 
 DEFAULT_GENRES = [

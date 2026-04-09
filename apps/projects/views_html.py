@@ -541,6 +541,8 @@ class ChapterWriterView(LoginRequiredMixin, DetailView):
             project=self.object
         ).select_related()
         ctx["project_styles"] = self.object.get_all_styles()
+        from apps.projects.services.preparation_service import get_preparation_status
+        ctx["prep_status"] = get_preparation_status(self.object, chapters)
         return ctx
 
 
