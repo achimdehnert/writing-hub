@@ -11,10 +11,8 @@ Covers:
   - Template stats aggregation
 """
 import pytest
-from unittest.mock import MagicMock, patch
 
 from apps.outlines.models import (
-    CONTENT_TYPE_TO_GROUP,
     OutlinePromptTemplate,
     OutlineQualityRating,
     get_content_type_group,

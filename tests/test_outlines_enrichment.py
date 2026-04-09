@@ -5,7 +5,7 @@ Tests the render_outline_prompt + LLMRouter integration: content-type dispatch,
 result mapping, error handling. Also covers the retriever registration.
 """
 import pytest
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 
 class TestEnrichNodeWithPromptDispatch:
@@ -195,7 +195,7 @@ class TestRetrieverRegistration:
         """project_context uses title+genre fallback if service fails."""
         from apps.outlines.retrievers import _get_project_context
 
-        mock_project = MagicMock()
+        mock_project = MagicMock(spec=["title", "genre", "pk"])
         mock_project.title = "Mein Roman"
         mock_project.genre = "Fantasy"
         mock_project.pk = "p-1"
@@ -221,12 +221,14 @@ class TestFieldprefillContract:
 
     def test_should_have_as_dict_on_result(self):
         """PrefillResult must have as_dict() method."""
+        from fieldprefill.result import PrefillResult
         r = PrefillResult(content='{"a": 1}')
         assert hasattr(r, "as_dict")
         assert r.as_dict() == {"a": 1}
 
     def test_should_have_get_on_result(self):
         """PrefillResult must have get() method."""
+        from fieldprefill.result import PrefillResult
         r = PrefillResult(content='{"key": "val"}')
         assert r.get("key") == "val"
         assert r.get("missing", "default") == "default"

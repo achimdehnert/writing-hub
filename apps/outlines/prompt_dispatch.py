@@ -12,7 +12,7 @@ fiction vs. academic vs. nonfiction outlines.
 """
 import logging
 
-from apps.core.prompt_utils import PromptRenderError, render_prompt
+from apps.core.prompt_utils import render_prompt
 
 logger = logging.getLogger(__name__)
 
