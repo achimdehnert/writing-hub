@@ -53,9 +53,9 @@ iil-fieldprefill[all]>=0.2.0,<1
 # TODO: switch to PyPI when published (currently git-only)
 iil-outlinefw @ git+https://github.com/achimdehnert/outlinefw.git@main  # ~0.3.x
 
-# Research Framework — academic search, citations, analysis, export
+# Research Framework — academic search, citations, SmartSearch pipeline (ADR-160)
 # TODO: switch to PyPI when published (currently git-only)
-iil-researchfw @ git+https://github.com/achimdehnert/researchfw.git@main  # ~0.1.x
+iil-researchfw @ git+https://github.com/achimdehnert/researchfw.git@main  # ~0.6.x
 
 # ============================================================================
 # Database

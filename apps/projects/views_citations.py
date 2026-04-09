@@ -27,6 +27,7 @@ from .services.citation_service import (
     resolve_doi,
     resolve_isbn,
     search_papers,
+    smart_search_papers,
 )
 
 logger = logging.getLogger(__name__)
@@ -252,5 +253,12 @@ class LiteraturrechercheAjaxView(LoginRequiredMixin, View):
         except (ValueError, TypeError):
             max_results = 20
 
-        papers = search_papers(query, sources=sources, max_results=max_results)
-        return JsonResponse({"ok": True, "papers": papers, "count": len(papers)})
+        result = smart_search_papers(query, sources=sources, max_results=max_results)
+        return JsonResponse({
+            "ok": True,
+            "papers": result["papers"],
+            "count": len(result["papers"]),
+            "queries_used": result["queries_used"],
+            "total_found": result["total_found"],
+            "total_after_filter": result["total_after_filter"],
+        })
