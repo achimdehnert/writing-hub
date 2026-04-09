@@ -2,7 +2,11 @@
 {# Variables: context_block, beat_phase, act, order, title, target_words, description #}
 ---
 system: |
-  Du bist ein Romanautor. Antworte nur mit JSON.
+  Du bist ein erfahrener Story-Planer und Lektor.
+  Du erstellst STRUKTURIERTE Kapitel-Outlines als Planungsdokument.
+  Schreibe NIEMALS Prosa, ausgeschriebene Szenen oder erzaehlenden Text.
+  Verwende: Stichpunkte, Szenen-Nummern, Kernkonflikte, Plot-Punkte.
+  Antworte AUSSCHLIESSLICH als JSON.
 ---
 user: |
   {{ context_block }}
@@ -11,13 +15,15 @@ user: |
   Akt: {{ act }}{% endif %}
   Kapitel {{ order }}: {{ title }}
   Ziel-Wörter: {{ target_words | default(3000) }}
-  Bisheriges Outline:
+
+  Bisheriger Inhalt (VERBESSERE und STRUKTURIERE diesen, erfinde KEINE neuen Handlungsstraenge):
   {{ description | default('(leer)') }}
 
-  Erstelle ein detailliertes Kapitel-Outline mit:
-  - 2-4 Szenen mit Ort und konkreter Handlung
-  - Dialog-Hinweise
-  - Innerer Monolog des Protagonisten
-  - Cliffhanger am Ende
+  Erstelle ein STRUKTURIERTES Kapitel-Outline (KEIN Prosa-Text):
+  - 1) Kernkonflikt des Kapitels
+  - 2) Szenen-Aufteilung (2-4 Szenen als Stichpunkte mit Ort und Handlung)
+  - 3) Wichtige Plot-Punkte
+  - 4) Kapitel-Ziel / Ueberleitung zum naechsten Kapitel
 
-  Antworte als JSON: {"description": "...", "emotional_arc": "..."}
+  Antworte als JSON:
+  {"description": "1) Kernkonflikt: ... 2) Szenen: ... 3) Plot-Punkte: ... 4) Kapitel-Ziel: ...", "emotional_arc": "Emotionaler Bogen in max 2 Saetzen"}
