@@ -120,11 +120,28 @@ class ChapterProductionService:
         return get_content_type_config(self._content_type)
 
     def _write_template(self) -> str:
-        """Convention: chapter_write_{content_type}, fallback to default."""
+        """Resolve write template: content_type → group → default.
+
+        Lookup chain:
+          1. chapter_write_{content_type}  (e.g. chapter_write_scientific)
+          2. chapter_write_{group}         (e.g. chapter_write_academic)
+          3. chapter_write_default
+        """
         from apps.core.prompt_utils import prompt_exists
+        from apps.projects.constants import CONTENT_TYPE_GROUPS
+
         ct_template = f"authoring/chapter_write_{self._content_type}"
         if prompt_exists(ct_template):
             return ct_template
+        group = CONTENT_TYPE_GROUPS.get(self._content_type, "")
+        if group:
+            group_template = f"authoring/chapter_write_{group}"
+            if prompt_exists(group_template):
+                logger.info(
+                    "Template fallback: %s → %s (group: %s)",
+                    self._content_type, group_template, group,
+                )
+                return group_template
         return _DEFAULT_TEMPLATE
 
     def _build_prompt_stack(self):
