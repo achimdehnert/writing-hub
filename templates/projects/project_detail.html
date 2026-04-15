@@ -226,7 +226,8 @@
     {% else %}
     <!-- Charaktere (nur fiktionale Projekte) -->
     <div class="col-md-4">
-        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;">
+        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
+             onclick="window.open('https://weltenhub.iil.pet','_blank')">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-people me-2" style="color:#6366f1;font-size:1.2rem;"></i>
@@ -248,7 +249,8 @@
 
     <!-- Weltenbau (nur fiktionale Projekte) -->
     <div class="col-md-4">
-        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;">
+        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
+             onclick="window.open('https://weltenhub.iil.pet','_blank')">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-globe2 me-2" style="color:#6366f1;font-size:1.2rem;"></i>
@@ -317,7 +319,8 @@
 
     <!-- Lektorat -->
     <div class="col-md-4">
-        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;">
+        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
+             onclick="location.href='{% url 'projects:lektorat' project.pk %}'">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-check2-square me-2" style="color:#6366f1;font-size:1.2rem;"></i>
@@ -339,7 +342,8 @@
 
     <!-- Review -->
     <div class="col-md-4">
-        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;">
+        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
+             onclick="location.href='{% url 'projects:review' project.pk %}'">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-shield-check me-2" style="color:#6366f1;font-size:1.2rem;"></i>
@@ -385,7 +389,8 @@
     {% else %}
     <!-- Illustration (nur fiktionale Projekte) -->
     <div class="col-md-4">
-        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;">
+        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
+             onclick="location.href='{% url 'projects:manuscript' project.pk %}'">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-image me-2" style="color:#6366f1;font-size:1.2rem;"></i>
@@ -408,7 +413,8 @@
 
     <!-- Publishing / Einreichung -->
     <div class="col-md-4">
-        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;">
+        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
+             onclick="location.href='{% url 'projects:publishing' project.pk %}'">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-bookmark-check me-2" style="color:#6366f1;font-size:1.2rem;"></i>
@@ -434,7 +440,8 @@
 
     <!-- Export -->
     <div class="col-md-4">
-        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;">
+        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
+             onclick="location.href='{% url 'projects:export' project.pk %}'">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-download me-2" style="color:#6366f1;font-size:1.2rem;"></i>

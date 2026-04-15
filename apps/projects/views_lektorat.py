@@ -69,10 +69,12 @@ class LektoratSessionStartView(LoginRequiredMixin, View):
         try:
             router = LLMRouter()
             total_issues = 0
+            checked_count = 0
 
             for node in chapters:
                 if not node.content or not node.content.strip():
                     continue
+                checked_count += 1
                 from apps.core.prompt_utils import render_prompt
                 prompt_msgs = render_prompt(
                     "projects/lektorat_analyze",
@@ -113,9 +115,17 @@ class LektoratSessionStartView(LoginRequiredMixin, View):
             session.status = "done"
             session.issues_found = total_issues
             session.finished_at = timezone.now()
-            session.summary = f"{total_issues} Probleme in {len(chapters)} Kapiteln gefunden."
-            session.save(update_fields=["status", "issues_found", "finished_at", "summary"])
-            messages.success(request, f"Lektorat abgeschlossen: {total_issues} Probleme gefunden.")
+            if checked_count == 0:
+                session.summary = (
+                    f"Keine Kapitel mit Inhalt gefunden ({len(chapters)} Kapitel vorhanden, "
+                    f"aber keines hat Text). Bitte zuerst Kapitel schreiben."
+                )
+                session.save(update_fields=["status", "issues_found", "finished_at", "summary"])
+                messages.warning(request, "Lektorat: Keine Kapitel mit Text gefunden — bitte zuerst Kapitel schreiben.")
+            else:
+                session.summary = f"{total_issues} Probleme in {checked_count}/{len(chapters)} Kapiteln gefunden."
+                session.save(update_fields=["status", "issues_found", "finished_at", "summary"])
+                messages.success(request, f"Lektorat abgeschlossen: {total_issues} Probleme in {checked_count} Kapiteln gefunden.")
 
         except Exception as exc:
             logger.exception("LektoratSessionStart error: %s", exc)

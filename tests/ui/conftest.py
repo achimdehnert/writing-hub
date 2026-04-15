@@ -85,6 +85,12 @@ def _seed_lookup_data():
         ]):
             AudienceLookup.objects.create(name=name, order=i)
 
+    # Outline Frameworks (identisch mit Production)
+    from apps.projects.models import OutlineFramework
+    if not OutlineFramework.objects.exists():
+        from django.core.management import call_command
+        call_command("seed_outline_frameworks", verbosity=0)
+
     from apps.projects.models import BookProject
     User = get_user_model()
     owner = User.objects.first()
