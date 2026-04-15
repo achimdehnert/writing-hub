@@ -6,9 +6,11 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+from apps.core.views_dev_login import DevLoginView
 from config.healthz import liveness, readiness
 
 urlpatterns = [
+    path("dev-login/", DevLoginView.as_view(), name="dev_login"),
     path("livez/", liveness, name="livez"),
     path("healthz/", readiness, name="healthz"),
     path("readyz/", readiness, name="readyz"),
