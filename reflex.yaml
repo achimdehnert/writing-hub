@@ -1,0 +1,55 @@
+hub_name: writing-hub
+vertical: creative_writing
+domain_keywords:
+  - Projekt
+  - Manuskript
+  - Kapitel
+  - Charakter
+  - Exposé
+  - Genre
+  - Lektorat
+  - Peer-Review
+  - Outline
+  - Idee
+
+quality:
+  min_acceptance_criteria: 2
+  max_uc_steps: 7
+  require_error_cases: true
+  require_specific_actor: true
+  forbid_implementation_details: true
+  forbid_soft_language: true
+
+viewports:
+  - name: mobile
+    width: 375
+    height: 812
+  - name: tablet
+    width: 768
+    height: 1024
+  - name: desktop
+    width: 1280
+    height: 800
+
+htmx_patterns:
+  banned:
+    - hx-boost
+  required_on_forms:
+    - hx-indicator
+
+permissions_matrix:
+  /projekte/:
+    anonymous: 302
+    viewer: 200
+    editor: 200
+    admin: 200
+  /projekte/neu/:
+    anonymous: 302
+    viewer: 403
+    editor: 200
+    admin: 200
+  /ideen/:
+    anonymous: 302
+    viewer: 200
+    editor: 200
+    admin: 200

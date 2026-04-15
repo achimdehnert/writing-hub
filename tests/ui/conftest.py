@@ -30,29 +30,72 @@ BASE_URL = os.environ.get("REFLEX_BASE_URL", "https://writing.iil.pet")
 
 # ── Django Test Client Fixture (primary — no browser needed) ──────────────
 
-@pytest.fixture(scope="session")
-def django_client():
+@pytest.fixture
+def auth_client(db):
     """Authenticated Django test client.
 
     Uses force_login — no credentials, no browser, fast.
     Works with SERVER_NAME to avoid DisallowedHost.
+    Seeds a test user + lookup data if none exists.
     """
     User = get_user_model()
-    user = (
-        User.objects.filter(is_superuser=True).first()
-        or User.objects.first()
-    )
-    assert user, "No users in database — run seed first"
+    user = User.objects.first()
+    if not user:
+        user = User.objects.create_superuser(
+            username="reflex-test",
+            email="test@iil.gmbh",
+            password="test",
+        )
+
+    _seed_lookup_data()
 
     c = Client(SERVER_NAME="writing.iil.pet")
     c.force_login(user)
     return c
 
 
-@pytest.fixture
-def auth_client(django_client):
-    """Alias for session-scoped django_client."""
-    return django_client
+def _seed_lookup_data():
+    """Seed lookup tables for UI audit tests (REFLEX Zirkel 2)."""
+    from apps.projects.models import ContentTypeLookup, GenreLookup, AudienceLookup
+
+    if not ContentTypeLookup.objects.exists():
+        for i, (name, slug) in enumerate([
+            ("Roman", "novel"), ("Sachbuch", "nonfiction"),
+            ("Kurzgeschichte", "short_story"), ("Drehbuch", "screenplay"),
+            ("Essay", "essay"), ("Novelle", "novella"),
+            ("Graphic Novel", "graphic_novel"),
+            ("Akademische Arbeit", "academic"),
+            ("Wissenschaftliches Paper", "scientific"),
+        ]):
+            ContentTypeLookup.objects.create(name=name, slug=slug, order=i)
+
+    if not GenreLookup.objects.exists():
+        for i, name in enumerate([
+            "Fantasy", "Science-Fiction", "Thriller", "Krimi", "Romantik",
+            "Horror", "Historischer Roman", "Literarische Fiktion",
+            "Young Adult", "Kinderbuch", "Autobiografie", "Sachbuch",
+            "Reisebericht", "Humor", "Mystery",
+        ]):
+            GenreLookup.objects.create(name=name, order=i)
+
+    if not AudienceLookup.objects.exists():
+        for i, name in enumerate([
+            "Erwachsene", "Young Adult", "Kinder (8-12)",
+            "Kleinkinder (3-7)", "Fachpublikum", "Allgemein",
+        ]):
+            AudienceLookup.objects.create(name=name, order=i)
+
+    from apps.projects.models import BookProject
+    User = get_user_model()
+    owner = User.objects.first()
+    if owner and not BookProject.objects.exists():
+        BookProject.objects.create(
+            title="Testprojekt für REFLEX",
+            owner=owner,
+            content_type="novel",
+            genre="Fantasy",
+            target_word_count=50000,
+        )
 
 
 # ── Signed Token Helper (for Playwright MCP / external browsers) ─────────

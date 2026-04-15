@@ -14,6 +14,7 @@ import pytest
 PROJEKTLISTE_URL = "/projekte/"
 
 
+@pytest.mark.django_db
 class TestProjektlisteAudit:
     """Audit der Projektliste — REFLEX Abschnitt 6."""
 

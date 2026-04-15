@@ -1,0 +1,114 @@
+{
+  "reflex_version": "0.1.0",
+  "loop_iteration": 1,
+  "timestamp": "2026-04-15T12:10:00Z",
+  "hub": "writing-hub",
+  "vertical": "creative_writing",
+
+  "zirkel_0": {
+    "status": "DONE",
+    "domain_kb": "domain/writing-hub-kb.md",
+    "entities": ["BookProject", "ContentTypeLookup", "GenreLookup", "AudienceLookup", "Author", "WritingStyle", "BookSeries"],
+    "invariants": 7,
+    "scope_boundaries": 4
+  },
+
+  "zirkel_1": {
+    "status": "DONE",
+    "use_cases": [
+      {
+        "slug": "uc-projektliste",
+        "file": "domain/use-cases/uc-projektliste.md",
+        "quality_score": 100,
+        "iterations": 2,
+        "acceptance_criteria": 10
+      },
+      {
+        "slug": "uc-neues-projekt",
+        "file": "domain/use-cases/uc-neues-projekt.md",
+        "quality_score": 100,
+        "iterations": 2,
+        "acceptance_criteria": 13,
+        "fixes": ["C-07: 'Import' matched implementation pattern → Fixed regex (iil-reflex)", "C-08: 'etc.' removed, concrete options listed"]
+      }
+    ]
+  },
+
+  "zirkel_2": {
+    "status": "DONE",
+    "total": 25,
+    "passed": 19,
+    "failed": 6,
+    "settings": "config.settings.development (SQLite)",
+    "failures": [
+      {
+        "test": "test_should_have_content_type_filter",
+        "uc": "uc-projektliste",
+        "ak": "AK-5",
+        "error": "Content-Type 'Roman' fehlt im Filter",
+        "classification": "INFRA_PROBLEM",
+        "confidence": 1.0,
+        "reasoning": "ContentTypeLookup Tabelle ist leer in Test-DB (keine Seed-Daten)",
+        "action": "Test-Fixtures mit Lookup-Daten anlegen"
+      },
+      {
+        "test": "test_should_have_genre_filter",
+        "uc": "uc-projektliste",
+        "ak": "AK-6",
+        "error": "Genre 'Fantasy' fehlt im Filter",
+        "classification": "INFRA_PROBLEM",
+        "confidence": 1.0,
+        "reasoning": "GenreLookup Tabelle ist leer in Test-DB",
+        "action": "Test-Fixtures mit Lookup-Daten anlegen"
+      },
+      {
+        "test": "test_should_display_project_cards",
+        "uc": "uc-projektliste",
+        "ak": "AK-7 (implizit)",
+        "error": "'Öffnen' not found — keine Projekte in DB",
+        "classification": "INFRA_PROBLEM",
+        "confidence": 1.0,
+        "reasoning": "Kein BookProject in Test-DB → Empty-State wird angezeigt",
+        "action": "Test-Fixtures mit mindestens einem BookProject"
+      },
+      {
+        "test": "test_should_show_word_count_on_cards",
+        "uc": "uc-projektliste",
+        "ak": "AK-7",
+        "error": "'Wörter' not found — keine Projekte in DB",
+        "classification": "INFRA_PROBLEM",
+        "confidence": 1.0,
+        "reasoning": "Kein BookProject in Test-DB → Karten werden nicht gerendert",
+        "action": "Test-Fixtures mit mindestens einem BookProject"
+      },
+      {
+        "test": "test_should_have_genre_options",
+        "uc": "uc-neues-projekt",
+        "ak": "AK-5",
+        "error": "Genre 'Fantasy' fehlt",
+        "classification": "INFRA_PROBLEM",
+        "confidence": 1.0,
+        "reasoning": "GenreLookup Tabelle ist leer in Test-DB",
+        "action": "Test-Fixtures mit Lookup-Daten anlegen"
+      },
+      {
+        "test": "test_should_have_target_audience_dropdown",
+        "uc": "uc-neues-projekt",
+        "ak": "AK-7",
+        "error": "'Erwachsene' not found",
+        "classification": "INFRA_PROBLEM",
+        "confidence": 1.0,
+        "reasoning": "AudienceLookup Tabelle ist leer in Test-DB",
+        "action": "Test-Fixtures mit Lookup-Daten anlegen"
+      }
+    ]
+  },
+
+  "feedback_loop": {
+    "root_cause": "Alle 6 Failures sind INFRA_PROBLEM — Lookup-Tabellen sind in der Test-DB leer",
+    "fix_type": "Test-Fixture mit Seed-Daten für ContentTypeLookup, GenreLookup, AudienceLookup, BookProject",
+    "uc_changes_needed": false,
+    "ui_changes_needed": false,
+    "next_iteration": "Seed-Fixtures anlegen → Tests erneut laufen lassen"
+  }
+}

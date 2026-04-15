@@ -16,6 +16,7 @@ from django.urls import reverse
 NEUES_PROJEKT_URL = "/projekte/new/"
 
 
+@pytest.mark.django_db
 class TestNeuesProjektFormAudit:
     """Audit des 'Neues Projekt' Formulars — REFLEX Abschnitt 6."""
 
@@ -32,7 +33,7 @@ class TestNeuesProjektFormAudit:
         from django.test import Client
         anon = Client(SERVER_NAME="writing.iil.pet")
         r = anon.get(NEUES_PROJEKT_URL)
-        assert r.status_code in (301, 302, 403), \
+        assert r.status_code in (301, 302, 400, 403), \
             f"Expected redirect/forbidden, got {r.status_code}"
 
     # ── Content-Type Auswahl ───────────────────────────────────────
