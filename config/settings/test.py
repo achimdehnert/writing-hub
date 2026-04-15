@@ -5,6 +5,7 @@ from .base import *  # noqa: F401, F403
 from decouple import config
 
 DEBUG = False
+ALLOWED_HOSTS = ["*"]
 
 # ADR-141: Explicit PostgreSQL — SQLite is BANNED for testing
 DATABASES = {
