@@ -1,0 +1,133 @@
+{
+  "use_case": "writing-hub-audit",
+  "uc_version": "0.1",
+  "wireframe_iteration": null,
+  "reflex_variant": "audit",
+  "timestamp": "2026-04-15T10:20:00Z",
+  "target_url": "https://writing.iil.pet",
+  "run_summary": {
+    "total": 27,
+    "passed": 27,
+    "failed": 0
+  },
+  "gate_status": "PASSED",
+  "audit_categories": {
+    "navigation": {
+      "tests": 9,
+      "passed": 9,
+      "findings": []
+    },
+    "form_structure": {
+      "tests": 10,
+      "passed": 10,
+      "findings": []
+    },
+    "auth_security": {
+      "tests": 2,
+      "passed": 2,
+      "findings": []
+    },
+    "filters": {
+      "tests": 3,
+      "passed": 3,
+      "findings": []
+    },
+    "project_cards": {
+      "tests": 2,
+      "passed": 2,
+      "findings": []
+    },
+    "validation": {
+      "tests": 1,
+      "passed": 1,
+      "findings": []
+    }
+  },
+  "pages_tested": [
+    {
+      "url": "/projekte/",
+      "title": "Projekte — Writing Hub",
+      "status": 200,
+      "checks": [
+        "page_heading",
+        "nav_links (7 areas)",
+        "search_input",
+        "content_type_filter",
+        "genre_filter",
+        "project_cards",
+        "word_count_display",
+        "logout_link",
+        "neues_projekt_button",
+        "quick_project_link",
+        "import_link"
+      ]
+    },
+    {
+      "url": "/projekte/new/",
+      "title": "Neues Schreibprojekt — Writing Hub",
+      "status": 200,
+      "checks": [
+        "form_loads",
+        "9_content_types",
+        "title_field",
+        "15_genre_options",
+        "description_field",
+        "target_audience_dropdown",
+        "word_count_default_50000",
+        "submit_button",
+        "cancel_link",
+        "author_section",
+        "login_required",
+        "empty_title_rejected"
+      ]
+    }
+  ],
+  "aria_observations": [
+    {
+      "page": "/projekte/",
+      "observation": "Navigation uses semantic nav element with links",
+      "severity": "OK"
+    },
+    {
+      "page": "/projekte/",
+      "observation": "Filter dropdowns use combobox role with option elements",
+      "severity": "OK"
+    },
+    {
+      "page": "/projekte/new/",
+      "observation": "Content-type and genre use radio buttons (correct pattern)",
+      "severity": "OK"
+    },
+    {
+      "page": "/projekte/new/",
+      "observation": "Autoren section shows 'Noch keine Schreibstile angelegt' with link to create",
+      "severity": "INFO",
+      "note": "Potentially confusing for new users — consider inline explanation"
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "NICE-TO-HAVE",
+      "page": "/projekte/new/",
+      "issue": "Author section shows empty state without explanation of what 'Schreibstile' are",
+      "action": "Add tooltip or help text explaining the concept",
+      "effort": "< 5 Min"
+    },
+    {
+      "priority": "NICE-TO-HAVE",
+      "page": "/projekte/",
+      "issue": "No data-testid attributes on interactive elements",
+      "action": "Add data-testid for future Playwright tests",
+      "effort": "< 30 Min"
+    }
+  ],
+  "next_action": {
+    "type": "AUDIT_COMPLETE",
+    "summary": "All 27 checks passed. UI is structurally sound.",
+    "next_steps": [
+      "Add data-testid attributes for Playwright integration",
+      "Test project creation end-to-end (submit + redirect + detail page)",
+      "Audit additional pages: Outlines, Ideen-Studio, Autoren"
+    ]
+  }
+}

@@ -40,6 +40,10 @@ staticfiles/
 .coverage
 htmlcov/
 
+# REFLEX UI Tests (Playwright sessions + credentials)
+tests/ui/.auth/
+tests/ui/.env.test
+
 # Ruff / Linting
 .ruff_cache/
 
