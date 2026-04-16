@@ -511,7 +511,7 @@ function renderPapers(papers) {
         const doiBtn = p.doi ? `<a href="https://doi.org/${p.doi}" target="_blank" class="btn btn-xs btn-outline-secondary ms-1" style="font-size:.7rem;padding:.15rem .4rem;">DOI</a>` : "";
         const abstract = p.abstract ? `<div class="mt-1 text-muted" style="font-size:.75rem;line-height:1.4;">${p.abstract.slice(0,240)}${p.abstract.length > 240 ? "…" : ""}</div>` : "";
 
-        return `<div class="paper-card p-3 mb-2">
+        return `<div class="paper-card p-3 mb-2" id="paper-${i}" data-paper-idx="${i}">
             <div class="d-flex align-items-start gap-2">
                 <div class="flex-grow-1">
                     <div class="fw-semibold" style="font-size:.88rem;">${(p.url || p.doi) ? `<a href="${p.url || ('https://doi.org/' + p.doi)}" target="_blank" rel="noopener" style="color:#e2e8f0;text-decoration:none;" onmouseover="this.style.color='#818cf8';this.style.textDecoration='underline'" onmouseout="this.style.color='#e2e8f0';this.style.textDecoration='none'">${p.title || 'Kein Titel'} <i class="bi bi-box-arrow-up-right" style="font-size:.7rem;opacity:.5;"></i></a>` : (p.title || "Kein Titel")}</div>
@@ -524,14 +524,76 @@ function renderPapers(papers) {
                     </div>
                     ${abstract}
                 </div>
-                <button class="btn btn-sm flex-shrink-0" style="background:#1a3a1a;border-color:#86efac;color:#86efac;white-space:nowrap;"
-                        onclick="addPaperToList(${i})">
-                    <i class="bi bi-plus-lg me-1"></i>Hinzufügen
+                <button class="btn btn-sm flex-shrink-0" style="background:#3a1a1a;border-color:#f87171;color:#f87171;white-space:nowrap;"
+                        onclick="dismissPaper(${i})" title="Treffer entfernen">
+                    <i class="bi bi-x-lg"></i>
                 </button>
             </div>
         </div>`;
     }).join("");
     list._papers = papers;
+    list._dismissed = new Set();
+    updateBulkAddBtn();
+}
+
+function dismissPaper(idx) {
+    const card = document.getElementById("paper-" + idx);
+    if (card) {
+        card.style.transition = "opacity .25s, max-height .3s";
+        card.style.opacity = "0";
+        card.style.maxHeight = "0";
+        card.style.overflow = "hidden";
+        card.style.marginBottom = "0";
+        card.style.padding = "0";
+        setTimeout(() => card.remove(), 300);
+    }
+    const list = document.getElementById("searchResultsList");
+    if (list._dismissed) list._dismissed.add(idx);
+    updateBulkAddBtn();
+}
+
+function updateBulkAddBtn() {
+    const list = document.getElementById("searchResultsList");
+    const papers = list._papers || [];
+    const dismissed = list._dismissed || new Set();
+    const remaining = papers.length - dismissed.size;
+    let btn = document.getElementById("bulkAddBtn");
+    if (!btn) {
+        btn = document.createElement("button");
+        btn.id = "bulkAddBtn";
+        btn.className = "btn btn-sm w-100 mt-2";
+        btn.style.cssText = "background:#1a3a1a;border-color:#86efac;color:#86efac;font-weight:600;";
+        btn.onclick = bulkAddPapers;
+        list.parentNode.insertBefore(btn, list.nextSibling);
+    }
+    if (remaining > 0) {
+        btn.innerHTML = `<i class="bi bi-plus-lg me-1"></i>${remaining} Treffer übernehmen`;
+        btn.style.display = "";
+        btn.disabled = false;
+    } else {
+        btn.style.display = "none";
+    }
+}
+
+async function bulkAddPapers() {
+    const list = document.getElementById("searchResultsList");
+    const papers = list._papers || [];
+    const dismissed = list._dismissed || new Set();
+    const toAdd = papers.filter((_, i) => !dismissed.has(i));
+    if (toAdd.length === 0) return;
+
+    const btn = document.getElementById("bulkAddBtn");
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Übernehme ${toAdd.length} Quellen…`;
+
+    for (const paper of toAdd) {
+        const body = new FormData();
+        body.append("csrfmiddlewaretoken", CSRF);
+        body.append("action", "add_from_search");
+        body.append("paper", JSON.stringify(paper));
+        await fetch(ADD_URL, {method: "POST", body});
+    }
+    window.location.reload();
 }
 
 async function runSummarize() {
@@ -592,22 +654,6 @@ async function runSummarize() {
         spinner.classList.remove("active");
         document.getElementById("summarizeBtn").disabled = false;
         summaryText.textContent = "Netzwerkfehler: " + err.message;
-    }
-}
-
-async function addPaperToList(idx) {
-    const papers = document.getElementById("searchResultsList")._papers;
-    if (!papers || !papers[idx]) return;
-    const paper = papers[idx];
-
-    const body = new FormData();
-    body.append("csrfmiddlewaretoken", CSRF);
-    body.append("action", "add_from_search");
-    body.append("paper", JSON.stringify(paper));
-
-    const resp = await fetch(ADD_URL, {method: "POST", body});
-    if (resp.redirected || resp.ok) {
-        window.location.reload();
     }
 }
 
