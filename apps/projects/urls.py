@@ -62,6 +62,7 @@ urlpatterns = [
     path("<uuid:pk>/lektorat/start/", views_lektorat.LektoratSessionStartView.as_view(), name="lektorat_start"),
     path("<uuid:pk>/lektorat/<uuid:session_pk>/", views_lektorat.LektoratSessionDetailView.as_view(), name="lektorat_session"),
     path("<uuid:pk>/lektorat/issue/<uuid:issue_pk>/resolve/", views_lektorat.LektoratIssueResolveView.as_view(), name="lektorat_resolve"),
+    path("<uuid:pk>/lektorat/issue/<uuid:issue_pk>/fix/", views_lektorat.LektoratIssueFixView.as_view(), name="lektorat_fix"),
     # Health-Score (ADR-157)
     path("<uuid:pk>/health/", views_health.ProjectHealthView.as_view(), name="health"),
     path("<uuid:pk>/health/partial/", views_health.ProjectHealthPartialView.as_view(), name="health_partial"),

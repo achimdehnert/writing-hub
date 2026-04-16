@@ -588,8 +588,10 @@ class LektoratIssue(models.Model):
         ("error", "Fehler"),
     ]
     severity = models.CharField(max_length=10, choices=SEVERITY, default="warning")
+    quote = models.TextField(blank=True, help_text="Betroffene Textstelle (Zitat aus dem Kapitel)")
     description = models.TextField()
     suggestion = models.TextField(blank=True)
+    fix_text = models.TextField(blank=True, help_text="KI-generierter Korrekturvorschlag")
     is_resolved = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -105,6 +105,7 @@ class LektoratSessionStartView(LoginRequiredMixin, View):
                                 node=node,
                                 issue_type=itype,
                                 severity=sev,
+                                quote=item.get("quote", "")[:200],
                                 description=desc,
                                 suggestion=item.get("suggestion", ""),
                             )
@@ -176,3 +177,46 @@ class LektoratIssueResolveView(LoginRequiredMixin, View):
         issue.is_resolved = not issue.is_resolved
         issue.save(update_fields=["is_resolved"])
         return JsonResponse({"ok": True, "is_resolved": issue.is_resolved})
+
+
+class LektoratIssueFixView(LoginRequiredMixin, View):
+    """KI-Korrekturvorschlag für ein Lektorats-Problem generieren (AJAX)."""
+
+    def post(self, request, pk, issue_pk):
+        from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
+        from apps.core.prompt_utils import render_prompt
+
+        issue = get_object_or_404(
+            LektoratIssue, pk=issue_pk,
+            session__project__owner=request.user,
+        )
+
+        if issue.fix_text:
+            return JsonResponse({"ok": True, "fix_text": issue.fix_text})
+
+        try:
+            prompt_msgs = render_prompt(
+                "projects/lektorat_fix",
+                chapter_title=issue.node.title,
+                chapter_order=issue.node.order,
+                quote=issue.quote,
+                description=issue.description,
+                suggestion=issue.suggestion,
+                issue_type=issue.get_issue_type_display(),
+            )
+            router = LLMRouter()
+            fix_text = router.completion(
+                action_code="chapter_analyze",
+                messages=prompt_msgs,
+            ).strip()
+
+            if fix_text:
+                issue.fix_text = fix_text
+                issue.save(update_fields=["fix_text"])
+                return JsonResponse({"ok": True, "fix_text": fix_text})
+
+            return JsonResponse({"ok": False, "error": "Kein Vorschlag generiert"})
+
+        except (LLMRoutingError, Exception) as exc:
+            logger.warning("LektoratFix issue=%s error: %s", issue_pk, exc)
+            return JsonResponse({"ok": False, "error": str(exc)[:200]})

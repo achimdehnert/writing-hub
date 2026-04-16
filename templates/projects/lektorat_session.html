@@ -52,13 +52,13 @@
     </div>
     <div class="col-3">
         <div class="card text-center py-3" style="background:#0d1117;border-color:#2d3748;">
-            <div class="fw-bold fs-3" style="color:#f87171;">{{ open_issues|length }}</div>
+            <div class="fw-bold fs-3" style="color:#f87171;">{{ open_count }}</div>
             <div class="text-muted small">Offen</div>
         </div>
     </div>
     <div class="col-3">
         <div class="card text-center py-3" style="background:#0d1117;border-color:#2d3748;">
-            <div class="fw-bold fs-3" style="color:#22c55e;">{{ resolved_issues|length }}</div>
+            <div class="fw-bold fs-3" style="color:#22c55e;">{{ resolved_count }}</div>
             <div class="text-muted small">Erledigt</div>
         </div>
     </div>
@@ -125,11 +125,32 @@
                     <span class="badge" style="background:#1e2235;color:#94a3b8;font-size:.6rem;">{{ issue.get_issue_type_display }}</span>
                     {% endif %}
                 </div>
+                {% if issue.quote %}
+                <div class="small mb-1 fst-italic" style="color:#94a3b8;border-left:2px solid #4338ca;padding-left:.5rem;">
+                    „{{ issue.quote }}"
+                </div>
+                {% endif %}
                 <div class="small" style="color:#cbd5e1;">{{ issue.description }}</div>
                 {% if issue.suggestion %}
                 <div class="mt-1 small" style="color:#6366f1;">
                     <i class="bi bi-lightbulb me-1"></i>{{ issue.suggestion }}
                 </div>
+                {% endif %}
+                {% if issue.fix_text %}
+                <div class="mt-1 p-2 rounded-2 small" id="fix-{{ issue.id }}"
+                     style="background:#0a1a0a;border:1px solid #22c55e33;color:#86efac;">
+                    <i class="bi bi-wrench me-1"></i><strong>Korrektur:</strong> {{ issue.fix_text }}
+                </div>
+                {% else %}
+                <div class="mt-1" id="fix-{{ issue.id }}"></div>
+                {% endif %}
+                {% if not issue.is_resolved and not issue.fix_text %}
+                <button class="btn btn-sm py-0 px-2 mt-1"
+                        style="background:#1a1a3a;border:1px solid #4338ca;color:#a5b4fc;font-size:.7rem;"
+                        onclick="generateFix('{{ issue.id }}', this)"
+                        title="KI-Korrekturvorschlag generieren">
+                    <i class="bi bi-wrench me-1"></i>Problem beheben
+                </button>
                 {% endif %}
             </div>
             <!-- Resolve-Button -->
@@ -189,6 +210,30 @@ function resolveIssue(id, btn) {
             btn.querySelector('i').className = 'bi bi-circle';
         }
     });
+}
+
+async function generateFix(issueId, btn) {
+    const origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Wird generiert...';
+    const url = '{% url "projects:lektorat_fix" project.pk "00000000-0000-0000-0000-000000000000" %}'.replace('00000000-0000-0000-0000-000000000000', issueId);
+    try {
+        const resp = await fetch(url, {method: 'POST', headers: {'X-CSRFToken': CSRF()}});
+        const data = await resp.json();
+        if (data.ok && data.fix_text) {
+            const fixDiv = document.getElementById('fix-' + issueId);
+            fixDiv.className = 'mt-1 p-2 rounded-2 small';
+            fixDiv.style.cssText = 'background:#0a1a0a;border:1px solid #22c55e33;color:#86efac;';
+            fixDiv.innerHTML = '<i class="bi bi-wrench me-1"></i><strong>Korrektur:</strong> ' + data.fix_text;
+            btn.remove();
+        } else {
+            btn.innerHTML = origHtml;
+            btn.disabled = false;
+        }
+    } catch {
+        btn.innerHTML = origHtml;
+        btn.disabled = false;
+    }
 }
 
 document.querySelectorAll('.filter-btn').forEach(btn => {

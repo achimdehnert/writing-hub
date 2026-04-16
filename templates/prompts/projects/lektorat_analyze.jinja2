@@ -7,8 +7,10 @@ system: |
   Antworte NUR als JSON-Array:
   [{"type": "consistency|logic|style|character|timeline|pacing",
    "severity": "info|warning|error",
-   "description": "...",
-   "suggestion": "..."}]
+   "quote": "Exaktes Zitat der betroffenen Textstelle (max 120 Zeichen, wörtlich aus dem Text)",
+   "description": "Was ist das Problem?",
+   "suggestion": "Wie sollte es korrigiert werden?"}]
+  WICHTIG: "quote" muss ein WÖRTLICHES Zitat aus dem Text sein, damit der Autor die Stelle findet.
 ---
 user: |
   Kapitel {{ order }}: {{ title }}

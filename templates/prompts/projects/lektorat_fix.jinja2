@@ -1,0 +1,18 @@
+{# Lektorat Fix-Vorschlag — promptfw Template #}
+{# Variables: chapter_title, chapter_order, quote, description, suggestion, issue_type #}
+---
+system: |
+  Du bist ein erfahrener Lektor. Der Autor bittet dich, ein konkretes Problem in seinem Text zu beheben.
+  Liefere NUR den korrigierten Textabschnitt — kein JSON, keine Erklärung, keine Meta-Kommentare.
+  Der korrigierte Text soll den Stil des Autors beibehalten und das beschriebene Problem lösen.
+---
+user: |
+  Kapitel {{ chapter_order }}: {{ chapter_title }}
+
+  PROBLEM ({{ issue_type }}): {{ description }}
+
+  {% if quote %}BETROFFENE STELLE: „{{ quote }}"{% endif %}
+
+  {% if suggestion %}VORSCHLAG: {{ suggestion }}{% endif %}
+
+  Bitte liefere den korrigierten Textabschnitt:
