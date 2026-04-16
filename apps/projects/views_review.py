@@ -166,6 +166,8 @@ class ChapterAIReviewView(LoginRequiredMixin, View):
             content_type_label=profile.get("label", ""),
         )
 
+        created = 0
+        error_msg = ""
         try:
             router = LLMRouter()
             raw = router.completion(
@@ -174,7 +176,6 @@ class ChapterAIReviewView(LoginRequiredMixin, View):
             )
             items = extract_json_list(raw)
             if items:
-                created = 0
                 for item in items[:MAX_REVIEW_FINDINGS]:
                     fb = item.get("feedback", "").strip()
                     if not fb:
@@ -206,10 +207,21 @@ class ChapterAIReviewView(LoginRequiredMixin, View):
                 )
                 messages.success(request, f"{agent['name']}: Review erstellt.")
         except LLMRoutingError as exc:
-            messages.warning(request, f"KI nicht verfügbar: {exc}")
+            error_msg = f"KI nicht verfügbar: {exc}"
+            messages.warning(request, error_msg)
         except Exception as exc:
             logger.exception("ChapterAIReview error: %s", exc)
-            messages.error(request, f"Fehler: {exc}")
+            error_msg = f"Fehler: {exc}"
+            messages.error(request, error_msg)
+
+        is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        if is_ajax:
+            return JsonResponse({
+                "ok": not error_msg,
+                "created": created,
+                "chapter": node.title,
+                "error": error_msg if error_msg else "",
+            })
 
         return redirect("projects:review_chapter", pk=pk, node_pk=node_pk)
 

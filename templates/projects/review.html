@@ -19,6 +19,11 @@
             <h4 class="fw-bold mb-1 text-white"><i class="bi bi-chat-square-text me-2"></i>Review &amp; Feedback</h4>
             <div class="text-white opacity-75 small">{{ project.title }} — Feedback sammeln und verarbeiten</div>
         </div>
+        <button class="btn" id="reviewAllBtn"
+                style="background:#fff;color:#7c3aed;font-weight:600;"
+                onclick="reviewAllChapters()">
+            <i class="bi bi-stars me-1"></i>Alle Kapitel reviewen
+        </button>
     </div>
 </div>
 
@@ -63,10 +68,17 @@
             {% endwith %}
             {% if ch.content %}
             <div class="d-flex gap-2">
-                <a href="{% url 'projects:review_chapter' project.pk ch.id %}" class="btn btn-sm w-100"
-                   style="background:#7c3aed;color:#fff;border:none;">
+                <a href="{% url 'projects:review_chapter' project.pk ch.id %}" class="btn btn-sm"
+                   style="background:#7c3aed;color:#fff;border:none;flex:1;">
                     <i class="bi bi-chat-square-text me-1"></i>Feedback
                 </a>
+                <form class="ai-review-form" method="post" action="{% url 'projects:review_ai' project.pk ch.id %}" style="flex:0;">
+                    {% csrf_token %}
+                    <input type="hidden" name="agent" value="lector">
+                    <button type="submit" class="btn btn-sm btn-outline-info" title="KI-Review starten">
+                        <i class="bi bi-stars"></i>
+                    </button>
+                </form>
             </div>
             {% else %}
             <div class="text-muted" style="font-size:.75rem;">Noch kein Inhalt</div>
@@ -89,4 +101,50 @@
 </div>
 
 </div>
+{% if messages %}
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:1100;">
+    {% for msg in messages %}
+    <div class="toast show align-items-center text-white
+        {% if msg.tags == 'error' %}bg-danger{% elif msg.tags == 'warning' %}bg-warning text-dark{% else %}bg-success{% endif %} border-0 mb-2">
+        <div class="d-flex"><div class="toast-body small">{{ msg }}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function reviewAllChapters() {
+    const forms = Array.from(document.querySelectorAll('.ai-review-form'));
+    if (!forms.length) { alert('Keine Kapitel mit Inhalt vorhanden.'); return; }
+    if (!confirm(`${forms.length} Kapitel per KI reviewen? Das kann einige Minuten dauern.`)) return;
+
+    const btn = document.getElementById('reviewAllBtn');
+    btn.disabled = true;
+    let done = 0, ok = 0, fail = 0;
+
+    for (const form of forms) {
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${done}/${forms.length} — ${ok} ✓ ${fail ? fail + ' ✗' : ''}`;
+        try {
+            const fd = new FormData(form);
+            const resp = await fetch(form.action, {
+                method: 'POST',
+                body: fd,
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+            });
+            const data = await resp.json();
+            done++;
+            data.ok ? ok++ : fail++;
+        } catch {
+            done++;
+            fail++;
+        }
+    }
+    btn.innerHTML = `<i class="bi bi-check-circle me-1"></i>${ok} reviewt` + (fail ? `, ${fail} fehlgeschlagen` : '');
+    setTimeout(() => location.reload(), 1500);
+}
+document.querySelectorAll('.toast').forEach(el => setTimeout(() => el.classList.remove('show'), 5000));
+</script>
 {% endblock %}

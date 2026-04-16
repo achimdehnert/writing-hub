@@ -119,15 +119,26 @@
 
         <!-- Bisheriges Feedback -->
         <div class="card" style="background:#0d1117;border-color:#2d3748;">
-            <div class="card-header py-2 d-flex justify-content-between" style="border-color:#2d3748;">
-                <span class="small fw-semibold" style="color:#e2e8f0;">Bisheriges Feedback ({{ reviews|length }})</span>
-                {% if open_count > 0 %}
-                <span class="badge" style="background:#f59e0b;color:#000;">{{ open_count }} offen</span>
+            <div class="card-header py-2" style="border-color:#2d3748;">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="small fw-semibold" style="color:#e2e8f0;">Bisheriges Feedback ({{ reviews|length }})</span>
+                    {% if open_count > 0 %}
+                    <span class="badge" style="background:#f59e0b;color:#000;">{{ open_count }} offen</span>
+                    {% endif %}
+                </div>
+                {% if reviews %}
+                <button class="btn btn-sm w-100" id="bulkResolveBtn"
+                        style="background:#1a2a1a;border:1px solid #22c55e44;color:#86efac;font-size:.72rem;"
+                        onclick="bulkResolveAll()">
+                    <i class="bi bi-check-all me-1"></i>Alle offenen erledigen
+                    <span class="badge ms-1" style="background:#22c55e33;" id="bulkResolveCount">{{ open_count }}</span>
+                </button>
                 {% endif %}
             </div>
             <div class="card-body p-0" style="max-height:35vh;overflow-y:auto;">
                 {% for r in reviews %}
-                <div class="p-3" style="border-bottom:1px solid #1e2235;{% if r.is_resolved %}opacity:.5;{% endif %}">
+                <div class="p-3" id="review-{{ r.id }}" data-resolved="{{ r.is_resolved|yesno:'true,false' }}" data-skipped="false"
+                     style="border-bottom:1px solid #1e2235;{% if r.is_resolved %}opacity:.5;{% endif %}">
                     <div class="d-flex align-items-start justify-content-between gap-2">
                         <div class="flex-grow-1">
                             <div class="d-flex align-items-center gap-1 mb-1">
@@ -151,12 +162,22 @@
                             <div class="mt-1 p-1 rounded" style="background:#1e2235;font-size:.72rem;color:#94a3b8;font-style:italic;">&#8220;{{ r.text_reference }}&#8221;</div>
                             {% endif %}
                         </div>
-                        <button class="btn btn-sm py-0 px-1 flex-shrink-0"
-                                style="font-size:.7rem;{% if r.is_resolved %}color:#22c55e;{% else %}color:#64748b;{% endif %}"
-                                onclick="resolveReview('{{ r.id }}', this)"
-                                title="{% if r.is_resolved %}Wiederöffnen{% else %}Erledigen{% endif %}">
-                            <i class="bi {% if r.is_resolved %}bi-check-circle-fill{% else %}bi-circle{% endif %}"></i>
-                        </button>
+                        <div class="d-flex flex-column gap-1 flex-shrink-0 align-items-center">
+                            <button class="btn btn-sm py-0 px-1"
+                                    style="font-size:.7rem;{% if r.is_resolved %}color:#22c55e;{% else %}color:#64748b;{% endif %}"
+                                    onclick="resolveReview('{{ r.id }}', this)"
+                                    title="{% if r.is_resolved %}Wiederöffnen{% else %}Erledigen{% endif %}">
+                                <i class="bi {% if r.is_resolved %}bi-check-circle-fill{% else %}bi-circle{% endif %}"></i>
+                            </button>
+                            {% if not r.is_resolved %}
+                            <button class="btn btn-sm py-0 px-1 skip-btn"
+                                    style="font-size:.65rem;color:#64748b;"
+                                    onclick="skipReview('{{ r.id }}', this)"
+                                    title="Überspringen — wird bei ‚Alle erledigen' ausgelassen">
+                                <i class="bi bi-skip-forward"></i>
+                            </button>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
                 {% empty %}
@@ -197,22 +218,93 @@ function selectAgent(key) {
     if (label) { label.style.borderColor = '#6366f1'; label.style.background = '#1e1b4b'; }
     if (radio) radio.checked = true;
 }
+const CSRF = () => document.cookie.match('csrftoken=([^;]+)')?.[1] || '';
+const RESOLVE_URL = '{% url "projects:review_resolve" project.pk "00000000-0000-0000-0000-000000000000" %}';
+
 function resolveReview(id, btn) {
-    fetch('{% url "projects:review_resolve" project.pk "00000000-0000-0000-0000-000000000000" %}'.replace('00000000-0000-0000-0000-000000000000', id), {
-        method: 'POST',
-        headers: {'X-CSRFToken': document.cookie.match('csrftoken=([^;]+)')?.[1] || ''}
+    fetch(RESOLVE_URL.replace('00000000-0000-0000-0000-000000000000', id), {
+        method: 'POST', headers: {'X-CSRFToken': CSRF()}
     }).then(r => r.json()).then(data => {
         const row = btn.closest('.p-3');
+        row.dataset.resolved = data.is_resolved ? 'true' : 'false';
         if (data.is_resolved) {
             row.style.opacity = '.5';
             btn.style.color = '#22c55e';
             btn.querySelector('i').className = 'bi bi-check-circle-fill';
+            const skipBtn = row.querySelector('.skip-btn');
+            if (skipBtn) skipBtn.remove();
         } else {
             row.style.opacity = '1';
             btn.style.color = '#64748b';
             btn.querySelector('i').className = 'bi bi-circle';
         }
+        updateBulkCount();
     });
+}
+
+function skipReview(id, btn) {
+    const row = btn.closest('.p-3');
+    row.dataset.skipped = 'true';
+    row.style.opacity = '.25';
+    btn.outerHTML = '<button class="btn btn-sm py-0 px-1" style="font-size:.6rem;color:#64748b;" ' +
+        'onclick="unskipReview(\'' + id + '\', this)" title="Zurückholen">' +
+        '<i class="bi bi-arrow-counterclockwise"></i></button>';
+    updateBulkCount();
+}
+
+function unskipReview(id, btn) {
+    const row = btn.closest('.p-3');
+    row.dataset.skipped = 'false';
+    row.style.opacity = '1';
+    btn.outerHTML = '<button class="btn btn-sm py-0 px-1 skip-btn" style="font-size:.65rem;color:#64748b;" ' +
+        'onclick="skipReview(\'' + id + '\', this)" title="Überspringen">' +
+        '<i class="bi bi-skip-forward"></i></button>';
+    updateBulkCount();
+}
+
+function updateBulkCount() {
+    const rows = document.querySelectorAll('[id^="review-"]');
+    let count = 0;
+    rows.forEach(r => {
+        if (r.dataset.resolved !== 'true' && r.dataset.skipped !== 'true') count++;
+    });
+    const badge = document.getElementById('bulkResolveCount');
+    if (badge) badge.textContent = count;
+}
+
+async function bulkResolveAll() {
+    const btn = document.getElementById('bulkResolveBtn');
+    const rows = document.querySelectorAll('[id^="review-"]');
+    const toResolve = [];
+    rows.forEach(r => {
+        if (r.dataset.resolved !== 'true' && r.dataset.skipped !== 'true') {
+            toResolve.push(r.id.replace('review-', ''));
+        }
+    });
+    if (!toResolve.length) return;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>0/' + toResolve.length;
+    let done = 0;
+    for (const id of toResolve) {
+        await fetch(RESOLVE_URL.replace('00000000-0000-0000-0000-000000000000', id), {
+            method: 'POST', headers: {'X-CSRFToken': CSRF()}
+        }).then(r => r.json()).then(data => {
+            const row = document.getElementById('review-' + id);
+            if (row && data.is_resolved) {
+                row.style.opacity = '.5';
+                row.dataset.resolved = 'true';
+                const resolveBtn = row.querySelector('button[onclick*="resolveReview"]');
+                if (resolveBtn) { resolveBtn.style.color = '#22c55e'; resolveBtn.querySelector('i').className = 'bi bi-check-circle-fill'; }
+                const skipBtn = row.querySelector('.skip-btn');
+                if (skipBtn) skipBtn.remove();
+            }
+        }).catch(() => {});
+        done++;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>' + done + '/' + toResolve.length;
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-check-all me-1"></i>Alle offenen erledigen <span class="badge ms-1" style="background:#22c55e33;" id="bulkResolveCount">0</span>';
+    updateBulkCount();
 }
 document.addEventListener('DOMContentLoaded', () => {
     const first = document.querySelector('[id^="agent-label-"]');
