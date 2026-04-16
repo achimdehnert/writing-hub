@@ -53,14 +53,14 @@ class TestProjectListFilter:
         )
 
     def test_list_no_filter_returns_all(self):
-        response = self.client.get("/projects/")
+        response = self.client.get("/projekte/")
         assert response.status_code == 200
         projects = list(response.context["projects"])
         assert len(projects) == 3
 
     def test_filter_by_genre(self):
         response = self.client.get(
-            f"/projects/?genre={self.genre_fantasy.pk}"
+            f"/projekte/?genre={self.genre_fantasy.pk}"
         )
         assert response.status_code == 200
         titles = [p.title for p in response.context["projects"]]
@@ -70,7 +70,7 @@ class TestProjectListFilter:
 
     def test_filter_by_content_type(self):
         response = self.client.get(
-            f"/projects/?typ={self.ct_story.pk}"
+            f"/projekte/?typ={self.ct_story.pk}"
         )
         assert response.status_code == 200
         titles = [p.title for p in response.context["projects"]]
@@ -80,7 +80,7 @@ class TestProjectListFilter:
 
     def test_filter_by_series(self):
         response = self.client.get(
-            f"/projects/?serie={self.series.pk}"
+            f"/projekte/?serie={self.series.pk}"
         )
         assert response.status_code == 200
         titles = [p.title for p in response.context["projects"]]
@@ -88,7 +88,7 @@ class TestProjectListFilter:
         assert len(titles) == 1
 
     def test_filter_series_none(self):
-        response = self.client.get("/projects/?serie=none")
+        response = self.client.get("/projekte/?serie=none")
         assert response.status_code == 200
         titles = [p.title for p in response.context["projects"]]
         assert "Krimi Story" in titles
@@ -96,7 +96,7 @@ class TestProjectListFilter:
         assert "Fantasy Roman" not in titles
 
     def test_filter_by_title_search(self):
-        response = self.client.get("/projects/?q=fantasy")
+        response = self.client.get("/projekte/?q=fantasy")
         assert response.status_code == 200
         titles = [p.title for p in response.context["projects"]]
         assert "Fantasy Roman" in titles
@@ -105,7 +105,7 @@ class TestProjectListFilter:
 
     def test_filter_combined_genre_and_type(self):
         response = self.client.get(
-            f"/projects/?genre={self.genre_fantasy.pk}&typ={self.ct_story.pk}"
+            f"/projekte/?genre={self.genre_fantasy.pk}&typ={self.ct_story.pk}"
         )
         assert response.status_code == 200
         titles = [p.title for p in response.context["projects"]]
@@ -114,7 +114,7 @@ class TestProjectListFilter:
         assert "Krimi Story" not in titles
 
     def test_filter_context_has_options(self):
-        response = self.client.get("/projects/")
+        response = self.client.get("/projekte/")
         assert "genre_options" in response.context
         assert "ct_options" in response.context
         assert "series_options" in response.context
@@ -124,7 +124,7 @@ class TestProjectListFilter:
             username="otherfilteruser", password="pass123"
         )
         BookSeries.objects.create(title="Fremde Serie", owner=other)
-        response = self.client.get("/projects/")
+        response = self.client.get("/projekte/")
         series_titles = [
             s.title for s in response.context["series_options"]
         ]

@@ -264,25 +264,25 @@ class TestPeerReviewModels:
 class TestPeerReviewViews:
 
     def test_dashboard_200(self, auth_client, scientific_project):
-        response = auth_client.get(f"/projects/{scientific_project.pk}/peer-review/")
+        response = auth_client.get(f"/projekte/{scientific_project.pk}/peer-review/")
         assert response.status_code == 200
         assert "agents" in response.context
         assert response.context["is_eligible"] is True
 
     def test_dashboard_not_eligible(self, auth_client, novel_project):
-        response = auth_client.get(f"/projects/{novel_project.pk}/peer-review/")
+        response = auth_client.get(f"/projekte/{novel_project.pk}/peer-review/")
         assert response.status_code == 200
         assert response.context["is_eligible"] is False
 
     def test_start_no_outline_redirects(self, auth_client, scientific_project):
         response = auth_client.post(
-            f"/projects/{scientific_project.pk}/peer-review/start/"
+            f"/projekte/{scientific_project.pk}/peer-review/start/"
         )
         assert response.status_code == 302
 
     def test_start_not_eligible_redirects(self, auth_client, novel_project):
         response = auth_client.post(
-            f"/projects/{novel_project.pk}/peer-review/start/"
+            f"/projekte/{novel_project.pk}/peer-review/start/"
         )
         assert response.status_code == 302
 
@@ -294,7 +294,7 @@ class TestPeerReviewViews:
             verdict="minor_revisions",
         )
         response = auth_client.get(
-            f"/projects/{scientific_project.pk}/peer-review/{session.pk}/"
+            f"/projekte/{scientific_project.pk}/peer-review/{session.pk}/"
         )
         assert response.status_code == 200
         assert "session" in response.context
@@ -310,7 +310,7 @@ class TestPeerReviewViews:
             feedback="Test finding",
         )
         response = auth_client.post(
-            f"/projects/{scientific_project.pk}/peer-review/finding/{finding.pk}/resolve/"
+            f"/projekte/{scientific_project.pk}/peer-review/finding/{finding.pk}/resolve/"
         )
         assert response.status_code == 200
         data = response.json()
@@ -318,7 +318,7 @@ class TestPeerReviewViews:
         assert data["is_resolved"] is True
 
         response2 = auth_client.post(
-            f"/projects/{scientific_project.pk}/peer-review/finding/{finding.pk}/resolve/"
+            f"/projekte/{scientific_project.pk}/peer-review/finding/{finding.pk}/resolve/"
         )
         data2 = response2.json()
         assert data2["is_resolved"] is False
@@ -332,7 +332,7 @@ class TestPeerReviewViews:
 class TestPeerReviewContextKeys:
 
     def test_dashboard_context(self, auth_client, scientific_project):
-        response = auth_client.get(f"/projects/{scientific_project.pk}/peer-review/")
+        response = auth_client.get(f"/projekte/{scientific_project.pk}/peer-review/")
         ctx = response.context
         assert "project" in ctx
         assert "sessions" in ctx
@@ -344,7 +344,7 @@ class TestPeerReviewContextKeys:
             project=scientific_project, created_by=user, status="done",
         )
         response = auth_client.get(
-            f"/projects/{scientific_project.pk}/peer-review/{session.pk}/"
+            f"/projekte/{scientific_project.pk}/peer-review/{session.pk}/"
         )
         ctx = response.context
         assert "session" in ctx

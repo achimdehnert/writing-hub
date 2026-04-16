@@ -9,11 +9,11 @@ class TestAuthRedirects:
         client = Client()
         response = client.get("/")
         assert response.status_code in (301, 302)
-        assert "/projects/" in response["Location"]
+        assert "/projekte/" in response["Location"]
 
     def test_projects_list_requires_login(self):
         client = Client()
-        response = client.get("/projects/")
+        response = client.get("/projekte/")
         assert response.status_code in (301, 302)
         assert "/accounts/login" in response["Location"]
 
@@ -21,7 +21,7 @@ class TestAuthRedirects:
         User.objects.create_user(username="testuser", password="testpass123")
         client = Client()
         client.login(username="testuser", password="testpass123")
-        response = client.get("/projects/")
+        response = client.get("/projekte/")
         assert response.status_code == 200
 
     def test_login_page_accessible(self):

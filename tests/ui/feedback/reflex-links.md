@@ -1,51 +1,51 @@
 # REFLEX Link Report — writing-hub
 
-Generated: 2026-04-16 07:28 UTC  
-Base URL: https://writing.iil.pet  
+Generated: 2026-04-16 22:36 UTC  
+Base URL: http://localhost:8000  
 Tests: 6 URLs geprüft
 
 ---
 
 ## TestWeltenListeAudit
 
-- ✅ [/welten/](https://writing.iil.pet/welten/) — Welten-Uebersicht
-- ✅ [/projekte/](https://writing.iil.pet/projekte/) — Nav-Link zu /welten/ vorhanden
+- ✅ [/welten/](http://localhost:8000/welten/) — Welten-Uebersicht
+- ✅ [/projekte/](http://localhost:8000/projekte/) — Nav-Link zu /welten/ vorhanden
 
 ## TestCharacterCreateFormAudit
 
-- ✅ [/welten/<uuid>/characters/create/](https://writing.iil.pet/welten/<uuid>/characters/create/) — Charakter erstellen
+- ✅ [/welten/<uuid>/characters/create/](http://localhost:8000/welten/<uuid>/characters/create/) — Charakter erstellen
 
 ## TestCharacterLinkViewAudit
 
-- ✅ [/welten/<uuid>/characters/link/](https://writing.iil.pet/welten/<uuid>/characters/link/) — Charakter verknuepfen
+- ✅ [/welten/<uuid>/characters/link/](http://localhost:8000/welten/<uuid>/characters/link/) — Charakter verknuepfen
 
 ## TestWorldDetailCharacterCardsAudit
 
-- ✅ [/welten/<uuid>/](https://writing.iil.pet/welten/<uuid>/) — Welt-Detail mit Charakter-Karten
+- ✅ [/welten/<uuid>/](http://localhost:8000/welten/<uuid>/) — Welt-Detail mit Charakter-Karten
 
 ## TestAutorenGenreAudit
 
-- ✅ [/autoren/](https://writing.iil.pet/autoren/) — Autoren-Uebersicht
+- ✅ [/autoren/](http://localhost:8000/autoren/) — Autoren-Uebersicht
 
 ---
 
 ## Quick-Open Links (Clipboard-ready)
 
 ```
-https://writing.iil.pet/welten/
+http://localhost:8000/welten/
 ```
 ```
-https://writing.iil.pet/projekte/
+http://localhost:8000/projekte/
 ```
 ```
-https://writing.iil.pet/welten/<uuid>/characters/create/
+http://localhost:8000/welten/<uuid>/characters/create/
 ```
 ```
-https://writing.iil.pet/welten/<uuid>/characters/link/
+http://localhost:8000/welten/<uuid>/characters/link/
 ```
 ```
-https://writing.iil.pet/welten/<uuid>/
+http://localhost:8000/welten/<uuid>/
 ```
 ```
-https://writing.iil.pet/autoren/
+http://localhost:8000/autoren/
 ```

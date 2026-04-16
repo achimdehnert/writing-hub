@@ -23,12 +23,13 @@ class TestRenderPrompt:
             assert all(isinstance(m, dict) for m in messages)
             assert all("role" in m and "content" in m for m in messages)
 
-    def test_render_prompt_nonexistent_template_returns_empty(self):
-        """render_prompt should return empty list for nonexistent template."""
-        from apps.core.prompt_utils import render_prompt
+    def test_render_prompt_nonexistent_template_raises(self):
+        """render_prompt should raise PromptRenderError for nonexistent template."""
+        import pytest
+        from apps.core.prompt_utils import PromptRenderError, render_prompt
 
-        messages = render_prompt("nonexistent/template", foo="bar")
-        assert messages == []
+        with pytest.raises(PromptRenderError):
+            render_prompt("nonexistent/template", foo="bar")
 
     def test_prompt_exists_returns_true_for_existing(self):
         """prompt_exists should return True for existing templates."""

@@ -117,8 +117,8 @@ class TestLoginRequired:
     """Alle geschützten Seiten müssen anonym auf /accounts/login/ redirecten."""
 
     ANON_URLS = [
-        "/projects/",
-        "/projects/new/",
+        "/projekte/",
+        "/projekte/new/",
         "/outlines/",
         "/autoren/",
         "/welten/",
@@ -144,98 +144,98 @@ class TestLoginRequired:
 class TestProjectViews:
 
     def test_project_list(self, auth_client):
-        must_200(auth_client.get("/projects/"))
+        must_200(auth_client.get("/projekte/"))
 
     def test_project_list_pagination(self, auth_client):
-        must_200(auth_client.get("/projects/?page=1"))
+        must_200(auth_client.get("/projekte/?page=1"))
 
     def test_project_list_partial_htmx(self, auth_client):
-        must_200(auth_client.get("/projects/partial/"))
+        must_200(auth_client.get("/projekte/partial/"))
 
     def test_project_list_partial_with_filter(self, auth_client, project):
-        must_200(auth_client.get(f"/projects/partial/?q={project.title[:5]}"))
+        must_200(auth_client.get(f"/projekte/partial/?q={project.title[:5]}"))
 
     def test_project_list_filter_genre(self, auth_client, project):
-        must_200(auth_client.get(f"/projects/?genre={project.genre_lookup.pk}"))
+        must_200(auth_client.get(f"/projekte/?genre={project.genre_lookup.pk}"))
 
     def test_project_list_filter_typ(self, auth_client, project):
-        must_200(auth_client.get(f"/projects/?typ={project.content_type_lookup.pk}"))
+        must_200(auth_client.get(f"/projekte/?typ={project.content_type_lookup.pk}"))
 
     def test_project_create_get(self, auth_client):
-        must_200(auth_client.get("/projects/new/"))
+        must_200(auth_client.get("/projekte/new/"))
 
     def test_project_detail(self, auth_client, project):
-        must_200(auth_client.get(f"/projects/{project.pk}/"))
+        must_200(auth_client.get(f"/projekte/{project.pk}/"))
 
     def test_project_edit_get(self, auth_client, project):
-        must_200(auth_client.get(f"/projects/{project.pk}/edit/"))
+        must_200(auth_client.get(f"/projekte/{project.pk}/edit/"))
 
     def test_project_chapter_writer(self, auth_client, project):
-        must_200(auth_client.get(f"/projects/{project.pk}/write/"))
+        must_200(auth_client.get(f"/projekte/{project.pk}/write/"))
 
     def test_project_manuscript(self, auth_client, project):
-        must_200(auth_client.get(f"/projects/{project.pk}/manuscript/"))
+        must_200(auth_client.get(f"/projekte/{project.pk}/manuscript/"))
 
     def test_project_publishing(self, auth_client, project):
-        must_200(auth_client.get(f"/projects/{project.pk}/publishing/"))
+        must_200(auth_client.get(f"/projekte/{project.pk}/publishing/"))
 
     def test_project_export(self, auth_client, project):
-        must_200(auth_client.get(f"/projects/{project.pk}/export/"))
+        must_200(auth_client.get(f"/projekte/{project.pk}/export/"))
 
     def test_project_versions(self, auth_client, project):
-        must_200(auth_client.get(f"/projects/{project.pk}/versions/"))
+        must_200(auth_client.get(f"/projekte/{project.pk}/versions/"))
 
     def test_project_review(self, auth_client, project):
-        must_200(auth_client.get(f"/projects/{project.pk}/review/"))
+        must_200(auth_client.get(f"/projekte/{project.pk}/review/"))
 
     def test_project_editing(self, auth_client, project):
-        must_200(auth_client.get(f"/projects/{project.pk}/editing/"))
+        must_200(auth_client.get(f"/projekte/{project.pk}/editing/"))
 
     def test_project_lektorat(self, auth_client, project):
-        must_200(auth_client.get(f"/projects/{project.pk}/lektorat/"))
+        must_200(auth_client.get(f"/projekte/{project.pk}/lektorat/"))
 
     def test_project_health(self, auth_client, project):
-        must_200(auth_client.get(f"/projects/{project.pk}/health/"))
+        must_200(auth_client.get(f"/projekte/{project.pk}/health/"))
 
     def test_project_health_partial(self, auth_client, project):
-        must_200(auth_client.get(f"/projects/{project.pk}/health/partial/"))
+        must_200(auth_client.get(f"/projekte/{project.pk}/health/partial/"))
 
     def test_project_analysis(self, auth_client, project):
-        must_200(auth_client.get(f"/projects/{project.pk}/analysis/"))
+        must_200(auth_client.get(f"/projekte/{project.pk}/analysis/"))
 
     def test_project_budget(self, auth_client, project):
-        must_200(auth_client.get(f"/projects/{project.pk}/budget/"))
+        must_200(auth_client.get(f"/projekte/{project.pk}/budget/"))
 
     def test_project_batch(self, auth_client, project):
-        must_200(auth_client.get(f"/projects/{project.pk}/batch/"))
+        must_200(auth_client.get(f"/projekte/{project.pk}/batch/"))
 
     def test_project_batch_status_partial(self, auth_client, project, batch_job):
         must_200(auth_client.get(
-            f"/projects/{project.pk}/batch/{batch_job.pk}/status/"
+            f"/projekte/{project.pk}/batch/{batch_job.pk}/status/"
         ))
 
     def test_project_research_dashboard(self, auth_client, project):
-        must_200(auth_client.get(f"/projects/{project.pk}/research/"))
+        must_200(auth_client.get(f"/projekte/{project.pk}/research/"))
 
     def test_project_beta_dashboard(self, auth_client, project):
-        must_200(auth_client.get(f"/projects/{project.pk}/beta/"))
+        must_200(auth_client.get(f"/projekte/{project.pk}/beta/"))
 
     def test_project_pitch_dashboard(self, auth_client, project):
-        must_200(auth_client.get(f"/projects/{project.pk}/pitch/"))
+        must_200(auth_client.get(f"/projekte/{project.pk}/pitch/"))
 
     def test_project_drama_dashboard(self, auth_client, project):
-        must_200(auth_client.get(f"/projects/{project.pk}/drama/"))
+        must_200(auth_client.get(f"/projekte/{project.pk}/drama/"))
 
     def test_project_peer_review(self, auth_client, project):
         project.content_type = "scientific"
         project.save(update_fields=["content_type"])
-        must_200(auth_client.get(f"/projects/{project.pk}/peer-review/"))
+        must_200(auth_client.get(f"/projekte/{project.pk}/peer-review/"))
 
     def test_project_other_user_detail_404(self, project):
         User.objects.create_user(username="fe_other", password="pass123")
         c = Client()
         c.login(username="fe_other", password="pass123")
-        response = c.get(f"/projects/{project.pk}/")
+        response = c.get(f"/projekte/{project.pk}/")
         assert response.status_code == 404
 
 
@@ -247,7 +247,7 @@ class TestProjectViews:
 class TestProjectNodeViews:
 
     def test_node_content_get(self, auth_client, outline_node):
-        must_200(auth_client.get(f"/projects/node/{outline_node.pk}/content/"))
+        must_200(auth_client.get(f"/projekte/node/{outline_node.pk}/content/"))
 
 
 # ---------------------------------------------------------------------------
@@ -328,18 +328,18 @@ class TestHTMXHeaders:
     HTMX_HEADER = {"HTTP_HX_REQUEST": "true"}
 
     def test_project_list_partial_htmx_header(self, auth_client):
-        response = auth_client.get("/projects/partial/", **self.HTMX_HEADER)
+        response = auth_client.get("/projekte/partial/", **self.HTMX_HEADER)
         must_200(response)
 
     def test_project_health_partial_htmx_header(self, auth_client, project):
         response = auth_client.get(
-            f"/projects/{project.pk}/health/partial/", **self.HTMX_HEADER
+            f"/projekte/{project.pk}/health/partial/", **self.HTMX_HEADER
         )
         must_200(response)
 
     def test_batch_status_partial_htmx_header(self, auth_client, project, batch_job):
         response = auth_client.get(
-            f"/projects/{project.pk}/batch/{batch_job.pk}/status/",
+            f"/projekte/{project.pk}/batch/{batch_job.pk}/status/",
             **self.HTMX_HEADER,
         )
         must_200(response)
@@ -354,7 +354,7 @@ class TestContextKeys:
     """Kritische Context-Keys müssen in der Response vorhanden sein."""
 
     def test_project_list_context_keys(self, auth_client, project):
-        response = auth_client.get("/projects/")
+        response = auth_client.get("/projekte/")
         assert "projects" in response.context
         assert "genre_options" in response.context
         assert "ct_options" in response.context
@@ -362,39 +362,39 @@ class TestContextKeys:
         assert "page_obj" in response.context
 
     def test_project_list_partial_context_keys(self, auth_client, project):
-        response = auth_client.get("/projects/partial/")
+        response = auth_client.get("/projekte/partial/")
         assert "projects" in response.context
         assert "page_obj" in response.context
 
     def test_project_detail_context(self, auth_client, project):
-        response = auth_client.get(f"/projects/{project.pk}/")
+        response = auth_client.get(f"/projekte/{project.pk}/")
         assert "project" in response.context
 
     def test_project_batch_context(self, auth_client, project):
-        response = auth_client.get(f"/projects/{project.pk}/batch/")
+        response = auth_client.get(f"/projekte/{project.pk}/batch/")
         assert "project" in response.context
         assert "jobs" in response.context
 
     def test_project_analysis_context(self, auth_client, project):
-        response = auth_client.get(f"/projects/{project.pk}/analysis/")
+        response = auth_client.get(f"/projekte/{project.pk}/analysis/")
         assert "project" in response.context
 
     def test_project_budget_context(self, auth_client, project):
-        response = auth_client.get(f"/projects/{project.pk}/budget/")
+        response = auth_client.get(f"/projekte/{project.pk}/budget/")
         assert "project" in response.context
 
     def test_project_research_context(self, auth_client, project):
-        response = auth_client.get(f"/projects/{project.pk}/research/")
+        response = auth_client.get(f"/projekte/{project.pk}/research/")
         assert "project" in response.context
 
     def test_project_beta_context(self, auth_client, project):
-        response = auth_client.get(f"/projects/{project.pk}/beta/")
+        response = auth_client.get(f"/projekte/{project.pk}/beta/")
         assert "project" in response.context
 
     def test_project_pitch_context(self, auth_client, project):
-        response = auth_client.get(f"/projects/{project.pk}/pitch/")
+        response = auth_client.get(f"/projekte/{project.pk}/pitch/")
         assert "project" in response.context
 
     def test_project_health_context(self, auth_client, project):
-        response = auth_client.get(f"/projects/{project.pk}/health/")
+        response = auth_client.get(f"/projekte/{project.pk}/health/")
         assert "project" in response.context

@@ -354,7 +354,7 @@ class WritingStyleSamplesView(LoginRequiredMixin, View):
 
         situations = services.get_situations_for_style(style)
         existing = set(style.samples.values_list("situation", flat=True))
-        missing = [(k, l, h) for k, l, h in situations if k not in existing]
+        missing = [(k, label, h) for k, label, h in situations if k not in existing]
 
         if not missing:
             if is_ajax:

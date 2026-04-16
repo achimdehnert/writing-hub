@@ -10,7 +10,6 @@ Prüft die existierende UI gegen Qualitätskriterien:
 """
 import pytest
 
-from django.urls import reverse
 
 
 NEUES_PROJEKT_URL = "/projekte/new/"

@@ -61,14 +61,14 @@ class ReflexLinkCollector:
         """Generate a markdown report with clickable links."""
         now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
         lines = [
-            f"# REFLEX Link Report — writing-hub",
-            f"",
+            "# REFLEX Link Report — writing-hub",
+            "",
             f"Generated: {now}  ",
             f"Base URL: {self.base_url}  ",
             f"Tests: {len(self.entries)} URLs geprüft",
-            f"",
-            f"---",
-            f"",
+            "",
+            "---",
+            "",
         ]
 
         # Group by test class
@@ -96,9 +96,9 @@ class ReflexLinkCollector:
         for e in self.entries:
             if e["path"] not in seen:
                 seen.add(e["path"])
-                lines.append(f"```")
+                lines.append("```")
                 lines.append(e["url"])
-                lines.append(f"```")
+                lines.append("```")
         lines.append("")
 
         return "\n".join(lines)

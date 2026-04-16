@@ -68,7 +68,7 @@ class TestOutlinePromptTemplateModel:
     def test_should_create_template_with_version_1(self):
         tpl = OutlinePromptTemplate.objects.create(
             content_type_group="academic",
-            template_key="enrich_node",
+            template_key="test_key_v1",
             system_prompt="Du bist ein Lektor.",
             user_prompt_template="Abschnitt {{ order }}: {{ title }}",
             is_active=True,
@@ -79,14 +79,14 @@ class TestOutlinePromptTemplateModel:
     def test_should_auto_increment_version(self):
         OutlinePromptTemplate.objects.create(
             content_type_group="fiction",
-            template_key="enrich_node",
+            template_key="test_auto_incr",
             system_prompt="v1",
             user_prompt_template="v1",
             version=1,
         )
         tpl2 = OutlinePromptTemplate(
             content_type_group="fiction",
-            template_key="enrich_node",
+            template_key="test_auto_incr",
             system_prompt="v2",
             user_prompt_template="v2",
         )
@@ -98,7 +98,7 @@ class TestOutlinePromptTemplateModel:
         """Only one template per (group, key) can be active."""
         tpl1 = OutlinePromptTemplate.objects.create(
             content_type_group="academic",
-            template_key="detail_pass",
+            template_key="test_unique_active",
             system_prompt="v1",
             user_prompt_template="v1",
             version=1,
@@ -106,7 +106,7 @@ class TestOutlinePromptTemplateModel:
         )
         tpl2 = OutlinePromptTemplate.objects.create(
             content_type_group="academic",
-            template_key="detail_pass",
+            template_key="test_unique_active",
             system_prompt="v2",
             user_prompt_template="v2",
             version=2,
@@ -156,6 +156,11 @@ class TestOutlinePromptTemplateModel:
 @pytest.mark.django_db
 class TestRenderOutlinePrompt:
     """Test render_outline_prompt dispatch logic."""
+
+    @pytest.fixture(autouse=True)
+    def _clear_seed_templates(self):
+        """Remove seed templates to allow tests to create their own."""
+        OutlinePromptTemplate.objects.all().delete()
 
     def test_should_use_db_template_when_active(self):
         """DB template is preferred over file template."""
@@ -241,6 +246,10 @@ class TestRenderOutlinePrompt:
 class TestGetActiveTemplate:
     """Test get_active_template for quality feedback linking."""
 
+    @pytest.fixture(autouse=True)
+    def _clear_seed_templates(self):
+        OutlinePromptTemplate.objects.all().delete()
+
     def test_should_return_active_template(self):
         from apps.outlines.prompt_dispatch import get_active_template
 
@@ -267,6 +276,10 @@ class TestGetActiveTemplate:
 @pytest.mark.django_db
 class TestOutlineQualityRating:
     """Test quality rating model and template stats."""
+
+    @pytest.fixture(autouse=True)
+    def _clear_seed_templates(self):
+        OutlinePromptTemplate.objects.all().delete()
 
     @pytest.fixture
     def _setup_data(self, django_user_model):

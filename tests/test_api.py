@@ -11,21 +11,21 @@ class TestProjectsAPI:
         self.client.login(username="apiuser", password="apipass123")
 
     def test_projects_api_list_returns_200(self):
-        response = self.client.get("/projects/api/")
+        response = self.client.get("/projekte/api/")
         assert response.status_code == 200
 
     def test_projects_api_returns_json(self):
-        response = self.client.get("/projects/api/")
+        response = self.client.get("/projekte/api/")
         assert response["Content-Type"].startswith("application/json")
 
     def test_projects_api_list_empty_for_new_user(self):
-        response = self.client.get("/projects/api/")
+        response = self.client.get("/projekte/api/")
         data = response.json()
         assert isinstance(data, list) or "results" in data or data == []
 
     def test_projects_api_unauthenticated_returns_403_or_401(self):
         client = Client()
-        response = client.get("/projects/api/")
+        response = client.get("/projekte/api/")
         assert response.status_code in (401, 403)
 
 

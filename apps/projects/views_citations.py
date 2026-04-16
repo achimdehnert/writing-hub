@@ -30,7 +30,6 @@ from .services.citation_service import (
     parse_bibtex,
     resolve_doi,
     resolve_isbn,
-    search_papers,
     smart_search_papers,
 )
 

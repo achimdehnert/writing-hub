@@ -186,24 +186,24 @@ class TestProjektDetailAudit:
     # ── AK-17 + AK-18: Charaktere/Weltenbau klickbar ────────────
 
     def test_should_have_charaktere_onclick(self):
-        """AK-17: Workflow-Karte 'Charaktere' hat onclick (nicht nur cursor:pointer)."""
+        """AK-17: Workflow-Karte 'Charaktere' ist klickbar (via <a> oder onclick)."""
         r = self.client.get(self.url)
         content = r.content.decode()
-        # "Charaktere" taucht auch in Statistik-Kästchen auf → Workflow-Section eingrenzen
         workflow_start = content.find("Workflow-Phasen")
         assert workflow_start > 0, "Workflow-Phasen Sektion nicht gefunden"
         workflow_content = content[workflow_start:]
         idx_char = workflow_content.find(">Charaktere<")
         assert idx_char > 0, "Charaktere-Karte nicht in Workflow-Phasen gefunden"
-        card_start = workflow_content.rfind("workflow-card", 0, idx_char)
-        card_block = workflow_content[card_start:idx_char]
-        assert "onclick" in card_block, (
-            "Charaktere-Workflow-Karte hat kein onclick — "
+        a_start = workflow_content.rfind("<a ", 0, idx_char)
+        div_start = workflow_content.rfind("workflow-card", 0, idx_char)
+        card_block = workflow_content[min(a_start, div_start) if a_start >= 0 else div_start:idx_char]
+        assert "onclick" in card_block or "href=" in card_block, (
+            "Charaktere-Workflow-Karte hat weder onclick noch href — "
             "cursor:pointer ohne Handler = toter Klick"
         )
 
     def test_should_have_weltenbau_onclick(self):
-        """AK-18: Workflow-Karte 'Weltenbau' hat onclick (nicht nur cursor:pointer)."""
+        """AK-18: Workflow-Karte 'Weltenbau' ist klickbar (via <a> oder onclick)."""
         r = self.client.get(self.url)
         content = r.content.decode()
         workflow_start = content.find("Workflow-Phasen")
@@ -211,10 +211,11 @@ class TestProjektDetailAudit:
         workflow_content = content[workflow_start:]
         idx_welt = workflow_content.find(">Weltenbau<")
         assert idx_welt > 0, "Weltenbau-Karte nicht in Workflow-Phasen gefunden"
-        card_start = workflow_content.rfind("workflow-card", 0, idx_welt)
-        card_block = workflow_content[card_start:idx_welt]
-        assert "onclick" in card_block, (
-            "Weltenbau-Workflow-Karte hat kein onclick — "
+        a_start = workflow_content.rfind("<a ", 0, idx_welt)
+        div_start = workflow_content.rfind("workflow-card", 0, idx_welt)
+        card_block = workflow_content[min(a_start, div_start) if a_start >= 0 else div_start:idx_welt]
+        assert "onclick" in card_block or "href=" in card_block, (
+            "Weltenbau-Workflow-Karte hat weder onclick noch href — "
             "cursor:pointer ohne Handler = toter Klick"
         )
 

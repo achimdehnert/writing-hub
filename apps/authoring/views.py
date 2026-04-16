@@ -126,7 +126,7 @@ class chapter_refine_start(APIView):
         from apps.projects.models import BookProject
 
         try:
-            project = BookProject.objects.get(pk=project_id, owner=request.user)
+            BookProject.objects.get(pk=project_id, owner=request.user)
         except BookProject.DoesNotExist:
             return Response({"detail": "Projekt nicht gefunden."}, status=status.HTTP_404_NOT_FOUND)
 

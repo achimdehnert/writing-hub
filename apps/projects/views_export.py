@@ -12,14 +12,14 @@ import logging
 import textwrap
 from datetime import date
 
-logger = logging.getLogger(__name__)
-
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.views.generic import DetailView
 
 from .models import BookProject, OutlineVersion
+
+logger = logging.getLogger(__name__)
 
 
 def _get_chapters_with_content(project: BookProject) -> list[dict]:

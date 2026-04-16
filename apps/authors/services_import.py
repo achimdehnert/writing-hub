@@ -17,9 +17,15 @@ Erwartetes MD-Format (Sektionen per ## Heading):
   ## Stil-Prompt | ## Style Prompt
   ## Quelltext | ## Source Text | ## Beispieltext
 """
+from __future__ import annotations
+
 import logging
 import re
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .models import WritingStyle
 
 logger = logging.getLogger(__name__)
 
