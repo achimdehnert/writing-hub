@@ -21,8 +21,9 @@ from .models import BookProject, OutlineVersion
 
 def _get_chapters_with_content(project: BookProject) -> list[dict]:
     """
-    Gibt alle Kapitel des aktiven Outlines zurück,
-    ergänzt um den geschriebenen Inhalt aus ChapterWriteJob.
+    Gibt alle Kapitel des aktiven Outlines zurück.
+    Primärquelle: OutlineNode.content (dort schreibt der Chapter Writer hin).
+    Fallback: ChapterWriteJob.content (Legacy-Pfad).
     """
     from apps.authoring.models_jobs import ChapterWriteJob
 
@@ -46,7 +47,7 @@ def _get_chapters_with_content(project: BookProject) -> list[dict]:
 
     result = []
     for node in nodes:
-        content = done_jobs.get(str(node.pk), "")
+        content = node.content or done_jobs.get(str(node.pk), "")
         result.append({
             "order": node.order,
             "title": node.title,
