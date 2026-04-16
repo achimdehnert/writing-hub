@@ -16,6 +16,7 @@ Kein direkter LLM-Zugriff — ausschliesslich via iil-aifw.
 from __future__ import annotations
 
 import logging
+import re
 import time
 from dataclasses import dataclass, field
 from decimal import Decimal
@@ -28,6 +29,21 @@ from .project_context_service import ProjectContextService
 logger = logging.getLogger(__name__)
 
 _DEFAULT_TEMPLATE = "authoring/chapter_write_default"
+
+# Regex: strip leading markdown headings like "# Kapitel 1: Title" or "### Title"
+_CHAPTER_HEADING_RE = re.compile(
+    r"\A\s*#{1,4}\s*(Kapitel\s*\d+[:.\s]*)?[^\n]*\n+",
+    re.IGNORECASE,
+)
+
+
+def _strip_chapter_heading(content: str) -> str:
+    """Remove redundant chapter title heading from LLM output.
+
+    The chapter title is stored separately in OutlineNode.title,
+    so it must not appear inside the content body.
+    """
+    return _CHAPTER_HEADING_RE.sub("", content).strip()
 
 
 class ProductionStage(str, Enum):
@@ -275,6 +291,7 @@ class ChapterProductionService:
             quality_level=self._quality_level, priority="quality",
             **write_overrides,
         )
+        content = _strip_chapter_heading(content)
         return WriteResult(success=True, content=content, word_count=len(content.split()))
 
     def _write_chunked(
@@ -354,6 +371,7 @@ class ChapterProductionService:
                 raise
 
         full_content = "\n\n".join(all_parts)
+        full_content = _strip_chapter_heading(full_content)
         return WriteResult(
             success=True, content=full_content,
             word_count=len(full_content.split()),

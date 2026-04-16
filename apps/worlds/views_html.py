@@ -170,3 +170,123 @@ class WorldLocationGenerateView(LoginRequiredMixin, View):
             svc.link_to_project(str(link.project_id), ids)
             messages.success(request, f"{len(ids)} Orte in WeltenHub erstellt.")
         return redirect("worlds_html:detail", pk=pk)
+
+
+class CharacterCreateView(LoginRequiredMixin, View):
+    """
+    GET:  Formular zum manuellen Erstellen eines Charakters.
+    POST: Charakter in WeltenHub anlegen + mit Projekt verknüpfen.
+    """
+    template_name = "worlds/character_create.html"
+
+    def get(self, request, pk):
+        link = get_object_or_404(
+            ProjectWorldLink, pk=pk, project__owner=request.user
+        )
+        world = None
+        try:
+            from weltenfw.django import get_client
+            world = get_client().worlds.get(link.weltenhub_world_id)
+        except Exception:
+            pass
+        return render(request, self.template_name, {
+            "link": link,
+            "world": world,
+            "project": link.project,
+        })
+
+    def post(self, request, pk):
+        from apps.worlds.services import WorldCharacterService
+
+        link = get_object_or_404(
+            ProjectWorldLink, pk=pk, project__owner=request.user
+        )
+        name = request.POST.get("name", "").strip()
+        if not name:
+            messages.error(request, "Name ist erforderlich.")
+            return redirect("worlds_html:character_create", pk=pk)
+
+        char_data = {
+            "name": name,
+            "personality": request.POST.get("personality", "").strip() or None,
+            "backstory": request.POST.get("backstory", "").strip() or None,
+            "goals": request.POST.get("goals", "").strip() or None,
+            "fears": request.POST.get("fears", "").strip() or None,
+            "appearance": request.POST.get("appearance", "").strip() or None,
+            "is_protagonist": request.POST.get("is_protagonist") == "on",
+            "notes": request.POST.get("notes", "").strip() or None,
+        }
+
+        svc = WorldCharacterService()
+        saved_ids = svc.save_to_weltenhub(link.weltenhub_world_id, [char_data])
+        if saved_ids:
+            svc.link_to_project(str(link.project_id), saved_ids)
+            messages.success(request, f'Charakter „{name}" erstellt und verknüpft.')
+        else:
+            messages.error(request, "Charakter konnte nicht in WeltenHub erstellt werden.")
+        return redirect("worlds_html:detail", pk=pk)
+
+
+class CharacterLinkView(LoginRequiredMixin, View):
+    """
+    GET:  Zeigt alle Charaktere der Welt aus WeltenHub — bereits verknüpfte markiert.
+    POST: Ausgewählte Charaktere mit Projekt verknüpfen.
+    """
+    template_name = "worlds/character_link.html"
+
+    def get(self, request, pk):
+        link = get_object_or_404(
+            ProjectWorldLink, pk=pk, project__owner=request.user
+        )
+        world = None
+        all_characters = []
+        linked_ids = set()
+        try:
+            from weltenfw.django import get_client
+            from apps.worlds.services import WorldCharacterService
+            from apps.worlds.models import ProjectCharacterLink
+
+            client = get_client()
+            world = client.worlds.get(link.weltenhub_world_id)
+            all_characters = WorldCharacterService().get_world_characters(link.weltenhub_world_id)
+
+            linked_ids = set(
+                ProjectCharacterLink.objects.filter(
+                    project=link.project
+                ).values_list("weltenhub_character_id", flat=True)
+            )
+        except Exception as exc:
+            logger.warning("CharacterLinkView: WeltenHub nicht erreichbar: %s", exc)
+            messages.warning(request, "WeltenHub derzeit nicht erreichbar.")
+
+        return render(request, self.template_name, {
+            "link": link,
+            "world": world,
+            "project": link.project,
+            "all_characters": all_characters,
+            "linked_ids": linked_ids,
+        })
+
+    def post(self, request, pk):
+        from uuid import UUID
+        from apps.worlds.services import WorldCharacterService
+
+        link = get_object_or_404(
+            ProjectWorldLink, pk=pk, project__owner=request.user
+        )
+        selected = request.POST.getlist("character_ids")
+        if not selected:
+            messages.warning(request, "Keine Charaktere ausgewählt.")
+            return redirect("worlds_html:character_link", pk=pk)
+
+        char_ids = []
+        for cid in selected:
+            try:
+                char_ids.append(UUID(cid))
+            except (ValueError, TypeError):
+                continue
+
+        svc = WorldCharacterService()
+        count = svc.link_to_project(str(link.project_id), char_ids)
+        messages.success(request, f"{count} Charakter(e) mit Projekt verknüpft.")
+        return redirect("worlds_html:detail", pk=pk)

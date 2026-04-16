@@ -11,6 +11,7 @@ from django.views import View
 from django.views.generic import DetailView
 from promptfw.parsing import extract_json_list
 
+from apps.core.prompt_utils import render_prompt
 from .constants import AI_REVIEW_AGENTS, FORMAT_PROFILES
 from .models import BookProject, OutlineNode, OutlineVersion
 
@@ -276,32 +277,21 @@ class ChapterAIEditingView(LoginRequiredMixin, View):
         project = node.outline_version.project
         profile = FORMAT_PROFILES.get(project.content_type, {})
         quality_hint = profile.get("quality_criteria", "")
-        quality_line = f"\nQualitätskriterien für diesen Texttyp: {quality_hint}\n" if quality_hint else ""
+        quality_line = f"Qualitaetskriterien fuer diesen Texttyp: {quality_hint}" if quality_hint else ""
 
-        system_prompt = (
-            "Du bist ein professioneller Lektor und Stilberater.\n"
-            "Erstelle konkrete Verbesserungsvorschläge für den Text.\n"
-            f"{quality_line}"
-            "Für jeden Vorschlag: Original-Textstelle, Verbesserung, Erklärung, Typ.\n"
-            "Antworte als JSON-Array:\n"
-            "[{\"type\": \"style|clarity|consistency|grammar|pacing|character\",\n"
-            " \"original\": \"Originaltext...\",\n"
-            " \"suggestion\": \"Verbesserter Text...\",\n"
-            " \"explanation\": \"Warum diese Änderung...\"}]"
-        )
-        user_prompt = (
-            f"Kapitel {node.order}: {node.title}\n\n"
-            f"{node.content[:8000]}"
+        prompt_messages = render_prompt(
+            "projects/chapter_suggestions",
+            quality_line=quality_line,
+            chapter_order=node.order,
+            chapter_title=node.title,
+            chapter_content=node.content[:8000],
         )
 
         try:
             router = LLMRouter()
             raw = router.completion(
                 action_code="chapter_analyze",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
+                messages=prompt_messages,
             )
             items = extract_json_list(raw)
             if items:

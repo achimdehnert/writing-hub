@@ -21,6 +21,8 @@
     .ai-btn { background: #1e1b4b; color: #a5b4fc; border: 1px solid #3730a3; padding: .35rem .85rem; border-radius: .375rem; font-size: .8rem; cursor: pointer; display: inline-flex; align-items: center; gap: .35rem; }
     .ai-btn:hover { background: #312e81; }
     .ai-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .genre-radio:checked + .genre-card { border-color: #6366f1 !important; background: #1e1b4b !important; }
+    .genre-card:hover { border-color: #475569 !important; }
 </style>
 {% endblock %}
 
@@ -69,6 +71,45 @@
             </div>
         </div>
     </div>
+
+    {% if genres %}
+    <div class="lab-section">
+        <h6><i class="bi bi-bookmarks me-2" style="color:#6366f1;"></i>Genre
+            <span class="text-muted fw-normal" style="font-size:.75rem;">(bestimmt die verfuegbaren Situationstypen fuer Beispieltexte)</span>
+        </h6>
+        <div class="row g-2">
+            {% for g in genres %}
+            <div class="col-6 col-md-3">
+                <label class="d-block" style="cursor:pointer;">
+                    <input type="radio" name="genre_profile" value="{{ g.pk }}"
+                           class="d-none genre-radio"
+                           {% if style and style.genre_profile_id == g.pk %}checked{% endif %}
+                           {% if post and post.genre_profile == g.pk|stringformat:"d" %}checked{% endif %}>
+                    <div class="genre-card p-2 rounded text-center"
+                         style="background:#131929;border:2px solid #2d3748;transition:all .15s;">
+                        <div style="font-size:1.5rem;">{{ g.icon }}</div>
+                        <div class="small fw-semibold mt-1" style="color:#e2e8f0;">{{ g.name_short }}</div>
+                        <div style="font-size:.65rem;color:#64748b;">{{ g.situation_count }} Typen</div>
+                    </div>
+                </label>
+            </div>
+            {% endfor %}
+            <div class="col-6 col-md-3">
+                <label class="d-block" style="cursor:pointer;">
+                    <input type="radio" name="genre_profile" value=""
+                           class="d-none genre-radio"
+                           {% if not style or not style.genre_profile %}checked{% endif %}>
+                    <div class="genre-card p-2 rounded text-center"
+                         style="background:#131929;border:2px solid #2d3748;transition:all .15s;">
+                        <div style="font-size:1.5rem;">&#x2699;</div>
+                        <div class="small fw-semibold mt-1" style="color:#e2e8f0;">Standard</div>
+                        <div style="font-size:.65rem;color:#64748b;">8 Typen</div>
+                    </div>
+                </label>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <div class="lab-section">
         <h6><i class="bi bi-file-text me-2" style="color:#6366f1;"></i>Quelltext

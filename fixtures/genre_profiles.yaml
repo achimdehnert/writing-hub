@@ -1,0 +1,840 @@
+# Genre-Profile und Situationstypen fuer Writing-Hub
+# 7 Genres mit je 8 Situationstypen = 56 total
+# Laden mit: python manage.py loaddata genre_profiles
+
+# ============================================================
+# Genre-Profile
+# ============================================================
+- model: authors.genreprofile
+  pk: 1
+  fields:
+    slug: fiction-thriller
+    name: "Belletristik / Thriller"
+    name_short: Thriller
+    description: "Spannungsliteratur, Psychothriller, Crime Fiction"
+    icon: "\U0001F52A"
+    sort_order: 10
+    is_active: true
+
+- model: authors.genreprofile
+  pk: 2
+  fields:
+    slug: fiction-literary
+    name: "Belletristik / Literatur"
+    name_short: Literatur
+    description: "Literarische Fiktion, Gegenwartsroman, Autofiktion"
+    icon: "\U0001F4D6"
+    sort_order: 20
+    is_active: true
+
+- model: authors.genreprofile
+  pk: 3
+  fields:
+    slug: academic
+    name: Wissenschaftlich
+    name_short: Wissenschaft
+    description: "Hausarbeiten, Dissertationen, wissenschaftliche Artikel"
+    icon: "\U0001F393"
+    sort_order: 30
+    is_active: true
+
+- model: authors.genreprofile
+  pk: 4
+  fields:
+    slug: journalism
+    name: Journalistisch
+    name_short: Journalismus
+    description: "Reportagen, Nachrichten, Feature, Investigativ"
+    icon: "\U0001F4F0"
+    sort_order: 40
+    is_active: true
+
+- model: authors.genreprofile
+  pk: 5
+  fields:
+    slug: business
+    name: "Business / Corporate"
+    name_short: Business
+    description: "Reports, Empfehlungen, Stakeholder-Kommunikation"
+    icon: "\U0001F4BC"
+    sort_order: 50
+    is_active: true
+
+- model: authors.genreprofile
+  pk: 6
+  fields:
+    slug: content-digital
+    name: "Content / Digital"
+    name_short: Content
+    description: "Blog, Social Media, SEO-Texte, Newsletter"
+    icon: "\U0001F4BB"
+    sort_order: 60
+    is_active: true
+
+- model: authors.genreprofile
+  pk: 7
+  fields:
+    slug: poetry-creative
+    name: "Lyrik / Kreativ"
+    name_short: Lyrik
+    description: "Gedichte, Prosagedichte, experimentelle Formen"
+    icon: "\u2728"
+    sort_order: 70
+    is_active: true
+
+
+# ============================================================
+# Situationstypen — Genre 1: Belletristik / Thriller
+# ============================================================
+- model: authors.situationtype
+  pk: 101
+  fields:
+    genre_profile: 1
+    slug: action
+    label: Actionszene
+    description: "Physische Konfrontation, Verfolgung, Kampf"
+    llm_prompt_hint: >
+      Analysiere: Satzrhythmus unter Druck, Koerperlichkeit statt Reflexion,
+      Tempo durch Ellipsen. Beachte: keine inneren Monologe, kein Adjektivueberschuss.
+    sort_order: 10
+    is_active: true
+
+- model: authors.situationtype
+  pk: 102
+  fields:
+    genre_profile: 1
+    slug: dialogue
+    label: Dialog
+    description: "Gespraeche mit Subtext und Machtgefaelle"
+    llm_prompt_hint: >
+      Analysiere: Subtext, Machtgefaelle, Nicht-Gesagtes.
+      Beachte: Jede Figur hat eigene Sprechweise, kein Erklaer-Dialog.
+    sort_order: 20
+    is_active: true
+
+- model: authors.situationtype
+  pk: 103
+  fields:
+    genre_profile: 1
+    slug: setting
+    label: Ortsbeschreibung
+    description: "Atmosphaere und Bedrohung durch Setting"
+    llm_prompt_hint: >
+      Analysiere: Sinneswahrnehmungen, Bedrohung durch Normalitaet,
+      Setting als Spiegelbild der Figurenstimmung. Kein Postkartenblick.
+    sort_order: 30
+    is_active: true
+
+- model: authors.situationtype
+  pk: 104
+  fields:
+    genre_profile: 1
+    slug: emotional
+    label: Emotionale Szene
+    description: "Verdiente Emotion ohne Sentimentalitaet"
+    llm_prompt_hint: >
+      Analysiere: Verdiente Emotion vs. Sentimentalitaet, koerperliche Manifestation
+      statt Benennung. Beachte: Show don't tell.
+    sort_order: 40
+    is_active: true
+
+- model: authors.situationtype
+  pk: 105
+  fields:
+    genre_profile: 1
+    slug: chapter-open
+    label: Kapiteleinstieg
+    description: "Sog erzeugen, Orientierung ohne Erklaerung"
+    llm_prompt_hint: >
+      Analysiere: Sog, Orientierung ohne Erklaerung, erster Satz als Versprechen.
+      Beachte: kein Aufwaermen, sofort in Medias Res.
+    sort_order: 50
+    is_active: true
+
+- model: authors.situationtype
+  pk: 106
+  fields:
+    genre_profile: 1
+    slug: chapter-close
+    label: "Kapitelende / Cliffhanger"
+    description: "Psychologische Wendung, Kurzsatz-Technik"
+    llm_prompt_hint: >
+      Analysiere: Psychologische Wendung, Kurzsatz am Ende, ungeloezte Frage.
+      Beachte: Cliffhanger ist psychologisch, nicht nur Plot-Twist.
+    sort_order: 60
+    is_active: true
+
+- model: authors.situationtype
+  pk: 107
+  fields:
+    genre_profile: 1
+    slug: inner-monologue
+    label: Innerer Monolog
+    description: "Figurenbewusstsein statt Erzaehlerkommentar"
+    llm_prompt_hint: >
+      Analysiere: Figurenbewusstsein vs. Erzaehlerkommentar, Gedankenrhythmus,
+      Fragmentierung bei Stress. Beachte: Nicht-lineare Assoziationen.
+    sort_order: 70
+    is_active: true
+
+- model: authors.situationtype
+  pk: 108
+  fields:
+    genre_profile: 1
+    slug: exposition
+    label: Exposition
+    description: "Figur ueber Verhalten zeigen, nicht erklaeren"
+    llm_prompt_hint: >
+      Analysiere: Figur ueber Verhalten/Dialog zeigen statt erklaeren,
+      Backstory in Handlung einweben. Beachte: kein Info-Dump.
+    sort_order: 80
+    is_active: true
+
+
+# ============================================================
+# Situationstypen — Genre 2: Belletristik / Literatur
+# ============================================================
+- model: authors.situationtype
+  pk: 201
+  fields:
+    genre_profile: 2
+    slug: incipit
+    label: "Erster Satz / Incipit"
+    description: "Ton setzt, Welt eroeffnet, kein Plot-Einstieg"
+    llm_prompt_hint: >
+      Analysiere: Wie der erste Satz den Gesamtton setzt, Welt eroeffnet ohne Plot.
+      Beachte: Sprachmelodie, Bildkraft, Versprechen an den Leser.
+    sort_order: 10
+    is_active: true
+
+- model: authors.situationtype
+  pk: 202
+  fields:
+    genre_profile: 2
+    slug: dialogue
+    label: Dialog
+    description: "Literarische Qualitaet, Rhythmus, Schweigen"
+    llm_prompt_hint: >
+      Analysiere: Literarische Qualitaet des Dialogs, Rhythmus, bedeutungsvolles Schweigen.
+      Beachte: Dialog als Charakterisierung, nicht als Information.
+    sort_order: 20
+    is_active: true
+
+- model: authors.situationtype
+  pk: 203
+  fields:
+    genre_profile: 2
+    slug: landscape
+    label: "Landschaft / Raum"
+    description: "Stimmung ueber Natur, kein Postkartenblick"
+    llm_prompt_hint: >
+      Analysiere: Landschaft als Stimmungstraeger, Natur als Spiegel innerer Zustaende.
+      Beachte: Sinnlichkeit, keine Reisefuehrer-Beschreibung.
+    sort_order: 30
+    is_active: true
+
+- model: authors.situationtype
+  pk: 204
+  fields:
+    genre_profile: 2
+    slug: memory
+    label: "Erinnerung / Rueckblende"
+    description: "Zeit als Schicht, nicht als Sprung"
+    llm_prompt_hint: >
+      Analysiere: Zeit als Schicht statt als Sprung, Erinnerung als Gegenwart.
+      Beachte: Uebergangstechnik, Vermeidung von Erklaerungen.
+    sort_order: 40
+    is_active: true
+
+- model: authors.situationtype
+  pk: 205
+  fields:
+    genre_profile: 2
+    slug: chapter-open
+    label: Kapiteleinstieg
+    description: "Ton neu kalibrieren, nicht Handlung vorantreiben"
+    llm_prompt_hint: >
+      Analysiere: Ton-Kalibrierung, Rhythmuswechsel zum vorigen Kapitel.
+      Beachte: Handlung folgt dem Ton, nicht umgekehrt.
+    sort_order: 50
+    is_active: true
+
+- model: authors.situationtype
+  pk: 206
+  fields:
+    genre_profile: 2
+    slug: reflection
+    label: "Reflexion / Essayistik"
+    description: "Figur denkt, Autor bleibt unsichtbar"
+    llm_prompt_hint: >
+      Analysiere: Essayistische Passagen, Figur denkt, Autor bleibt unsichtbar.
+      Beachte: Grenze zwischen Figuren-Reflexion und Autorenkommentar.
+    sort_order: 60
+    is_active: true
+
+- model: authors.situationtype
+  pk: 207
+  fields:
+    genre_profile: 2
+    slug: leitmotif
+    label: Leitmotiv-Szene
+    description: "Wiederkehrendes Bild, neue Bedeutungsebene"
+    llm_prompt_hint: >
+      Analysiere: Wiederkehrendes Bild/Motiv, Bedeutungsverschiebung bei Wiederholung.
+      Beachte: Subtilitaet, kein plumpes Symbol.
+    sort_order: 70
+    is_active: true
+
+- model: authors.situationtype
+  pk: 208
+  fields:
+    genre_profile: 2
+    slug: ending
+    label: "Schluss / Offenes Ende"
+    description: "Aufloesung verweigern oder verdichten"
+    llm_prompt_hint: >
+      Analysiere: Offenheit vs. Verdichtung, Resonanz, Nachklang.
+      Beachte: Kein erklaerter Schluss, kein Moral-Appendix.
+    sort_order: 80
+    is_active: true
+
+
+# ============================================================
+# Situationstypen — Genre 3: Wissenschaftlich
+# ============================================================
+- model: authors.situationtype
+  pk: 301
+  fields:
+    genre_profile: 3
+    slug: abstract
+    label: Abstract
+    description: "Strukturierte Kurzzusammenfassung"
+    llm_prompt_hint: >
+      Analysiere: Vollstaendigkeit der 5 Abstract-Bausteine (Kontext, Forschungsluecke,
+      Fragestellung, Methodik, Ergebnis/Beitrag), Praegnanz (150-250 Woerter),
+      keine Zitate, kein Ich-Stil.
+    sort_order: 10
+    is_active: true
+
+- model: authors.situationtype
+  pk: 302
+  fields:
+    genre_profile: 3
+    slug: introduction
+    label: "Einleitung / Problemstellung"
+    description: "Relevanz, Forschungsluecke, Fragestellung"
+    llm_prompt_hint: >
+      Analysiere: Relevanz-Argumentation, Forschungsluecke, klare Fragestellung.
+      Beachte: Trichter-Struktur, vom Allgemeinen zum Spezifischen.
+    sort_order: 20
+    is_active: true
+
+- model: authors.situationtype
+  pk: 303
+  fields:
+    genre_profile: 3
+    slug: argumentation
+    label: Argumentationskette
+    description: "These, Beleg, Schluss — keine Spruenge"
+    llm_prompt_hint: >
+      Analysiere: These-Beleg-Schluss-Struktur, logische Kohaerenz, Uebergaenge.
+      Beachte: Keine Gedankenspruenge, keine unbelegten Behauptungen.
+    sort_order: 30
+    is_active: true
+
+- model: authors.situationtype
+  pk: 304
+  fields:
+    genre_profile: 3
+    slug: methodology
+    label: Methodik-Beschreibung
+    description: "Praezision, Reproduzierbarkeit, Neutralitaet"
+    llm_prompt_hint: >
+      Analysiere: Praezision, Reproduzierbarkeit, Neutralitaet der Darstellung.
+      Beachte: Passiv vs. Aktiv, Fachterminologie korrekt verwendet.
+    sort_order: 40
+    is_active: true
+
+- model: authors.situationtype
+  pk: 305
+  fields:
+    genre_profile: 3
+    slug: results
+    label: Ergebnisdarstellung
+    description: "Datennah, kein Wertungsueberschuss"
+    llm_prompt_hint: >
+      Analysiere: Datennaehe, klare Struktur, Trennung von Ergebnis und Interpretation.
+      Beachte: Kein vorweggenommenes Fazit, keine Wertung.
+    sort_order: 50
+    is_active: true
+
+- model: authors.situationtype
+  pk: 306
+  fields:
+    genre_profile: 3
+    slug: discussion
+    label: "Diskussion / Einordnung"
+    description: "Kritische Reflexion, Grenzen benennen"
+    llm_prompt_hint: >
+      Analysiere: Kritische Reflexion, Einordnung in Forschungsstand, Grenzen benennen.
+      Beachte: Keine Ueberinterpretation, ehrliche Limitationen.
+    sort_order: 60
+    is_active: true
+
+- model: authors.situationtype
+  pk: 307
+  fields:
+    genre_profile: 3
+    slug: conclusion
+    label: "Fazit / Ausblick"
+    description: "Verdichtung und offene Fragen"
+    llm_prompt_hint: >
+      Analysiere: Verdichtung der Ergebnisse, offene Fragen, Forschungsausblick.
+      Beachte: Kein Neustart, kein neues Argument im Fazit.
+    sort_order: 70
+    is_active: true
+
+- model: authors.situationtype
+  pk: 308
+  fields:
+    genre_profile: 3
+    slug: citation
+    label: "Zitation & Quellenintegration"
+    description: "Nahtlos in Fliesstext, kein Zitatfriedhof"
+    llm_prompt_hint: >
+      Analysiere: Nahtlose Quellenintegration, Paraphrase vs. Direktzitat,
+      Zitat als Argument nicht als Lueckenfueller. Beachte: Zitierstil-Konsistenz.
+    sort_order: 80
+    is_active: true
+
+
+# ============================================================
+# Situationstypen — Genre 4: Journalistisch
+# ============================================================
+- model: authors.situationtype
+  pk: 401
+  fields:
+    genre_profile: 4
+    slug: lead
+    label: "Lead / Einleitung"
+    description: "Inverted Pyramid, W-Fragen, kein Anlauf"
+    llm_prompt_hint: >
+      Analysiere: Inverted Pyramid, W-Fragen beantwortet, Nachrichtenwert sofort klar.
+      Beachte: Kein Anlauf, keine Einleitung der Einleitung.
+    sort_order: 10
+    is_active: true
+
+- model: authors.situationtype
+  pk: 402
+  fields:
+    genre_profile: 4
+    slug: nut-graf
+    label: Nut Graf
+    description: "Warum jetzt, warum relevant"
+    llm_prompt_hint: >
+      Analysiere: Relevanz-Argumentation in einem Absatz, Einordnung ohne Meinung.
+      Beachte: Nut Graf erklaert, warum der Leser weiterlesen soll.
+    sort_order: 20
+    is_active: true
+
+- model: authors.situationtype
+  pk: 403
+  fields:
+    genre_profile: 4
+    slug: quote-integration
+    label: Zitatintegration
+    description: "Zitat traegt, Einleitung kontextualisiert"
+    llm_prompt_hint: >
+      Analysiere: Zitat als Beleg, nicht als Dekoration. Einleitung gibt Kontext.
+      Beachte: Kein Zitat ohne Einordnung, kein Zitat das fuer sich steht.
+    sort_order: 30
+    is_active: true
+
+- model: authors.situationtype
+  pk: 404
+  fields:
+    genre_profile: 4
+    slug: scene-setting
+    label: Szenischer Einstieg
+    description: "Reportage-Erzaehlung, konkrete Person/Moment"
+    llm_prompt_hint: >
+      Analysiere: Konkreter Moment, konkrete Person, sinnliche Details.
+      Beachte: Reportage-Ton, nicht Roman-Ton. Fakten bleiben Fakten.
+    sort_order: 40
+    is_active: true
+
+- model: authors.situationtype
+  pk: 405
+  fields:
+    genre_profile: 4
+    slug: data-narrative
+    label: Daten erzaehlen
+    description: "Zahlen mit Bedeutung, kein Tabellen-Dump"
+    llm_prompt_hint: >
+      Analysiere: Daten mit Kontext und Vergleich, menschliche Dimension der Zahlen.
+      Beachte: Kein Tabellen-Dump, Zahlen muessen Geschichte erzaehlen.
+    sort_order: 50
+    is_active: true
+
+- model: authors.situationtype
+  pk: 406
+  fields:
+    genre_profile: 4
+    slug: background
+    label: "Hintergrund / Einordnung"
+    description: "Geschichte ohne Abschweifung"
+    llm_prompt_hint: >
+      Analysiere: Relevante Hintergrundinformation, chronologische Klarheit.
+      Beachte: Nur was zum Verstaendnis noetig ist, keine Geschichtsstunde.
+    sort_order: 60
+    is_active: true
+
+- model: authors.situationtype
+  pk: 407
+  fields:
+    genre_profile: 4
+    slug: conflict-balance
+    label: "Konflikt & Gegenperspektive"
+    description: "Fairness ohne falsche Aequivalenz"
+    llm_prompt_hint: >
+      Analysiere: Faire Darstellung verschiedener Positionen, keine falsche Aequivalenz.
+      Beachte: Journalistische Balance heisst nicht: beiden Seiten gleich viel Raum.
+    sort_order: 70
+    is_active: true
+
+- model: authors.situationtype
+  pk: 408
+  fields:
+    genre_profile: 4
+    slug: closing
+    label: "Schluss / Kicker"
+    description: "Offene Frage oder starkes letztes Bild"
+    llm_prompt_hint: >
+      Analysiere: Kicker-Qualitaet, letztes Bild/Zitat, offene Frage.
+      Beachte: Schluss darf nicht zusammenfassen, sondern resonieren.
+    sort_order: 80
+    is_active: true
+
+
+# ============================================================
+# Situationstypen — Genre 5: Business / Corporate
+# ============================================================
+- model: authors.situationtype
+  pk: 501
+  fields:
+    genre_profile: 5
+    slug: executive-summary
+    label: Executive Summary
+    description: "Entscheidungsrelevanz zuerst"
+    llm_prompt_hint: >
+      Analysiere: Entscheidungsrelevanz sofort klar, kein Aufwaermen.
+      Beachte: Max 1 Seite, Empfehlung sichtbar, Zahlen statt Adjektive.
+    sort_order: 10
+    is_active: true
+
+- model: authors.situationtype
+  pk: 502
+  fields:
+    genre_profile: 5
+    slug: problem-framing
+    label: Problemdarstellung
+    description: "Schmerz konkret benennen, Kosten sichtbar"
+    llm_prompt_hint: >
+      Analysiere: Problem konkret und messbar dargestellt, Business Impact sichtbar.
+      Beachte: Kein Vortrag, sondern Schmerzpunkt plus Kosten.
+    sort_order: 20
+    is_active: true
+
+- model: authors.situationtype
+  pk: 503
+  fields:
+    genre_profile: 5
+    slug: recommendation
+    label: Handlungsempfehlung
+    description: "Direkt, begruendet, mit naechsten Schritten"
+    llm_prompt_hint: >
+      Analysiere: Klarheit der Empfehlung, Begruendung, konkrete naechste Schritte.
+      Beachte: Aktiv formuliert, mit Verantwortlichkeit und Timeline.
+    sort_order: 30
+    is_active: true
+
+- model: authors.situationtype
+  pk: 504
+  fields:
+    genre_profile: 5
+    slug: data-story
+    label: Daten als Argument
+    description: "KPI mit Kontext, nicht mit Tabellen erschlagen"
+    llm_prompt_hint: >
+      Analysiere: Daten als Narrativ, KPI mit Kontext und Trend.
+      Beachte: Zahlen muessen Entscheidung stuetzen, nicht verwirren.
+    sort_order: 40
+    is_active: true
+
+- model: authors.situationtype
+  pk: 505
+  fields:
+    genre_profile: 5
+    slug: stakeholder-appeal
+    label: Stakeholder-Ansprache
+    description: "Zielgruppe, Ton, was die Person braucht"
+    llm_prompt_hint: >
+      Analysiere: Zielgruppen-Passung, Ton, Was braucht der Leser?.
+      Beachte: C-Level anders als Fachebene, Budget-Owner anders als Umsetzer.
+    sort_order: 50
+    is_active: true
+
+- model: authors.situationtype
+  pk: 506
+  fields:
+    genre_profile: 5
+    slug: risk-framing
+    label: Risiko-Framing
+    description: "Risiken benennen ohne Laehmung"
+    llm_prompt_hint: >
+      Analysiere: Risiken ehrlich benannt, mit Mitigierung, ohne Laehmung.
+      Beachte: Risiko-Matrix-Denken: Wahrscheinlichkeit x Impact x Mitigierung.
+    sort_order: 60
+    is_active: true
+
+- model: authors.situationtype
+  pk: 507
+  fields:
+    genre_profile: 5
+    slug: email-update
+    label: "Status-Update / E-Mail"
+    description: "Kurz, klar, mit Call to Action"
+    llm_prompt_hint: >
+      Analysiere: Kuerze, Klarheit, Call to Action am Ende.
+      Beachte: Subject Line traegt, erster Satz ist das Ergebnis.
+    sort_order: 70
+    is_active: true
+
+- model: authors.situationtype
+  pk: 508
+  fields:
+    genre_profile: 5
+    slug: closing-action
+    label: "Abschluss / CTA"
+    description: "Verbindlichkeit erzeugen ohne Druck"
+    llm_prompt_hint: >
+      Analysiere: Verbindlichkeit, konkreter naechster Schritt, Timeline.
+      Beachte: CTA darf nicht unverbindlich sein, aber auch nicht aggressiv.
+    sort_order: 80
+    is_active: true
+
+
+# ============================================================
+# Situationstypen — Genre 6: Content / Digital
+# ============================================================
+- model: authors.situationtype
+  pk: 601
+  fields:
+    genre_profile: 6
+    slug: hook
+    label: "Hook / Eroeffnung"
+    description: "3-Sekunden-Test, Neugier oder Schmerz"
+    llm_prompt_hint: >
+      Analysiere: Hook-Qualitaet, 3-Sekunden-Test, Neugier oder Schmerzpunkt.
+      Beachte: Erster Satz entscheidet ob weitergelesen wird.
+    sort_order: 10
+    is_active: true
+
+- model: authors.situationtype
+  pk: 602
+  fields:
+    genre_profile: 6
+    slug: seo-intro
+    label: SEO-Einleitung
+    description: "Keyword natuerlich, nicht gestopft"
+    llm_prompt_hint: >
+      Analysiere: Keyword-Integration, Natuerlichkeit, Suchintention beantwortet.
+      Beachte: Keyword in den ersten 100 Woertern, aber nicht gestopft.
+    sort_order: 20
+    is_active: true
+
+- model: authors.situationtype
+  pk: 603
+  fields:
+    genre_profile: 6
+    slug: listicle-item
+    label: "Listenpunkt / How-To-Schritt"
+    description: "Scanbar, konkret, mit Mini-Payoff"
+    llm_prompt_hint: >
+      Analysiere: Scanbarkeit, Konkretheit, eigenstaendiger Mehrwert pro Punkt.
+      Beachte: Jeder Punkt muss allein stehen koennen, Mini-Payoff am Ende.
+    sort_order: 30
+    is_active: true
+
+- model: authors.situationtype
+  pk: 604
+  fields:
+    genre_profile: 6
+    slug: storytelling-block
+    label: Storytelling-Block
+    description: "Persoenlich, spezifisch, uebertragbar"
+    llm_prompt_hint: >
+      Analysiere: Persoenliche Geschichte, Spezifitaet, Uebertragbarkeit.
+      Beachte: Story dient dem Punkt, nicht der Selbstdarstellung.
+    sort_order: 40
+    is_active: true
+
+- model: authors.situationtype
+  pk: 605
+  fields:
+    genre_profile: 6
+    slug: social-caption
+    label: Social-Media-Caption
+    description: "Plattformton, Emoji-Strategie, CTA"
+    llm_prompt_hint: >
+      Analysiere: Plattform-Passung, Emoji-Strategie, Call to Action.
+      Beachte: Instagram anders als LinkedIn, Hook in Zeile 1.
+    sort_order: 50
+    is_active: true
+
+- model: authors.situationtype
+  pk: 606
+  fields:
+    genre_profile: 6
+    slug: cta
+    label: Call to Action
+    description: "Verben statt Substantive, Nutzen statt Befehl"
+    llm_prompt_hint: >
+      Analysiere: Aktive Verben, klarer Nutzen, keine Druck-Sprache.
+      Beachte: CTA muss Nutzen kommunizieren, nicht nur fordern.
+    sort_order: 60
+    is_active: true
+
+- model: authors.situationtype
+  pk: 607
+  fields:
+    genre_profile: 6
+    slug: transition
+    label: "Ueberleitung / Bridge"
+    description: "Lesefluss, kein harter Themenwechsel"
+    llm_prompt_hint: >
+      Analysiere: Lesefluss, logische Bruecke zwischen Abschnitten.
+      Beachte: Kein harter Schnitt, kein 'Kommen wir nun zu...'.
+    sort_order: 70
+    is_active: true
+
+- model: authors.situationtype
+  pk: 608
+  fields:
+    genre_profile: 6
+    slug: meta-description
+    label: Meta Description
+    description: "155 Zeichen, Nutzen + Keyword + Differenzierung"
+    llm_prompt_hint: >
+      Analysiere: Zeichenlaenge (150-160), Keyword-Praesenz, Nutzenversprechen.
+      Beachte: Meta Description ist Werbung, nicht Zusammenfassung.
+    sort_order: 80
+    is_active: true
+
+
+# ============================================================
+# Situationstypen — Genre 7: Lyrik / Kreativ
+# ============================================================
+- model: authors.situationtype
+  pk: 701
+  fields:
+    genre_profile: 7
+    slug: opening-image
+    label: Eroeffnungsbild
+    description: "Konkretes Bild, kein abstraktes Konzept"
+    llm_prompt_hint: >
+      Analysiere: Konkretheit des Bildes, sinnliche Praesenz.
+      Beachte: Kein abstraktes Konzept, sondern: Was sieht/hoert/riecht man?
+    sort_order: 10
+    is_active: true
+
+- model: authors.situationtype
+  pk: 702
+  fields:
+    genre_profile: 7
+    slug: turn
+    label: "Volta / Wendung"
+    description: "Moment des Umschlags"
+    llm_prompt_hint: >
+      Analysiere: Wendepunkt, Umschlag im Ton/Bild/Perspektive.
+      Beachte: Volta kann subtil oder hart sein, aber sie muss spuerbar sein.
+    sort_order: 20
+    is_active: true
+
+- model: authors.situationtype
+  pk: 703
+  fields:
+    genre_profile: 7
+    slug: sensory-detail
+    label: Sensorisches Detail
+    description: "Nicht 'schoen' — sondern was genau"
+    llm_prompt_hint: >
+      Analysiere: Konkrete Sinneswahrnehmung statt Bewertung.
+      Beachte: Nicht 'schoen', sondern was genau gesehen/gehoert/gerochen wird.
+    sort_order: 30
+    is_active: true
+
+- model: authors.situationtype
+  pk: 704
+  fields:
+    genre_profile: 7
+    slug: white-space
+    label: "Zeilenbruch / Weissraum"
+    description: "Was das Schweigen sagt"
+    llm_prompt_hint: >
+      Analysiere: Bedeutung des Zeilenbruchs, Weissraum als Stilmittel.
+      Beachte: Wo gebrochen wird, aendert Bedeutung. Pause ist Aussage.
+    sort_order: 40
+    is_active: true
+
+- model: authors.situationtype
+  pk: 705
+  fields:
+    genre_profile: 7
+    slug: refrain
+    label: "Refrain / Wiederholung"
+    description: "Bedeutungsverschiebung durch Wiederholung"
+    llm_prompt_hint: >
+      Analysiere: Wiederholung mit Variation, Bedeutungsverschiebung.
+      Beachte: Refrain darf nicht mechanisch wirken, jede Wiederholung verschiebt.
+    sort_order: 50
+    is_active: true
+
+- model: authors.situationtype
+  pk: 706
+  fields:
+    genre_profile: 7
+    slug: metaphor-development
+    label: Metaphern-Entfaltung
+    description: "Ein Bild in drei Schichten"
+    llm_prompt_hint: >
+      Analysiere: Metapher ueber mehrere Zeilen/Strophen entwickelt, Schichtung.
+      Beachte: Nicht Metaphern-Friedhof, sondern ein Bild, drei Ebenen.
+    sort_order: 60
+    is_active: true
+
+- model: authors.situationtype
+  pk: 707
+  fields:
+    genre_profile: 7
+    slug: prose-poem
+    label: Prosagedicht-Passage
+    description: "Lyrik ohne Versform, Rhythmus im Satz"
+    llm_prompt_hint: >
+      Analysiere: Rhythmus im Prosasatz, lyrische Verdichtung ohne Vers.
+      Beachte: Prosagedicht ist keine Prosa mit Zeilenumbruechen.
+    sort_order: 70
+    is_active: true
+
+- model: authors.situationtype
+  pk: 708
+  fields:
+    genre_profile: 7
+    slug: closing-image
+    label: "Schluss-Bild / Resonanz"
+    description: "Offen enden, nachklingen lassen"
+    llm_prompt_hint: >
+      Analysiere: Schlussbild-Qualitaet, Resonanz, Offenheit.
+      Beachte: Schluss erklaert nicht, er klingt nach.
+    sort_order: 80
+    is_active: true

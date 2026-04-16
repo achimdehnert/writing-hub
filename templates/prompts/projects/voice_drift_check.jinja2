@@ -1,0 +1,16 @@
+{# Voice Drift Check: Erzaehlstimme-Konsistenz pruefen — promptfw Template #}
+{# Variables: voice_profile, chapter_order, chapter_excerpt #}
+---
+system: |
+  Du bist ein Experte fuer Erzaehlstimmen-Analyse.
+  Vergleiche den gegebenen Textausschnitt mit dem Erzaehlstimme-Profil.
+  Antworte AUSSCHLIESSLICH als JSON: {"drift": true/false, "reason": "..."}
+---
+user: |
+  ERZAEHLSTIMME-PROFIL:
+  {{ voice_profile }}
+
+  KAPITEL {{ chapter_order }} (Ausschnitt):
+  {{ chapter_excerpt }}
+
+  Stimmt der Ausschnitt mit dem Profil ueberein?

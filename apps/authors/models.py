@@ -2,14 +2,68 @@
 Authors App — Autor-Profile und Schreibstile
 
 Struktur:
+  GenreProfile (genre-spezifische Situationstypen-Konfiguration)
+  SituationType (1 GenreProfile → N SituationTypes)
   Author (1 User → N Authors)
-  WritingStyle (1 Author → N Styles, mit DO/DONT/Taboo Style Lab Feldern)
-  WritingStyleSample (1 Style → N Beispieltexte)
+  WritingStyle (1 Author → N Styles, 1 GenreProfile)
+  WritingStyleSample (1 Style → N Beispieltexte, 1 SituationType)
 """
 import uuid
 
 from django.conf import settings
 from django.db import models
+
+
+class GenreProfile(models.Model):
+    """Genre mit eigener Situationstypen-Konfiguration."""
+    slug = models.SlugField(max_length=80, unique=True)
+    name = models.CharField(max_length=120)
+    name_short = models.CharField(max_length=40)
+    description = models.TextField(blank=True)
+    icon = models.CharField(max_length=10, blank=True)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "wh_genre_profiles"
+        ordering = ["sort_order", "name"]
+        verbose_name = "Genre-Profil"
+        verbose_name_plural = "Genre-Profile"
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def situation_count(self):
+        return self.situation_types.filter(is_active=True).count()
+
+
+class SituationType(models.Model):
+    """Ein Situationstyp innerhalb eines GenreProfiles."""
+    genre_profile = models.ForeignKey(
+        GenreProfile,
+        on_delete=models.CASCADE,
+        related_name="situation_types",
+    )
+    slug = models.SlugField(max_length=80)
+    label = models.CharField(max_length=120)
+    description = models.TextField(blank=True)
+    llm_prompt_hint = models.TextField(
+        blank=True,
+        help_text="Zusaetzliche Analysekriterien fuer LLM-Prompts",
+    )
+    sort_order = models.PositiveSmallIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "wh_situation_types"
+        ordering = ["sort_order"]
+        unique_together = [("genre_profile", "slug")]
+        verbose_name = "Situationstyp"
+        verbose_name_plural = "Situationstypen"
+
+    def __str__(self):
+        return f"{self.genre_profile.name_short} — {self.label}"
 
 
 class Author(models.Model):
@@ -54,6 +108,14 @@ class WritingStyle(models.Model):
         Author,
         on_delete=models.CASCADE,
         related_name="writing_styles",
+    )
+    genre_profile = models.ForeignKey(
+        GenreProfile,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="writing_styles",
+        help_text="Genre bestimmt die verfuegbaren Situationstypen",
     )
     name = models.CharField(
         max_length=200,
@@ -138,7 +200,19 @@ class WritingStyleSample(models.Model):
         on_delete=models.CASCADE,
         related_name="samples",
     )
-    situation = models.CharField(max_length=30, choices=SITUATIONS)
+    situation = models.CharField(
+        max_length=30,
+        choices=SITUATIONS,
+        help_text="Legacy-Feld, wird durch situation_type ersetzt",
+    )
+    situation_type = models.ForeignKey(
+        SituationType,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="samples",
+        help_text="Genre-spezifischer Situationstyp (ersetzt situation CharField)",
+    )
     text = models.TextField()
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -150,4 +224,13 @@ class WritingStyleSample(models.Model):
         verbose_name_plural = "Stil-Beispieltexte"
 
     def __str__(self):
+        if self.situation_type:
+            return f"{self.style} — {self.situation_type.label}"
         return f"{self.style} — {self.get_situation_display()}"
+
+    @property
+    def effective_label(self):
+        """Label aus SituationType oder Fallback auf legacy CharField."""
+        if self.situation_type:
+            return self.situation_type.label
+        return self.get_situation_display()

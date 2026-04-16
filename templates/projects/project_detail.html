@@ -226,8 +226,8 @@
     {% else %}
     <!-- Charaktere (nur fiktionale Projekte) -->
     <div class="col-md-4">
-        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
-             onclick="window.open('https://weltenhub.iil.pet','_blank')">
+        <a href="{% if world_links %}{% url 'worlds_html:detail' world_links.0.pk %}{% else %}{% url 'worlds_html:list' %}{% endif %}"
+           class="card h-100 workflow-card text-decoration-none" style="background:#0d1117;border-color:#2d3748;cursor:pointer;">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-people me-2" style="color:#6366f1;font-size:1.2rem;"></i>
@@ -244,13 +244,13 @@
                     <span class="text-muted">{% if stat_characters > 0 %}Vorhanden{% else %}Ausstehend{% endif %}</span>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
     <!-- Weltenbau (nur fiktionale Projekte) -->
     <div class="col-md-4">
-        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
-             onclick="window.open('https://weltenhub.iil.pet','_blank')">
+        <a href="{% url 'worlds_html:list' %}"
+           class="card h-100 workflow-card text-decoration-none" style="background:#0d1117;border-color:#2d3748;cursor:pointer;">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-globe2 me-2" style="color:#6366f1;font-size:1.2rem;"></i>
@@ -267,6 +267,7 @@
                     <span class="text-muted">{% if stat_worlds > 0 %}Vorhanden{% else %}Ausstehend{% endif %}</span>
                 </div>
             </div>
+        </a>
         </div>
     </div>
     {% endif %}
@@ -609,23 +610,27 @@
         <!-- Welten -->
         <div class="card mb-3" style="background:#0d1117;border-color:#2d3748;">
             <div class="card-header d-flex align-items-center justify-content-between py-2" style="border-color:#2d3748;">
-                <span class="fw-semibold small"><i class="bi bi-globe2 me-1"></i>Welten</span>
+                <a href="{% url 'worlds_html:list' %}" class="fw-semibold small text-decoration-none" style="color:#e2e8f0;">
+                    <i class="bi bi-globe2 me-1"></i>Welten
+                </a>
                 <span class="badge" style="background:#1e2235;color:#94a3b8;">{{ stat_worlds }}</span>
             </div>
             <div class="card-body p-0">
                 {% if world_links %}
                 <ul class="list-group list-group-flush">
                     {% for wl in world_links %}
-                    <li class="list-group-item border-0 py-2 px-3 small"
-                        style="background:transparent;color:#e2e8f0;border-bottom:1px solid #1e2235 !important;">
-                        <i class="bi bi-geo-alt me-1 text-muted"></i>{{ wl }}
-                    </li>
+                    <a href="{% url 'worlds_html:detail' wl.pk %}"
+                       class="list-group-item border-0 py-2 px-3 small text-decoration-none"
+                       style="background:transparent;color:#e2e8f0;border-bottom:1px solid #1e2235 !important;">
+                        <i class="bi bi-globe2 me-1 text-muted"></i>{{ wl.weltenhub_world_id|truncatechars:12 }}
+                        <span class="badge ms-1" style="background:#1e2235;color:#6366f1;font-size:.6rem;">{{ wl.get_role_display }}</span>
+                    </a>
                     {% endfor %}
                 </ul>
                 {% else %}
                 <div class="p-3 text-center text-muted small">
                     <i class="bi bi-globe2 d-block mb-1" style="font-size:1.3rem;"></i>
-                    Keine Welten verknüpft
+                    Keine Welten verknuepft
                 </div>
                 {% endif %}
             </div>
@@ -645,6 +650,11 @@
                         style="background:transparent;color:#e2e8f0;border-bottom:1px solid #1e2235 !important;">
                         <i class="bi bi-person me-1 text-muted"></i>
                         {{ char.project_role|default:char.notes|default:"Charakter" }}
+                        {% if char.weltenhub_character_id %}
+                        <span class="text-muted" style="font-size:.65rem;">
+                            <i class="bi bi-link-45deg"></i>
+                        </span>
+                        {% endif %}
                     </li>
                     {% endfor %}
                 </ul>
@@ -652,6 +662,13 @@
                 <div class="p-3 text-center text-muted small">
                     <i class="bi bi-people d-block mb-1" style="font-size:1.3rem;"></i>
                     Keine Charaktere
+                    {% if world_links %}
+                    <div class="mt-2">
+                        <a href="{% url 'worlds_html:detail' world_links.0.pk %}" class="btn btn-outline-primary btn-sm" style="font-size:.7rem;">
+                            <i class="bi bi-plus me-1"></i>Erstellen
+                        </a>
+                    </div>
+                    {% endif %}
                 </div>
                 {% endif %}
             </div>

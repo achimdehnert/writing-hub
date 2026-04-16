@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Charaktere verknuepfen — {{ world.name|default:"Welt" }} — Writing Hub{% endblock %}
+{% block nav_worlds %}active{% endblock %}
+
+{% block content %}
+<div style="max-width:800px;margin:0 auto;">
+
+<a href="{% url 'worlds_html:detail' link.pk %}" class="btn btn-link text-muted ps-0 mb-3">
+    <i class="bi bi-arrow-left me-1"></i> Zurueck zu {{ world.name|default:"Welt" }}
+</a>
+
+<div class="card" style="background:#0d1117;border-color:#2d3748;">
+    <div class="card-header py-3" style="border-color:#2d3748;">
+        <h5 class="mb-0 fw-bold" style="color:#e2e8f0;">
+            <i class="bi bi-link-45deg me-2" style="color:#6366f1;"></i>Bestehende Charaktere verknuepfen
+        </h5>
+        <div class="text-muted small mt-1">
+            Welt: <strong style="color:#a5b4fc;">{{ world.name|default:"—" }}</strong>
+            &middot; Projekt: {{ project.title }}
+        </div>
+    </div>
+    <div class="card-body p-4">
+        {% if all_characters %}
+        <form method="post">
+            {% csrf_token %}
+            <p class="text-muted small mb-3">
+                <i class="bi bi-info-circle me-1"></i>
+                Waehle Charaktere aus WeltenHub, die mit diesem Projekt verknuepft werden sollen.
+                Bereits verknuepfte sind markiert.
+            </p>
+
+            <div class="row g-2 mb-4">
+                {% for char in all_characters %}
+                <div class="col-md-6">
+                    <label class="d-flex gap-3 align-items-start p-3 rounded-2"
+                           style="background:#131929;border:1px solid {% if char.id in linked_ids %}#6366f1{% else %}#374151{% endif %};cursor:pointer;">
+                        <input type="checkbox" name="character_ids" value="{{ char.id }}"
+                               class="form-check-input mt-1"
+                               style="background-color:#0d1117;border-color:#475569;"
+                               {% if char.id in linked_ids %}checked disabled{% endif %}>
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold small" style="color:#e2e8f0;">
+                                <i class="bi bi-person me-1"></i>{{ char.name }}
+                                {% if char.is_protagonist %}
+                                <span class="ms-1" style="font-size:.65rem;padding:.1rem .35rem;border-radius:999px;background:#1a3a1a;color:#22c55e;">Protagonist</span>
+                                {% endif %}
+                            </div>
+                            {% if char.personality %}
+                            <div class="text-muted" style="font-size:.75rem;">{{ char.personality|truncatechars:80 }}</div>
+                            {% endif %}
+                            {% if char.id in linked_ids %}
+                            <div style="font-size:.7rem;color:#6366f1;">
+                                <i class="bi bi-check-circle me-1"></i>Bereits verknuepft
+                            </div>
+                            {% endif %}
+                        </div>
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="d-flex gap-2 justify-content-end">
+                <a href="{% url 'worlds_html:detail' link.pk %}" class="btn btn-outline-secondary btn-sm">Abbrechen</a>
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-link-45deg me-1"></i>Ausgewaehlte verknuepfen
+                </button>
+            </div>
+        </form>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="bi bi-people d-block mb-2 text-muted" style="font-size:2.5rem;"></i>
+            <p class="text-muted mb-2">Keine Charaktere in dieser Welt gefunden.</p>
+            <p class="text-muted small mb-3">Erstelle zuerst Charaktere in WeltenHub oder nutze die LLM-Generierung.</p>
+            <div class="d-flex gap-2 justify-content-center">
+                <a href="{% url 'worlds_html:character_create' link.pk %}" class="btn btn-outline-success btn-sm">
+                    <i class="bi bi-plus me-1"></i>Charakter erstellen
+                </a>
+                <a href="{% url 'worlds_html:detail' link.pk %}" class="btn btn-outline-secondary btn-sm">
+                    Zurueck
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+</div>
+{% endblock %}

@@ -18,6 +18,7 @@ from aifw.service import sync_completion
 from aifw.schema import LLMResult
 
 from apps.core.prompt_utils import render_prompt
+from apps.authoring.services.chapter_production_service import _strip_chapter_heading
 
 logger = logging.getLogger(__name__)
 
@@ -121,9 +122,12 @@ class ChapterContext:
             for world in self.worlds[:2]:
                 name = world.get("name") or "Unbekannt"
                 desc = (world.get("description") or "")[:300]
+                atmosphere = (world.get("atmosphere") or "")[:150]
                 parts.append(f"\n{name}")
                 if desc:
                     parts.append(f"  {desc}")
+                if atmosphere:
+                    parts.append(f"  Atmosphaere: {atmosphere}")
 
         if self.style_dna:
             parts.append("")
@@ -133,6 +137,8 @@ class ChapterContext:
             dna = self.style_dna
             if dna.get("name"):
                 parts.append(f"Stilprofil: {dna['name']}")
+            if dna.get("style_prompt"):
+                parts.append(f"\nStil-Anweisungen:\n{dna['style_prompt'][:400]}")
             if dna.get("signature_moves"):
                 parts.append("\nSignature Moves:")
                 for move in dna["signature_moves"][:5]:
@@ -199,6 +205,8 @@ class ChapterContext:
             parts.append("SCHREIBSTIL-VORGABEN")
             parts.append("=" * 50)
             dna = self.style_dna
+            if dna.get("style_prompt"):
+                parts.append(f"\nStil-Anweisungen:\n{dna['style_prompt'][:400]}")
             if dna.get("do_list"):
                 parts.append("\nDO:")
                 for item in dna["do_list"][:8]:
@@ -207,6 +215,9 @@ class ChapterContext:
                 parts.append("\nDONT:")
                 for item in dna["dont_list"][:5]:
                     parts.append(f"  - {item}")
+            if dna.get("taboo_list"):
+                parts.append("\nTABU-WOERTER:")
+                parts.append(f"  {', '.join(dna['taboo_list'][:10])}")
 
         parts.append("")
         parts.append("=" * 50)
@@ -232,30 +243,56 @@ class ChapterContext:
             for link in ProjectWorldLink.objects.filter(project=project)[:3]:
                 w = link.get_world()
                 if w:
-                    worlds.append({"name": getattr(w, "name", ""), "description": getattr(w, "description", "")})
+                    worlds.append({
+                        "name": getattr(w, "name", ""),
+                        "description": getattr(w, "description", ""),
+                        "atmosphere": getattr(w, "atmosphere", ""),
+                    })
             for link in ProjectCharacterLink.objects.filter(project=project)[:10]:
                 c = link.get_character()
                 if c:
-                    characters.append({"name": getattr(c, "name", ""), "role": link.narrative_role or ""})
+                    characters.append({
+                        "name": getattr(c, "name", ""),
+                        "role": link.narrative_role or getattr(c, "role", ""),
+                        "description": getattr(c, "description", "") or getattr(c, "backstory", ""),
+                        "motivation": getattr(c, "motivation", ""),
+                    })
         except Exception as exc:
             logger.debug("World/character context not available: %s", exc)
 
+        # WritingStyle vom Projekt (primaer) -> AuthorStyleDNA (fallback)
         style_dna = None
         try:
-            from apps.authoring.models import AuthorStyleDNA
-            dna_obj = AuthorStyleDNA.objects.filter(
-                author=project.owner, is_primary=True
-            ).first()
-            if dna_obj:
+            ws = project.writing_style
+            if ws:
                 style_dna = {
-                    "name": dna_obj.name,
-                    "signature_moves": dna_obj.signature_moves or [],
-                    "do_list": dna_obj.do_list or [],
-                    "dont_list": dna_obj.dont_list or [],
-                    "taboo_list": dna_obj.taboo_list or [],
+                    "name": ws.name,
+                    "signature_moves": ws.signature_moves or [],
+                    "do_list": ws.do_list or [],
+                    "dont_list": ws.dont_list or [],
+                    "taboo_list": ws.taboo_list or [],
                 }
-        except Exception as exc:
-            logger.warning("Could not load Style DNA: %s", exc)
+                if ws.style_prompt:
+                    style_dna["style_prompt"] = ws.style_prompt
+        except Exception:
+            pass
+
+        if not style_dna:
+            try:
+                from apps.authoring.models import AuthorStyleDNA
+                dna_obj = AuthorStyleDNA.objects.filter(
+                    author=project.owner, is_primary=True
+                ).first()
+                if dna_obj:
+                    style_dna = {
+                        "name": dna_obj.name,
+                        "signature_moves": dna_obj.signature_moves or [],
+                        "do_list": dna_obj.do_list or [],
+                        "dont_list": dna_obj.dont_list or [],
+                        "taboo_list": dna_obj.taboo_list or [],
+                    }
+            except Exception as exc:
+                logger.warning("Could not load Style DNA: %s", exc)
 
         return cls(
             project_id=project_id,
@@ -334,7 +371,7 @@ class ChapterWriterHandler:
         if not result.success:
             return {"success": False, "error": result.error}
 
-        content = result.content.strip()
+        content = _strip_chapter_heading(result.content.strip())
         return {
             "success": True,
             "content": content,
@@ -418,7 +455,7 @@ class ChapterWriterHandler:
             all_content.append(result.content.strip())
             total_latency += result.latency_ms or 0
 
-        full_content = "\n\n".join(all_content)
+        full_content = _strip_chapter_heading("\n\n".join(all_content))
         return {
             "success": True,
             "content": full_content,

@@ -43,6 +43,11 @@
             <h4 class="fw-bold text-white mb-1"><i class="bi bi-palette me-2"></i>{{ style.name }}</h4>
             <div style="color:#a5b4fc;font-size:.85rem;">
                 <i class="bi bi-person-circle me-1"></i>{{ style.author.name }}
+                {% if style.genre_profile %}
+                <span class="badge ms-2" style="background:#312e81;color:#c7d2fe;font-size:.72rem;">
+                    {{ style.genre_profile.icon }} {{ style.genre_profile.name_short }}
+                </span>
+                {% endif %}
                 {% if style.description %} &mdash; {{ style.description }}{% endif %}
             </div>
         </div>
@@ -168,33 +173,35 @@
 
 <!-- Beispieltexte -->
 <div class="card mb-4" style="background:#0d1117;border-color:#2d3748;">
-    <div class="card-header py-2" style="border-color:#2d3748;">
+    <div class="card-header py-2 d-flex align-items-center justify-content-between" style="border-color:#2d3748;">
         <span class="fw-semibold small" style="color:#e2e8f0;">
-            <i class="bi bi-text-paragraph me-1"></i>Beispieltexte ({{ style.sample_count }}/8 Situationen)
+            <i class="bi bi-text-paragraph me-1"></i>Beispieltexte ({{ style.sample_count }}/{{ situation_items|length }} Situationen)
         </span>
+        {% if style.genre_profile %}
+        <span class="text-muted" style="font-size:.7rem;">
+            {{ style.genre_profile.icon }} {{ style.genre_profile.name_short }}
+        </span>
+        {% endif %}
     </div>
     <div class="card-body p-0">
-        {% for situation_key, situation_label in situations %}
-        {% with sample=None %}
-        {% for s in samples %}{% if s.situation == situation_key %}{% with sample=s %}{% endwith %}{% endif %}{% endfor %}
-        {% endwith %}
+        {% for item in situation_items %}
         <div class="border-bottom p-3" style="border-color:#1e2235 !important;">
             <div class="d-flex align-items-center justify-content-between mb-2">
                 <div class="d-flex align-items-center gap-2">
-                    <span class="badge" style="background:#1e2235;color:#6366f1;font-size:.7rem;">{{ situation_label }}</span>
-                    {% for s in samples %}{% if s.situation == situation_key %}
+                    <span class="badge" style="background:#1e2235;color:#6366f1;font-size:.7rem;">{{ item.label }}</span>
+                    {% if item.sample %}
                     <span class="badge" style="background:#1a3a1a;color:#22c55e;font-size:.65rem;"><i class="bi bi-check"></i> vorhanden</span>
-                    {% endif %}{% endfor %}
+                    {% endif %}
                 </div>
                 <div class="d-flex gap-1">
                     <button class="btn btn-outline-secondary btn-sm"
                             data-bs-toggle="collapse"
-                            data-bs-target="#sample-{{ situation_key }}"
+                            data-bs-target="#sample-{{ item.key }}"
                             style="font-size:.72rem;">
                         <i class="bi bi-pencil"></i>
                     </button>
                     {% if style.status == 'ready' %}
-                    <form method="post" action="{% url 'authors:sample_update' style.pk situation_key %}" class="d-inline">
+                    <form method="post" action="{% url 'authors:sample_update' style.pk item.key %}" class="d-inline">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="regenerate">
                         <button class="btn btn-sm" style="background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3;font-size:.72rem;">
@@ -204,31 +211,31 @@
                     {% endif %}
                 </div>
             </div>
-            {% for s in samples %}{% if s.situation == situation_key %}
-            <div class="text-muted small" style="white-space:pre-wrap;line-height:1.6;font-size:.8rem;">{{ s.text|truncatechars:300 }}</div>
-            {% endfor %}
+            {% if item.sample %}
+            <div class="text-muted small" style="white-space:pre-wrap;line-height:1.6;font-size:.8rem;">{{ item.sample.text|truncatechars:300 }}</div>
+            {% endif %}
 
-            <div class="collapse mt-2" id="sample-{{ situation_key }}">
-                <form method="post" action="{% url 'authors:sample_update' style.pk situation_key %}">
+            <div class="collapse mt-2" id="sample-{{ item.key }}">
+                <form method="post" action="{% url 'authors:sample_update' style.pk item.key %}">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="save">
                     <div class="mb-2">
                         <textarea name="text" rows="8"
                                   class="form-control form-control-sm" style="background:#131929;color:#f1f5f9;border-color:#475569;font-size:.82rem;"
-                                  placeholder="Beispieltext für {{ situation_label }}...">{% for s in samples %}{% if s.situation == situation_key %}{{ s.text }}{% endif %}{% endfor %}</textarea>
+                                  placeholder="Beispieltext fuer {{ item.label }}...">{% if item.sample %}{{ item.sample.text }}{% endif %}</textarea>
                     </div>
                     <div class="mb-2">
                         <input type="text" name="notes"
                                class="form-control form-control-sm" style="background:#131929;color:#f1f5f9;border-color:#475569;font-size:.78rem;"
                                placeholder="Notizen (optional)..."
-                               value="{% for s in samples %}{% if s.situation == situation_key %}{{ s.notes }}{% endif %}{% endfor %}">
+                               value="{% if item.sample %}{{ item.sample.notes }}{% endif %}">
                     </div>
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary btn-sm">
                             <i class="bi bi-floppy me-1"></i>Speichern
                         </button>
                         <button type="button" class="btn btn-outline-secondary btn-sm"
-                                data-bs-toggle="collapse" data-bs-target="#sample-{{ situation_key }}">Abbrechen</button>
+                                data-bs-toggle="collapse" data-bs-target="#sample-{{ item.key }}">Abbrechen</button>
                     </div>
                 </form>
             </div>

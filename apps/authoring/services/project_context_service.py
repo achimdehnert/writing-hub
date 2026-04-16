@@ -33,6 +33,7 @@ class ProjectContext:
     chapter_summaries: list[str] = field(default_factory=list)
 
     author_style: dict[str, Any] = field(default_factory=dict)
+    writing_style_prompt: str = ""
 
     def to_prompt_block(self) -> str:
         """Kontext als kompakter Text-Block fuer LLM-System-Prompt."""
@@ -54,27 +55,47 @@ class ProjectContext:
         if self.characters:
             lines.append("\n## Charaktere")
             for ch in self.characters:
-                lines.append(
-                    f"- {ch.get('name', '?')} ({ch.get('role', '?')}): "
-                    f"{ch.get('description', '')[:200]}"
-                )
+                role = ch.get('role', '?')
+                desc = ch.get('description', '')[:200]
+                motivation = ch.get('motivation', '')
+                line = f"- {ch.get('name', '?')} ({role}): {desc}"
+                if motivation:
+                    line += f" | Motivation: {motivation[:100]}"
+                lines.append(line)
         if self.worlds:
             lines.append("\n## Weltenbau")
             for w in self.worlds:
-                lines.append(
-                    f"- {w.get('name', '?')}: {w.get('description', '')[:200]}"
-                )
-        if self.author_style:
+                desc = w.get('description', '')[:200]
+                atmosphere = w.get('atmosphere', '')
+                line = f"- {w.get('name', '?')}: {desc}"
+                if atmosphere:
+                    line += f" | Atmosphaere: {atmosphere[:100]}"
+                lines.append(line)
+        if self.writing_style_prompt or self.author_style:
             lines.append("\n## Autorenstil")
+            if self.writing_style_prompt:
+                lines.append(self.writing_style_prompt[:500])
+            if self.author_style.get("name"):
+                lines.append(f"Stil-Profil: {self.author_style['name']}")
             if self.author_style.get("signature_moves"):
                 lines.append(
                     "Stilmittel: "
                     + ", ".join(self.author_style["signature_moves"][:5])
                 )
+            if self.author_style.get("do_list"):
+                lines.append(
+                    "DO (empfohlen): "
+                    + ", ".join(self.author_style["do_list"][:5])
+                )
             if self.author_style.get("dont_list"):
                 lines.append(
-                    "Vermeiden: "
+                    "DONT (vermeiden): "
                     + ", ".join(self.author_style["dont_list"][:5])
+                )
+            if self.author_style.get("taboo_list"):
+                lines.append(
+                    "TABU (niemals verwenden): "
+                    + ", ".join(self.author_style["taboo_list"][:5])
                 )
         return "\n".join(lines)
 
@@ -169,20 +190,36 @@ class ProjectContextService:
         except Exception:
             pass
 
-        # Autor-Stil (primaeres Profil)
+        # Autor-Stil: WritingStyle vom Projekt (primaer) → AuthorStyleDNA (fallback)
         try:
-            style_dna = AuthorStyleDNA.objects.filter(
-                author=project.owner, is_primary=True
-            ).first()
-            if style_dna:
+            ws = project.writing_style
+            if ws:
+                from apps.authors.services import get_style_prompt_for_writing
+                ctx.writing_style_prompt = get_style_prompt_for_writing(ws)
                 ctx.author_style = {
-                    "name": style_dna.name,
-                    "signature_moves": style_dna.signature_moves,
-                    "do_list": style_dna.do_list,
-                    "dont_list": style_dna.dont_list,
-                    "taboo_list": style_dna.taboo_list,
+                    "name": ws.name,
+                    "signature_moves": ws.signature_moves or [],
+                    "do_list": ws.do_list or [],
+                    "dont_list": ws.dont_list or [],
+                    "taboo_list": ws.taboo_list or [],
                 }
         except Exception:
             pass
+
+        if not ctx.author_style:
+            try:
+                style_dna = AuthorStyleDNA.objects.filter(
+                    author=project.owner, is_primary=True
+                ).first()
+                if style_dna:
+                    ctx.author_style = {
+                        "name": style_dna.name,
+                        "signature_moves": style_dna.signature_moves,
+                        "do_list": style_dna.do_list,
+                        "dont_list": style_dna.dont_list,
+                        "taboo_list": style_dna.taboo_list,
+                    }
+            except Exception:
+                pass
 
         return ctx

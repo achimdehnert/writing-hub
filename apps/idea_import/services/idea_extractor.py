@@ -10,46 +10,12 @@ import logging
 from aifw import sync_completion
 from promptfw.parsing import extract_json
 
+from apps.core.prompt_utils import render_prompt
+
 logger = logging.getLogger(__name__)
 
 _ACTION_CODE = "idea_extraction"
 _MAX_CHARS = 8_000
-
-_SYSTEM_PROMPT = (
-    "Du bist ein präziser Literatur-Analyst für das Writing Hub Buchprojekt-System.\n\n"
-    "Deine Aufgabe: Analysiere den gegebenen Text und extrahiere ALLE erkennbaren "
-    "Buchprojekt-Inhalte.\n\n"
-    "KRITISCHE REGELN:\n"
-    "1. Antworte NUR mit validem JSON — kein Fließtext, keine Erklärungen, keine Markdown-Backticks.\n"
-    "2. Fehlende Informationen → null oder leere Liste. NIEMALS Inhalte erfinden.\n"
-    "3. Halte dich streng an das vorgegebene JSON-Schema.\n"
-    "4. confidence_scores: Schätze pro Sektion 0.0–1.0 (1.0 = sehr sicher)."
-)
-
-_TASK_TEMPLATE = """
-Analysiere dieses Dokument und extrahiere alle Buchprojekt-Inhalte:
-
----DOKUMENT START---
-{document_text}
----DOKUMENT ENDE---
-
-Extrahiere in folgendes JSON-Schema:
-
-{{
-  "title": "Buchtitel oder null",
-  "description": "Kurzbeschreibung/Klappentext oder null",
-  "content_type": "novel|nonfiction|essay oder null",
-  "core_thesis": "Kernthese/Prämisse oder null",
-  "target_audience": "Zielgruppe oder null",
-  "genre": "Genre oder null",
-  "outline_beats": [{{"title": "...", "description": "...", "beat_type": "chapter", "order": 1}}],
-  "chapters": [{{"number": 1, "title": "...", "summary": "..."}}],
-  "characters": [{{"name": "...", "role": "protagonist|antagonist|supporting", "description": "...", "arc": "..."}}],
-  "world_elements": [{{"name": "...", "element_type": "location|object|faction|rule|concept", "description": "..."}}],
-  "confidence_scores": {{"metadata": 0.0, "outline": 0.0, "characters": 0.0, "world": 0.0}},
-  "detected_language": "de"
-}}
-"""
 
 
 def extract_ideas(document_text: str) -> dict:
@@ -64,10 +30,10 @@ def extract_ideas(document_text: str) -> dict:
     if len(document_text) > _MAX_CHARS:
         truncated += f"\n\n[... Text auf {_MAX_CHARS} Zeichen gekürzt ...]"
 
-    messages = [
-        {"role": "system", "content": _SYSTEM_PROMPT},
-        {"role": "user", "content": _TASK_TEMPLATE.format(document_text=truncated)},
-    ]
+    messages = render_prompt(
+        "idea_import/idea_extraction",
+        document_text=truncated,
+    )
 
     try:
         result = sync_completion(action_code=_ACTION_CODE, messages=messages)

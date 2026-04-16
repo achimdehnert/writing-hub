@@ -187,19 +187,19 @@ def _check_voice_drift(project, nodes, snap):
     written = [n for n in nodes if n.content and len(n.content) > 300]
     samples = written[::max(1, len(written) // 5)][:5]
 
+    from apps.core.prompt_utils import render_prompt
+
     drifted = []
     for node in samples:
+        messages = render_prompt(
+            "projects/voice_drift_check",
+            voice_profile=voice.authoringfw_prompt_block,
+            chapter_order=node.order,
+            chapter_excerpt=node.content[:1200],
+        )
         result = sync_completion(
             action_code="voice_drift_check",
-            messages=[{
-                "role": "user",
-                "content": (
-                    f"ERZÄHLSTIMME-PROFIL:\n{voice.authoringfw_prompt_block}\n\n"
-                    f"KAPITEL {node.order} (Ausschnitt):\n{node.content[:1200]}\n\n"
-                    "Stimmt der Ausschnitt mit dem Profil überein? "
-                    'Antworte als JSON: {"drift": true/false, "reason": "..."}'
-                ),
-            }],
+            messages=messages,
         )
         if result.success:
             from promptfw.parsing import extract_json

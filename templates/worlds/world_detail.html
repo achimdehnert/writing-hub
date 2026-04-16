@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}{{ world.name|default:"Welt" }} — Welten — Writing Hub{% endblock %}
+{% block nav_worlds %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+    .world-section { background: #0d1117; border: 1px solid #2d3748; border-radius: .75rem; padding: 1.25rem; margin-bottom: 1rem; }
+    .world-section h6 { color: #e2e8f0; font-size: .85rem; font-weight: 700; margin-bottom: .75rem; }
+    .char-card { background: #131929; border: 1px solid #374151; border-radius: .5rem; padding: .75rem; transition: border-color .15s; }
+    .char-card:hover { border-color: #6366f1; }
+    .char-role { font-size: .65rem; padding: .15rem .4rem; border-radius: 999px; font-weight: 600; }
+    .role-protagonist { background: #1a3a1a; color: #22c55e; }
+    .role-antagonist { background: #3a1a1a; color: #f87171; }
+    .role-supporting { background: #1e2235; color: #94a3b8; }
+    .loc-card { background: #131929; border: 1px solid #374151; border-radius: .5rem; padding: .75rem; }
+    .loc-card:hover { border-color: #6366f1; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:960px;margin:0 auto;">
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <a href="{% url 'worlds_html:list' %}" class="btn btn-link text-muted ps-0">
+        <i class="bi bi-arrow-left me-1"></i> Welten
+    </a>
+    <div class="d-flex gap-2">
+        <a href="https://weltenforger.com/worlds/{{ link.weltenhub_world_id }}/"
+           target="_blank" rel="noopener"
+           class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-box-arrow-up-right me-1"></i> In WeltenHub oeffnen
+        </a>
+    </div>
+</div>
+
+<!-- Welt-Header -->
+<div class="rounded-3 p-4 mb-4" style="background:linear-gradient(135deg,#1a365d 0%,#1e1b4b 100%);">
+    <div class="d-flex align-items-center gap-2 mb-2">
+        <i class="bi bi-globe2 text-primary" style="font-size:1.5rem;"></i>
+        <h4 class="fw-bold text-white mb-0">{{ world.name|default:"Unbekannte Welt" }}</h4>
+    </div>
+    {% if world.description %}
+    <p class="mb-0" style="color:#a5b4fc;">{{ world.description|truncatechars:300 }}</p>
+    {% endif %}
+    <div class="mt-2 d-flex gap-3" style="color:#94a3b8;font-size:.82rem;">
+        <span><i class="bi bi-folder2-open me-1"></i>{{ project.title }}</span>
+        <span><i class="bi bi-people me-1"></i>{{ characters|length }} Charaktere</span>
+        <span><i class="bi bi-geo-alt me-1"></i>{{ locations|length }} Orte</span>
+        <span class="badge bg-dark border border-secondary text-muted" style="font-size:.65rem;">{{ link.get_role_display }}</span>
+    </div>
+</div>
+
+{% if not world %}
+<div class="alert alert-warning py-2 small">
+    <i class="bi bi-exclamation-triangle me-1"></i>
+    WeltenHub ist derzeit nicht erreichbar. Die Welt-Daten koennen nicht geladen werden.
+</div>
+{% endif %}
+
+<!-- Charaktere -->
+<div class="world-section">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h6 class="mb-0"><i class="bi bi-people me-2" style="color:#6366f1;"></i>Charaktere ({{ characters|length }})</h6>
+        <div class="d-flex gap-2">
+            <a href="{% url 'worlds_html:character_link' link.pk %}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-link-45deg me-1"></i>Vorhandene verknuepfen
+            </a>
+            <a href="{% url 'worlds_html:character_create' link.pk %}" class="btn btn-outline-success btn-sm">
+                <i class="bi bi-plus me-1"></i>Neuer Charakter
+            </a>
+            <form method="post" action="{% url 'worlds_html:characters_generate' link.pk %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="count" value="3">
+                <button class="btn btn-sm" style="background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3;">
+                    <i class="bi bi-stars me-1"></i>Per LLM generieren
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {% if characters %}
+    <div class="row g-2">
+        {% for char in characters %}
+        <div class="col-md-6 col-lg-4">
+            <div class="char-card">
+                <div class="d-flex align-items-start justify-content-between mb-1">
+                    <div class="fw-semibold small" style="color:#e2e8f0;">
+                        <i class="bi bi-person me-1"></i>{{ char.name }}
+                    </div>
+                    <span class="char-role {% if char.is_protagonist %}role-protagonist{% else %}role-supporting{% endif %}">
+                        {% if char.is_protagonist %}Protagonist{% else %}Nebenfigur{% endif %}
+                    </span>
+                </div>
+                {% if char.personality %}
+                <div class="text-muted" style="font-size:.75rem;">{{ char.personality|truncatechars:100 }}</div>
+                {% endif %}
+                {% if char.backstory %}
+                <div class="mt-1 text-muted" style="font-size:.72rem;"><strong>Hintergrund:</strong> {{ char.backstory|truncatechars:80 }}</div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-3">
+        <i class="bi bi-people d-block mb-2 text-muted" style="font-size:2rem;"></i>
+        <p class="text-muted small mb-2">Noch keine Charaktere in dieser Welt.</p>
+        <div class="d-flex gap-2 justify-content-center">
+            <a href="{% url 'worlds_html:character_create' link.pk %}" class="btn btn-outline-success btn-sm">
+                <i class="bi bi-plus me-1"></i>Charakter erstellen
+            </a>
+            <a href="{% url 'worlds_html:character_link' link.pk %}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-link-45deg me-1"></i>Bestehende verknuepfen
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Orte -->
+<div class="world-section">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h6 class="mb-0"><i class="bi bi-geo-alt me-2" style="color:#6366f1;"></i>Orte ({{ locations|length }})</h6>
+        <form method="post" action="{% url 'worlds_html:locations_generate' link.pk %}" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="count" value="3">
+            <button class="btn btn-sm" style="background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3;">
+                <i class="bi bi-stars me-1"></i>Per LLM generieren
+            </button>
+        </form>
+    </div>
+
+    {% if locations %}
+    <div class="row g-2">
+        {% for loc in locations %}
+        <div class="col-md-6">
+            <div class="loc-card">
+                <div class="fw-semibold small mb-1" style="color:#e2e8f0;">
+                    <i class="bi bi-geo-alt me-1"></i>{{ loc.name }}
+                </div>
+                {% if loc.description %}
+                <div class="text-muted" style="font-size:.75rem;">{{ loc.description|truncatechars:120 }}</div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-3 text-muted small">
+        <i class="bi bi-geo-alt d-block mb-1" style="font-size:1.5rem;"></i>
+        Keine Orte in dieser Welt.
+    </div>
+    {% endif %}
+</div>
+
+</div>
+{% endblock %}

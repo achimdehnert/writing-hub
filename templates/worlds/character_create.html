@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Charakter erstellen — {{ world.name|default:"Welt" }} — Writing Hub{% endblock %}
+{% block nav_worlds %}active{% endblock %}
+
+{% block content %}
+<div style="max-width:700px;margin:0 auto;">
+
+<a href="{% url 'worlds_html:detail' link.pk %}" class="btn btn-link text-muted ps-0 mb-3">
+    <i class="bi bi-arrow-left me-1"></i> Zurueck zu {{ world.name|default:"Welt" }}
+</a>
+
+<div class="card" style="background:#0d1117;border-color:#2d3748;">
+    <div class="card-header py-3" style="border-color:#2d3748;">
+        <h5 class="mb-0 fw-bold" style="color:#e2e8f0;">
+            <i class="bi bi-person-plus me-2" style="color:#6366f1;"></i>Neuer Charakter
+        </h5>
+        <div class="text-muted small mt-1">
+            Welt: <strong style="color:#a5b4fc;">{{ world.name|default:"—" }}</strong>
+            &middot; Projekt: {{ project.title }}
+        </div>
+    </div>
+    <div class="card-body p-4">
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label class="form-label small fw-semibold" style="color:#cbd5e1;">Name *</label>
+                <input type="text" name="name" class="form-control"
+                       style="background:#131929;color:#f1f5f9;border-color:#475569;"
+                       placeholder="z.B. Max Brenner" required autofocus>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-semibold" style="color:#cbd5e1;">Persoenlichkeit</label>
+                <textarea name="personality" rows="2" class="form-control"
+                          style="background:#131929;color:#f1f5f9;border-color:#475569;font-size:.85rem;"
+                          placeholder="Introvertiert, analytisch, empathisch..."></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-semibold" style="color:#cbd5e1;">Hintergrund / Backstory</label>
+                <textarea name="backstory" rows="3" class="form-control"
+                          style="background:#131929;color:#f1f5f9;border-color:#475569;font-size:.85rem;"
+                          placeholder="Aufgewachsen in... Hat erlebt..."></textarea>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold" style="color:#cbd5e1;">Ziele</label>
+                    <textarea name="goals" rows="2" class="form-control"
+                              style="background:#131929;color:#f1f5f9;border-color:#475569;font-size:.85rem;"
+                              placeholder="Was will die Figur erreichen?"></textarea>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold" style="color:#cbd5e1;">Aengste</label>
+                    <textarea name="fears" rows="2" class="form-control"
+                              style="background:#131929;color:#f1f5f9;border-color:#475569;font-size:.85rem;"
+                              placeholder="Wovor fuerchtet sich die Figur?"></textarea>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-semibold" style="color:#cbd5e1;">Aussehen</label>
+                <textarea name="appearance" rows="2" class="form-control"
+                          style="background:#131929;color:#f1f5f9;border-color:#475569;font-size:.85rem;"
+                          placeholder="Gross, dunkle Haare, Narbe ueber dem linken Auge..."></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-semibold" style="color:#cbd5e1;">Notizen</label>
+                <textarea name="notes" rows="2" class="form-control"
+                          style="background:#131929;color:#f1f5f9;border-color:#475569;font-size:.85rem;"
+                          placeholder="Interne Notizen..."></textarea>
+            </div>
+
+            <div class="form-check mb-4">
+                <input type="checkbox" name="is_protagonist" class="form-check-input" id="id_protagonist"
+                       style="background-color:#131929;border-color:#475569;">
+                <label class="form-check-label small" for="id_protagonist" style="color:#cbd5e1;">
+                    <i class="bi bi-star me-1" style="color:#eab308;"></i>Protagonist (Hauptfigur)
+                </label>
+            </div>
+
+            <div class="d-flex gap-2 justify-content-end">
+                <a href="{% url 'worlds_html:detail' link.pk %}" class="btn btn-outline-secondary btn-sm">Abbrechen</a>
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus me-1"></i>Charakter erstellen
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+</div>
+{% endblock %}

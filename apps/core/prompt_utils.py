@@ -105,14 +105,22 @@ def _render_from_file(template_name: str, context: dict) -> list[dict]:
         if not raw_tpl.strip().startswith("---"):
             raise ValueError("Template must start with YAML frontmatter (---)")
 
-        parts = raw_tpl.split("---", 2)
-        if len(parts) < 3:
+        # Split on all --- delimiters and merge YAML blocks
+        parts = raw_tpl.split("---")
+        # parts[0] is empty (before first ---), rest are YAML sections
+        yaml_sections = [p for p in parts[1:] if p.strip()]
+        if not yaml_sections:
             raise ValueError("Invalid frontmatter: expected --- ... --- format")
 
-        frontmatter = yaml.safe_load(parts[1])
-        if not isinstance(frontmatter, dict):
+        frontmatter: dict = {}
+        for section in yaml_sections:
+            parsed = yaml.safe_load(section)
+            if isinstance(parsed, dict):
+                frontmatter.update(parsed)
+
+        if not frontmatter:
             raise ValueError(
-                f"Frontmatter must be a YAML dict, got {type(frontmatter).__name__}"
+                "Frontmatter must contain at least one YAML dict section"
             )
 
         messages: list[dict[str, str]] = []

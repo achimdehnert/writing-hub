@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 from django.views.generic import DetailView, ListView
 
-from .models import Author, WritingStyle, WritingStyleSample
+from .models import Author, GenreProfile, SituationType, WritingStyle, WritingStyleSample
 from . import services
 
 logger = logging.getLogger(__name__)
@@ -81,7 +81,8 @@ class WritingStyleCreateView(LoginRequiredMixin, View):
 
     def get(self, request, pk):
         author = get_object_or_404(Author, pk=pk, owner=request.user)
-        return render(request, self.template_name, {"author": author})
+        genres = GenreProfile.objects.filter(is_active=True)
+        return render(request, self.template_name, {"author": author, "genres": genres})
 
     def post(self, request, pk):
         author = get_object_or_404(Author, pk=pk, owner=request.user)
@@ -96,15 +97,23 @@ class WritingStyleCreateView(LoginRequiredMixin, View):
                 source_text = ""
 
         if not name:
+            genres = GenreProfile.objects.filter(is_active=True)
             return render(request, self.template_name, {
                 "author": author,
+                "genres": genres,
                 "error": "Name ist pflicht.",
                 "post": request.POST,
             })
 
+        genre_profile = None
+        genre_pk = request.POST.get("genre_profile")
+        if genre_pk:
+            genre_profile = GenreProfile.objects.filter(pk=genre_pk, is_active=True).first()
+
         style = WritingStyle.objects.create(
             author=author,
             name=name,
+            genre_profile=genre_profile,
             description=request.POST.get("description", ""),
             source_text=source_text,
             do_list=_parse_list_input(request.POST.get("do_list", "")),
@@ -130,8 +139,40 @@ class WritingStyleDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["samples"] = self.object.samples.all().order_by("situation")
-        ctx["situations"] = WritingStyleSample.SITUATIONS
+        style = self.object
+        samples = style.samples.all().select_related("situation_type").order_by("situation")
+        ctx["samples"] = samples
+
+        # Genre-aware situation types (fallback to legacy list)
+        if style.genre_profile:
+            ctx["situation_types"] = style.genre_profile.situation_types.filter(
+                is_active=True
+            ).order_by("sort_order")
+            ctx["situations"] = [
+                (st.slug, st.label) for st in ctx["situation_types"]
+            ]
+        else:
+            ctx["situation_types"] = None
+            ctx["situations"] = WritingStyleSample.SITUATIONS
+
+        # Build sample lookup by situation key
+        sample_by_key = {}
+        for s in samples:
+            if s.situation_type:
+                sample_by_key[s.situation_type.slug] = s
+            if s.situation:
+                sample_by_key[s.situation] = s
+
+        # Pre-built list: [(key, label, sample_or_None), ...]
+        situation_items = []
+        for key, label in ctx["situations"]:
+            situation_items.append({
+                "key": key,
+                "label": label,
+                "sample": sample_by_key.get(key),
+            })
+        ctx["situation_items"] = situation_items
+        ctx["genres"] = GenreProfile.objects.filter(is_active=True)
         return ctx
 
 
@@ -142,10 +183,12 @@ class WritingStyleUpdateView(LoginRequiredMixin, View):
         style = get_object_or_404(
             WritingStyle, pk=pk, author__owner=request.user
         )
+        genres = GenreProfile.objects.filter(is_active=True)
         return render(request, self.template_name, {
             "style": style,
             "author": style.author,
             "is_edit": True,
+            "genres": genres,
             "do_list_str": "\n".join(style.do_list or []),
             "dont_list_str": "\n".join(style.dont_list or []),
             "taboo_list_str": "\n".join(style.taboo_list or []),
@@ -175,6 +218,12 @@ class WritingStyleUpdateView(LoginRequiredMixin, View):
             style.status = WritingStyle.Status.DRAFT
             style.style_profile = ""
             style.style_prompt = ""
+
+        genre_pk = request.POST.get("genre_profile")
+        if genre_pk:
+            style.genre_profile = GenreProfile.objects.filter(pk=genre_pk, is_active=True).first()
+        elif genre_pk == "":
+            style.genre_profile = None
         style.save()
         messages.success(request, f'Schreibstil \u201e{style.name}\u201c aktualisiert.')
         return redirect("authors:style_detail", pk=style.pk)
@@ -256,9 +305,23 @@ class SampleUpdateView(LoginRequiredMixin, View):
         )
         action = request.POST.get("action", "save")
 
+        # Resolve SituationType and label from genre or legacy
+        situation_type = None
+        situation_label = situation
+        llm_hint = ""
+        if style.genre_profile:
+            st = SituationType.objects.filter(
+                genre_profile=style.genre_profile, slug=situation
+            ).first()
+            if st:
+                situation_type = st
+                situation_label = st.label
+                llm_hint = st.llm_prompt_hint or ""
+        else:
+            situation_label = dict(WritingStyleSample.SITUATIONS).get(situation, situation)
+
         if action == "regenerate":
             style_desc = services.get_style_prompt_for_writing(style)
-            situation_label = dict(WritingStyleSample.SITUATIONS).get(situation, situation)
             try:
                 from apps.authoring.services.llm_router import LLMRouter
                 from apps.core.prompt_utils import render_prompt
@@ -267,6 +330,7 @@ class SampleUpdateView(LoginRequiredMixin, View):
                     "authors/generate_sample",
                     style_desc=style_desc,
                     situation_label=situation_label,
+                    llm_prompt_hint=llm_hint,
                 )
                 result = router.completion(
                     action_code="chapter_write",
@@ -274,7 +338,7 @@ class SampleUpdateView(LoginRequiredMixin, View):
                 )
                 WritingStyleSample.objects.update_or_create(
                     style=style, situation=situation,
-                    defaults={"text": result},
+                    defaults={"text": result, "situation_type": situation_type},
                 )
                 messages.success(request, f'Beispieltext ({situation_label}) neu generiert.')
             except Exception as exc:
@@ -285,10 +349,76 @@ class SampleUpdateView(LoginRequiredMixin, View):
             if text:
                 WritingStyleSample.objects.update_or_create(
                     style=style, situation=situation,
-                    defaults={"text": text, "notes": notes},
+                    defaults={"text": text, "notes": notes, "situation_type": situation_type},
                 )
                 messages.success(request, 'Beispieltext gespeichert.')
 
+        return redirect("authors:style_detail", pk=style.pk)
+
+
+class WritingStyleImportView(LoginRequiredMixin, View):
+    """Importiert einen Schreibstil aus einer Markdown-Datei."""
+    template_name = "authors/style_import.html"
+
+    def get(self, request, pk):
+        author = get_object_or_404(Author, pk=pk, owner=request.user)
+        return render(request, self.template_name, {"author": author})
+
+    def post(self, request, pk):
+        from .services_import import import_style_from_markdown, parse_style_markdown
+
+        author = get_object_or_404(Author, pk=pk, owner=request.user)
+
+        markdown_text = ""
+        if request.FILES.get("md_file"):
+            f = request.FILES["md_file"]
+            try:
+                markdown_text = f.read().decode("utf-8", errors="replace")
+            except Exception:
+                markdown_text = ""
+        if not markdown_text:
+            markdown_text = request.POST.get("md_text", "").strip()
+
+        if not markdown_text:
+            return render(request, self.template_name, {
+                "author": author,
+                "error": "Bitte eine Markdown-Datei hochladen oder Text eingeben.",
+            })
+
+        name_override = request.POST.get("name", "").strip()
+
+        # Preview mode: parse and show results before creating
+        if request.POST.get("action") == "preview":
+            parsed = parse_style_markdown(markdown_text)
+            return render(request, self.template_name, {
+                "author": author,
+                "preview": parsed,
+                "md_text": markdown_text,
+                "name_override": name_override,
+            })
+
+        # Import mode: create WritingStyle
+        auto_analyze = bool(request.POST.get("auto_analyze"))
+        style, parsed = import_style_from_markdown(
+            author,
+            markdown_text,
+            name_override=name_override,
+            auto_analyze=auto_analyze,
+        )
+
+        if auto_analyze and not parsed.has_structured_data:
+            messages.info(
+                request,
+                f'Stil \u201e{style.name}\u201c importiert (wenig Struktur erkannt). '
+                'Starte LLM-Analyse...'
+            )
+            return redirect("authors:style_analyze", pk=style.pk)
+
+        messages.success(
+            request,
+            f'Stil \u201e{style.name}\u201c importiert '
+            f'({len(parsed.sections_found)} Sektionen erkannt).'
+        )
         return redirect("authors:style_detail", pk=style.pk)
 
 

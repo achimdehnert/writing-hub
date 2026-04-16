@@ -80,8 +80,8 @@
         <a href="{% url 'ideas:list' %}" class="nav-link {% if app == 'ideas' and 'list' in request.resolver_match.url_name %}active{% endif %}">
             <i class="bi bi-upload"></i> Ideen-Import
         </a>
-        <a href="https://weltenhub.iil.pet" target="_blank" rel="noopener" class="nav-link">
-            <i class="bi bi-globe2"></i> WeltenHub <i class="bi bi-box-arrow-up-right ms-1" style="font-size:.65rem;"></i>
+        <a href="{% url 'worlds_html:list' %}" class="nav-link {% if app == 'worlds_html' %}active{% endif %}">
+            <i class="bi bi-globe2"></i> Welten
         </a>
         <hr class="border-secondary mx-3">
         {% if user.is_staff %}

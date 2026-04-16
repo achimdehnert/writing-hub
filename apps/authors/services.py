@@ -5,11 +5,12 @@ import logging
 
 from promptfw.parsing import extract_json
 
-from .models import WritingStyle, WritingStyleSample
+from .models import SituationType, WritingStyle, WritingStyleSample
 
 logger = logging.getLogger(__name__)
 
-SITUATIONS = [
+# Legacy fallback situations (used when no genre_profile is set)
+LEGACY_SITUATIONS = [
     ("action", "Actionszene"),
     ("dialogue", "Dialog"),
     ("description", "Ortsbeschreibung"),
@@ -19,6 +20,21 @@ SITUATIONS = [
     ("inner", "Innerer Monolog"),
     ("exposition", "Exposition"),
 ]
+
+
+def get_situations_for_style(style: WritingStyle) -> list[tuple[str, str, str]]:
+    """
+    Returns list of (slug, label, llm_prompt_hint) for the style's genre.
+    Falls back to LEGACY_SITUATIONS if no genre_profile set.
+    """
+    if style.genre_profile:
+        return [
+            (st.slug, st.label, st.llm_prompt_hint or "")
+            for st in style.genre_profile.situation_types.filter(
+                is_active=True
+            ).order_by("sort_order")
+        ]
+    return [(key, label, "") for key, label in LEGACY_SITUATIONS]
 
 
 def analyze_style(style: WritingStyle) -> bool:
@@ -125,8 +141,8 @@ def extract_style_rules(style: WritingStyle) -> tuple[bool, dict]:
 
 def generate_samples(style: WritingStyle) -> int:
     """
-    Generiert Beispieltexte für alle Situationen.
-    Gibt Anzahl der generierten Samples zurück.
+    Generiert Beispieltexte fuer alle Situationen des Genres.
+    Gibt Anzahl der generierten Samples zurueck.
     """
     from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
 
@@ -139,7 +155,9 @@ def generate_samples(style: WritingStyle) -> int:
     router = LLMRouter()
     from apps.core.prompt_utils import render_prompt
 
-    for situation_key, situation_label in SITUATIONS:
+    situations = get_situations_for_style(style)
+
+    for situation_key, situation_label, llm_hint in situations:
         if style.samples.filter(situation=situation_key).exists():
             continue
         try:
@@ -147,14 +165,24 @@ def generate_samples(style: WritingStyle) -> int:
                 "authors/generate_sample",
                 style_desc=style_desc,
                 situation_label=situation_label,
+                llm_prompt_hint=llm_hint,
             )
             result = router.completion(
                 action_code="chapter_write",
                 messages=prompt_msgs,
             )
+            # Resolve SituationType FK if genre_profile is set
+            situation_type = None
+            if style.genre_profile:
+                situation_type = SituationType.objects.filter(
+                    genre_profile=style.genre_profile,
+                    slug=situation_key,
+                ).first()
+
             WritingStyleSample.objects.create(
                 style=style,
                 situation=situation_key,
+                situation_type=situation_type,
                 text=result,
             )
             count += 1
