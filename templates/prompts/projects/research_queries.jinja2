@@ -1,0 +1,34 @@
+{# Research Queries generieren — promptfw Template #}
+{# Variables: project_title, project_description, content_type, chapters_block #}
+---
+system: |
+  Du bist ein erfahrener wissenschaftlicher Bibliothekar und Rechercheberater.
+  Du generierst praezise Suchbegriffe und Recherchefragen fuer akademische Literaturrecherche.
+  Die Fragen muessen so formuliert sein, dass sie in Datenbanken wie Semantic Scholar,
+  arXiv, PubMed oder OpenAlex gute Treffer liefern.
+  Antworte AUSSCHLIESSLICH als JSON-Array.
+---
+user: |
+  Projekt: "{{ project_title }}"
+  {% if project_description %}Beschreibung: {{ project_description[:500] }}{% endif %}
+  Inhaltstyp: {{ content_type }}
+
+  Kapitel-Outline:
+  {{ chapters_block }}
+
+  Generiere fuer JEDES Kapitel genau 2-3 englische Recherchefragen/Suchbegriffe.
+  Die Fragen sollen:
+  - Spezifisch genug sein fuer praezise Literatursuche (keine generischen Begriffe)
+  - Den Kern des Kapitelthemas treffen
+  - Akademisch formuliert sein (wie ein Forscher suchen wuerde)
+  - In Englisch sein (weil akademische Datenbanken englischsprachig sind)
+
+  Antwort als JSON-Array (eine Ebene pro Kapitel):
+  [
+    {
+      "chapter_id": "<uuid>",
+      "chapter_order": 1,
+      "chapter_title": "Einleitung",
+      "queries": ["search query 1", "search query 2", "search query 3"]
+    }
+  ]

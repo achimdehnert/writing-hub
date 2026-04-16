@@ -77,11 +77,19 @@
     </div>
     <div class="card-body p-3">
         {% if chapters %}
-        <div class="mb-2">
-            <small class="text-muted d-block mb-1"><i class="bi bi-lightbulb me-1"></i>Schlagworte aus Outline übernehmen:</small>
-            <div class="d-flex gap-1 flex-wrap">
+        <div class="mb-2" id="research-queries-section">
+            <div class="d-flex align-items-center justify-content-between mb-1">
+                <small class="text-muted"><i class="bi bi-lightbulb me-1"></i>Recherchefragen pro Kapitel</small>
+                <button id="genQueriesBtn" class="btn btn-sm py-0 px-2"
+                        style="background:#1e1b4b;border:1px solid #4338ca;color:#a5b4fc;font-size:.68rem;"
+                        onclick="generateResearchQueries()" type="button">
+                    <span class="spinner-border spinner-border-sm me-1" id="genQueriesSpinner" style="display:none;" role="status"></span>
+                    <i class="bi bi-stars me-1" id="genQueriesIcon"></i>KI-Recherchefragen generieren
+                </button>
+            </div>
+            <div id="research-queries-list" class="d-flex gap-1 flex-wrap">
                 {% for ch_pk, ch_order, ch_title in chapters %}
-                <button class="btn btn-sm py-0 px-2" type="button"
+                <button class="btn btn-sm py-0 px-2 ch-query-btn" type="button"
                         style="background:#131929;border:1px solid #2d3748;color:#94a3b8;font-size:.7rem;"
                         onclick="document.getElementById('searchQuery').value='{{ ch_title|escapejs }}'; document.getElementById('searchQuery').focus();"
                         title="Suchfeld mit Kapitelthema füllen">
@@ -89,6 +97,7 @@
                 </button>
                 {% endfor %}
             </div>
+            <div id="genQueriesError" class="text-danger small mt-1" style="display:none;"></div>
         </div>
         {% endif %}
         <div class="row g-2 align-items-end mb-3">
@@ -399,6 +408,7 @@
 <script>
 const SEARCH_URL = "{% url 'projects:citation_search' project.pk %}";
 const SUMMARIZE_URL = "{% url 'projects:citation_summarize' project.pk %}";
+const RESEARCH_QUERIES_URL = "{% url 'projects:citation_research_queries' project.pk %}";
 const ADD_URL = "{% url 'projects:citations' project.pk %}";
 const CSRF = "{{ csrf_token }}";
 
@@ -586,5 +596,65 @@ async function addPaperToList(idx) {
 document.getElementById("searchQuery").addEventListener("keydown", e => {
     if (e.key === "Enter") runLiteraturrecherche();
 });
+
+async function generateResearchQueries() {
+    const btn = document.getElementById("genQueriesBtn");
+    const spinner = document.getElementById("genQueriesSpinner");
+    const icon = document.getElementById("genQueriesIcon");
+    const list = document.getElementById("research-queries-list");
+    const errDiv = document.getElementById("genQueriesError");
+
+    btn.disabled = true;
+    spinner.style.display = "";
+    icon.style.display = "none";
+    errDiv.style.display = "none";
+    list.innerHTML = '<small class="text-muted">Generiere Recherchefragen aus Outline…</small>';
+
+    const body = new FormData();
+    body.append("csrfmiddlewaretoken", CSRF);
+
+    try {
+        const resp = await fetch(RESEARCH_QUERIES_URL, {method: "POST", body});
+        const data = await resp.json();
+
+        btn.disabled = false;
+        spinner.style.display = "none";
+        icon.style.display = "";
+
+        if (!data.ok) {
+            errDiv.textContent = data.error || "Fehler";
+            errDiv.style.display = "";
+            return;
+        }
+
+        const chapters = data.chapters || [];
+        if (chapters.length === 0) {
+            list.innerHTML = '<small class="text-muted">Keine Recherchefragen generiert.</small>';
+            return;
+        }
+
+        list.innerHTML = chapters.map(ch => {
+            const queries = (ch.queries || []).map(q =>
+                `<button class="btn btn-sm py-0 px-2 me-1 mb-1" type="button"
+                    style="background:#1a1a3a;border:1px solid #4338ca;color:#c7d2fe;font-size:.68rem;"
+                    onclick="document.getElementById('searchQuery').value=this.textContent.trim(); document.getElementById('searchQuery').focus();"
+                    title="Suchfeld füllen">
+                    ${q}
+                </button>`
+            ).join("");
+            return `<div class="w-100 mb-1">
+                <small class="text-muted fw-semibold" style="font-size:.65rem;">${ch.chapter_order || ""}. ${ch.chapter_title || ""}</small>
+                <div class="d-flex flex-wrap gap-0 mt-0">${queries}</div>
+            </div>`;
+        }).join("");
+
+    } catch (err) {
+        btn.disabled = false;
+        spinner.style.display = "none";
+        icon.style.display = "";
+        errDiv.textContent = "Netzwerkfehler: " + err.message;
+        errDiv.style.display = "";
+    }
+}
 </script>
 {% endblock %}

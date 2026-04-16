@@ -281,6 +281,65 @@ class CitationISBNLookupAjaxView(LoginRequiredMixin, View):
         return JsonResponse({"ok": False, "error": f"ISBN nicht gefunden: {isbn}"})
 
 
+class ResearchQueriesAjaxView(LoginRequiredMixin, View):
+    """
+    AJAX: KI-generierte Recherchefragen pro Kapitel.
+
+    POST → generiert 2-3 englische Suchbegriffe pro Kapitel
+    basierend auf Outline-Inhalten via LLM.
+    """
+
+    def post(self, request, pk):
+        project = get_object_or_404(
+            BookProject, pk=pk, owner=request.user, is_active=True
+        )
+        active_outline = OutlineVersion.objects.filter(
+            project=project, is_active=True
+        ).order_by("-created_at").first()
+        if not active_outline:
+            return JsonResponse({"ok": False, "error": "Kein aktives Outline vorhanden."})
+
+        chapters = list(
+            active_outline.nodes.filter(beat_type="chapter").order_by("order")
+        )
+        if not chapters:
+            return JsonResponse({"ok": False, "error": "Keine Kapitel im Outline."})
+
+        chapters_block = "\n".join(
+            f"{ch.order}. {ch.title}\n   {(ch.description or '')[:200]}"
+            for ch in chapters
+        )
+
+        from apps.core.prompt_utils import render_prompt
+        from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
+
+        try:
+            messages = render_prompt(
+                "projects/research_queries",
+                project_title=project.title,
+                project_description=project.description or "",
+                content_type=project.content_type or "novel",
+                chapters_block=chapters_block,
+            )
+            router = LLMRouter()
+            raw = router.completion(
+                action_code="outline_generate",
+                messages=messages,
+                priority="fast",
+                timeout=60,
+            )
+            from promptfw.parsing import extract_json_list
+            result = extract_json_list(raw)
+            if not result:
+                return JsonResponse({"ok": False, "error": "Keine Ergebnisse generiert."})
+            return JsonResponse({"ok": True, "chapters": result})
+        except LLMRoutingError as exc:
+            return JsonResponse({"ok": False, "error": str(exc)})
+        except Exception as exc:
+            logger.exception("ResearchQueriesAjaxView error for project %s", pk)
+            return JsonResponse({"ok": False, "error": f"Fehler: {exc}"})
+
+
 class LiteraturrechercheAjaxView(LoginRequiredMixin, View):
     """
     AJAX: KI-gestützte Literaturrecherche.

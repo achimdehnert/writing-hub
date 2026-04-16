@@ -85,6 +85,7 @@ urlpatterns = [
     path("<uuid:pk>/citations/", views_citations.CitationDashboardView.as_view(), name="citations"),
     path("<uuid:pk>/citations/doi/", views_citations.CitationDOILookupAjaxView.as_view(), name="citation_doi"),
     path("<uuid:pk>/citations/isbn/", views_citations.CitationISBNLookupAjaxView.as_view(), name="citation_isbn"),
+    path("<uuid:pk>/citations/research-queries/", views_citations.ResearchQueriesAjaxView.as_view(), name="citation_research_queries"),
     path("<uuid:pk>/citations/search/", views_citations.LiteraturrechercheAjaxView.as_view(), name="citation_search"),
     path("<uuid:pk>/citations/summarize/", views_research_summary.ResearchSummarizeAjaxView.as_view(), name="citation_summarize"),
     path("<uuid:pk>/outline-research/", views_research_summary.OutlineResearchView.as_view(), name="outline_research"),
