@@ -212,6 +212,7 @@ class CitationDashboardView(LoginRequiredMixin, View):
 
         elif action == "add_from_search":
             paper_json = request.POST.get("paper", "")
+            node_id = request.POST.get("node_id", "") or None
             try:
                 paper = json.loads(paper_json)
                 authors_raw = paper.get("authors", [])
@@ -222,7 +223,14 @@ class CitationDashboardView(LoginRequiredMixin, View):
                          "orcid": ""}
                         for a in authors_raw
                     ]
-                _, created = _create_citation_from_dict(project, paper, added_via="search")
+                citation, created = _create_citation_from_dict(project, paper, added_via="search")
+                if created and node_id:
+                    node = OutlineNode.objects.filter(
+                        pk=node_id, outline_version__project=project,
+                    ).first()
+                    if node:
+                        citation.node = node
+                        citation.save(update_fields=["node"])
                 if created:
                     messages.success(request, f"Quelle hinzugefügt: {paper.get('title', '')[:60]}")
                 else:

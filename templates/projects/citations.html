@@ -97,8 +97,8 @@
                                 {% for q in ch_queries %}
                                 <button class="btn btn-sm py-0 px-2 me-1 mb-1" type="button"
                                     style="background:#1a1a3a;border:1px solid #4338ca;color:#c7d2fe;font-size:.68rem;"
-                                    onclick="document.getElementById('searchQuery').value=this.textContent.trim(); document.getElementById('searchQuery').focus();"
-                                    title="Suchfeld füllen">{{ q }}</button>
+                                    onclick="currentSearchChapterId='{{ ch_pk }}'; document.getElementById('searchQuery').value=this.textContent.trim(); document.getElementById('searchQuery').focus();"
+                                    title="Suchfeld füllen → Kapitel {{ ch_order }}">{{ q }}</button>
                                 {% endfor %}
                             </div>
                         </div>
@@ -108,8 +108,8 @@
                     {% for ch_pk, ch_order, ch_title, ch_queries in chapters %}
                     <button class="btn btn-sm py-0 px-2 ch-query-btn me-1 mb-1" type="button"
                             style="background:#131929;border:1px solid #2d3748;color:#94a3b8;font-size:.7rem;"
-                            onclick="document.getElementById('searchQuery').value='{{ ch_title|escapejs }}'; document.getElementById('searchQuery').focus();"
-                            title="Suchfeld mit Kapitelthema füllen">
+                            onclick="currentSearchChapterId='{{ ch_pk }}'; document.getElementById('searchQuery').value='{{ ch_title|escapejs }}'; document.getElementById('searchQuery').focus();"
+                            title="Suchfeld füllen → Kapitel {{ ch_order }}">
                         {{ ch_order }}. {{ ch_title|truncatechars:20 }}
                     </button>
                     {% endfor %}
@@ -429,6 +429,7 @@ const SUMMARIZE_URL = "{% url 'projects:citation_summarize' project.pk %}";
 const RESEARCH_QUERIES_URL = "{% url 'projects:citation_research_queries' project.pk %}";
 const ADD_URL = "{% url 'projects:citations' project.pk %}";
 const CSRF = "{{ csrf_token }}";
+let currentSearchChapterId = null;
 
 const SOURCE_COLORS = {
     arxiv: "#f59e0b",
@@ -567,7 +568,8 @@ function updateBulkAddBtn() {
         list.parentNode.insertBefore(btn, list.nextSibling);
     }
     if (remaining > 0) {
-        btn.innerHTML = `<i class="bi bi-plus-lg me-1"></i>${remaining} Treffer übernehmen`;
+        const chHint = currentSearchChapterId ? ' <span style="opacity:.7;font-size:.7rem;">(→ Kapitel zugeordnet)</span>' : '';
+        btn.innerHTML = `<i class="bi bi-plus-lg me-1"></i>${remaining} Treffer übernehmen${chHint}`;
         btn.style.display = "";
         btn.disabled = false;
     } else {
@@ -591,6 +593,7 @@ async function bulkAddPapers() {
         body.append("csrfmiddlewaretoken", CSRF);
         body.append("action", "add_from_search");
         body.append("paper", JSON.stringify(paper));
+        if (currentSearchChapterId) body.append("node_id", currentSearchChapterId);
         await fetch(ADD_URL, {method: "POST", body});
     }
     window.location.reload();
@@ -698,11 +701,12 @@ async function generateResearchQueries() {
         }
 
         list.innerHTML = chapters.map(ch => {
+            const chId = ch.chapter_id || "";
             const queries = (ch.queries || []).map(q =>
                 `<button class="btn btn-sm py-0 px-2 me-1 mb-1" type="button"
                     style="background:#1a1a3a;border:1px solid #4338ca;color:#c7d2fe;font-size:.68rem;"
-                    onclick="document.getElementById('searchQuery').value=this.textContent.trim(); document.getElementById('searchQuery').focus();"
-                    title="Suchfeld füllen">
+                    onclick="currentSearchChapterId='${chId}'; document.getElementById('searchQuery').value=this.textContent.trim(); document.getElementById('searchQuery').focus();"
+                    title="Suchfeld füllen → Kap. ${ch.chapter_order || ''}">
                     ${q}
                 </button>`
             ).join("");
