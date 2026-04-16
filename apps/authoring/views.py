@@ -7,6 +7,7 @@ Async-Pattern: POST start → Celery Task → GET status polling.
 
 import logging
 
+from apps.authoring.defaults import DEFAULT_TARGET_WORD_COUNT
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -60,7 +61,7 @@ class chapter_write_start(APIView):
                 chapter_number=data.get("chapter_number", 1),
                 chapter_title=data.get("chapter_title", ""),
                 chapter_outline=data.get("chapter_outline", ""),
-                target_word_count=data.get("target_word_count", 2000),
+                target_word_count=data.get("target_word_count", DEFAULT_TARGET_WORD_COUNT),
                 chapter_beat=data.get("chapter_beat", ""),
                 emotional_arc=data.get("emotional_arc", ""),
                 prev_chapter_summary=data.get("prev_chapter_summary", ""),
@@ -82,7 +83,7 @@ class chapter_write_start(APIView):
                 context.chapter_number = data.get("chapter_number", 1)
                 context.chapter_title = data.get("chapter_title", "")
                 context.chapter_outline = data.get("chapter_outline", "")
-                context.target_word_count = data.get("target_word_count", 2000)
+                context.target_word_count = data.get("target_word_count", DEFAULT_TARGET_WORD_COUNT)
                 context.chapter_beat = data.get("chapter_beat", "")
                 context.emotional_arc = data.get("emotional_arc", "")
                 context.prev_chapter_summary = data.get("prev_chapter_summary", "")
@@ -108,6 +109,69 @@ class chapter_write_start(APIView):
         )
 
 
+class chapter_refine_start(APIView):
+    """
+    POST /authoring/projects/<project_id>/chapters/<chapter_ref>/refine/
+
+    Verfeinert bestehendes Kapitel synchron (kein Celery nötig).
+    Body: {existing_content, instruction, target_word_count?}
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, project_id, chapter_ref):
+        from apps.authoring.handlers.chapter_writer_handler import (
+            ChapterContext,
+            ChapterWriterHandler,
+        )
+        from apps.projects.models import BookProject
+
+        try:
+            project = BookProject.objects.get(pk=project_id, owner=request.user)
+        except BookProject.DoesNotExist:
+            return Response({"detail": "Projekt nicht gefunden."}, status=status.HTTP_404_NOT_FOUND)
+
+        data = request.data
+        existing_content = data.get("existing_content", "")
+        instruction = data.get("instruction", "")
+        mode = data.get("mode", "refine")  # refine or continue
+
+        if not existing_content:
+            return Response(
+                {"detail": "Kein bestehender Inhalt zum Verfeinern."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        context = ChapterContext.from_project(
+            project_id=str(project_id),
+            chapter_ref=str(chapter_ref),
+        )
+        context.existing_content = existing_content
+        context.target_word_count = data.get("target_word_count", DEFAULT_TARGET_WORD_COUNT)
+        context.chapter_beat = data.get("chapter_beat", "")
+        context.emotional_arc = data.get("emotional_arc", "")
+
+        handler = ChapterWriterHandler()
+        try:
+            if mode == "continue":
+                result = handler.continue_chapter(context)
+            else:
+                result = handler.refine_chapter(context, instruction or "Verfeinere und erweitere diesen Text mit mehr Details, tieferen Beschreibungen und lebendigeren Szenen.")
+        except Exception as exc:
+            logger.exception("chapter_refine_start error: %s", exc)
+            return Response({"success": False, "error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        if result.get("success"):
+            return Response({
+                "success": True,
+                "content": result["content"],
+                "word_count": result.get("word_count", 0),
+            })
+        return Response(
+            {"success": False, "error": result.get("error", "Verfeinerung fehlgeschlagen")},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
 class chapter_write_status(APIView):
     """
     GET /authoring/jobs/<job_id>/status/
@@ -118,12 +182,23 @@ class chapter_write_status(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, job_id):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
         from apps.authoring.models_jobs import ChapterWriteJob
 
         try:
             job = ChapterWriteJob.objects.get(pk=job_id, requested_by=request.user)
         except ChapterWriteJob.DoesNotExist:
             return Response({"detail": "Job nicht gefunden."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Auto-fail stale jobs (pending/running > 10 min)
+        stale_cutoff = timezone.now() - timedelta(minutes=10)
+        if job.status in ("pending", "running") and job.created_at < stale_cutoff:
+            job.status = "failed"
+            job.error = "Timeout: Job nicht innerhalb von 10 Minuten abgeschlossen."
+            job.save(update_fields=["status", "error"])
 
         payload = {"status": job.status, "job_id": str(job.id)}
         if job.is_done:

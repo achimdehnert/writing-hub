@@ -25,6 +25,12 @@ import logging
 import time
 
 from django.conf import settings
+from apps.authoring.defaults import (
+    DEFAULT_CONTENT_TYPE,
+    DEFAULT_FRAMEWORK,
+    DEFAULT_PROJECT_TARGET_WORDS,
+    DEFAULT_TARGET_WORD_COUNT,
+)
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 
@@ -45,7 +51,7 @@ CONTENT_TYPE_MAP = {
     "scientific_essay": "scientific",
     "imrad_article": "scientific",
     "essay": "essay",
-    "three_act": "novel",
+    "three_act": DEFAULT_CONTENT_TYPE,
 }
 
 
@@ -65,15 +71,15 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             "--framework",
-            default="academic_essay",
+            default=DEFAULT_FRAMEWORK,
             choices=FRAMEWORK_CHOICES,
-            help="Outline-Framework (default: academic_essay)",
+            help=f"Outline-Framework (default: {DEFAULT_FRAMEWORK})",
         )
         parser.add_argument(
             "--target-words",
             type=int,
-            default=5000,
-            help="Ziel-Wortanzahl gesamt (default: 5000)",
+            default=DEFAULT_PROJECT_TARGET_WORDS,
+            help=f"Ziel-Wortanzahl gesamt (default: {DEFAULT_PROJECT_TARGET_WORDS})",
         )
         parser.add_argument(
             "--chapter-count",
@@ -317,7 +323,7 @@ class Command(BaseCommand):
         if fw_obj:
             beats = list(fw_obj.beats.order_by("order"))
             if beats:
-                words_per = (project.target_word_count or 5000) // len(beats)
+                words_per = (project.target_word_count or DEFAULT_PROJECT_TARGET_WORDS) // len(beats)
                 OutlineNode.objects.bulk_create([
                     OutlineNode(
                         outline_version=version,
@@ -334,7 +340,7 @@ class Command(BaseCommand):
 
         # Ultra-Fallback: generische Kapitel
         count = chapter_count or 5
-        words_per = (project.target_word_count or 5000) // count
+        words_per = (project.target_word_count or DEFAULT_PROJECT_TARGET_WORDS) // count
         OutlineNode.objects.bulk_create([
             OutlineNode(
                 outline_version=version,
@@ -401,7 +407,7 @@ class Command(BaseCommand):
         total_words = 0
 
         for node in nodes:
-            target = node.target_words or 2000
+            target = node.target_words or DEFAULT_TARGET_WORD_COUNT
             self.stdout.write(
                 f"  ✍  {node.order}. {node.title} ({target} Wörter)...",
                 ending="",

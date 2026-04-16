@@ -113,3 +113,66 @@ class TestWorkflowViewsReachable:
     def test_should_reach_versions(self):
         url = reverse("projects:versions", kwargs={"pk": self.project.pk})
         assert self.client.get(url).status_code == 200
+
+
+def _seed_world(db, project):
+    """Erzeugt Welt + Charakter + Ort für Worlds-Views Tests."""
+    from apps.worlds.models import ProjectWorldLink, ProjectCharacterLink, ProjectLocationLink
+
+    wl = ProjectWorldLink.objects.filter(project=project).first()
+    if not wl:
+        wl = ProjectWorldLink.objects.create(
+            project=project,
+            weltenhub_world_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+            role="primary",
+        )
+    pcl = ProjectCharacterLink.objects.filter(project=project).first()
+    if not pcl:
+        pcl = ProjectCharacterLink.objects.create(
+            project=project,
+            name="Test-Charakter",
+            narrative_role="protagonist",
+        )
+    pll = ProjectLocationLink.objects.filter(project=project).first()
+    if not pll:
+        pll = ProjectLocationLink.objects.create(
+            project=project,
+            name="Test-Ort",
+            description="Ein Testort",
+        )
+    return wl, pcl, pll
+
+
+@pytest.mark.django_db
+class TestWorldsViewsReachable:
+    """Alle Worlds GET-Views müssen HTTP 200 liefern."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db, auth_client):
+        self.project = _seed_project(db)
+        self.client = auth_client
+        self.wl, self.pcl, self.pll = _seed_world(db, self.project)
+
+    def test_should_reach_world_list(self):
+        url = reverse("worlds_html:list")
+        assert self.client.get(url).status_code == 200
+
+    def test_should_reach_world_detail(self):
+        url = reverse("worlds_html:detail", kwargs={"pk": self.wl.pk})
+        assert self.client.get(url).status_code == 200
+
+    def test_should_reach_character_detail(self):
+        url = reverse("worlds_html:character_detail", kwargs={"pk": self.pcl.pk})
+        assert self.client.get(url).status_code == 200
+
+    def test_should_reach_character_create(self):
+        url = reverse("worlds_html:character_create", kwargs={"pk": self.wl.pk})
+        assert self.client.get(url).status_code == 200
+
+    def test_should_reach_character_link(self):
+        url = reverse("worlds_html:character_link", kwargs={"pk": self.wl.pk})
+        assert self.client.get(url).status_code == 200
+
+    def test_should_reach_location_detail(self):
+        url = reverse("worlds_html:location_detail", kwargs={"pk": self.pll.pk})
+        assert self.client.get(url).status_code == 200

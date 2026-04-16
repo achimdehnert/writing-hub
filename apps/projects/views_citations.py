@@ -1,6 +1,8 @@
 """
 Citation Views — DOI/ISBN Lookup, BibTeX Import, Bibliography
 für akademische/wissenschaftliche BookProjects.
+
+Quellen werden in ProjectCitation (DB) gespeichert (Issue #8).
 """
 from __future__ import annotations
 
@@ -9,6 +11,7 @@ import logging
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import IntegrityError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views import View
@@ -19,7 +22,7 @@ from .constants import (
     SEARCH_SOURCES,
     VALID_SEARCH_SOURCES,
 )
-from .models import BookProject
+from .models import BookProject, ProjectCitation
 from .services.citation_service import (
     export_bibtex,
     format_bibliography,
@@ -33,6 +36,72 @@ from .services.citation_service import (
 logger = logging.getLogger(__name__)
 
 
+def _model_to_dict(c: ProjectCitation) -> dict:
+    """Convert ProjectCitation model to dict for format_bibliography compatibility."""
+    return {
+        "title": c.title,
+        "authors": c.authors_json or [],
+        "year": c.year,
+        "source_type": c.source_type,
+        "journal": c.journal,
+        "volume": c.volume,
+        "issue": c.issue,
+        "pages": c.pages,
+        "publisher": c.publisher,
+        "doi": c.doi,
+        "url": c.url,
+        "abstract": c.abstract,
+        "keywords": c.keywords or [],
+    }
+
+
+def _create_citation_from_dict(project, data, added_via="manual"):
+    """Create ProjectCitation from a citation dict. Returns (citation, created)."""
+    doi = data.get("doi") or ""
+    title = data.get("title") or ""
+
+    if doi:
+        existing = ProjectCitation.objects.filter(project=project, doi=doi).first()
+        if existing:
+            return existing, False
+    if title:
+        existing = ProjectCitation.objects.filter(project=project, title=title).first()
+        if existing:
+            return existing, False
+
+    if not title:
+        return None, False
+
+    authors = data.get("authors") or []
+    year_raw = data.get("year")
+    if year_raw is None and data.get("publication_date"):
+        y = str(data["publication_date"])[:4]
+        year_raw = int(y) if y.isdigit() else None
+
+    try:
+        citation = ProjectCitation.objects.create(
+            project=project,
+            title=title,
+            authors_json=authors if authors else [],
+            year=int(year_raw) if year_raw else None,
+            doi=doi,
+            url=data.get("url") or "",
+            abstract=data.get("abstract") or "",
+            source_type=data.get("source_type") or "journal",
+            journal=data.get("journal") or "",
+            volume=data.get("volume") or "",
+            issue=data.get("issue") or "",
+            pages=data.get("pages") or "",
+            publisher=data.get("publisher") or "",
+            keywords=data.get("keywords") or [],
+            added_via=added_via,
+        )
+        return citation, True
+    except IntegrityError:
+        existing = ProjectCitation.objects.filter(project=project, doi=doi).first()
+        return existing, False
+
+
 class CitationDashboardView(LoginRequiredMixin, View):
     """Zitations-Dashboard für ein akademisches/wissenschaftliches Projekt."""
 
@@ -43,39 +112,32 @@ class CitationDashboardView(LoginRequiredMixin, View):
             BookProject, pk=pk, owner=request.user, is_active=True
         )
 
-    def _get_citations(self, request):
-        raw = request.session.get("citations", "[]")
-        try:
-            return json.loads(raw) if isinstance(raw, str) else raw
-        except (json.JSONDecodeError, TypeError):
-            return []
-
-    def _save_citations(self, request, citations):
-        request.session["citations"] = json.dumps(citations)
-
-    def get(self, request, pk):
-        project = self._get_project(request, pk)
-        citations = self._get_citations(request)
+    def _render(self, request, project, style=None):
+        """Render citations dashboard with current DB state."""
+        citations_qs = ProjectCitation.objects.filter(project=project)
+        citations_dicts = [_model_to_dict(c) for c in citations_qs]
         profile = FORMAT_PROFILES.get(project.content_type, {})
         default_style = profile.get("default_bib_style", "apa")
-        style = request.GET.get("style", default_style)
-        bibliography = ""
-        if citations:
-            bibliography = format_bibliography(citations, style=style)
+        style = style or request.GET.get("style", default_style)
+        bibliography = format_bibliography(citations_dicts, style=style) if citations_dicts else ""
         return render(request, self.template_name, {
             "project": project,
-            "citations": citations,
+            "citations": citations_qs,
+            "citations_dicts": citations_dicts,
             "bibliography": bibliography,
             "citation_styles": BIBLIOGRAPHY_STYLES,
             "active_style": style,
-            "bibtex_export": export_bibtex(citations) if citations else "",
+            "bibtex_export": export_bibtex(citations_dicts) if citations_dicts else "",
             "search_sources": SEARCH_SOURCES,
         })
+
+    def get(self, request, pk):
+        project = self._get_project(request, pk)
+        return self._render(request, project)
 
     def post(self, request, pk):
         project = self._get_project(request, pk)
         action = request.POST.get("action", "")
-        citations = self._get_citations(request)
 
         if action == "resolve_doi":
             doi = request.POST.get("doi", "").strip()
@@ -84,9 +146,8 @@ class CitationDashboardView(LoginRequiredMixin, View):
             else:
                 result = resolve_doi(doi)
                 if result:
-                    if not any(c.get("doi") == result.get("doi") for c in citations):
-                        citations.append(result)
-                        self._save_citations(request, citations)
+                    _, created = _create_citation_from_dict(project, result, added_via="doi")
+                    if created:
                         messages.success(request, f"Quelle gefunden: {result.get('title', doi)}")
                     else:
                         messages.warning(request, "Diese Quelle ist bereits in der Liste.")
@@ -100,9 +161,8 @@ class CitationDashboardView(LoginRequiredMixin, View):
             else:
                 result = resolve_isbn(isbn)
                 if result:
-                    if not any(c.get("title") == result.get("title") for c in citations):
-                        citations.append(result)
-                        self._save_citations(request, citations)
+                    _, created = _create_citation_from_dict(project, result, added_via="isbn")
+                    if created:
                         messages.success(request, f"Buch gefunden: {result.get('title', isbn)}")
                     else:
                         messages.warning(request, "Dieses Buch ist bereits in der Liste.")
@@ -117,84 +177,46 @@ class CitationDashboardView(LoginRequiredMixin, View):
                 imported = parse_bibtex(bibtex_str)
                 added = 0
                 for c in imported:
-                    doi = c.get("doi", "")
-                    title = c.get("title", "")
-                    if doi and any(x.get("doi") == doi for x in citations):
-                        continue
-                    if title and any(x.get("title") == title for x in citations):
-                        continue
-                    citations.append(c)
-                    added += 1
-                self._save_citations(request, citations)
+                    _, created = _create_citation_from_dict(project, c, added_via="bibtex")
+                    if created:
+                        added += 1
                 messages.success(request, f"{added} Quellen aus BibTeX importiert.")
 
         elif action == "remove":
-            idx_str = request.POST.get("index", "")
-            try:
-                idx = int(idx_str)
-                if 0 <= idx < len(citations):
-                    removed = citations.pop(idx)
-                    self._save_citations(request, citations)
-                    messages.success(request, f"Entfernt: {removed.get('title', '')}")
-            except (ValueError, IndexError):
-                pass
+            citation_id = request.POST.get("citation_id", "")
+            if citation_id:
+                deleted, _ = ProjectCitation.objects.filter(
+                    pk=citation_id, project=project
+                ).delete()
+                if deleted:
+                    messages.success(request, "Quelle entfernt.")
 
         elif action == "add_from_search":
             paper_json = request.POST.get("paper", "")
             try:
                 paper = json.loads(paper_json)
-                title = paper.get("title", "")
-                doi = paper.get("doi", "")
-                if doi and any(c.get("doi") == doi for c in citations):
-                    messages.warning(request, "Diese Quelle ist bereits in der Liste.")
-                elif title and any(c.get("title") == title for c in citations):
-                    messages.warning(request, "Diese Quelle ist bereits in der Liste.")
+                authors_raw = paper.get("authors", [])
+                if authors_raw and isinstance(authors_raw[0], str):
+                    paper["authors"] = [
+                        {"family": a.split()[-1] if a.split() else a,
+                         "given": " ".join(a.split()[:-1]) if len(a.split()) > 1 else "",
+                         "orcid": ""}
+                        for a in authors_raw
+                    ]
+                _, created = _create_citation_from_dict(project, paper, added_via="search")
+                if created:
+                    messages.success(request, f"Quelle hinzugefügt: {paper.get('title', '')[:60]}")
                 else:
-                    authors_raw = paper.get("authors", [])
-                    if authors_raw and isinstance(authors_raw[0], str):
-                        authors = [
-                            {"family": a.split()[-1] if a.split() else a,
-                             "given": " ".join(a.split()[:-1]) if len(a.split()) > 1 else "",
-                             "orcid": ""}
-                            for a in authors_raw
-                        ]
-                    else:
-                        authors = authors_raw
-                    year = paper.get("publication_date", "")[:4] if paper.get("publication_date") else None
-                    citation = {
-                        "title": title,
-                        "authors": authors,
-                        "year": int(year) if year and year.isdigit() else None,
-                        "source_type": "journal",
-                        "journal": paper.get("journal", ""),
-                        "volume": "", "issue": "", "pages": "",
-                        "publisher": "", "place": "",
-                        "doi": doi or "",
-                        "url": paper.get("url", ""),
-                        "abstract": paper.get("abstract", ""),
-                        "keywords": paper.get("categories", []),
-                    }
-                    citations.append(citation)
-                    self._save_citations(request, citations)
-                    messages.success(request, f"Quelle hinzugefügt: {title[:60]}")
+                    messages.warning(request, "Diese Quelle ist bereits in der Liste.")
             except (json.JSONDecodeError, KeyError):
                 messages.error(request, "Fehler beim Hinzufügen der Quelle.")
 
         elif action == "clear_all":
-            self._save_citations(request, [])
-            messages.success(request, "Alle Quellen entfernt.")
+            count, _ = ProjectCitation.objects.filter(project=project).delete()
+            messages.success(request, f"{count} Quellen entfernt.")
 
         style = request.POST.get("style", request.GET.get("style", "apa"))
-        bibliography = format_bibliography(citations, style=style) if citations else ""
-        return render(request, self.template_name, {
-            "project": project,
-            "citations": citations,
-            "bibliography": bibliography,
-            "citation_styles": BIBLIOGRAPHY_STYLES,
-            "active_style": style,
-            "bibtex_export": export_bibtex(citations) if citations else "",
-            "search_sources": SEARCH_SOURCES,
-        })
+        return self._render(request, project, style=style)
 
 
 class CitationDOILookupAjaxView(LoginRequiredMixin, View):

@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}{{ pll.name|default:"Ort" }} — Writing Hub{% endblock %}
+{% block nav_worlds %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+    .field-section { background: #0d1117; border: 1px solid #2d3748; border-radius: .75rem; padding: 1.25rem; margin-bottom: 1rem; }
+    .field-section h6 { color: #e2e8f0; font-size: .85rem; font-weight: 700; margin-bottom: .75rem; }
+    .field-section .form-label { color: #94a3b8; font-size: .78rem; font-weight: 600; margin-bottom: .25rem; }
+    .field-section .form-control {
+        background: #131929; color: #f1f5f9; border-color: #475569; font-size: .85rem;
+    }
+    .field-section .form-control:focus {
+        border-color: #6366f1; box-shadow: 0 0 0 .15rem rgba(99,102,241,.25);
+    }
+    .loc-header { background: linear-gradient(135deg, #1a365d 0%, #1e1b4b 100%); border-radius: .75rem; padding: 1.5rem; margin-bottom: 1.25rem; }
+    .source-badge { font-size: .7rem; padding: .2rem .5rem; border-radius: 999px; font-weight: 600; }
+    .source-outline { background: #312e81; color: #c4b5fd; }
+    .source-llm { background: #1e1b4b; color: #a5b4fc; }
+    .source-manual { background: #1e2235; color: #94a3b8; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:820px;margin:0 auto;">
+
+<!-- Back nav -->
+<div class="d-flex align-items-center justify-content-between mb-3">
+    {% if world_link %}
+    <a href="{% url 'worlds_html:detail' world_link.pk %}" class="btn btn-link text-muted ps-0">
+        <i class="bi bi-arrow-left me-1"></i> Zurueck zur Welt
+    </a>
+    {% else %}
+    <a href="{% url 'worlds_html:list' %}" class="btn btn-link text-muted ps-0">
+        <i class="bi bi-arrow-left me-1"></i> Welten
+    </a>
+    {% endif %}
+</div>
+
+<!-- Location Header -->
+<div class="loc-header">
+    <div class="d-flex align-items-center gap-3">
+        <div class="rounded-circle d-flex align-items-center justify-content-center"
+             style="width:56px;height:56px;background:#1e1b4b;border:2px solid #6366f1;">
+            <i class="bi bi-geo-alt-fill" style="font-size:1.5rem;color:#a5b4fc;"></i>
+        </div>
+        <div class="flex-grow-1">
+            <h4 class="mb-1" style="color:#f1f5f9;">{{ pll.name|default:"Unbekannter Ort" }}</h4>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                {% if pll.source == "outline" %}
+                <span class="source-badge source-outline">Aus Outline</span>
+                {% elif pll.source == "llm" %}
+                <span class="source-badge source-llm">Per LLM generiert</span>
+                {% else %}
+                <span class="source-badge source-manual">Manuell</span>
+                {% endif %}
+                <form method="post" action="{% url 'worlds_html:location_refine' pll.pk %}" class="d-inline ms-2">
+                    {% csrf_token %}
+                    <button class="btn btn-sm" style="background:#312e81;color:#c4b5fd;border:1px solid #4c1d95;font-size:.75rem;">
+                        <i class="bi bi-magic me-1"></i>Per KI verfeinern
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form method="post" action="{% url 'worlds_html:location_detail' pll.pk %}">
+{% csrf_token %}
+
+<!-- Stammdaten -->
+<div class="field-section">
+    <h6><i class="bi bi-geo-alt me-2" style="color:#6366f1;"></i> Stammdaten</h6>
+    <div class="row g-3">
+        <div class="col-12">
+            <div class="form-label">Name</div>
+            <input type="text" name="name" class="form-control" placeholder="Name des Ortes" value="{{ pll.name }}">
+        </div>
+        <div class="col-12">
+            <div class="form-label">Beschreibung</div>
+            <textarea name="description" class="form-control" rows="3" placeholder="Beschreibung des Ortes...">{{ pll.description }}</textarea>
+        </div>
+    </div>
+</div>
+
+<!-- Atmosphaere & Bedeutung -->
+<div class="field-section">
+    <h6><i class="bi bi-cloud-haze me-2" style="color:#6366f1;"></i> Atmosphaere & Bedeutung</h6>
+    <div class="row g-3">
+        <div class="col-12">
+            <div class="form-label">Atmosphaere</div>
+            <textarea name="atmosphere" class="form-control" rows="2" placeholder="Stimmung, Sinneseindruecke, Licht, Geraeusche...">{{ pll.atmosphere }}</textarea>
+        </div>
+        <div class="col-12">
+            <div class="form-label">Bedeutung fuer die Geschichte</div>
+            <textarea name="significance" class="form-control" rows="2" placeholder="Warum ist dieser Ort wichtig fuer die Handlung?">{{ pll.significance }}</textarea>
+        </div>
+    </div>
+</div>
+
+<!-- Notizen -->
+<div class="field-section">
+    <h6><i class="bi bi-sticky me-2" style="color:#6366f1;"></i> Notizen</h6>
+    <textarea name="notes" class="form-control" rows="3" placeholder="Interne Notizen...">{{ pll.notes }}</textarea>
+</div>
+
+<!-- Actions -->
+<div class="d-flex justify-content-between align-items-center mt-3 mb-4">
+    {% if world_link %}
+    <a href="{% url 'worlds_html:detail' world_link.pk %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Abbrechen
+    </a>
+    {% else %}
+    <a href="{% url 'worlds_html:list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Abbrechen
+    </a>
+    {% endif %}
+    <button type="submit" class="btn btn-sm" style="background:#4f46e5;color:#fff;">
+        <i class="bi bi-check-lg me-1"></i> Speichern
+    </button>
+</div>
+
+</form>
+</div>
+{% endblock %}

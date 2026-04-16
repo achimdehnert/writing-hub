@@ -7,10 +7,16 @@ Auth: Two strategies depending on execution context:
 
 Session Storage is reused across the entire test run.
 If the session expires, it is automatically renewed.
+
+Link Report:
+  After each test run, generates tests/ui/feedback/reflex-links.md
+  with clickable URLs for every tested page — open in browser to verify manually.
 """
 import os
 import json
 import logging
+from collections import defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -24,8 +30,145 @@ logger = logging.getLogger(__name__)
 AUTH_DIR = Path(__file__).parent / ".auth"
 SNAPSHOT_DIR = Path(__file__).parent / "snapshots"
 FEEDBACK_DIR = Path(__file__).parent / "feedback"
+REPORT_DIR = Path(__file__).parent / "feedback"
 
-BASE_URL = os.environ.get("REFLEX_BASE_URL", "https://writing.iil.pet")
+BASE_URL = os.environ.get("REFLEX_BASE_URL", "http://localhost:8000")
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# REFLEX Link Collector — tracks tested URLs per test class
+# ═══════════════════════════════════════════════════════════════════════════
+
+class ReflexLinkCollector:
+    """Collects tested URLs and generates a clickable report."""
+
+    def __init__(self, base_url: str):
+        self.base_url = base_url.rstrip("/")
+        self.entries: list[dict] = []
+
+    def add(self, path: str, test_name: str, test_class: str = "",
+            status: str = "passed", description: str = ""):
+        self.entries.append({
+            "path": path,
+            "url": f"{self.base_url}{path}",
+            "test_name": test_name,
+            "test_class": test_class,
+            "status": status,
+            "description": description,
+        })
+
+    def generate_markdown(self) -> str:
+        """Generate a markdown report with clickable links."""
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        lines = [
+            f"# REFLEX Link Report — writing-hub",
+            f"",
+            f"Generated: {now}  ",
+            f"Base URL: {self.base_url}  ",
+            f"Tests: {len(self.entries)} URLs geprüft",
+            f"",
+            f"---",
+            f"",
+        ]
+
+        # Group by test class
+        by_class = defaultdict(list)
+        for e in self.entries:
+            by_class[e["test_class"] or "Uncategorized"].append(e)
+
+        for cls_name, entries in by_class.items():
+            lines.append(f"## {cls_name}")
+            lines.append("")
+            for e in entries:
+                icon = "✅" if e["status"] == "passed" else "❌"
+                desc = f" — {e['description']}" if e["description"] else ""
+                lines.append(
+                    f"- {icon} [{e['path']}]({e['url']}){desc}"
+                )
+            lines.append("")
+
+        # Quick-open section
+        lines.append("---")
+        lines.append("")
+        lines.append("## Quick-Open Links (Clipboard-ready)")
+        lines.append("")
+        seen = set()
+        for e in self.entries:
+            if e["path"] not in seen:
+                seen.add(e["path"])
+                lines.append(f"```")
+                lines.append(e["url"])
+                lines.append(f"```")
+        lines.append("")
+
+        return "\n".join(lines)
+
+    def save(self, path: Path | None = None) -> Path:
+        REPORT_DIR.mkdir(parents=True, exist_ok=True)
+        out = path or REPORT_DIR / "reflex-links.md"
+        out.write_text(self.generate_markdown(), encoding="utf-8")
+        return out
+
+
+# Global collector instance
+_link_collector = ReflexLinkCollector(BASE_URL)
+
+
+def reflex_link(path: str, description: str = ""):
+    """Pytest marker decorator: register a tested URL for the link report.
+
+    Usage in tests:
+        @reflex_link("/welten/", "Welten-Übersicht")
+        def test_should_load_welten_liste(self, auth_client):
+            ...
+    """
+    def decorator(func):
+        func._reflex_path = path
+        func._reflex_desc = description
+        return func
+    return decorator
+
+
+@pytest.fixture(autouse=True)
+def _reflex_link_tracker(request):
+    """Auto-fixture: after each test, record URL if @reflex_link was used."""
+    yield
+    test_fn = request.function
+    path = getattr(test_fn, "_reflex_path", None)
+    if path:
+        cls_name = request.node.parent.name if request.node.parent else ""
+        _link_collector.add(
+            path=path,
+            test_name=request.node.name,
+            test_class=cls_name,
+            status="passed" if not request.node.rep_call or request.node.rep_call.passed else "failed",
+            description=getattr(test_fn, "_reflex_desc", ""),
+        )
+
+
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    """Store test outcome on the item for _reflex_link_tracker."""
+    outcome = yield
+    rep = outcome.get_result()
+    setattr(item, f"rep_{rep.when}", rep)
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Generate link report at end of test session."""
+    if _link_collector.entries:
+        report_path = _link_collector.save()
+        # Print summary to terminal
+        print(f"\n{'=' * 60}")
+        print(f"REFLEX Link Report: {report_path}")
+        print(f"{'=' * 60}")
+        seen = set()
+        for e in _link_collector.entries:
+            if e["path"] not in seen:
+                seen.add(e["path"])
+                icon = "✅" if e["status"] == "passed" else "❌"
+                print(f"  {icon} {e['url']}")
+        print(f"{'=' * 60}\n")
 
 
 # ── Django Test Client Fixture (primary — no browser needed) ──────────────

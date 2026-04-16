@@ -106,7 +106,7 @@
                 <span class="text-muted small" id="word-count">0 Wörter</span>
                 <span style="font-size:.72rem;color:#94a3b8;" id="save-status"></span>
                 <button class="btn btn-sm" style="background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3;"
-                        id="btn-generate-main" data-action="generate-current" disabled>
+                        id="btn-ai-main" data-action="ai-smart" disabled>
                     <i class="bi bi-stars me-1"></i>Mit KI generieren
                 </button>
                 <button class="btn btn-success btn-sm" id="btn-save" data-action="save-content" disabled>
@@ -165,7 +165,11 @@
                     <div class="flex-grow-1" style="min-width:0;">
                         <div class="d-flex align-items-center gap-1">
                             <i class="bi bi-{{ step.icon }}" style="font-size:.7rem;color:#6366f1;"></i>
+                            {% if step.resolved_url %}
+                            <a href="{{ step.resolved_url }}" class="small text-decoration-none" style="color:{% if step.done %}#22c55e{% else %}#e2e8f0{% endif %};">{{ step.label }}</a>
+                            {% else %}
                             <span class="small" style="color:{% if step.done %}#22c55e{% else %}#e2e8f0{% endif %};">{{ step.label }}</span>
+                            {% endif %}
                             {% if step.recommended and not step.done %}
                             <span class="badge" style="background:#451a03;color:#fbbf24;font-size:.5rem;">empfohlen</span>
                             {% endif %}
@@ -220,7 +224,9 @@
                 <input type="number" id="target-words"
                     class="form-control form-control-sm"
                     style="background:#1a1f2e;color:#e2e8f0;border-color:#2d3748;"
-                    value="3000" min="500" max="20000" step="500">
+                    data-save-field="target_words" data-save-type="int"
+                    value="{% if project.target_word_count and chapter_count %}{% widthratio project.target_word_count chapter_count 1 %}{% else %}{{ defaults.target_word_count }}{% endif %}"
+                    min="500" max="50000" step="500">
                 <div class="d-flex gap-1 mt-1 flex-wrap">
                     <button class="btn btn-outline-secondary py-0 px-1" style="font-size:.63rem;" data-action="set-words" data-value="2000">2k</button>
                     <button class="btn btn-outline-secondary py-0 px-1" style="font-size:.63rem;" data-action="set-words" data-value="5000">5k</button>
@@ -234,6 +240,7 @@
                 <label class="form-label small text-muted fw-semibold">BEAT / SZENEN-NOTIZ</label>
                 <textarea id="chapter-beat" class="form-control form-control-sm"
                     style="background:#1a1f2e;color:#e2e8f0;border-color:#2d3748;"
+                    data-save-field="description"
                     rows="5" placeholder="Was passiert in diesem Kapitel?"></textarea>
             </div>
 
@@ -242,6 +249,7 @@
                 <label class="form-label small text-muted fw-semibold"><i class="bi bi-heart me-1"></i>EMOTIONALER BOGEN</label>
                 <input type="text" id="emotional-arc" class="form-control form-control-sm"
                     style="background:#1a1f2e;color:#e2e8f0;border-color:#2d3748;"
+                    data-save-field="emotional_arc"
                     placeholder="z.B. Hoffnung → Zweifel → Entschluss">
             </div>
 
@@ -251,13 +259,15 @@
                 {% if characters %}
                 <ul class="list-unstyled mb-0">
                     {% for char in characters %}
-                    <li class="small py-1" style="color:#94a3b8;border-bottom:1px solid #1e2235;">
-                        <i class="bi bi-person-circle me-1" style="color:#6366f1;"></i>{{ char.project_role|default:char.notes|default:"Charakter" }}
+                    <li class="small py-1" style="border-bottom:1px solid #1e2235;">
+                        <a href="{% url 'worlds_html:character_detail' pk=char.pk %}" class="text-decoration-none" style="color:#94a3b8;" title="Charakter bearbeiten">
+                            <i class="bi bi-person-circle me-1" style="color:#6366f1;"></i>{{ char.name|default:char.project_role|default:"Charakter" }}
+                        </a>
                     </li>
                     {% endfor %}
                 </ul>
                 {% else %}
-                <div class="small text-muted">Keine Charaktere</div>
+                <div class="small text-muted">Keine Charaktere. <a href="{% url 'worlds_html:list' %}" class="text-primary">Welten öffnen</a></div>
                 {% endif %}
             </div>
 
@@ -266,10 +276,14 @@
                 <div class="small text-muted fw-semibold mb-1"><i class="bi bi-globe2 me-1"></i>WELT</div>
                 {% if world_links %}
                 {% for wl in world_links %}
-                <div class="small py-1" style="color:#94a3b8;"><i class="bi bi-geo-alt me-1" style="color:#6366f1;"></i>{{ wl }}</div>
+                <div class="small py-1">
+                    <a href="{% url 'worlds_html:detail' pk=wl.pk %}" class="text-decoration-none" style="color:#94a3b8;" title="Welt bearbeiten">
+                        <i class="bi bi-geo-alt me-1" style="color:#6366f1;"></i>{{ wl.name|default:wl.notes|default:"Welt" }} ({{ wl.get_role_display }})
+                    </a>
+                </div>
                 {% endfor %}
                 {% else %}
-                <div class="small text-muted">Keine Welt definiert</div>
+                <div class="small text-muted">Keine Welt definiert. <a href="{% url 'worlds_html:list' %}" class="text-primary">Welten öffnen</a></div>
                 {% endif %}
             </div>
 
@@ -314,6 +328,9 @@
 {% block extra_js %}
 <script>
 const PROJECT_ID = "{{ project.pk }}";
+const PROJECT_TARGET_WORDS = {{ project.target_word_count|default:"0" }};
+const CHAPTER_COUNT = {{ chapter_count|default:"1" }};
+const DEFAULT_WORDS_PER_CHAPTER = PROJECT_TARGET_WORDS > 0 ? Math.round(PROJECT_TARGET_WORDS / CHAPTER_COUNT / 500) * 500 : {{ defaults.target_word_count }};
 const CSRF = () => { const v = document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)'); return v ? v[2] : ''; };
 const CHAPTERS = JSON.parse(document.getElementById('chapters-data').textContent);
 const PROJECT_STYLES = JSON.parse(document.getElementById('project-styles-data').textContent);
@@ -361,7 +378,7 @@ function selectChapter(id) {
     // Sidebar-Felder
     document.getElementById('chapter-beat').value = ch.description || '';
     document.getElementById('emotional-arc').value = ch.emotional_arc || '';
-    if (ch.target_words) document.getElementById('target-words').value = ch.target_words;
+    document.getElementById('target-words').value = ch.target_words || DEFAULT_WORDS_PER_CHAPTER;
 
     // Stil-Auswahl aktualisieren
     const styleSelect = document.getElementById('chapter-style-select');
@@ -378,7 +395,7 @@ function selectChapter(id) {
     const item = document.getElementById('chapter-item-' + id);
     if (item) { item.style.background = '#1e2a3a'; item.style.borderLeft = '3px solid #6366f1'; item.scrollIntoView({block: 'nearest'}); }
 
-    document.getElementById('btn-generate-main').disabled = false;
+    document.getElementById('btn-ai-main').disabled = false;
     document.getElementById('btn-save').disabled = false;
 
     // Research status
@@ -401,6 +418,7 @@ function selectChapter(id) {
             updateWordCount(data.content || '');
             if (data.updated_at) setSaveStatus('Gespeichert ' + new Date(data.updated_at).toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'}));
             else setSaveStatus('');
+            updateAiButton();
         })
         .catch(() => setSaveStatus(''));
 }
@@ -436,8 +454,9 @@ function setSaveStatus(msg) { const el = document.getElementById('save-status');
 
 function onContentChange() {
     updateWordCount(document.getElementById('chapter-content').value);
+    updateAiButton();
     clearTimeout(autoSaveTimer);
-    autoSaveTimer = setTimeout(() => saveContent(true), 2000);
+    autoSaveTimer = setTimeout(() => saveContent(true), {{ defaults.autosave_delay_ms }});
 }
 
 function startGenerationCurrent() {
@@ -445,9 +464,19 @@ function startGenerationCurrent() {
     startGeneration(currentChapterId);
 }
 
+function aiSmartAction() {
+    if (!currentChapterId) { alert('Bitte zuerst ein Kapitel auswählen.'); return; }
+    const content = (document.getElementById('chapter-content').value || '').trim();
+    if (content.length > 0) {
+        startRefine('refine');
+    } else {
+        startGeneration(currentChapterId);
+    }
+}
+
 function startGeneration(chapterId) {
     if (currentChapterId !== chapterId) selectChapter(chapterId);
-    const btn = document.getElementById('btn-generate-main');
+    const btn = document.getElementById('btn-ai-main');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Läuft...';
     document.getElementById('gen-status').classList.remove('d-none');
@@ -479,7 +508,17 @@ function startGeneration(chapterId) {
 
 function pollJobStatus(jobId, chapterId) {
     let step = 1;
+    let pollCount = 0;
+    const MAX_POLLS = {{ defaults.poll_max_count }};
     pollInterval = setInterval(() => {
+        pollCount++;
+        if (pollCount > MAX_POLLS) {
+            clearInterval(pollInterval);
+            showGenError('Timeout: Generierung dauert zu lange. Celery Worker aktiv?');
+            resetBtn();
+            setTimeout(processGenAllQueue, 500);
+            return;
+        }
         fetch(`/api/v1/authoring/jobs/${jobId}/status/`).then(r => r.json()).then(data => {
             if (step === 1 && data.status !== 'pending') step = 2;
             document.getElementById('gen-status-text').textContent = `Schritt ${step}/2: Generiere Details für Kapitel...`;
@@ -490,15 +529,15 @@ function pollJobStatus(jobId, chapterId) {
                 document.getElementById('gen-status').classList.add('d-none');
                 resetBtn();
                 saveContentDirect(data.content || '');
-                if (genAllQueue.length > 0) setTimeout(processGenAllQueue, 500);
+                setTimeout(processGenAllQueue, 500);
             } else if (data.status === 'failed') {
                 clearInterval(pollInterval);
                 showGenError(data.error || 'Fehlgeschlagen');
                 resetBtn();
-                if (genAllQueue.length > 0) setTimeout(processGenAllQueue, 500);
+                setTimeout(processGenAllQueue, 500);
             }
         });
-    }, 2500);
+    }, {{ defaults.poll_interval_ms }});
 }
 
 function generateAll() {
@@ -523,12 +562,23 @@ function processGenAllQueue() {
 
 function saveContent(silent) { saveContentDirect(document.getElementById('chapter-content').value, silent); }
 
+function collectSidebarFields() {
+    const fields = {};
+    document.querySelectorAll('[data-save-field]').forEach(el => {
+        const key = el.dataset.saveField;
+        const val = el.value;
+        fields[key] = el.dataset.saveType === 'int' ? (val ? parseInt(val) : null) : val;
+    });
+    return fields;
+}
+
 function saveContentDirect(content, silent) {
     if (!currentSaveUrl) return;
+    const payload = Object.assign({content}, collectSidebarFields());
     fetch(currentSaveUrl, {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF()},
-        body: JSON.stringify({content})
+        body: JSON.stringify(payload)
     })
     .then(r => r.json())
     .then(data => {
@@ -540,13 +590,80 @@ function saveContentDirect(content, silent) {
                 if (sp) { sp.textContent = (data.word_count || 0) > 0 ? data.word_count + 'W' : '0 W'; sp.style.color = data.word_count > 0 ? '#22c55e' : '#f59e0b'; }
             }
             if (!silent) { const btn = document.getElementById('btn-save'); btn.innerHTML = '<i class="bi bi-check"></i> Gespeichert'; setTimeout(() => { btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Speichern'; }, 1500); }
+            if (currentChapterId && CHAPTER_MAP[currentChapterId]) {
+                const ch = CHAPTER_MAP[currentChapterId];
+                Object.keys(payload).forEach(k => { if (k !== 'content') ch[k] = payload[k]; });
+            }
         }
     }).catch(() => setSaveStatus('Fehler beim Speichern'));
 }
 
 function showGenError(msg) { document.getElementById('gen-status-text').textContent = 'Fehler: ' + msg; document.getElementById('gen-spinner').classList.add('d-none'); }
 function updateWordCount(t) { const c = t.trim() ? t.trim().split(/\s+/).length : 0; document.getElementById('word-count').textContent = c.toLocaleString('de-DE') + ' Wörter'; }
-function resetBtn() { const btn = document.getElementById('btn-generate-main'); btn.disabled = false; btn.innerHTML = '<i class="bi bi-stars me-1"></i>Mit KI generieren'; }
+function resetBtn() {
+    const btn = document.getElementById('btn-ai-main');
+    btn.disabled = false;
+    updateAiButton();
+}
+
+function updateAiButton() {
+    const btn = document.getElementById('btn-ai-main');
+    const hasContent = (document.getElementById('chapter-content').value || '').trim().length > 0;
+    if (hasContent) {
+        btn.innerHTML = '<i class="bi bi-brush me-1"></i>Mit KI verfeinern';
+        btn.style.background = '#1a2e1a'; btn.style.color = '#86efac'; btn.style.borderColor = '#166534';
+    } else {
+        btn.innerHTML = '<i class="bi bi-stars me-1"></i>Mit KI generieren';
+        btn.style.background = '#1e1b4b'; btn.style.color = '#a5b4fc'; btn.style.borderColor = '#3730a3';
+    }
+}
+
+function startRefine(mode) {
+    if (!currentChapterId) { alert('Bitte zuerst ein Kapitel auswählen.'); return; }
+    const content = document.getElementById('chapter-content').value;
+    if (!content.trim()) { alert('Kein Inhalt zum Verfeinern.'); return; }
+
+    const ch = CHAPTER_MAP[currentChapterId];
+    const label = mode === 'continue' ? 'Fortsetzen' : 'Verfeinern';
+    const btn = document.getElementById('btn-ai-main');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>' + label + '...';
+    document.getElementById('gen-status').classList.remove('d-none');
+    document.getElementById('gen-status-text').textContent = label + ' läuft...';
+    document.getElementById('gen-spinner').classList.remove('d-none');
+
+    let instruction = '';
+    if (mode === 'refine') {
+        instruction = prompt('Verfeinerungs-Anweisung (optional):', 'Erweitere mit mehr Details, tieferen Beschreibungen und lebendigeren Szenen.') || '';
+        if (instruction === null) { resetBtn(); document.getElementById('gen-status').classList.add('d-none'); return; }
+    }
+
+    fetch(`/api/v1/authoring/projects/${PROJECT_ID}/chapters/${currentChapterId}/refine/`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF()},
+        body: JSON.stringify({
+            existing_content: content,
+            instruction: instruction,
+            mode: mode,
+            target_word_count: parseInt(document.getElementById('target-words').value) || 3000,
+            chapter_beat: document.getElementById('chapter-beat')?.value || (ch ? ch.description : ''),
+            emotional_arc: document.getElementById('emotional-arc')?.value || (ch ? ch.emotional_arc : ''),
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('gen-status').classList.add('d-none');
+        if (data.success) {
+            document.getElementById('chapter-content').value = data.content || '';
+            updateWordCount(data.content || '');
+            saveContentDirect(data.content || '');
+        } else {
+            showGenError(data.error || label + ' fehlgeschlagen');
+        }
+        resetBtn();
+    })
+    .catch(err => { showGenError(err.toString()); resetBtn(); });
+}
 
 let researchAllQueue = [];
 
@@ -576,11 +693,11 @@ function startResearch(chapterId) {
         } else {
             statusText.innerHTML = '<i class="bi bi-x-circle me-1" style="color:#ef4444;"></i>Fehler: ' + (data.error || 'Unbekannt');
         }
-        if (researchAllQueue.length > 0) setTimeout(processResearchAllQueue, 500);
+        setTimeout(processResearchAllQueue, 500);
     })
     .catch(err => {
         statusText.innerHTML = '<i class="bi bi-x-circle me-1" style="color:#ef4444;"></i>Netzwerkfehler: ' + err.message;
-        if (researchAllQueue.length > 0) setTimeout(processResearchAllQueue, 500);
+        setTimeout(processResearchAllQueue, 500);
     });
 }
 
@@ -617,6 +734,7 @@ window.addEventListener('DOMContentLoaded', () => {
         if (action === 'select-chapter') { selectChapter(el.dataset.chapterId); }
         else if (action === 'generate-chapter') { e.stopPropagation(); startGeneration(el.dataset.chapterId); }
         else if (action === 'generate-current') { startGenerationCurrent(); }
+        else if (action === 'ai-smart') { aiSmartAction(); }
         else if (action === 'save-content') { saveContent(); }
         else if (action === 'toggle-outline') { toggleOutlinePanel(); }
         else if (action === 'set-words') { document.getElementById('target-words').value = el.dataset.value; }

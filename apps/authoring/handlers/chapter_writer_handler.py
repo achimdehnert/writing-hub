@@ -6,7 +6,7 @@ Aenderungen:
   - FK-Quellen: bfagent.BookProjects -> projects.BookProject (UUID)
   - FK-Quellen: bfagent.Characters   -> worlds.WorldCharacter
   - FK-Quellen: bfagent.Worlds       -> worlds.World
-  - LLM: aifw.service.sync_completion (statt deprecated aifw.generate_text)
+  - LLM: LLMRouter (aifw-basiert, ADR-095) — kein direkter aifw-Zugriff
   - Event Bus: entfernt (nicht in writing-hub)
 """
 
@@ -14,11 +14,34 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-from aifw.service import sync_completion
-from aifw.schema import LLMResult
-
+from apps.authoring.defaults import (
+    CHAR_DESC_MAX_CHARS,
+    CHAR_MOTIVATION_MAX_CHARS,
+    CHUNK_CONTEXT_WINDOW,
+    CHUNK_MAX_CONTINUATIONS,
+    CHUNK_TARGET_RATIO,
+    DEFAULT_CITATION_STYLE,
+    DEFAULT_CONTENT_TYPE,
+    DEFAULT_TARGET_WORD_COUNT,
+    MAX_CHARACTERS_IN_PROMPT,
+    MAX_STYLE_DO_ITEMS,
+    MAX_STYLE_DONT_ITEMS,
+    MAX_STYLE_SIGNATURE_MOVES,
+    MAX_STYLE_TABOO_ITEMS,
+    MAX_TOKENS_REFINE,
+    MAX_TOKENS_WRITE,
+    MAX_WORLDS_IN_PROMPT,
+    MIN_TOKENS_WRITE,
+    NEXT_CHAPTER_OUTLINE_MAX_CHARS,
+    PREV_CHAPTER_SUMMARY_MAX_CHARS,
+    RESEARCH_NOTES_MAX_CHARS,
+    STYLE_PROMPT_MAX_CHARS,
+    WORLD_ATMOSPHERE_MAX_CHARS,
+    WORLD_DESC_MAX_CHARS,
+)
 from apps.core.prompt_utils import render_prompt
 from apps.authoring.services.chapter_production_service import _strip_chapter_heading
+from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
 
 logger = logging.getLogger(__name__)
 
@@ -33,14 +56,14 @@ class ChapterContext:
     genre: str = ""
     premise: str = ""
     target_audience: str = ""
-    content_type: str = "novel"
-    citation_style: str = "APA"
+    content_type: str = DEFAULT_CONTENT_TYPE
+    citation_style: str = DEFAULT_CITATION_STYLE
     chapter_number: int = 1
     chapter_title: str = ""
     chapter_outline: str = ""
     chapter_beat: str = ""
     emotional_arc: str = ""
-    target_word_count: int = 2000
+    target_word_count: int = DEFAULT_TARGET_WORD_COUNT
     existing_content: str = ""
     prev_chapter_summary: str = ""
     next_chapter_outline: str = ""
@@ -91,23 +114,23 @@ class ChapterContext:
         if self.prev_chapter_summary:
             parts.append("")
             parts.append("WAS BISHER GESCHAH:")
-            parts.append(self.prev_chapter_summary[:600])
+            parts.append(self.prev_chapter_summary[:PREV_CHAPTER_SUMMARY_MAX_CHARS])
 
         if self.next_chapter_outline:
             parts.append("")
             parts.append("VORSCHAU NAECHSTES KAPITEL:")
-            parts.append(self.next_chapter_outline[:200])
+            parts.append(self.next_chapter_outline[:NEXT_CHAPTER_OUTLINE_MAX_CHARS])
 
         if self.characters:
             parts.append("")
             parts.append("=" * 50)
             parts.append("CHARAKTERE")
             parts.append("=" * 50)
-            for char in self.characters[:5]:
+            for char in self.characters[:MAX_CHARACTERS_IN_PROMPT]:
                 name = char.get("name") or "Unbekannt"
                 role = char.get("role") or "Nebenrolle"
-                desc = (char.get("description") or "")[:200]
-                motivation = (char.get("motivation") or "")[:150]
+                desc = (char.get("description") or "")[:CHAR_DESC_MAX_CHARS]
+                motivation = (char.get("motivation") or "")[:CHAR_MOTIVATION_MAX_CHARS]
                 parts.append(f"\n{name} ({role})")
                 if desc:
                     parts.append(f"  Beschreibung: {desc}")
@@ -119,10 +142,10 @@ class ChapterContext:
             parts.append("=" * 50)
             parts.append("SETTING & WELT")
             parts.append("=" * 50)
-            for world in self.worlds[:2]:
+            for world in self.worlds[:MAX_WORLDS_IN_PROMPT]:
                 name = world.get("name") or "Unbekannt"
-                desc = (world.get("description") or "")[:300]
-                atmosphere = (world.get("atmosphere") or "")[:150]
+                desc = (world.get("description") or "")[:WORLD_DESC_MAX_CHARS]
+                atmosphere = (world.get("atmosphere") or "")[:WORLD_ATMOSPHERE_MAX_CHARS]
                 parts.append(f"\n{name}")
                 if desc:
                     parts.append(f"  {desc}")
@@ -138,22 +161,22 @@ class ChapterContext:
             if dna.get("name"):
                 parts.append(f"Stilprofil: {dna['name']}")
             if dna.get("style_prompt"):
-                parts.append(f"\nStil-Anweisungen:\n{dna['style_prompt'][:400]}")
+                parts.append(f"\nStil-Anweisungen:\n{dna['style_prompt'][:STYLE_PROMPT_MAX_CHARS]}")
             if dna.get("signature_moves"):
                 parts.append("\nSignature Moves:")
-                for move in dna["signature_moves"][:5]:
+                for move in dna["signature_moves"][:MAX_STYLE_SIGNATURE_MOVES]:
                     parts.append(f"  - {move}")
             if dna.get("do_list"):
                 parts.append("\nDO:")
-                for item in dna["do_list"][:8]:
+                for item in dna["do_list"][:MAX_STYLE_DO_ITEMS]:
                     parts.append(f"  - {item}")
             if dna.get("dont_list"):
                 parts.append("\nDONT:")
-                for item in dna["dont_list"][:5]:
+                for item in dna["dont_list"][:MAX_STYLE_DONT_ITEMS]:
                     parts.append(f"  - {item}")
             if dna.get("taboo_list"):
                 parts.append("\nTABU-WOERTER:")
-                parts.append(f"  {', '.join(dna['taboo_list'][:10])}")
+                parts.append(f"  {', '.join(dna['taboo_list'][:MAX_STYLE_TABOO_ITEMS])}")
 
         parts.append("")
         parts.append("=" * 50)
@@ -190,14 +213,14 @@ class ChapterContext:
         if self.prev_chapter_summary:
             parts.append("")
             parts.append("VORHERIGES KAPITEL (ZUSAMMENFASSUNG):")
-            parts.append(self.prev_chapter_summary[:600])
+            parts.append(self.prev_chapter_summary[:PREV_CHAPTER_SUMMARY_MAX_CHARS])
 
         if self.research_notes:
             parts.append("")
             parts.append("=" * 50)
             parts.append("RECHERCHE-ERGEBNISSE & QUELLEN")
             parts.append("=" * 50)
-            parts.append(self.research_notes[:3000])
+            parts.append(self.research_notes[:RESEARCH_NOTES_MAX_CHARS])
 
         if self.style_dna:
             parts.append("")
@@ -206,18 +229,18 @@ class ChapterContext:
             parts.append("=" * 50)
             dna = self.style_dna
             if dna.get("style_prompt"):
-                parts.append(f"\nStil-Anweisungen:\n{dna['style_prompt'][:400]}")
+                parts.append(f"\nStil-Anweisungen:\n{dna['style_prompt'][:STYLE_PROMPT_MAX_CHARS]}")
             if dna.get("do_list"):
                 parts.append("\nDO:")
-                for item in dna["do_list"][:8]:
+                for item in dna["do_list"][:MAX_STYLE_DO_ITEMS]:
                     parts.append(f"  - {item}")
             if dna.get("dont_list"):
                 parts.append("\nDONT:")
-                for item in dna["dont_list"][:5]:
+                for item in dna["dont_list"][:MAX_STYLE_DONT_ITEMS]:
                     parts.append(f"  - {item}")
             if dna.get("taboo_list"):
                 parts.append("\nTABU-WOERTER:")
-                parts.append(f"  {', '.join(dna['taboo_list'][:10])}")
+                parts.append(f"  {', '.join(dna['taboo_list'][:MAX_STYLE_TABOO_ITEMS])}")
 
         parts.append("")
         parts.append("=" * 50)
@@ -324,7 +347,7 @@ class ChapterWriterHandler:
       generate_summary(content)           — Zusammenfassung
     """
 
-    MAX_TOKENS = 4096
+    MAX_TOKENS = MAX_TOKENS_WRITE
 
     def write_chapter(self, context: ChapterContext) -> dict[str, Any]:
         """Schreibt ein vollstaendiges Kapitel."""
@@ -357,26 +380,23 @@ class ChapterWriterHandler:
 
     def _write_single(self, context: ChapterContext) -> dict[str, Any]:
         estimated_tokens = int(context.target_word_count * 1.5)
-        max_tokens = min(max(estimated_tokens, 2000), self.MAX_TOKENS)
+        max_tokens = min(max(estimated_tokens, MIN_TOKENS_WRITE), self.MAX_TOKENS)
 
         messages = self._render_write_messages(context)
         try:
-            result: LLMResult = sync_completion(
+            router = LLMRouter()
+            raw = router.completion(
                 "chapter_generation", messages, max_tokens=max_tokens
             )
-        except Exception as exc:
+        except (LLMRoutingError, Exception) as exc:
             logger.error("_write_single failed: %s", exc)
             return {"success": False, "error": str(exc)}
 
-        if not result.success:
-            return {"success": False, "error": result.error}
-
-        content = _strip_chapter_heading(result.content.strip())
+        content = _strip_chapter_heading(raw.strip())
         return {
             "success": True,
             "content": content,
             "word_count": len(content.split()),
-            "latency_ms": result.latency_ms,
         }
 
     def _write_chunked(self, context: ChapterContext) -> dict[str, Any]:
@@ -386,7 +406,6 @@ class ChapterWriterHandler:
         num_chunks = (context.target_word_count // words_per_chunk) + 1
         context_str = context.to_prompt_context()
         all_content: list[str] = []
-        total_latency = 0
 
         ct_config = get_content_type_config(context.content_type)
         vocab = ct_config.chunk_vocab
@@ -405,7 +424,7 @@ class ChapterWriterHandler:
                     f"{vocab['opening']}. ENDE NICHT — das Kapitel wird fortgesetzt."
                 )
             elif is_last:
-                prev = "\n\n".join(all_content[-2:])[-3000:]
+                prev = "\n\n".join(all_content[-2:])[-CHUNK_CONTEXT_WINDOW:]
                 chunk_prompt = (
                     f"BISHERIGER INHALT (Auszug):\n{prev}\n\n"
                     f"Schreibe das ENDE des Kapitels (~{words_per_chunk} Woerter, "
@@ -413,7 +432,7 @@ class ChapterWriterHandler:
                     "Schliesse das Kapitel ab."
                 )
             else:
-                prev = "\n\n".join(all_content[-2:])[-3000:]
+                prev = "\n\n".join(all_content[-2:])[-CHUNK_CONTEXT_WINDOW:]
                 chunk_prompt = (
                     f"BISHERIGER INHALT (Auszug):\n{prev}\n\n"
                     f"{vocab['mid']} (~{words_per_chunk} Woerter, "
@@ -426,10 +445,11 @@ class ChapterWriterHandler:
                 {"role": "user", "content": chunk_prompt},
             ]
             try:
-                result: LLMResult = sync_completion(
+                router = LLMRouter()
+                chunk_content = router.completion(
                     "chapter_generation", messages, max_tokens=self.MAX_TOKENS
                 )
-            except Exception as exc:
+            except (LLMRoutingError, Exception) as exc:
                 logger.error("Chunk %d error: %s", chunk_num + 1, exc)
                 if all_content:
                     partial = "\n\n".join(all_content)
@@ -437,30 +457,49 @@ class ChapterWriterHandler:
                         "success": True,
                         "content": partial + f"\n\n[Abgebrochen nach Teil {chunk_num}: {exc}]",
                         "word_count": len(partial.split()),
-                        "latency_ms": total_latency,
                     }
                 return {"success": False, "error": str(exc)}
 
-            if not result.success:
-                if all_content:
-                    partial = "\n\n".join(all_content)
-                    return {
-                        "success": True,
-                        "content": partial + "\n\n[Abgebrochen]",
-                        "word_count": len(partial.split()),
-                        "latency_ms": total_latency,
-                    }
-                return {"success": False, "error": result.error}
-
-            all_content.append(result.content.strip())
-            total_latency += result.latency_ms or 0
+            all_content.append(chunk_content.strip())
 
         full_content = _strip_chapter_heading("\n\n".join(all_content))
+        current_words = len(full_content.split())
+        min_words = int(context.target_word_count * CHUNK_TARGET_RATIO)
+
+        continuations = 0
+        while current_words < min_words and continuations < CHUNK_MAX_CONTINUATIONS:
+            continuations += 1
+            remaining = context.target_word_count - current_words
+            prev = full_content[-CHUNK_CONTEXT_WINDOW:]
+            cont_prompt = (
+                f"BISHERIGER INHALT (Auszug):\n{prev}\n\n"
+                f"Das Kapitel hat erst {current_words} von {context.target_word_count} Woertern. "
+                f"Schreibe ~{remaining} weitere Woerter, um das Kapitel fortzusetzen. "
+                f"Wiederhole KEINEN bestehenden Inhalt."
+            )
+            messages = [
+                {"role": "system", "content": sys_prompt},
+                {"role": "user", "content": cont_prompt},
+            ]
+            try:
+                router = LLMRouter()
+                continuation = router.completion(
+                    "chapter_generation", messages, max_tokens=self.MAX_TOKENS
+                )
+                full_content = full_content.rstrip() + "\n\n" + continuation.strip()
+                current_words = len(full_content.split())
+                logger.info(
+                    "Continuation %d: %d/%d words",
+                    continuations, current_words, context.target_word_count,
+                )
+            except (LLMRoutingError, Exception) as exc:
+                logger.warning("Continuation %d failed: %s", continuations, exc)
+                break
+
         return {
             "success": True,
             "content": full_content,
             "word_count": len(full_content.split()),
-            "latency_ms": total_latency,
         }
 
     def refine_chapter(self, context: ChapterContext, instruction: str) -> dict[str, Any]:
@@ -475,19 +514,16 @@ class ChapterWriterHandler:
             instruction=instruction,
         )
         try:
-            result: LLMResult = sync_completion("chapter_generation", messages, max_tokens=8000)
-        except Exception as exc:
+            router = LLMRouter()
+            raw = router.completion("chapter_generation", messages, max_tokens=MAX_TOKENS_REFINE)
+        except (LLMRoutingError, Exception) as exc:
             return {"success": False, "error": str(exc)}
 
-        if not result.success:
-            return {"success": False, "error": result.error}
-
-        content = result.content.strip()
+        content = raw.strip()
         return {
             "success": True,
             "content": content,
             "word_count": len(content.split()),
-            "latency_ms": result.latency_ms,
         }
 
     def continue_chapter(self, context: ChapterContext) -> dict[str, Any]:
@@ -512,24 +548,21 @@ class ChapterWriterHandler:
             remaining_words=remaining,
         )
         try:
-            result: LLMResult = sync_completion(
+            router = LLMRouter()
+            raw = router.completion(
                 "chapter_generation",
                 messages,
                 max_tokens=min(max(int(remaining * 1.5), 1000), self.MAX_TOKENS),
             )
-        except Exception as exc:
+        except (LLMRoutingError, Exception) as exc:
             return {"success": False, "error": str(exc)}
 
-        if not result.success:
-            return {"success": False, "error": result.error}
-
-        continuation = result.content.strip()
+        continuation = raw.strip()
         full_content = context.existing_content + "\n\n" + continuation
         return {
             "success": True,
             "content": full_content,
             "word_count": len(full_content.split()),
-            "latency_ms": result.latency_ms,
         }
 
     def generate_summary(self, content: str) -> str:
@@ -539,10 +572,9 @@ class ChapterWriterHandler:
 
         messages = render_prompt(_TPL_SUMMARY, content=content)
         try:
-            result: LLMResult = sync_completion("chapter_generation", messages, max_tokens=200)
-            if result.success:
-                return result.content.strip()
-        except Exception as exc:
+            router = LLMRouter()
+            return router.completion("chapter_generation", messages, max_tokens=200).strip()
+        except (LLMRoutingError, Exception) as exc:
             logger.warning("Summary generation failed: %s", exc)
 
         return content[:200] + "..."

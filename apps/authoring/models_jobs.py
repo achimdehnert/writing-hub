@@ -8,6 +8,8 @@ Polling-Endpunkt: GET /authoring/jobs/<chapter_ref>/status/
 import uuid
 
 from django.conf import settings
+
+from apps.authoring.defaults import DEFAULT_FRAMEWORK
 from django.db import models
 
 
@@ -173,7 +175,7 @@ class EssayPipelineJob(models.Model):
     current_step = models.CharField(
         max_length=20, choices=PipelineStep.choices, default=PipelineStep.CREATED,
     )
-    framework = models.CharField(max_length=50, default="academic_essay")
+    framework = models.CharField(max_length=50, default=DEFAULT_FRAMEWORK)
     do_research = models.BooleanField(default=False)
     do_review = models.BooleanField(default=False)
     total_chapters = models.PositiveSmallIntegerField(default=0)

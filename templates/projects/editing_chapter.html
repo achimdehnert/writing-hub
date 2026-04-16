@@ -25,7 +25,8 @@
             {% csrf_token %}
             <button type="submit" class="btn"
                     style="background:#ea580c;color:#fff;border:none;"
-                    {% if not node.content %}disabled{% endif %}>
+                    {% if not node.content %}disabled{% endif %}
+                    onclick="this.disabled=true;this.innerHTML='<span class=\'spinner-border spinner-border-sm me-1\'></span>Analysiert…';this.form.submit();">
                 <i class="bi bi-search me-1"></i>Analysieren
             </button>
         </form>

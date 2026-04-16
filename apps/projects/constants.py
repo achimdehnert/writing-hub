@@ -324,9 +324,9 @@ PREPARATION_STEPS = {
     ],
     "fiction": [
         {"key": "characters", "label": "Charaktere entwickeln", "icon": "people",
-         "recommended": True, "scope": "project", "url_name": "worlds:list"},
+         "recommended": True, "scope": "project", "url_name": "worlds_html:list"},
         {"key": "worlds", "label": "Welten entwickeln", "icon": "globe2",
-         "recommended": True, "scope": "project", "url_name": "worlds:list"},
+         "recommended": True, "scope": "project", "url_name": "worlds_html:list"},
         {"key": "research", "label": "Literaturrecherche", "icon": "journal-bookmark",
          "recommended": False, "scope": "chapter", "url_name": None},
     ],

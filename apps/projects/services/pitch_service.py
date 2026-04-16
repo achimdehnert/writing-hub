@@ -91,17 +91,14 @@ def generate_query(project):
 
 
 def _call_llm_messages(action_code: str, messages: list[dict]) -> str:
+    from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
     try:
-        from aifw.service import sync_completion
-        result = sync_completion(
-            action_code=action_code,
-            messages=messages,
-        )
-        if not result.success:
-            raise RuntimeError(f"LLM-Fehler ({action_code}): {result.error}")
-        return result.content.strip()
+        router = LLMRouter()
+        return router.completion(action_code=action_code, messages=messages).strip()
+    except LLMRoutingError as exc:
+        raise RuntimeError(f"LLM-Fehler ({action_code}): {exc}")
     except ImportError:
-        raise RuntimeError("aifw nicht installiert — LLM-Generierung nicht verfügbar.")
+        raise RuntimeError("LLMRouter nicht verfügbar — LLM-Generierung nicht möglich.")
 
 
 def _get_character(project, role: str):

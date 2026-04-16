@@ -20,6 +20,12 @@ from .location_service import (
     WorldLocationService,
     WorldSceneService,
 )
+from .outline_extraction_service import (
+    extract_from_outline,
+    refine_character_with_llm,
+    refine_location_with_llm,
+    save_extracted_to_project,
+)
 from .world_builder_service import WorldBuildResult, WorldBuilderService
 
 __all__ = [
@@ -31,4 +37,8 @@ __all__ = [
     "WorldCharacterService",
     "WorldLocationService",
     "WorldSceneService",
+    "extract_from_outline",
+    "save_extracted_to_project",
+    "refine_character_with_llm",
+    "refine_location_with_llm",
 ]

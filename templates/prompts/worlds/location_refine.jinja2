@@ -1,0 +1,17 @@
+{# Location Refine — promptfw Template #}
+{# Variables: char_ctx (re-used variable name for location context) #}
+---
+system: |
+  Du bist ein Experte für Weltenbau in der Literatur.
+  Verfeinere und bereichere den Ort basierend auf den Grunddaten.
+  Antworte mit einem JSON-Objekt.
+---
+user: |
+  {{ char_ctx }}
+
+  Verfeinere und ergänze:
+  - description: detaillierte Beschreibung des Orts
+  - atmosphere: Stimmung und sensorische Details
+  - significance: Bedeutung für die Geschichte
+
+  JSON: {"description": "", "atmosphere": "", "significance": ""}

@@ -6,6 +6,7 @@ import logging
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import models
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -13,6 +14,11 @@ from django.utils import timezone
 from django.views import View
 from django.views.generic import DetailView, ListView, UpdateView
 
+from apps.authoring.defaults import (
+    DEFAULT_CONTENT_TYPE,
+    DEFAULT_PROJECT_TARGET_WORDS,
+    distribute_chapter_targets,
+)
 from apps.series.models import BookSeries
 from .constants import (
     DEFAULT_CONTENT_TYPES,
@@ -385,7 +391,10 @@ class OutlineCreateView(LoginRequiredMixin, View):
                 is_active=True,
             )
             beats = list(fw_obj.beats.order_by("order")) if fw_obj else []
+            ct = getattr(project, "content_type", DEFAULT_CONTENT_TYPE) or DEFAULT_CONTENT_TYPE
+            ptarget = project.target_word_count or DEFAULT_PROJECT_TARGET_WORDS
             if beats:
+                targets = distribute_chapter_targets(ptarget, len(beats), ct)
                 OutlineNode.objects.bulk_create([
                     OutlineNode(
                         outline_version=version,
@@ -393,21 +402,25 @@ class OutlineCreateView(LoginRequiredMixin, View):
                         beat_type="chapter",
                         beat_phase=b.name,
                         order=b.order,
+                        target_words=targets[i],
                     )
-                    for b in beats
+                    for i, b in enumerate(beats)
                 ])
-                messages.success(request, f'Outline „{name}" mit {len(beats)} Beats angelegt.')
+                messages.success(request, f'Outline „{name}“ mit {len(beats)} Beats angelegt.')
             elif chapter_count > 0:
+                count = min(chapter_count, 50)
+                targets = distribute_chapter_targets(ptarget, count, ct)
                 OutlineNode.objects.bulk_create([
                     OutlineNode(
                         outline_version=version,
                         title=f"Kapitel {i + 1}",
                         beat_type="chapter",
                         order=i + 1,
+                        target_words=targets[i],
                     )
-                    for i in range(min(chapter_count, 50))
+                    for i in range(count)
                 ])
-                messages.success(request, f'Outline „{name}" mit {chapter_count} leeren Kapiteln angelegt.')
+                messages.success(request, f'Outline „{name}“ mit {chapter_count} leeren Kapiteln angelegt.')
             else:
                 messages.success(request, f'Outline „{name}" angelegt.')
             if request.POST.get("ai_generate") == "1" and project.description:
@@ -443,6 +456,9 @@ class OutlineCreateView(LoginRequiredMixin, View):
                                 beat_type=beat or "chapter",
                                 order=i + 1,
                             ))
+                        ai_targets = distribute_chapter_targets(ptarget, len(db_nodes), ct)
+                        for idx, dn in enumerate(db_nodes):
+                            dn.target_words = ai_targets[idx]
                         _ON.objects.bulk_create(db_nodes)
                         messages.success(
                             request,
@@ -541,8 +557,22 @@ class ChapterWriterView(LoginRequiredMixin, DetailView):
             project=self.object
         ).select_related()
         ctx["project_styles"] = self.object.get_all_styles()
+        from apps.authoring.defaults import (
+            AUTOSAVE_DELAY_MS,
+            DEFAULT_TARGET_WORD_COUNT,
+            POLL_INTERVAL_MS,
+            POLL_MAX_COUNT,
+            TOAST_DISPLAY_MS,
+        )
         from apps.projects.services.preparation_service import get_preparation_status
         ctx["prep_status"] = get_preparation_status(self.object, chapters)
+        ctx["defaults"] = {
+            "target_word_count": DEFAULT_TARGET_WORD_COUNT,
+            "poll_interval_ms": POLL_INTERVAL_MS,
+            "poll_max_count": POLL_MAX_COUNT,
+            "autosave_delay_ms": AUTOSAVE_DELAY_MS,
+            "toast_display_ms": TOAST_DISPLAY_MS,
+        }
         return ctx
 
 
@@ -581,6 +611,12 @@ class ChapterResearchView(LoginRequiredMixin, View):
 
 
 class ChapterContentView(LoginRequiredMixin, View):
+    SAVEABLE_FIELDS = {
+        "target_words": ("target_words", lambda v: int(v) if v else None),
+        "description": ("description", str),
+        "emotional_arc": ("emotional_arc", str),
+    }
+
     def _get_node(self, request, node_pk):
         return get_object_or_404(
             OutlineNode,
@@ -606,10 +642,16 @@ class ChapterContentView(LoginRequiredMixin, View):
             body = json.loads(request.body)
             content = body.get("content", "")
         except (json.JSONDecodeError, AttributeError):
+            body = {}
             content = request.POST.get("content", "")
         node.content = content
         node.content_updated_at = timezone.now()
-        node.save(update_fields=["content", "word_count", "content_updated_at"])
+        update_fields = ["content", "word_count", "content_updated_at"]
+        for json_key, (model_field, coerce) in self.SAVEABLE_FIELDS.items():
+            if json_key in body:
+                setattr(node, model_field, coerce(body[json_key]))
+                update_fields.append(model_field)
+        node.save(update_fields=update_fields)
         return JsonResponse({
             "ok": True,
             "word_count": node.word_count,
@@ -710,3 +752,18 @@ class DramaTurningPointAddView(LoginRequiredMixin, View):
             position_percent=position,
         )
         return redirect("projects:drama_dashboard", pk=pk)
+
+
+class GenresByContentTypeView(LoginRequiredMixin, View):
+    """AJAX: Genres gefiltert nach Inhaltstyp (oder alle bei ct_id=leer)."""
+
+    def get(self, request):
+        ct_id = request.GET.get("ct")
+        if ct_id:
+            genres = GenreLookup.objects.filter(
+                models.Q(content_type_id=ct_id) | models.Q(content_type__isnull=True)
+            ).order_by("order", "name")
+        else:
+            genres = GenreLookup.objects.all().order_by("order", "name")
+        data = [{"id": g.pk, "name": g.name} for g in genres]
+        return JsonResponse(data, safe=False)

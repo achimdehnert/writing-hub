@@ -16,27 +16,40 @@ logger = logging.getLogger(__name__)
 try:
     from iil_researchfw import Citation, CitationService, CitationStyle, Author, SourceType
     from iil_researchfw.search import AcademicSearchService
-    from iil_researchfw.search.smart import SmartSearchService
-    from iil_researchfw.analysis.summary import AISummaryService, make_together_llm
-    from iil_researchfw.analysis.relevance import RelevanceScorer
     _RESEARCHFW_AVAILABLE = True
 except ImportError:
     _RESEARCHFW_AVAILABLE = False
     logger.warning("iil-researchfw not installed — citation features disabled")
 
+# Optional: advanced features (SmartSearch, AI Summary) — may not exist in all versions
+_SMART_SEARCH_AVAILABLE = False
+try:
+    from iil_researchfw.search.smart import SmartSearchService
+    from iil_researchfw.analysis.summary import AISummaryService, make_together_llm
+    from iil_researchfw.analysis.relevance import RelevanceScorer
+    _SMART_SEARCH_AVAILABLE = True
+except ImportError:
+    logger.info("iil-researchfw smart search/analysis not available — using basic search")
 
-def _run_async(coro: Any) -> Any:
-    """Run an async coroutine synchronously (Django context)."""
+
+def _run_async(coro: Any, timeout: int = 60) -> Any:
+    """Run an async coroutine synchronously (Django context) with timeout."""
+    async def _with_timeout():
+        return await asyncio.wait_for(coro, timeout=timeout)
+
     try:
         loop = asyncio.get_event_loop()
         if loop.is_running():
             import concurrent.futures
             with concurrent.futures.ThreadPoolExecutor() as pool:
-                future = pool.submit(asyncio.run, coro)
-                return future.result(timeout=15)
-        return loop.run_until_complete(coro)
+                future = pool.submit(asyncio.run, _with_timeout())
+                return future.result(timeout=timeout + 5)
+        return loop.run_until_complete(_with_timeout())
     except RuntimeError:
-        return asyncio.run(coro)
+        return asyncio.run(_with_timeout())
+    except (asyncio.TimeoutError, TimeoutError) as exc:
+        logger.warning("_run_async timeout after %ds: %s", timeout, exc)
+        raise TimeoutError(f"Recherche-Timeout nach {timeout}s") from exc
 
 
 def resolve_doi(doi: str) -> dict[str, Any] | None:
@@ -180,7 +193,7 @@ def smart_search_papers(
     from django.conf import settings
     api_key = getattr(settings, "TOGETHER_API_KEY", "") or getattr(settings, "OPENAI_API_KEY", "")
 
-    if not api_key:
+    if not _SMART_SEARCH_AVAILABLE or not api_key:
         logger.info("smart_search_papers: no LLM key configured, falling back to search_papers()")
         papers = search_papers(topic, sources=sources, max_results=max_results)
         return {
@@ -231,11 +244,11 @@ def summarize_papers(
 
     Returns dict mit 'summary', 'key_points', 'top_papers', 'ai_generated'.
     """
-    if not _RESEARCHFW_AVAILABLE or not papers:
+    if not _RESEARCHFW_AVAILABLE or not _SMART_SEARCH_AVAILABLE or not papers:
         return {
             "summary": "",
             "key_points": [],
-            "top_papers": [],
+            "top_papers": papers[:10] if papers else [],
             "ai_generated": False,
         }
 

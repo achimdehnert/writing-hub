@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from apps.authoring.defaults import DEFAULT_CONTENT_TYPE
+
 
 @dataclass
 class HealthCheck:
@@ -48,7 +50,7 @@ def compute_dramaturgic_health(project) -> DramaturgicHealthResult:
     score = Vollständigkeit der Planung (0–100).
     Für Essays/Sachbücher wird _compute_nondramatic_health() gerufen.
     """
-    content_type = getattr(project, "content_type", "novel")
+    content_type = getattr(project, "content_type", DEFAULT_CONTENT_TYPE)
     if content_type in NON_DRAMATIC_TYPES:
         return _compute_nondramatic_health(project, content_type)
 

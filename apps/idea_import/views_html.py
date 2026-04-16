@@ -10,6 +10,11 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 from django.views.generic import ListView
 
+from apps.authoring.defaults import (
+    DEFAULT_CONTENT_TYPE,
+    DEFAULT_PROJECT_TARGET_WORDS,
+    distribute_chapter_targets,
+)
 from apps.projects.models import BookProject
 from .models import IdeaImportDraft
 
@@ -246,6 +251,9 @@ def _commit_outline(project, data: dict, user) -> int:
         source="idea_import",
         is_active=True,
     )
+    ct = getattr(project, "content_type", DEFAULT_CONTENT_TYPE) or DEFAULT_CONTENT_TYPE
+    ptarget = project.target_word_count or DEFAULT_PROJECT_TARGET_WORDS
+    targets = distribute_chapter_targets(ptarget, len(all_beats), ct)
     OutlineNode.objects.bulk_create([
         OutlineNode(
             outline_version=version,
@@ -253,8 +261,9 @@ def _commit_outline(project, data: dict, user) -> int:
             description=b["description"],
             beat_type=b["beat_type"],
             order=b["order"],
+            target_words=targets[i],
         )
-        for b in all_beats
+        for i, b in enumerate(all_beats)
     ])
     return len(all_beats)
 

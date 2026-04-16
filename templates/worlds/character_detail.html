@@ -1,0 +1,394 @@
+{% extends "base.html" %}
+
+{% block title %}{{ char.name|default:"Charakter" }} — Writing Hub{% endblock %}
+{% block nav_worlds %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+    .field-section { background: #0d1117; border: 1px solid #2d3748; border-radius: .75rem; padding: 1.25rem; margin-bottom: 1rem; }
+    .field-section h6 { color: #e2e8f0; font-size: .85rem; font-weight: 700; margin-bottom: .75rem; }
+    .field-section .form-label { color: #94a3b8; font-size: .78rem; font-weight: 600; margin-bottom: .25rem; }
+    .field-section .form-control, .field-section .form-select {
+        background: #131929; color: #f1f5f9; border-color: #475569; font-size: .85rem;
+    }
+    .field-section .form-control:focus, .field-section .form-select:focus {
+        border-color: #6366f1; box-shadow: 0 0 0 .15rem rgba(99,102,241,.25);
+    }
+    .char-header { background: linear-gradient(135deg, #1a365d 0%, #1e1b4b 100%); border-radius: .75rem; padding: 1.5rem; margin-bottom: 1.25rem; }
+    .role-badge { font-size: .7rem; padding: .2rem .5rem; border-radius: 999px; font-weight: 600; }
+    .role-protagonist { background: #1a3a1a; color: #22c55e; }
+    .role-antagonist { background: #3a1a1a; color: #f87171; }
+    .role-default { background: #1e2235; color: #94a3b8; }
+    .weltenhub-ro { background: #0c1222; border: 1px dashed #374151; border-radius: .5rem; padding: .75rem; }
+    .weltenhub-ro label { color: #64748b; font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; }
+    .weltenhub-ro .val { color: #cbd5e1; font-size: .85rem; white-space: pre-wrap; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:820px;margin:0 auto;">
+
+<!-- Back nav -->
+<div class="d-flex align-items-center justify-content-between mb-3">
+    {% if world_link %}
+    <a href="{% url 'worlds_html:detail' world_link.pk %}" class="btn btn-link text-muted ps-0">
+        <i class="bi bi-arrow-left me-1"></i> Zurueck zur Welt
+    </a>
+    {% else %}
+    <a href="{% url 'worlds_html:list' %}" class="btn btn-link text-muted ps-0">
+        <i class="bi bi-arrow-left me-1"></i> Welten
+    </a>
+    {% endif %}
+</div>
+
+<!-- Character Header -->
+<div class="char-header">
+    <div class="d-flex align-items-center gap-3">
+        <div class="rounded-circle d-flex align-items-center justify-content-center"
+             style="width:56px;height:56px;background:#1e1b4b;border:2px solid #6366f1;">
+            <i class="bi bi-person-fill" style="font-size:1.5rem;color:#a5b4fc;"></i>
+        </div>
+        <div>
+            <h4 class="fw-bold text-white mb-0">{{ display_name|default:"Unbekannter Charakter" }}</h4>
+            <div class="d-flex align-items-center gap-2 mt-1">
+                <span class="role-badge {% if pcl.narrative_role == 'protagonist' %}role-protagonist{% elif pcl.narrative_role == 'antagonist' %}role-antagonist{% else %}role-default{% endif %}">
+                    {{ pcl.get_narrative_role_display }}
+                </span>
+                {% if pcl.source %}
+                <span class="badge" style="background:#1e1b4b;color:#a5b4fc;font-size:.6rem;">{{ pcl.get_source_display }}</span>
+                {% endif %}
+                {% if pcl.character_status != "alive" %}
+                <span class="role-badge" style="background:#3a1a1a;color:#f87171;">{{ pcl.get_character_status_display }}</span>
+                {% endif %}
+                {% if pcl.first_appearance %}
+                <span style="color:#94a3b8;font-size:.75rem;"><i class="bi bi-bookmark me-1"></i>{{ pcl.first_appearance }}</span>
+                {% endif %}
+                <form method="post" action="{% url 'worlds_html:character_refine' pcl.pk %}" class="d-inline ms-2">
+                    {% csrf_token %}
+                    <button class="btn btn-sm" style="background:#312e81;color:#c4b5fd;border:1px solid #4c1d95;font-size:.75rem;">
+                        <i class="bi bi-magic me-1"></i>Per KI verfeinern
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stammdaten (lokal, immer editierbar — ADR-152) -->
+<form method="post">
+    {% csrf_token %}
+
+    <div class="field-section">
+        <h6><i class="bi bi-person-vcard me-2" style="color:#6366f1;"></i>Stammdaten</h6>
+        <div class="row g-2">
+            <div class="col-md-6">
+                <label class="form-label">Name</label>
+                <input type="text" name="name" class="form-control form-control-sm"
+                       value="{{ pcl.name }}" placeholder="Name der Figur">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Beschreibung</label>
+                <input type="text" name="description" class="form-control form-control-sm"
+                       value="{{ pcl.description }}" placeholder="Kurzbeschreibung">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Persoenlichkeit</label>
+                <textarea name="personality" rows="2" class="form-control"
+                          placeholder="Charakter-Eigenschaften, Temperament...">{{ pcl.personality }}</textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Hintergrundgeschichte</label>
+                <textarea name="backstory" rows="2" class="form-control"
+                          placeholder="Wichtige Lebensgeschichte...">{{ pcl.backstory }}</textarea>
+            </div>
+        </div>
+    </div>
+
+{% if char %}
+    <div class="field-section" style="border-style:dashed;">
+        <h6><i class="bi bi-cloud me-2" style="color:#475569;"></i>WeltenHub-Referenz <span class="text-muted" style="font-size:.7rem;font-weight:400;">(nur lesbar)</span></h6>
+        <div class="row g-2">
+            {% if char.goals %}
+            <div class="col-md-6">
+                <div class="weltenhub-ro"><label>Ziele</label><div class="val">{{ char.goals }}</div></div>
+            </div>
+            {% endif %}
+            {% if char.fears %}
+            <div class="col-md-6">
+                <div class="weltenhub-ro"><label>Aengste</label><div class="val">{{ char.fears }}</div></div>
+            </div>
+            {% endif %}
+            {% if char.appearance %}
+            <div class="col-12">
+                <div class="weltenhub-ro"><label>Aussehen</label><div class="val">{{ char.appearance }}</div></div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+{% elif pcl.weltenhub_character_id %}
+    <div class="d-flex align-items-center gap-2 mb-3 py-2 px-3 rounded" style="background:#131929;border:1px solid #374151;">
+        <i class="bi bi-cloud-slash text-muted"></i>
+        <span class="small text-muted">WeltenHub nicht erreichbar — alle Felder sind lokal editierbar.</span>
+    </div>
+{% endif %}
+
+    <!-- Narrative Rolle + Plot-Status -->
+    <div class="field-section">
+        <h6><i class="bi bi-diagram-3 me-2" style="color:#6366f1;"></i>Rolle &amp; Status</h6>
+        <div class="row g-2">
+            <div class="col-md-4">
+                <label class="form-label">Narrative Rolle</label>
+                <select name="narrative_role" class="form-select form-select-sm">
+                    {% for key, label in narrative_roles %}
+                    <option value="{{ key }}" {% if pcl.narrative_role == key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Status im Plot</label>
+                <select name="character_status" class="form-select form-select-sm">
+                    {% for key, label in character_statuses %}
+                    <option value="{{ key }}" {% if pcl.character_status == key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Erster Auftritt</label>
+                <input type="text" name="first_appearance" class="form-control form-control-sm"
+                       value="{{ pcl.first_appearance }}" placeholder="Kapitel / Szene">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Projekt-Rolle</label>
+                <input type="text" name="project_role" class="form-control form-control-sm"
+                       value="{{ pcl.project_role }}" placeholder="z.B. B-Story">
+            </div>
+        </div>
+    </div>
+
+    <!-- Charakter-Arc -->
+    <div class="field-section">
+        <h6><i class="bi bi-arrow-repeat me-2" style="color:#22c55e;"></i>Charakter-Arc</h6>
+        <div class="row g-2">
+            <div class="col-md-6">
+                <label class="form-label">Want (aeusseres Ziel)</label>
+                <textarea name="want" rows="2" class="form-control">{{ pcl.want }}</textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Need (innere Wahrheit)</label>
+                <textarea name="need" rows="2" class="form-control">{{ pcl.need }}</textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Flaw (psychologischer Riss)</label>
+                <textarea name="flaw" rows="2" class="form-control">{{ pcl.flaw }}</textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Ghost (praegender Moment)</label>
+                <textarea name="ghost" rows="2" class="form-control">{{ pcl.ghost }}</textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">False Belief</label>
+                <textarea name="false_belief" rows="2" class="form-control">{{ pcl.false_belief }}</textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">True Belief (Erkenntnis am Ende)</label>
+                <textarea name="true_belief" rows="2" class="form-control">{{ pcl.true_belief }}</textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stimme / Sprechmuster -->
+    <div class="field-section">
+        <h6><i class="bi bi-chat-quote me-2" style="color:#a5b4fc;"></i>Stimme / Sprechmuster</h6>
+        <textarea name="voice_pattern" rows="3" class="form-control"
+                  placeholder="Kurzsaetze, Fuellwoerter, Dialekt, Schweigen als Mittel...">{{ pcl.voice_pattern }}</textarea>
+    </div>
+
+    <!-- Geheimnis -->
+    <div class="field-section">
+        <h6><i class="bi bi-eye-slash me-2" style="color:#fbbf24;"></i>Geheimnis</h6>
+        <div class="row g-2">
+            <div class="col-12">
+                <label class="form-label">Was verbirgt die Figur?</label>
+                <textarea name="secret_what" rows="2" class="form-control">{{ pcl.secret_what }}</textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Vor wem?</label>
+                <input type="text" name="secret_from_whom" class="form-control form-control-sm"
+                       value="{{ pcl.secret_from_whom }}">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Warum?</label>
+                <textarea name="secret_why" rows="1" class="form-control">{{ pcl.secret_why }}</textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- Antagonisten-Felder (nur wenn Rolle = antagonist) -->
+    <div class="field-section" id="antagonist-section"
+         style="{% if pcl.narrative_role != 'antagonist' %}display:none;{% endif %}">
+        <h6><i class="bi bi-lightning me-2" style="color:#f87171;"></i>Antagonisten-Felder</h6>
+        <div class="row g-2">
+            <div class="col-md-4">
+                <label class="form-label">Antagonisten-Typ</label>
+                <select name="antagonist_type" class="form-select form-select-sm">
+                    <option value="">—</option>
+                    {% for key, label in antagonist_types %}
+                    <option value="{{ key }}" {% if pcl.antagonist_type == key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-8">
+                <label class="form-label">Logik (Warum glaubt er/sie, das Richtige zu tun?)</label>
+                <textarea name="antagonist_logic" rows="2" class="form-control">{{ pcl.antagonist_logic }}</textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Spiegel zum Protagonisten</label>
+                <textarea name="mirror_to_protagonist" rows="2" class="form-control">{{ pcl.mirror_to_protagonist }}</textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Gemeinsamkeit mit Protagonisten</label>
+                <textarea name="shared_trait_with_protagonist" rows="2" class="form-control">{{ pcl.shared_trait_with_protagonist }}</textarea>
+            </div>
+            <div class="col-12">
+                <label class="form-label">Informationsvorsprung</label>
+                <textarea name="information_advantage" rows="2" class="form-control">{{ pcl.information_advantage }}</textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- Beziehungen (Phase 2) -->
+    <div class="field-section">
+        <h6><i class="bi bi-diagram-2 me-2" style="color:#a78bfa;"></i>Beziehungen</h6>
+
+        {% if rels_from or rels_to %}
+        <div class="mb-3">
+            {% for rel in rels_from %}
+            <div class="d-flex align-items-center gap-2 mb-1 py-1 px-2 rounded" style="background:#131929;">
+                <span style="color:#e2e8f0;font-size:.82rem;">
+                    <i class="bi bi-arrow-right me-1" style="color:#6366f1;"></i>
+                    <strong>{{ rel.get_relationship_type_display }}</strong>
+                    <a href="{% url 'worlds_html:character_detail' rel.to_character.pk %}" style="color:#a5b4fc;">
+                        {{ rel.to_character }}
+                    </a>
+                </span>
+                {% if rel.since_chapter %}
+                <span class="text-muted" style="font-size:.7rem;">(ab {{ rel.since_chapter }})</span>
+                {% endif %}
+                {% if not rel.is_public %}
+                <span style="font-size:.65rem;color:#fbbf24;"><i class="bi bi-eye-slash"></i> geheim</span>
+                {% endif %}
+                <span class="ms-auto">
+                    {% for i in "12345" %}
+                        {% if forloop.counter <= rel.intensity %}
+                        <i class="bi bi-circle-fill" style="font-size:.4rem;color:#6366f1;"></i>
+                        {% else %}
+                        <i class="bi bi-circle" style="font-size:.4rem;color:#475569;"></i>
+                        {% endif %}
+                    {% endfor %}
+                </span>
+                <form method="post" action="{% url 'worlds_html:relationship_delete' rel.pk %}" class="d-inline ms-1">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-link btn-sm text-muted p-0" title="Entfernen">
+                        <i class="bi bi-x-circle" style="font-size:.75rem;"></i>
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+
+            {% for rel in rels_to %}
+            <div class="d-flex align-items-center gap-2 mb-1 py-1 px-2 rounded" style="background:#0c1222;">
+                <span style="color:#cbd5e1;font-size:.82rem;">
+                    <i class="bi bi-arrow-left me-1" style="color:#94a3b8;"></i>
+                    <a href="{% url 'worlds_html:character_detail' rel.from_character.pk %}" style="color:#a5b4fc;">
+                        {{ rel.from_character }}
+                    </a>
+                    <strong>{{ rel.get_relationship_type_display }}</strong> mich
+                </span>
+                {% if rel.since_chapter %}
+                <span class="text-muted" style="font-size:.7rem;">(ab {{ rel.since_chapter }})</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted small mb-2">Noch keine Beziehungen erfasst.</p>
+        {% endif %}
+
+        {% if other_characters %}
+        <details class="mt-2">
+            <summary class="small" style="color:#a5b4fc;cursor:pointer;">
+                <i class="bi bi-plus-circle me-1"></i>Beziehung hinzufuegen
+            </summary>
+            <div class="mt-2 p-2 rounded" style="background:#131929;">
+                <form method="post" action="{% url 'worlds_html:relationship_add' pcl.pk %}" class="row g-2 align-items-end">
+                    {% csrf_token %}
+                    <div class="col-md-4">
+                        <label class="form-label">Zu Charakter</label>
+                        <select name="to_character" class="form-select form-select-sm" required>
+                            <option value="">— waehlen —</option>
+                            {% for oc in other_characters %}
+                            <option value="{{ oc.pk }}">{{ oc }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Typ</label>
+                        <select name="relationship_type" class="form-select form-select-sm">
+                            {% for key, label in relationship_types %}
+                            <option value="{{ key }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Seit Kapitel</label>
+                        <input type="text" name="since_chapter" class="form-control form-control-sm" placeholder="optional">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-outline-primary btn-sm w-100">
+                            <i class="bi bi-plus me-1"></i>Hinzufuegen
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </details>
+        {% endif %}
+    </div>
+
+    <!-- Notizen -->
+    <div class="field-section">
+        <h6><i class="bi bi-journal-text me-2" style="color:#94a3b8;"></i>Notizen</h6>
+        <textarea name="project_arc" rows="2" class="form-control mb-2"
+                  placeholder="Projekt-spezifischer Arc...">{{ pcl.project_arc }}</textarea>
+        <textarea name="notes" rows="2" class="form-control"
+                  placeholder="Interne Notizen...">{{ pcl.notes }}</textarea>
+    </div>
+
+    <!-- Submit -->
+    <div class="d-flex justify-content-between mb-4">
+        {% if world_link %}
+        <a href="{% url 'worlds_html:detail' world_link.pk %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Abbrechen
+        </a>
+        {% else %}
+        <a href="{% url 'worlds_html:list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Zurueck
+        </a>
+        {% endif %}
+        <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-check2 me-1"></i>Speichern
+        </button>
+    </div>
+</form>
+
+</div>
+
+{% block extra_js %}
+<script>
+// Show/hide antagonist section based on narrative_role
+document.querySelector('[name="narrative_role"]').addEventListener('change', function() {
+    document.getElementById('antagonist-section').style.display =
+        this.value === 'antagonist' ? '' : 'none';
+});
+</script>
+{% endblock %}
+{% endblock %}

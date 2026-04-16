@@ -9,6 +9,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.views.generic import DetailView, ListView
 
+from apps.authoring.defaults import DEFAULT_PROJECT_TARGET_WORDS, DEFAULT_TARGET_WORD_COUNT
 from apps.projects.models import OutlineFramework, OutlineNode, OutlineVersion
 
 logger = logging.getLogger(__name__)
@@ -196,11 +197,14 @@ class OutlineNodeAddView(LoginRequiredMixin, View):
         outline = get_object_or_404(OutlineVersion, pk=pk, project__owner=request.user)
         max_order = outline.nodes.count()
         title = request.POST.get("title", "").strip() or f"Kapitel {max_order + 1}"
+        ptarget = outline.project.target_word_count or DEFAULT_PROJECT_TARGET_WORDS
+        target_words = ptarget // (max_order + 1) or DEFAULT_TARGET_WORD_COUNT
         OutlineNode.objects.create(
             outline_version=outline,
             title=title,
             beat_type="chapter",
             order=max_order + 1,
+            target_words=target_words,
         )
         messages.success(request, f'Kapitel „{title}" hinzugefügt.')
         return redirect("outlines:detail", pk=pk)

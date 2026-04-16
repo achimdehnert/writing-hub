@@ -267,12 +267,7 @@
                             {{ c.title|truncatechars:80 }}
                         </div>
                         <div class="text-muted small mt-1">
-                            {% for a in c.authors %}
-                                {% if forloop.counter <= 3 %}
-                                    {{ a.family }}{% if a.given %}, {{ a.given|slice:":1" }}.{% endif %}{% if not forloop.last %}; {% endif %}
-                                {% endif %}
-                            {% endfor %}
-                            {% if c.authors|length > 3 %} et al.{% endif %}
+                            {{ c.authors_display }}
                             {% if c.year %}&nbsp;({{ c.year }}){% endif %}
                         </div>
                         <div class="mt-1 d-flex flex-wrap gap-1">
@@ -290,7 +285,7 @@
                     <form method="post" class="ms-2 flex-shrink-0">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="remove">
-                        <input type="hidden" name="index" value="{{ forloop.counter0 }}">
+                        <input type="hidden" name="citation_id" value="{{ c.pk }}">
                         <button class="btn btn-sm btn-outline-danger" title="Entfernen">
                             <i class="bi bi-x"></i>
                         </button>

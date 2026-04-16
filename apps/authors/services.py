@@ -41,18 +41,17 @@ def analyze_style(style: WritingStyle) -> bool:
     """
     Analysiert den Quelltext eines WritingStyle per LLM.
     Speichert style_profile und style_prompt.
+    Wird typisch in einem Background-Thread aufgerufen.
     """
     from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
 
+    style.refresh_from_db()
     text = style.source_text.strip()
     if not text:
         style.status = WritingStyle.Status.ERROR
         style.error_message = "Kein Quelltext vorhanden."
         style.save(update_fields=["status", "error_message"])
         return False
-
-    style.status = WritingStyle.Status.ANALYZING
-    style.save(update_fields=["status"])
 
     from apps.core.prompt_utils import render_prompt
     prompt_msgs = render_prompt(

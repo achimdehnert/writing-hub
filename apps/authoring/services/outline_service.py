@@ -9,6 +9,11 @@ Public API:
 
 import logging
 
+from apps.authoring.defaults import (
+    DEFAULT_CONTENT_TYPE,
+    DEFAULT_PROJECT_TARGET_WORDS,
+    distribute_chapter_targets,
+)
 from apps.authoring.services.llm_router import LLMRouter
 
 logger = logging.getLogger(__name__)
@@ -166,6 +171,11 @@ def _save_outline_to_db(
                 beat_type=beat or "chapter",
                 order=i + 1,
             ))
+        ct = getattr(project, "content_type", DEFAULT_CONTENT_TYPE) or DEFAULT_CONTENT_TYPE
+        ptarget = project.target_word_count or DEFAULT_PROJECT_TARGET_WORDS
+        targets = distribute_chapter_targets(ptarget, len(db_nodes), ct)
+        for idx, dn in enumerate(db_nodes):
+            dn.target_words = targets[idx]
         DBOutlineNode.objects.bulk_create(db_nodes)
         return str(version.pk)
     except Exception:

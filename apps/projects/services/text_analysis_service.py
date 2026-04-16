@@ -5,8 +5,13 @@ Strukturelle Manuskript-Analyse (regelbasiert, kein LLM).
 """
 from __future__ import annotations
 
+import logging
 import re
 import statistics
+
+from apps.authoring.defaults import CHAPTER_EXCERPT_MAX_CHARS, MAX_CHARACTERS_IN_PROMPT
+
+logger = logging.getLogger(__name__)
 
 MAX_SNAPSHOTS = 5
 
@@ -176,7 +181,7 @@ def _estimate_dialogue_ratio(content: str) -> float:
 
 def _check_voice_drift(project, nodes, snap):
     try:
-        from aifw.service import sync_completion
+        from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
     except ImportError:
         return snap
 
@@ -185,27 +190,30 @@ def _check_voice_drift(project, nodes, snap):
         return snap
 
     written = [n for n in nodes if n.content and len(n.content) > 300]
-    samples = written[::max(1, len(written) // 5)][:5]
+    samples = written[::max(1, len(written) // MAX_CHARACTERS_IN_PROMPT)][:MAX_CHARACTERS_IN_PROMPT]
 
     from apps.core.prompt_utils import render_prompt
 
     drifted = []
+    router = LLMRouter()
     for node in samples:
         messages = render_prompt(
             "projects/voice_drift_check",
             voice_profile=voice.authoringfw_prompt_block,
             chapter_order=node.order,
-            chapter_excerpt=node.content[:1200],
+            chapter_excerpt=node.content[:CHAPTER_EXCERPT_MAX_CHARS],
         )
-        result = sync_completion(
-            action_code="voice_drift_check",
-            messages=messages,
-        )
-        if result.success:
+        try:
+            raw = router.completion(
+                action_code="voice_drift_check",
+                messages=messages,
+            )
             from promptfw.parsing import extract_json
-            data = extract_json(result.content)
+            data = extract_json(raw)
             if data and data.get("drift"):
                 drifted.append({"order": node.order, "reason": data.get("reason", "")})
+        except (LLMRoutingError, Exception) as exc:
+            logger.warning("Voice drift check failed for chapter %d: %s", node.order, exc)
 
     snap.voice_drift_checked = True
     snap.voice_drift_detected = bool(drifted)

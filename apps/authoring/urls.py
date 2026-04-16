@@ -12,6 +12,11 @@ urlpatterns = [
         name="chapter-write-start",
     ),
     path(
+        "projects/<uuid:project_id>/chapters/<str:chapter_ref>/refine/",
+        views.chapter_refine_start.as_view(),
+        name="chapter-refine-start",
+    ),
+    path(
         "jobs/<uuid:job_id>/status/",
         views.chapter_write_status.as_view(),
         name="chapter-write-status",

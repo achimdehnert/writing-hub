@@ -99,6 +99,8 @@ urlpatterns = [
     path("quick/start/", views_quick_project.QuickProjectStartView.as_view(), name="quick_project_start"),
     path("quick/<uuid:pk>/<uuid:job_id>/", views_quick_project.QuickProjectProgressView.as_view(), name="quick_project_progress"),
     path("quick/<uuid:pk>/<uuid:job_id>/status/", views_quick_project.QuickProjectStatusView.as_view(), name="quick_project_status"),
+    # AJAX Helpers
+    path("api/genres/", views_html.GenresByContentTypeView.as_view(), name="api_genres_by_ct"),
     # REST API
     path("api/", views.BookProjectListView.as_view(), name="api_list"),
     path("api/<uuid:pk>/", views.BookProjectDetailView.as_view(), name="api_detail"),

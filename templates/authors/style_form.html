@@ -112,6 +112,62 @@
     {% endif %}
 
     <div class="lab-section">
+        <h6><i class="bi bi-mortarboard me-2" style="color:#6366f1;"></i>Fachprofil
+            <span class="text-muted fw-normal" style="font-size:.75rem;">(optional — fuer akademische und fachspezifische Stile)</span>
+        </h6>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="section-label">Zitationsstil</label>
+                <select name="citation_style" class="form-select" style="background:#131929;color:#f1f5f9;border-color:#475569;">
+                    <option value="">— Kein —</option>
+                    {% for val, label in citation_styles %}
+                    <option value="{{ val }}" {% if style and style.citation_style == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="section-label">Sprache</label>
+                <select name="language" class="form-select" style="background:#131929;color:#f1f5f9;border-color:#475569;">
+                    <option value="">— Kein —</option>
+                    {% for val, label in language_choices %}
+                    <option value="{{ val }}" {% if style and style.language == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="section-label">Formalitaetsgrad</label>
+                <select name="formality_level" class="form-select" style="background:#131929;color:#f1f5f9;border-color:#475569;">
+                    <option value="">— Kein —</option>
+                    {% for val, label in formality_levels %}
+                    <option value="{{ val }}" {% if style and style.formality_level == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="section-label">Fachgebiet</label>
+                <input type="text" name="domain"
+                       class="form-control" style="background:#131929;color:#f1f5f9;border-color:#475569;"
+                       value="{% if style %}{{ style.domain }}{% endif %}"
+                       placeholder="z.B. Wirtschaftsinformatik, KI">
+            </div>
+            <div class="col-md-4">
+                <label class="section-label">Zielgruppe</label>
+                <input type="text" name="target_audience"
+                       class="form-control" style="background:#131929;color:#f1f5f9;border-color:#475569;"
+                       value="{% if style %}{{ style.target_audience }}{% endif %}"
+                       placeholder="z.B. Fachpublikum, Studenten">
+            </div>
+            <div class="col-md-4">
+                <label class="section-label">Publikationsformat</label>
+                <input type="text" name="publication_format"
+                       class="form-control" style="background:#131929;color:#f1f5f9;border-color:#475569;"
+                       value="{% if style %}{{ style.publication_format }}{% endif %}"
+                       placeholder="z.B. Conference Paper, Journal">
+            </div>
+        </div>
+    </div>
+
+    <div class="lab-section">
         <h6><i class="bi bi-file-text me-2" style="color:#6366f1;"></i>Quelltext
             <span class="text-muted fw-normal" style="font-size:.75rem;">(Beispieltext des Autors, wird per LLM analysiert)</span>
         </h6>

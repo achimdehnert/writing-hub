@@ -7,6 +7,18 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
+from apps.authoring.defaults import (
+    CHAR_DESC_MAX_CHARS,
+    CHAR_MOTIVATION_MAX_CHARS,
+    DEFAULT_CONTENT_TYPE,
+    MAX_STYLE_DONT_ITEMS,
+    MAX_STYLE_SIGNATURE_MOVES,
+    MAX_STYLE_TABOO_ITEMS,
+    STYLE_PROMPT_MAX_CHARS,
+    VOICE_PATTERN_MAX_CHARS,
+    WORLD_DESC_MAX_CHARS,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -18,7 +30,7 @@ class ProjectContext:
     title: str = ""
     genre: str = ""
     description: str = ""
-    content_type: str = "novel"
+    content_type: str = DEFAULT_CONTENT_TYPE
     target_audience: str = ""
     target_word_count: int = 0
 
@@ -55,47 +67,57 @@ class ProjectContext:
         if self.characters:
             lines.append("\n## Charaktere")
             for ch in self.characters:
-                role = ch.get('role', '?')
-                desc = ch.get('description', '')[:200]
+                role = ch.get('narrative_role') or ch.get('role', '?')
+                desc = ch.get('description', '')[:CHAR_DESC_MAX_CHARS]
                 motivation = ch.get('motivation', '')
                 line = f"- {ch.get('name', '?')} ({role}): {desc}"
                 if motivation:
-                    line += f" | Motivation: {motivation[:100]}"
+                    line += f" | Motivation: {motivation[:CHAR_MOTIVATION_MAX_CHARS]}"
+                if ch.get('voice_pattern'):
+                    line += f" | Stimme: {ch['voice_pattern'][:VOICE_PATTERN_MAX_CHARS]}"
+                if ch.get('secret'):
+                    line += f" | Geheimnis: {ch['secret'][:VOICE_PATTERN_MAX_CHARS]}"
+                if ch.get('want'):
+                    line += f" | Will: {ch['want'][:CHAR_MOTIVATION_MAX_CHARS]}"
+                if ch.get('need'):
+                    line += f" | Braucht: {ch['need'][:CHAR_MOTIVATION_MAX_CHARS]}"
+                if ch.get('flaw'):
+                    line += f" | Schwaeche: {ch['flaw'][:CHAR_MOTIVATION_MAX_CHARS]}"
                 lines.append(line)
         if self.worlds:
             lines.append("\n## Weltenbau")
             for w in self.worlds:
-                desc = w.get('description', '')[:200]
+                desc = w.get('description', '')[:WORLD_DESC_MAX_CHARS]
                 atmosphere = w.get('atmosphere', '')
                 line = f"- {w.get('name', '?')}: {desc}"
                 if atmosphere:
-                    line += f" | Atmosphaere: {atmosphere[:100]}"
+                    line += f" | Atmosphaere: {atmosphere[:WORLD_DESC_MAX_CHARS]}"
                 lines.append(line)
         if self.writing_style_prompt or self.author_style:
             lines.append("\n## Autorenstil")
             if self.writing_style_prompt:
-                lines.append(self.writing_style_prompt[:500])
+                lines.append(self.writing_style_prompt[:STYLE_PROMPT_MAX_CHARS])
             if self.author_style.get("name"):
                 lines.append(f"Stil-Profil: {self.author_style['name']}")
             if self.author_style.get("signature_moves"):
                 lines.append(
                     "Stilmittel: "
-                    + ", ".join(self.author_style["signature_moves"][:5])
+                    + ", ".join(self.author_style["signature_moves"][:MAX_STYLE_SIGNATURE_MOVES])
                 )
             if self.author_style.get("do_list"):
                 lines.append(
                     "DO (empfohlen): "
-                    + ", ".join(self.author_style["do_list"][:5])
+                    + ", ".join(self.author_style["do_list"][:MAX_STYLE_SIGNATURE_MOVES])
                 )
             if self.author_style.get("dont_list"):
                 lines.append(
                     "DONT (vermeiden): "
-                    + ", ".join(self.author_style["dont_list"][:5])
+                    + ", ".join(self.author_style["dont_list"][:MAX_STYLE_DONT_ITEMS])
                 )
             if self.author_style.get("taboo_list"):
                 lines.append(
                     "TABU (niemals verwenden): "
-                    + ", ".join(self.author_style["taboo_list"][:5])
+                    + ", ".join(self.author_style["taboo_list"][:MAX_STYLE_TABOO_ITEMS])
                 )
         return "\n".join(lines)
 
@@ -135,15 +157,27 @@ class ProjectContextService:
                 try:
                     from weltenfw.django import get_client
                     char = get_client().characters.get(link.weltenhub_character_id)
-                    characters.append({
+                    char_entry = {
                         "name": getattr(char, "name", str(link.weltenhub_character_id)),
                         "role": link.project_role or getattr(char, "role", ""),
+                        "narrative_role": link.get_narrative_role_display(),
                         "description": (
                             getattr(char, "description", "")
                             or getattr(char, "backstory", "")
                         ),
                         "motivation": getattr(char, "motivation", ""),
-                    })
+                    }
+                    if link.voice_pattern:
+                        char_entry["voice_pattern"] = link.voice_pattern
+                    if link.secret_what:
+                        char_entry["secret"] = link.secret_what
+                    if link.want:
+                        char_entry["want"] = link.want
+                    if link.need:
+                        char_entry["need"] = link.need
+                    if link.flaw:
+                        char_entry["flaw"] = link.flaw
+                    characters.append(char_entry)
                 except Exception:
                     pass
             ctx.characters = characters

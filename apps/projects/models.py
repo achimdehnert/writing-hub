@@ -9,6 +9,8 @@ import uuid
 from django.conf import settings
 from django.db import models
 
+from apps.core.mixins import ComputedFieldsMixin
+
 
 def _import_timeline_models():
     from apps.projects import models_timeline  # noqa: F401
@@ -41,6 +43,13 @@ class ContentTypeLookup(models.Model):
 
 class GenreLookup(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    content_type = models.ForeignKey(
+        ContentTypeLookup, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="genres",
+        verbose_name="Inhaltstyp",
+        help_text="Leer = für alle Inhaltstypen verfügbar",
+    )
     order = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
@@ -356,7 +365,7 @@ class OutlineSequence(models.Model):
         return f"Seq {self.sort_order}: {self.title}"
 
 
-class OutlineNode(models.Model):
+class OutlineNode(ComputedFieldsMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     outline_version = models.ForeignKey(
         "OutlineVersion", on_delete=models.CASCADE, related_name="nodes"
@@ -430,12 +439,12 @@ class OutlineNode(models.Model):
     def __str__(self):
         return f"{self.outline_version} — {self.order}. {self.title}"
 
-    def save(self, *args, **kwargs):
-        if self.content:
-            self.word_count = len(self.content.split())
-        else:
-            self.word_count = 0
-        super().save(*args, **kwargs)
+    COMPUTED_FIELDS = {
+        "word_count": (["content"], "_compute_word_count"),
+    }
+
+    def _compute_word_count(self):
+        self.word_count = len(self.content.split()) if self.content else 0
 
     def get_effective_style(self):
         if self.writing_style:
@@ -1003,7 +1012,7 @@ class ComparableTitle(models.Model):
         return result
 
 
-class PitchDocument(models.Model):
+class PitchDocument(ComputedFieldsMixin):
     """
     Pitch-Dokument — Logline, Exposé, Synopsis oder Query Letter (ADR-159).
 
@@ -1047,10 +1056,12 @@ class PitchDocument(models.Model):
     def __str__(self):
         return f"{self.get_pitch_type_display()} v{self.version} — {self.project.title}"
 
-    def save(self, *args, **kwargs):
-        if self.content:
-            self.word_count = len(self.content.split())
-        super().save(*args, **kwargs)
+    COMPUTED_FIELDS = {
+        "word_count": (["content"], "_compute_word_count"),
+    }
+
+    def _compute_word_count(self):
+        self.word_count = len(self.content.split()) if self.content else 0
 
 
 class ResearchNote(models.Model):
@@ -1369,6 +1380,93 @@ class PeerReviewFinding(models.Model):
 
     def __str__(self):
         return f"[{self.get_agent_display()}] {self.feedback[:60]}"
+
+
+class ProjectCitation(models.Model):
+    """Strukturierte Quellen-Verwaltung pro Projekt (Issue #8)."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        BookProject, on_delete=models.CASCADE, related_name="citations",
+    )
+    node = models.ForeignKey(
+        OutlineNode, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="citations", verbose_name="Kapitel-Zuordnung",
+    )
+    title = models.CharField(max_length=500)
+    authors_json = models.JSONField(default=list, blank=True)
+    year = models.PositiveIntegerField(null=True, blank=True)
+    doi = models.CharField(max_length=200, blank=True, default="")
+    url = models.URLField(max_length=500, blank=True, default="")
+    abstract = models.TextField(blank=True, default="")
+
+    SOURCE_TYPES = [
+        ("journal", "Journal Article"),
+        ("book", "Buch"),
+        ("conference", "Konferenz"),
+        ("web", "Webquelle"),
+        ("report", "Report / White Paper"),
+        ("thesis", "Dissertation / Thesis"),
+    ]
+    source_type = models.CharField(
+        max_length=30, choices=SOURCE_TYPES, default="journal",
+    )
+
+    ADDED_VIA_CHOICES = [
+        ("search", "KI-Literaturrecherche"),
+        ("doi", "DOI-Lookup"),
+        ("isbn", "ISBN-Lookup"),
+        ("bibtex", "BibTeX-Import"),
+        ("manual", "Manuell"),
+    ]
+    added_via = models.CharField(
+        max_length=20, choices=ADDED_VIA_CHOICES, default="search",
+    )
+
+    journal = models.CharField(max_length=300, blank=True, default="")
+    volume = models.CharField(max_length=50, blank=True, default="")
+    issue = models.CharField(max_length=50, blank=True, default="")
+    pages = models.CharField(max_length=50, blank=True, default="")
+    publisher = models.CharField(max_length=200, blank=True, default="")
+    bibtex = models.TextField(blank=True, default="")
+    relevance_note = models.TextField(blank=True, default="")
+    keywords = models.JSONField(default=list, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "wh_project_citations"
+        ordering = ["project", "-created_at"]
+        verbose_name = "Projekt-Quelle"
+        verbose_name_plural = "Projekt-Quellen"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project", "doi"],
+                condition=~models.Q(doi=""),
+                name="unique_project_doi",
+            ),
+        ]
+
+    def __str__(self):
+        year_str = f" ({self.year})" if self.year else ""
+        return f"{self.title[:80]}{year_str}"
+
+    @property
+    def authors_display(self):
+        """Format authors for display."""
+        if not self.authors_json:
+            return ""
+        names = []
+        for a in self.authors_json[:3]:
+            if isinstance(a, dict):
+                names.append(f"{a.get('family', '')} {a.get('given', '')}".strip())
+            else:
+                names.append(str(a))
+        result = ", ".join(names)
+        if len(self.authors_json) > 3:
+            result += " et al."
+        return result
 
 
 # ADR-158: DialogueScene discoverable machen

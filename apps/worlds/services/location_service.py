@@ -16,10 +16,17 @@ import logging
 from dataclasses import dataclass, field
 from uuid import UUID
 
-from apps.core.prompt_utils import render_prompt
-from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
-
 logger = logging.getLogger(__name__)
+
+
+def _get_router():
+    from apps.authoring.services.llm_router import LLMRouter
+    return LLMRouter()
+
+
+def _get_routing_error():
+    from apps.authoring.services.llm_router import LLMRoutingError
+    return LLMRoutingError
 
 
 @dataclass
@@ -50,7 +57,7 @@ class WorldLocationService:
     """
 
     def __init__(self):
-        self._router = LLMRouter()
+        self._router = _get_router()
 
     def generate_locations(
         self,
@@ -80,7 +87,7 @@ class WorldLocationService:
             )
             locations = self._parse_locations(raw)
             return LocationGenerationResult(success=True, locations=locations)
-        except LLMRoutingError as exc:
+        except _get_routing_error() as exc:
             logger.error("generate_locations: %s", exc)
             return LocationGenerationResult(success=False, error=str(exc))
         except Exception as exc:
@@ -199,6 +206,7 @@ class WorldLocationService:
         requirements: str,
     ) -> list[dict]:
         """promptfw render_prompt() — raises PromptRenderError on failure."""
+        from apps.core.prompt_utils import render_prompt
         return render_prompt(
             "worlds/location_generate",
             world_ctx=world_ctx,
@@ -232,7 +240,7 @@ class WorldSceneService:
     """
 
     def __init__(self):
-        self._router = LLMRouter()
+        self._router = _get_router()
 
     def generate_scenes(
         self,
@@ -259,7 +267,7 @@ class WorldSceneService:
             )
             scenes = self._parse_scenes(raw)
             return SceneGenerationResult(success=True, scenes=scenes)
-        except LLMRoutingError as exc:
+        except _get_routing_error() as exc:
             logger.error("generate_scenes: %s", exc)
             return SceneGenerationResult(success=False, error=str(exc))
         except Exception as exc:
@@ -357,6 +365,7 @@ class WorldSceneService:
         requirements: str,
     ) -> list[dict]:
         """promptfw render_prompt() — raises PromptRenderError on failure."""
+        from apps.core.prompt_utils import render_prompt
         return render_prompt(
             "worlds/scene_generate",
             world_ctx=world_ctx,

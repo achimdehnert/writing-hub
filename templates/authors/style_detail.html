@@ -61,6 +61,30 @@
     </div>
 </div>
 
+<!-- Fachprofil Badges -->
+{% if style.citation_style or style.language or style.formality_level or style.domain or style.target_audience or style.publication_format %}
+<div class="d-flex flex-wrap gap-2 mb-4" style="font-size:.78rem;">
+    {% if style.domain %}
+    <span class="badge" style="background:#1e1b4b;color:#a5b4fc;"><i class="bi bi-diagram-3 me-1"></i>{{ style.domain }}</span>
+    {% endif %}
+    {% if style.citation_style %}
+    <span class="badge" style="background:#1a3a1a;color:#22c55e;"><i class="bi bi-quote me-1"></i>{{ style.get_citation_style_display }}</span>
+    {% endif %}
+    {% if style.language %}
+    <span class="badge" style="background:#1a2a3a;color:#60a5fa;"><i class="bi bi-translate me-1"></i>{{ style.language|upper }}</span>
+    {% endif %}
+    {% if style.formality_level %}
+    <span class="badge" style="background:#2d1a00;color:#fb923c;"><i class="bi bi-bar-chart me-1"></i>{{ style.get_formality_level_display }}</span>
+    {% endif %}
+    {% if style.target_audience %}
+    <span class="badge" style="background:#1e2235;color:#94a3b8;"><i class="bi bi-people me-1"></i>{{ style.target_audience }}</span>
+    {% endif %}
+    {% if style.publication_format %}
+    <span class="badge" style="background:#1e2235;color:#94a3b8;"><i class="bi bi-file-earmark-text me-1"></i>{{ style.publication_format }}</span>
+    {% endif %}
+</div>
+{% endif %}
+
 <!-- Workflow-Schritte -->
 <div class="card mb-4" style="background:#0d1117;border-color:#2d3748;">
     <div class="card-body">
@@ -110,12 +134,19 @@
 </div>
 
 <!-- Aktions-Buttons -->
-<div class="d-flex flex-wrap gap-2 mb-4">
-    {% if style.status == 'draft' or style.status == 'error' %}
+<div class="d-flex flex-wrap gap-2 mb-4 align-items-center">
+    {% if style.status == 'analyzing' %}
+    <div id="analyze-status"
+         hx-get="{% url 'authors:style_status' style.pk %}"
+         hx-trigger="every 2s"
+         hx-swap="outerHTML">
+        <span class="spinner-border spinner-border-sm me-1"></span>
+        <span style="color:#60a5fa;">Analyse l&auml;uft&hellip;</span>
+    </div>
+    {% elif style.status == 'draft' or style.status == 'error' %}
     <form method="post" action="{% url 'authors:style_analyze' style.pk %}">
         {% csrf_token %}
-        <button class="btn btn-primary"
-                onclick="this.disabled=true;this.innerHTML='<span class=\'spinner-border spinner-border-sm me-1\'></span>Analysiert...'">
+        <button class="btn btn-primary">
             <i class="bi bi-stars me-1"></i>Jetzt analysieren
         </button>
     </form>
@@ -129,13 +160,11 @@
     {% endif %}
 
     {% if style.status == 'ready' %}
-    <form method="post" action="{% url 'authors:style_samples' style.pk %}">
-        {% csrf_token %}
-        <button class="btn btn-outline-primary btn-sm"
-                onclick="this.disabled=true;this.innerHTML='<span class=\'spinner-border spinner-border-sm me-1\'></span>Generiert...'">
-            <i class="bi bi-text-paragraph me-1"></i>Alle Beispiele generieren
-        </button>
-    </form>
+    <button id="btn-gen-all" class="btn btn-outline-primary btn-sm"
+            data-url="{% url 'authors:style_samples' style.pk %}"
+            data-csrf="{{ csrf_token }}">
+        <i class="bi bi-text-paragraph me-1"></i>Alle Beispiele generieren
+    </button>
     {% endif %}
 </div>
 
@@ -146,27 +175,46 @@
         <span class="fw-semibold small" style="color:#e2e8f0;">
             <i class="bi bi-clipboard-data me-1"></i>Stil-Profil (LLM-Analyse)
         </span>
-        <button class="btn btn-link btn-sm text-muted p-0" data-bs-toggle="collapse" data-bs-target="#collapseProfile">
-            Ein-/Ausklappen
-        </button>
+        <div class="d-flex gap-2 align-items-center">
+            <span id="profile-save-status" class="small" style="color:#22c55e;"></span>
+            <button class="btn btn-sm py-0 px-2" style="background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3;font-size:.72rem;"
+                    id="btn-save-profile">
+                <i class="bi bi-floppy me-1"></i>Speichern
+            </button>
+            <button class="btn btn-link btn-sm text-muted p-0" data-bs-toggle="collapse" data-bs-target="#collapseProfile">
+                Ein-/Ausklappen
+            </button>
+        </div>
     </div>
     <div class="collapse show" id="collapseProfile">
-        <div class="card-body">
-            <div class="p-3 rounded" style="background:#0a0d14;font-size:.85rem;color:#cbd5e1;white-space:pre-wrap;line-height:1.7;">{{ style.style_profile }}</div>
+        <div class="card-body p-2">
+            <textarea id="field-style-profile" rows="12"
+                      class="form-control form-control-sm"
+                      style="background:#0a0d14;color:#cbd5e1;border-color:#2d3748;font-size:.85rem;line-height:1.7;resize:vertical;">{{ style.style_profile }}</textarea>
         </div>
     </div>
 </div>
 {% endif %}
 
-{% if style.style_prompt %}
+{% if style.style_prompt or style.style_profile %}
 <div class="card mb-4" style="background:#0d1117;border-color:#3730a3;">
-    <div class="card-header py-2" style="border-color:#3730a3;">
+    <div class="card-header py-2 d-flex align-items-center justify-content-between" style="border-color:#3730a3;">
         <span class="fw-semibold small" style="color:#a5b4fc;">
             <i class="bi bi-cpu me-1"></i>Stil-Prompt (wird beim Schreiben verwendet)
         </span>
+        <div class="d-flex gap-2 align-items-center">
+            <span id="prompt-save-status" class="small" style="color:#22c55e;"></span>
+            <button class="btn btn-sm py-0 px-2" style="background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3;font-size:.72rem;"
+                    id="btn-save-prompt">
+                <i class="bi bi-floppy me-1"></i>Speichern
+            </button>
+        </div>
     </div>
-    <div class="card-body">
-        <div class="p-3 rounded" style="background:#1e1b4b;font-size:.85rem;color:#c7d2fe;font-style:italic;line-height:1.6;">{{ style.style_prompt }}</div>
+    <div class="card-body p-2">
+        <textarea id="field-style-prompt" rows="5"
+                  class="form-control form-control-sm"
+                  style="background:#1e1b4b;color:#c7d2fe;border-color:#3730a3;font-size:.85rem;line-height:1.6;font-style:italic;resize:vertical;"
+                  placeholder="Stil-Prompt hier eingeben...">{{ style.style_prompt }}</textarea>
     </div>
 </div>
 {% endif %}
@@ -250,5 +298,78 @@
 {% block extra_js %}
 <script>
 document.querySelectorAll('.toast').forEach(el => setTimeout(() => el.classList.remove('show'), 5000));
+
+// Inline-Save for Stil-Profil & Stil-Prompt
+function inlineSave(fieldId, fieldName, statusId) {
+    const textarea = document.getElementById(fieldId);
+    const status = document.getElementById(statusId);
+    if (!textarea) return;
+    const fd = new FormData();
+    fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    fd.append(fieldName, textarea.value);
+    status.textContent = 'Speichert...';
+    status.style.color = '#94a3b8';
+    fetch('{% url "authors:style_patch" style.pk %}', {
+        method: 'POST', body: fd,
+        headers: {'X-Requested-With': 'XMLHttpRequest'},
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) { status.textContent = '✓ Gespeichert'; status.style.color = '#22c55e'; }
+        else { status.textContent = '✗ Fehler'; status.style.color = '#ef4444'; }
+        setTimeout(() => { status.textContent = ''; }, 3000);
+    })
+    .catch(() => { status.textContent = '✗ Netzwerkfehler'; status.style.color = '#ef4444'; });
+}
+const btnProfile = document.getElementById('btn-save-profile');
+if (btnProfile) btnProfile.addEventListener('click', () => inlineSave('field-style-profile', 'style_profile', 'profile-save-status'));
+const btnPrompt = document.getElementById('btn-save-prompt');
+if (btnPrompt) btnPrompt.addEventListener('click', () => inlineSave('field-style-prompt', 'style_prompt', 'prompt-save-status'));
+
+// Alle Beispiele generieren
+(function() {
+    const btn = document.getElementById('btn-gen-all');
+    if (!btn) return;
+
+    btn.addEventListener('click', function() {
+        const url = btn.dataset.url;
+        const csrf = btn.dataset.csrf;
+        const origHTML = btn.innerHTML;
+        let ok = 0, fail = 0;
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Starte...';
+
+        function next() {
+            const fd = new FormData();
+            fd.append('csrfmiddlewaretoken', csrf);
+            fetch(url, {
+                method: 'POST',
+                body: fd,
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.ok) ok++; else fail++;
+                const label = data.generated || '';
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>'
+                    + ok + ' generiert' + (fail ? ', ' + fail + ' fehlgeschlagen' : '')
+                    + (data.remaining > 0 ? ' — noch ' + data.remaining + '...' : '');
+                if (data.done) {
+                    btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>'
+                        + ok + ' generiert' + (fail ? ', ' + fail + ' fehlgeschlagen' : '');
+                    setTimeout(() => location.reload(), 1200);
+                } else {
+                    next();
+                }
+            })
+            .catch(err => {
+                fail++;
+                btn.innerHTML = '<i class="bi bi-x-circle me-1"></i>Fehler: ' + err.message;
+            });
+        }
+        next();
+    });
+})();
 </script>
 {% endblock %}

@@ -11,6 +11,12 @@ from django.views import View
 from django.views.generic import DetailView
 from promptfw.parsing import extract_json_list
 
+from apps.authoring.defaults import (
+    CHAPTER_CONTENT_MAX_CHARS,
+    FEEDBACK_MAX_CHARS,
+    MAX_REVIEW_FINDINGS,
+    MAX_STYLE_SUGGESTIONS,
+)
 from apps.core.prompt_utils import render_prompt
 from .constants import AI_REVIEW_AGENTS, FORMAT_PROFILES
 from .models import BookProject, OutlineNode, OutlineVersion
@@ -169,7 +175,7 @@ class ChapterAIReviewView(LoginRequiredMixin, View):
             items = extract_json_list(raw)
             if items:
                 created = 0
-                for item in items[:10]:
+                for item in items[:MAX_REVIEW_FINDINGS]:
                     fb = item.get("feedback", "").strip()
                     if not fb:
                         continue
@@ -194,7 +200,7 @@ class ChapterAIReviewView(LoginRequiredMixin, View):
                     created_by=request.user,
                     reviewer=agent["name"],
                     feedback_type="suggestion",
-                    feedback=raw[:2000],
+                    feedback=raw[:FEEDBACK_MAX_CHARS],
                     is_ai_generated=True,
                     ai_agent=agent_key,
                 )
@@ -262,7 +268,13 @@ class ChapterEditingView(LoginRequiredMixin, DetailView):
 class ChapterAIEditingView(LoginRequiredMixin, View):
     """KI-Editing: Analysiert ein Kapitel und erstellt Verbesserungsvorschläge."""
 
+    LLM_TIMEOUT_SECONDS = 90
+
+    def _is_ajax(self, request):
+        return request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
     def post(self, request, pk, node_pk):
+        import concurrent.futures
         from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
         from .models import ChapterEditing
 
@@ -270,7 +282,11 @@ class ChapterAIEditingView(LoginRequiredMixin, View):
             OutlineNode, pk=node_pk,
             outline_version__project__owner=request.user
         )
+        is_ajax = self._is_ajax(request)
+
         if not node.content or not node.content.strip():
+            if is_ajax:
+                return JsonResponse({"ok": False, "error": "Kein Inhalt"})
             messages.warning(request, "Kapitel hat noch keinen Inhalt zum Analysieren.")
             return redirect("projects:editing_chapter", pk=pk, node_pk=node_pk)
 
@@ -284,19 +300,23 @@ class ChapterAIEditingView(LoginRequiredMixin, View):
             quality_line=quality_line,
             chapter_order=node.order,
             chapter_title=node.title,
-            chapter_content=node.content[:8000],
+            chapter_content=node.content[:CHAPTER_CONTENT_MAX_CHARS],
         )
 
+        created = 0
+        error_msg = ""
         try:
             router = LLMRouter()
-            raw = router.completion(
-                action_code="chapter_analyze",
-                messages=prompt_messages,
-            )
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                future = pool.submit(
+                    router.completion,
+                    action_code="chapter_analyze",
+                    messages=prompt_messages,
+                )
+                raw = future.result(timeout=self.LLM_TIMEOUT_SECONDS)
             items = extract_json_list(raw)
             if items:
-                created = 0
-                for item in items[:15]:
+                for item in items[:MAX_STYLE_SUGGESTIONS]:
                     sug = item.get("suggestion", "").strip()
                     if not sug:
                         continue
@@ -319,15 +339,29 @@ class ChapterAIEditingView(LoginRequiredMixin, View):
                     node=node,
                     created_by=request.user,
                     suggestion_type="style",
-                    suggestion=raw[:2000],
+                    suggestion=raw[:FEEDBACK_MAX_CHARS],
                     is_ai_generated=True,
                 )
+                created = 1
                 messages.success(request, "Analyse abgeschlossen.")
+        except concurrent.futures.TimeoutError:
+            error_msg = "KI-Analyse Timeout (> 90s). Bitte erneut versuchen."
+            messages.warning(request, error_msg)
         except LLMRoutingError as exc:
-            messages.warning(request, f"KI nicht verfügbar: {exc}")
+            error_msg = f"KI nicht verfügbar: {exc}"
+            messages.warning(request, error_msg)
         except Exception as exc:
             logger.exception("ChapterAIEditing error: %s", exc)
-            messages.error(request, f"Fehler: {exc}")
+            error_msg = f"Fehler: {exc}"
+            messages.error(request, error_msg)
+
+        if is_ajax:
+            return JsonResponse({
+                "ok": not error_msg,
+                "created": created,
+                "chapter": node.title,
+                "error": error_msg,
+            })
 
         return redirect("projects:editing_chapter", pk=pk, node_pk=node_pk)
 

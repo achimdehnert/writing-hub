@@ -18,10 +18,17 @@ import logging
 from dataclasses import dataclass
 from uuid import UUID
 
-from apps.core.prompt_utils import render_prompt
-from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
-
 logger = logging.getLogger(__name__)
+
+
+def _get_router():
+    from apps.authoring.services.llm_router import LLMRouter
+    return LLMRouter()
+
+
+def _get_routing_error():
+    from apps.authoring.services.llm_router import LLMRoutingError
+    return LLMRoutingError
 
 
 @dataclass
@@ -63,7 +70,7 @@ class WorldBuilderService:
     """
 
     def __init__(self):
-        self._router = LLMRouter()
+        self._router = _get_router()
         self._prompt_stack = self._build_prompt_stack()
 
     def _build_prompt_stack(self):
@@ -129,7 +136,7 @@ class WorldBuilderService:
                 priority="quality",
             )
             return self._parse_world_response(raw)
-        except LLMRoutingError as exc:
+        except _get_routing_error() as exc:
             logger.error("WorldBuilderService.generate_world: %s", exc)
             return WorldBuildResult(success=False, error=str(exc))
         except Exception as exc:
@@ -236,6 +243,7 @@ class WorldBuilderService:
         except Exception:
             return ""
 
+        from apps.core.prompt_utils import render_prompt
         messages = render_prompt(
             "worlds/world_expand",
             world_name=world.name,
@@ -271,6 +279,7 @@ class WorldBuilderService:
         world_ctx_str: str,
     ) -> list[dict]:
         """promptfw render_prompt() — raises PromptRenderError on failure."""
+        from apps.core.prompt_utils import render_prompt
         return render_prompt(
             "worlds/world_generate",
             world_ctx_str=world_ctx_str,

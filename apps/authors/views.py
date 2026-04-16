@@ -2,10 +2,11 @@
 Authors — Views für Autor-Profile und Schreibstile (Style Lab Builder).
 """
 import logging
+import threading
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 from django.views.generic import DetailView, ListView
@@ -76,13 +77,26 @@ class AuthorUpdateView(LoginRequiredMixin, View):
         return redirect("authors:detail", pk=author.pk)
 
 
+class AuthorDeleteView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        author = get_object_or_404(Author, pk=pk, owner=request.user)
+        name = author.name
+        author.delete()
+        messages.success(request, f'Autor „{name}" gelöscht.')
+        return redirect("authors:list")
+
+
 class WritingStyleCreateView(LoginRequiredMixin, View):
     template_name = "authors/style_form.html"
 
     def get(self, request, pk):
         author = get_object_or_404(Author, pk=pk, owner=request.user)
         genres = GenreProfile.objects.filter(is_active=True)
-        return render(request, self.template_name, {"author": author, "genres": genres})
+        return render(request, self.template_name, {
+            "author": author,
+            "genres": genres,
+            **_style_choice_context(),
+        })
 
     def post(self, request, pk):
         author = get_object_or_404(Author, pk=pk, owner=request.user)
@@ -103,6 +117,7 @@ class WritingStyleCreateView(LoginRequiredMixin, View):
                 "genres": genres,
                 "error": "Name ist pflicht.",
                 "post": request.POST,
+                **_style_choice_context(),
             })
 
         genre_profile = None
@@ -116,6 +131,12 @@ class WritingStyleCreateView(LoginRequiredMixin, View):
             genre_profile=genre_profile,
             description=request.POST.get("description", ""),
             source_text=source_text,
+            citation_style=request.POST.get("citation_style", ""),
+            language=request.POST.get("language", ""),
+            target_audience=request.POST.get("target_audience", ""),
+            formality_level=request.POST.get("formality_level", ""),
+            domain=request.POST.get("domain", ""),
+            publication_format=request.POST.get("publication_format", ""),
             do_list=_parse_list_input(request.POST.get("do_list", "")),
             dont_list=_parse_list_input(request.POST.get("dont_list", "")),
             taboo_list=_parse_list_input(request.POST.get("taboo_list", "")),
@@ -193,6 +214,7 @@ class WritingStyleUpdateView(LoginRequiredMixin, View):
             "dont_list_str": "\n".join(style.dont_list or []),
             "taboo_list_str": "\n".join(style.taboo_list or []),
             "signature_moves_str": "\n".join(style.signature_moves or []),
+            **_style_choice_context(),
         })
 
     def post(self, request, pk):
@@ -201,6 +223,12 @@ class WritingStyleUpdateView(LoginRequiredMixin, View):
         )
         style.name = request.POST.get("name", style.name).strip() or style.name
         style.description = request.POST.get("description", style.description)
+        style.citation_style = request.POST.get("citation_style", style.citation_style)
+        style.language = request.POST.get("language", style.language)
+        style.target_audience = request.POST.get("target_audience", style.target_audience)
+        style.formality_level = request.POST.get("formality_level", style.formality_level)
+        style.domain = request.POST.get("domain", style.domain)
+        style.publication_format = request.POST.get("publication_format", style.publication_format)
         style.do_list = _parse_list_input(request.POST.get("do_list", ""))
         style.dont_list = _parse_list_input(request.POST.get("dont_list", ""))
         style.taboo_list = _parse_list_input(request.POST.get("taboo_list", ""))
@@ -230,27 +258,55 @@ class WritingStyleUpdateView(LoginRequiredMixin, View):
 
 
 class WritingStyleAnalyzeView(LoginRequiredMixin, View):
-    """Startet LLM-Analyse des Schreibstils (synchron)."""
+    """Startet LLM-Analyse des Schreibstils (asynchron via Thread)."""
 
     def post(self, request, pk):
         style = get_object_or_404(
             WritingStyle, pk=pk, author__owner=request.user
         )
-        ok = services.analyze_style(style)
-        if ok:
-            messages.success(
-                request,
-                f'Stil \u201e{style.name}\u201c erfolgreich analysiert.'
-            )
-        else:
-            messages.error(
-                request,
-                f'Analyse fehlgeschlagen: {style.error_message}'
-            )
+        if style.status == WritingStyle.Status.ANALYZING:
+            messages.info(request, "Analyse läuft bereits.")
+            return redirect("authors:style_detail", pk=style.pk)
+
+        style.status = WritingStyle.Status.ANALYZING
+        style.error_message = ""
+        style.save(update_fields=["status", "error_message"])
+
+        thread = threading.Thread(
+            target=services.analyze_style,
+            args=(style,),
+            daemon=True,
+        )
+        thread.start()
+        messages.info(request, "Analyse gestartet — Seite aktualisiert sich automatisch.")
         return redirect("authors:style_detail", pk=style.pk)
 
     def get(self, request, pk):
         return redirect("authors:style_detail", pk=pk)
+
+
+class WritingStyleStatusView(LoginRequiredMixin, View):
+    """HTMX-Polling: gibt aktuellen Analyse-Status als HTML-Fragment zurück."""
+
+    def get(self, request, pk):
+        style = get_object_or_404(
+            WritingStyle, pk=pk, author__owner=request.user
+        )
+        detail_url = f"/autoren/stil/{style.pk}/"
+        if style.status == WritingStyle.Status.ANALYZING:
+            poll_url = f"/autoren/stil/{style.pk}/status/"
+            return HttpResponse(
+                f'<div id="analyze-status" hx-get="{poll_url}"'
+                ' hx-trigger="every 2s" hx-swap="outerHTML">'
+                '<span class="spinner-border spinner-border-sm me-1"></span>'
+                '<span style="color:#60a5fa;">Analyse l\u00e4uft\u2026</span></div>'
+            )
+        # Analysis done — redirect to detail page
+        if request.headers.get("HX-Request"):
+            resp = HttpResponse(status=200)
+            resp["HX-Redirect"] = detail_url
+            return resp
+        return redirect("authors:style_detail", pk=style.pk)
 
 
 class WritingStyleExtractRulesView(LoginRequiredMixin, View):
@@ -276,15 +332,77 @@ class WritingStyleExtractRulesView(LoginRequiredMixin, View):
 
 
 class WritingStyleSamplesView(LoginRequiredMixin, View):
-    """Generiert Beispieltexte für alle Situationen."""
+    """Generiert Beispieltexte — einzeln per AJAX oder alle auf einmal."""
+
+    def _is_ajax(self, request):
+        return request.headers.get("X-Requested-With") == "XMLHttpRequest"
 
     def post(self, request, pk):
+        from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
+        from apps.core.prompt_utils import render_prompt
+
         style = get_object_or_404(
             WritingStyle, pk=pk, author__owner=request.user
         )
+        is_ajax = self._is_ajax(request)
+
         if style.status != WritingStyle.Status.READY:
+            if is_ajax:
+                return JsonResponse({"ok": False, "error": "Stil nicht bereit", "done": True})
             messages.warning(request, "Bitte zuerst den Stil analysieren.")
             return redirect("authors:style_detail", pk=style.pk)
+
+        situations = services.get_situations_for_style(style)
+        existing = set(style.samples.values_list("situation", flat=True))
+        missing = [(k, l, h) for k, l, h in situations if k not in existing]
+
+        if not missing:
+            if is_ajax:
+                return JsonResponse({"ok": True, "done": True, "generated": 0,
+                                     "total": len(situations), "remaining": 0})
+            messages.info(request, "Alle Beispieltexte bereits vorhanden.")
+            return redirect("authors:style_detail", pk=style.pk)
+
+        # AJAX: generate only the NEXT missing sample
+        if is_ajax:
+            situation_key, situation_label, llm_hint = missing[0]
+            style_desc = style.style_prompt or style.style_profile[:500]
+            try:
+                router = LLMRouter()
+                prompt_msgs = render_prompt(
+                    "authors/generate_sample",
+                    style_desc=style_desc,
+                    situation_label=situation_label,
+                    llm_prompt_hint=llm_hint,
+                )
+                result = router.completion(
+                    action_code="chapter_write",
+                    messages=prompt_msgs,
+                )
+                situation_type = None
+                if style.genre_profile:
+                    situation_type = SituationType.objects.filter(
+                        genre_profile=style.genre_profile, slug=situation_key
+                    ).first()
+                WritingStyleSample.objects.create(
+                    style=style, situation=situation_key,
+                    situation_type=situation_type, text=result,
+                )
+                return JsonResponse({
+                    "ok": True, "done": len(missing) <= 1,
+                    "generated": situation_label,
+                    "total": len(situations),
+                    "remaining": len(missing) - 1,
+                })
+            except (LLMRoutingError, Exception) as exc:
+                return JsonResponse({
+                    "ok": False, "error": str(exc),
+                    "generated": situation_label,
+                    "done": len(missing) <= 1,
+                    "remaining": len(missing) - 1,
+                })
+
+        # Non-AJAX fallback: generate all (blocking)
         count = services.generate_samples(style)
         if count > 0:
             messages.success(request, f'{count} Beispieltexte generiert.')
@@ -438,6 +556,22 @@ class WritingStyleDeleteView(LoginRequiredMixin, View):
 # Helpers
 # ---------------------------------------------------------------------------
 
+LANGUAGE_CHOICES = [
+    ("de", "Deutsch"),
+    ("en", "Englisch"),
+    ("de-en", "Deutsch + Englisch (Mixed)"),
+]
+
+
+def _style_choice_context() -> dict:
+    """Return template context for WritingStyle choice fields."""
+    return {
+        "citation_styles": WritingStyle.CitationStyle.choices,
+        "formality_levels": WritingStyle.FormalityLevel.choices,
+        "language_choices": LANGUAGE_CHOICES,
+    }
+
+
 def _parse_list_input(raw: str) -> list[str]:
     """Parses newline or comma-separated list input into a clean list."""
     if not raw:
@@ -447,3 +581,22 @@ def _parse_list_input(raw: str) -> list[str]:
     if not items:
         items = [i.strip() for i in raw.split(",") if i.strip()]
     return items
+
+
+class WritingStylePatchView(LoginRequiredMixin, View):
+    """AJAX: Einzelne Felder eines WritingStyle inline aktualisieren."""
+
+    ALLOWED_FIELDS = {"style_profile", "style_prompt"}
+
+    def post(self, request, pk):
+        style = get_object_or_404(
+            WritingStyle, pk=pk, author__owner=request.user
+        )
+        updated = []
+        for field in self.ALLOWED_FIELDS:
+            if field in request.POST:
+                setattr(style, field, request.POST[field])
+                updated.append(field)
+        if updated:
+            style.save(update_fields=updated)
+        return JsonResponse({"ok": True, "updated": updated})

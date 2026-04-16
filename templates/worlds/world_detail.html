@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ world.name|default:"Welt" }} — Welten — Writing Hub{% endblock %}
+{% block title %}{{ world_display_name }} — Welten — Writing Hub{% endblock %}
 {% block nav_worlds %}active{% endblock %}
 
 {% block extra_css %}
@@ -25,6 +25,7 @@
     <a href="{% url 'worlds_html:list' %}" class="btn btn-link text-muted ps-0">
         <i class="bi bi-arrow-left me-1"></i> Welten
     </a>
+    {% if weltenhub_available %}
     <div class="d-flex gap-2">
         <a href="https://weltenforger.com/worlds/{{ link.weltenhub_world_id }}/"
            target="_blank" rel="noopener"
@@ -32,13 +33,14 @@
             <i class="bi bi-box-arrow-up-right me-1"></i> In WeltenHub oeffnen
         </a>
     </div>
+    {% endif %}
 </div>
 
 <!-- Welt-Header -->
 <div class="rounded-3 p-4 mb-4" style="background:linear-gradient(135deg,#1a365d 0%,#1e1b4b 100%);">
     <div class="d-flex align-items-center gap-2 mb-2">
         <i class="bi bi-globe2 text-primary" style="font-size:1.5rem;"></i>
-        <h4 class="fw-bold text-white mb-0">{{ world.name|default:"Unbekannte Welt" }}</h4>
+        <h4 class="fw-bold text-white mb-0">{{ world_display_name }}</h4>
     </div>
     {% if world.description %}
     <p class="mb-0" style="color:#a5b4fc;">{{ world.description|truncatechars:300 }}</p>
@@ -51,10 +53,28 @@
     </div>
 </div>
 
-{% if not world %}
+{% if not weltenhub_available %}
 <div class="alert alert-warning py-2 small">
     <i class="bi bi-exclamation-triangle me-1"></i>
-    WeltenHub ist derzeit nicht erreichbar. Die Welt-Daten koennen nicht geladen werden.
+    WeltenHub ist derzeit nicht erreichbar. Daten werden lokal verwaltet.
+</div>
+{% endif %}
+
+{% if has_outline %}
+<div class="world-section" style="border-color:#3730a3;">
+    <div class="d-flex align-items-center justify-content-between">
+        <div>
+            <i class="bi bi-file-earmark-text me-2" style="color:#a5b4fc;"></i>
+            <span class="small fw-semibold" style="color:#e2e8f0;">Outline vorhanden</span>
+            <span class="text-muted small ms-2">Charaktere und Orte koennen aus dem Outline extrahiert werden.</span>
+        </div>
+        <form method="post" action="{% url 'worlds_html:outline_extract' link.pk %}" class="d-inline">
+            {% csrf_token %}
+            <button class="btn btn-sm" style="background:#312e81;color:#c4b5fd;border:1px solid #4c1d95;">
+                <i class="bi bi-download me-1"></i>Aus Outline uebernehmen
+            </button>
+        </form>
+    </div>
 </div>
 {% endif %}
 
@@ -81,24 +101,48 @@
 
     {% if characters %}
     <div class="row g-2">
-        {% for char in characters %}
+        {% for c in characters %}
         <div class="col-md-6 col-lg-4">
-            <div class="char-card">
+            <a href="{% url 'worlds_html:character_detail' c.pcl_pk %}" class="text-decoration-none">
+            <div class="char-card" style="cursor:pointer;">
                 <div class="d-flex align-items-start justify-content-between mb-1">
                     <div class="fw-semibold small" style="color:#e2e8f0;">
-                        <i class="bi bi-person me-1"></i>{{ char.name }}
+                        <i class="bi bi-person me-1"></i>{{ c.name }}
                     </div>
-                    <span class="char-role {% if char.is_protagonist %}role-protagonist{% else %}role-supporting{% endif %}">
-                        {% if char.is_protagonist %}Protagonist{% else %}Nebenfigur{% endif %}
-                    </span>
+                    <div class="d-flex gap-1 align-items-center">
+                        {% if c.source == "outline" %}
+                        <span class="badge" style="background:#312e81;color:#c4b5fd;font-size:.55rem;">Outline</span>
+                        {% elif c.source == "llm" %}
+                        <span class="badge" style="background:#1e1b4b;color:#a5b4fc;font-size:.55rem;">LLM</span>
+                        {% endif %}
+                        <span class="char-role {% if c.narrative_role_key == 'protagonist' %}role-protagonist{% elif c.narrative_role_key == 'antagonist' %}role-antagonist{% else %}role-supporting{% endif %}">
+                            {% if c.narrative_role %}{{ c.narrative_role }}{% elif c.is_protagonist %}Protagonist{% else %}Nebenfigur{% endif %}
+                        </span>
+                    </div>
                 </div>
-                {% if char.personality %}
-                <div class="text-muted" style="font-size:.75rem;">{{ char.personality|truncatechars:100 }}</div>
+                {% if c.personality %}
+                <div class="text-muted" style="font-size:.75rem;">{{ c.personality|truncatechars:100 }}</div>
                 {% endif %}
-                {% if char.backstory %}
-                <div class="mt-1 text-muted" style="font-size:.72rem;"><strong>Hintergrund:</strong> {{ char.backstory|truncatechars:80 }}</div>
+                {% if c.voice_pattern %}
+                <div class="mt-1" style="font-size:.72rem;color:#a5b4fc;">
+                    <i class="bi bi-chat-quote me-1"></i>{{ c.voice_pattern|truncatechars:60 }}
+                </div>
                 {% endif %}
+                {% if c.secret_what %}
+                <div class="mt-1" style="font-size:.72rem;color:#fbbf24;">
+                    <i class="bi bi-eye-slash me-1"></i>{{ c.secret_what|truncatechars:50 }}
+                </div>
+                {% endif %}
+                <div class="d-flex gap-2 mt-1" style="font-size:.65rem;">
+                    {% if c.character_status and c.character_status != "Lebt" %}
+                    <span class="badge" style="background:#3a1a1a;color:#f87171;">{{ c.character_status }}</span>
+                    {% endif %}
+                    {% if c.first_appearance %}
+                    <span class="text-muted"><i class="bi bi-bookmark me-1"></i>{{ c.first_appearance }}</span>
+                    {% endif %}
+                </div>
             </div>
+            </a>
         </div>
         {% endfor %}
     </div>
@@ -135,14 +179,28 @@
     <div class="row g-2">
         {% for loc in locations %}
         <div class="col-md-6">
-            <div class="loc-card">
-                <div class="fw-semibold small mb-1" style="color:#e2e8f0;">
-                    <i class="bi bi-geo-alt me-1"></i>{{ loc.name }}
+            <a href="{% url 'worlds_html:location_detail' loc.pll_pk %}" class="text-decoration-none">
+            <div class="loc-card" style="cursor:pointer;transition:border-color .15s;">
+                <div class="d-flex align-items-start justify-content-between mb-1">
+                    <div class="fw-semibold small" style="color:#e2e8f0;">
+                        <i class="bi bi-geo-alt me-1"></i>{{ loc.name }}
+                    </div>
+                    <div class="d-flex gap-1 align-items-center">
+                        {% if loc.source == "outline" %}
+                        <span class="badge" style="background:#312e81;color:#c4b5fd;font-size:.55rem;">Outline</span>
+                        {% elif loc.source == "llm" %}
+                        <span class="badge" style="background:#1e1b4b;color:#a5b4fc;font-size:.55rem;">LLM</span>
+                        {% endif %}
+                    </div>
                 </div>
                 {% if loc.description %}
                 <div class="text-muted" style="font-size:.75rem;">{{ loc.description|truncatechars:120 }}</div>
                 {% endif %}
+                {% if loc.atmosphere %}
+                <div class="mt-1 text-muted" style="font-size:.7rem;"><i class="bi bi-cloud-haze me-1"></i>{{ loc.atmosphere|truncatechars:80 }}</div>
+                {% endif %}
             </div>
+            </a>
         </div>
         {% endfor %}
     </div>

@@ -32,6 +32,16 @@
                 <a href="{% url 'authors:detail' author.pk %}" class="btn btn-outline-secondary btn-sm">
                     <i class="bi bi-eye me-1"></i>Details
                 </a>
+                <a href="{% url 'authors:update' author.pk %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-pencil"></i>
+                </a>
+                <form method="post" action="{% url 'authors:delete' author.pk %}" class="d-inline"
+                      onsubmit="return confirm('Autor „{{ author.name }}" und alle Schreibstile wirklich löschen?')">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </form>
             </div>
         </div>
 

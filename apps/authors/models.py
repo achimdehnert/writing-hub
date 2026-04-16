@@ -137,6 +137,53 @@ class WritingStyle(models.Model):
         blank=True,
         help_text="Kondensierter Prompt-Baustein für LLM-Generierung",
     )
+    # Akademische / fachspezifische Felder
+    class CitationStyle(models.TextChoices):
+        APA = "apa", "APA 7th"
+        IEEE = "ieee", "IEEE"
+        ACM = "acm", "ACM"
+        HARVARD = "harvard", "Harvard"
+        CHICAGO = "chicago", "Chicago"
+        DIN_ISO = "din_iso", "DIN ISO 690"
+        CUSTOM = "custom", "Benutzerdefiniert"
+
+    class FormalityLevel(models.TextChoices):
+        HIGH = "high", "Hoch-akademisch"
+        SEMI = "semi", "Semi-formal"
+        POPULAR = "popular", "Populaerwissenschaftlich"
+
+    citation_style = models.CharField(
+        max_length=20,
+        choices=CitationStyle.choices,
+        blank=True,
+        help_text="Zitationsstil (APA, IEEE, ACM, ...)",
+    )
+    language = models.CharField(
+        max_length=10,
+        blank=True,
+        help_text="Sprache: de, en, de-en (Mixed)",
+    )
+    target_audience = models.CharField(
+        max_length=120,
+        blank=True,
+        help_text="Zielgruppe: Fachpublikum, Studenten, Management, ...",
+    )
+    formality_level = models.CharField(
+        max_length=20,
+        choices=FormalityLevel.choices,
+        blank=True,
+        help_text="Formalitaetsgrad des Stils",
+    )
+    domain = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Fachgebiet: Wirtschaftsinformatik, KI, BWL, ...",
+    )
+    publication_format = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Typisches Format: Conference Paper, Journal, Dissertation, ...",
+    )
     # Style Lab Builder Felder (bfagent-kompatibel)
     do_list = models.JSONField(
         default=list,

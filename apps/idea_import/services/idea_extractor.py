@@ -1,16 +1,16 @@
 """
 IdeaExtractorService — Sync-Variante des IdeaExtractorAgent.
 
-Portiert aus bfagent (kein Celery/async — sync via aifw.sync_completion).
+Portiert aus bfagent — LLM-Calls ausschliesslich via LLMRouter (ADR-095).
 """
 from __future__ import annotations
 
 import logging
 
-from aifw import sync_completion
 from promptfw.parsing import extract_json
 
 from apps.core.prompt_utils import render_prompt
+from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
 
 logger = logging.getLogger(__name__)
 
@@ -36,16 +36,13 @@ def extract_ideas(document_text: str) -> dict:
     )
 
     try:
-        result = sync_completion(action_code=_ACTION_CODE, messages=messages)
-    except Exception as exc:
-        logger.exception("IdeaExtractor: sync_completion Fehler: %s", exc)
+        router = LLMRouter()
+        raw = router.completion(action_code=_ACTION_CODE, messages=messages)
+    except (LLMRoutingError, Exception) as exc:
+        logger.exception("IdeaExtractor: LLM-Fehler: %s", exc)
         return _empty_result(f"KI-Fehler: {exc}")
 
-    if not result.success:
-        logger.error("IdeaExtractor: aifw-Fehler: %s", result.error)
-        return _empty_result(f"KI-Fehler: {result.error}")
-
-    return _parse(result.content)
+    return _parse(raw)
 
 
 def _parse(raw: str) -> dict:

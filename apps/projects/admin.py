@@ -6,7 +6,7 @@ from .models import (
     ContentTypeLookup, GenreConventionProfile, GenreLookup,
     OutlineFramework, OutlineFrameworkBeat, OutlineNode,
     OutlineSequence, OutlineVersion, PeerReviewFinding,
-    PeerReviewSession, PitchDocument,
+    PeerReviewSession, PitchDocument, ProjectCitation,
     ProjectGenrePromise, ProjectTurningPoint,
     ResearchNote, SubplotArc, TextAnalysisSnapshot,
 )
@@ -27,8 +27,9 @@ class ContentTypeLookupAdmin(admin.ModelAdmin):
 
 @admin.register(GenreLookup)
 class GenreLookupAdmin(admin.ModelAdmin):
-    list_display = ["name", "order"]
-    list_editable = ["order"]
+    list_display = ["name", "content_type", "order"]
+    list_editable = ["content_type", "order"]
+    list_filter = ["content_type"]
 
 
 @admin.register(AudienceLookup)
@@ -321,4 +322,12 @@ class PeerReviewFindingAdmin(admin.ModelAdmin):
     search_fields = ["feedback", "node__title"]
     readonly_fields = ["id", "created_at"]
 
+
+@admin.register(ProjectCitation)
+class ProjectCitationAdmin(admin.ModelAdmin):
+    list_display = ["title", "project", "node", "source_type", "added_via", "year", "doi", "created_at"]
+    list_filter = ["source_type", "added_via"]
+    search_fields = ["title", "doi", "project__title"]
+    raw_id_fields = ["project", "node"]
+    readonly_fields = ["id", "created_at", "updated_at"]
 

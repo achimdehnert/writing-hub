@@ -22,6 +22,13 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from enum import Enum
 
+from apps.authoring.defaults import (
+    CHUNK_CONTEXT_WINDOW,
+    DEFAULT_CONTENT_TYPE,
+    DEFAULT_TARGET_WORD_COUNT,
+    MAX_QUALITY_ISSUES,
+    MAX_TOKENS_WRITE,
+)
 from apps.core.prompt_utils import render_prompt
 from .llm_router import LLMRouter, LLMRoutingError, get_quality_level_for_tier
 from .project_context_service import ProjectContextService
@@ -126,9 +133,9 @@ class ChapterProductionService:
         try:
             from apps.projects.models import BookProject
             project = BookProject.objects.get(pk=self._project_id)
-            return project.content_type or "novel"
+            return project.content_type or DEFAULT_CONTENT_TYPE
         except Exception:
-            return "novel"
+            return DEFAULT_CONTENT_TYPE
 
     def _load_content_type_config(self):
         """Load style + chunk_vocab from authoringfw bundled YAML."""
@@ -243,7 +250,7 @@ class ChapterProductionService:
             return BriefResult(success=False, error=str(exc))
 
     def write_chapter(
-        self, chapter_id: str, brief: str, target_words: int = 2000
+        self, chapter_id: str, brief: str, target_words: int = DEFAULT_TARGET_WORD_COUNT
     ) -> WriteResult:
         """Stage 2: Kapitel schreiben via aifw action_code=chapter_write.
 
@@ -255,7 +262,7 @@ class ChapterProductionService:
         ctx_block = self._get_context_block()
         style_block = self._get_style_constraints()
         dynamic_max_tokens = compute_max_tokens(target_words)
-        words_per_chunk = compute_words_per_chunk(min(dynamic_max_tokens, 4096))
+        words_per_chunk = compute_words_per_chunk(min(dynamic_max_tokens, MAX_TOKENS_WRITE))
 
         try:
             if target_words <= words_per_chunk:
@@ -320,7 +327,7 @@ class ChapterProductionService:
                     f"{vocab['opening']}. ENDE NICHT — das Kapitel wird fortgesetzt."
                 )
             elif is_last:
-                prev_excerpt = "\n\n".join(all_parts[-2:])[-3000:]
+                prev_excerpt = "\n\n".join(all_parts[-2:])[-CHUNK_CONTEXT_WINDOW:]
                 chunk_brief = (
                     f"BISHERIGER INHALT (Auszug):\n{prev_excerpt}\n\n"
                     f"Schreibe das ENDE des Kapitels (~{words_per_chunk} Wörter, "
@@ -328,7 +335,7 @@ class ChapterProductionService:
                     "Schließe das Kapitel ab."
                 )
             else:
-                prev_excerpt = "\n\n".join(all_parts[-2:])[-3000:]
+                prev_excerpt = "\n\n".join(all_parts[-2:])[-CHUNK_CONTEXT_WINDOW:]
                 chunk_brief = (
                     f"BISHERIGER INHALT (Auszug):\n{prev_excerpt}\n\n"
                     f"{vocab['mid']} (~{words_per_chunk} Wörter, "
@@ -416,14 +423,14 @@ class ChapterProductionService:
         elif score >= 7.0:
             return GateResult(decision="review", allows_commit=False, reason=f"Score {score:.1f} — manuelle Pruefung")
         elif score >= 5.0:
-            fixes = [i.get("description", "") for i in analyze.issues[:3]]
+            fixes = [i.get("description", "") for i in analyze.issues[:MAX_QUALITY_ISSUES]]
             return GateResult(decision="revise", allows_commit=False, required_fixes=fixes, reason=f"Score {score:.1f}")
         return GateResult(decision="reject", allows_commit=False, reason=f"Score {score:.1f} < 5.0")
 
     def produce_chapter(
         self,
         chapter_id: str,
-        target_words: int = 2000,
+        target_words: int = DEFAULT_TARGET_WORD_COUNT,
         max_iterations: int = 3,
         auto_commit: bool = False,
     ) -> ProductionResult:

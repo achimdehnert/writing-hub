@@ -95,12 +95,14 @@
 {% if not is_edit %}
 <div class="mb-4">
     <label class="form-label"><i class="bi bi-tag me-1"></i>Genre</label>
-    <div class="d-flex flex-wrap gap-2">
+    <div class="d-flex flex-wrap gap-2" id="genre-tags-wrap">
         {% for g in genres %}
-        <input type="radio" class="btn-check" name="genre_lookup" id="genre_{{ g.pk }}" value="{{ g.pk }}"
-               {% if post.genre_lookup == g.pk|stringformat:"s" %}checked{% endif %}>
-        <label class="btn btn-sm genre-tag" for="genre_{{ g.pk }}"
-               style="border:1px solid #475569;color:#cbd5e1;background:#131929;">{{ g.name }}</label>
+        <span class="genre-tag-wrap" data-ct="{{ g.content_type_id|default:'' }}">
+            <input type="radio" class="btn-check" name="genre_lookup" id="genre_{{ g.pk }}" value="{{ g.pk }}"
+                   {% if post.genre_lookup == g.pk|stringformat:"s" %}checked{% endif %}>
+            <label class="btn btn-sm genre-tag" for="genre_{{ g.pk }}"
+                   style="border:1px solid #475569;color:#cbd5e1;background:#131929;">{{ g.name }}</label>
+        </span>
         {% endfor %}
     </div>
 </div>
@@ -192,7 +194,7 @@
 <div class="row g-3 mb-4">
     <div class="col-md-4">
         <label class="form-label small">Inhaltstyp</label>
-        <select name="content_type_lookup" class="form-select">
+        <select name="content_type_lookup" id="id_content_type_lookup" class="form-select">
             <option value="">— bitte wählen —</option>
             {% for ct in form.fields.content_type_lookup.queryset %}
             <option value="{{ ct.pk }}" {% if form.content_type_lookup.value|stringformat:"s" == ct.pk|stringformat:"s" %}selected{% endif %}>{{ ct }}</option>
@@ -201,10 +203,10 @@
     </div>
     <div class="col-md-4">
         <label class="form-label small">Genre</label>
-        <select name="genre_lookup" class="form-select">
+        <select name="genre_lookup" id="id_genre_lookup" class="form-select">
             <option value="">— bitte wählen —</option>
             {% for g in form.fields.genre_lookup.queryset %}
-            <option value="{{ g.pk }}" {% if form.genre_lookup.value|stringformat:"s" == g.pk|stringformat:"s" %}selected{% endif %}>{{ g }}</option>
+            <option value="{{ g.pk }}" data-ct="{{ g.content_type_id|default:'' }}" {% if form.genre_lookup.value|stringformat:"s" == g.pk|stringformat:"s" %}selected{% endif %}>{{ g }}</option>
             {% endfor %}
         </select>
     </div>
@@ -251,6 +253,37 @@ function updateStyleCount() {
     if (hint) hint.textContent = count + ' Stil' + (count !== 1 ? 'e' : '') + ' ausgewählt';
 }
 
-document.addEventListener('DOMContentLoaded', updateStyleCount);
+function filterGenresByContentType() {
+    const ctSelect = document.getElementById('id_content_type_lookup');
+    const genreSelect = document.getElementById('id_genre_lookup');
+    if (!ctSelect || !genreSelect) return;
+    const ctId = ctSelect.value;
+    const currentVal = genreSelect.value;
+    const options = genreSelect.querySelectorAll('option[data-ct]');
+    options.forEach(opt => {
+        const optCt = opt.getAttribute('data-ct');
+        opt.style.display = (!ctId || !optCt || optCt === ctId) ? '' : 'none';
+        if (opt.style.display === 'none' && opt.selected) opt.selected = false;
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateStyleCount();
+    const ctSelect = document.getElementById('id_content_type_lookup');
+    if (ctSelect) {
+        ctSelect.addEventListener('change', filterGenresByContentType);
+        filterGenresByContentType();
+    }
+    // Create-Mode: CT-Radio → Genre-Tags filtern
+    document.querySelectorAll('input[name="content_type_lookup"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const ctId = this.value;
+            document.querySelectorAll('.genre-tag-wrap').forEach(wrap => {
+                const ct = wrap.dataset.ct;
+                wrap.style.display = (!ct || ct === ctId) ? '' : 'none';
+            });
+        });
+    });
+});
 </script>
 {% endblock %}

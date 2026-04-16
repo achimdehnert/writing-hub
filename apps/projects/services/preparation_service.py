@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from apps.authoring.defaults import DEFAULT_CONTENT_TYPE
 from apps.projects.constants import CONTENT_TYPE_GROUPS, PREPARATION_STEPS
 
 logger = logging.getLogger(__name__)
@@ -29,7 +30,7 @@ def get_preparation_status(
     """
     from django.urls import reverse, NoReverseMatch
 
-    content_type = getattr(project, "content_type", "novel") or "novel"
+    content_type = getattr(project, "content_type", DEFAULT_CONTENT_TYPE) or DEFAULT_CONTENT_TYPE
     group = CONTENT_TYPE_GROUPS.get(content_type, "fiction")
     step_defs = PREPARATION_STEPS.get(group, [])
 

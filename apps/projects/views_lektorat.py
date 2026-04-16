@@ -12,6 +12,7 @@ from django.views import View
 from django.views.generic import DetailView
 from promptfw.parsing import extract_json_list
 
+from apps.authoring.defaults import MAX_LEKTORAT_FINDINGS
 from .models import BookProject, LektoratIssue, LektoratSession, OutlineVersion
 
 logger = logging.getLogger(__name__)
@@ -89,7 +90,7 @@ class LektoratSessionStartView(LoginRequiredMixin, View):
                     )
                     items = extract_json_list(raw)
                     if items:
-                        for item in items[:10]:
+                        for item in items[:MAX_LEKTORAT_FINDINGS]:
                             desc = item.get("description", "").strip()
                             if not desc:
                                 continue

@@ -17,10 +17,17 @@ import logging
 from dataclasses import dataclass, field
 from uuid import UUID
 
-from apps.core.prompt_utils import render_prompt
-from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
-
 logger = logging.getLogger(__name__)
+
+
+def _get_router():
+    from apps.authoring.services.llm_router import LLMRouter
+    return LLMRouter()
+
+
+def _get_routing_error():
+    from apps.authoring.services.llm_router import LLMRoutingError
+    return LLMRoutingError
 
 
 @dataclass
@@ -47,7 +54,7 @@ class WorldCharacterService:
     """
 
     def __init__(self):
-        self._router = LLMRouter()
+        self._router = _get_router()
 
     def generate_cast(
         self,
@@ -80,7 +87,7 @@ class WorldCharacterService:
             )
             chars = self._parse_characters(raw)
             return CharacterGenerationResult(success=True, characters=chars)
-        except LLMRoutingError as exc:
+        except _get_routing_error() as exc:
             logger.error("generate_cast: %s", exc)
             return CharacterGenerationResult(success=False, error=str(exc))
         except Exception as exc:
@@ -109,6 +116,7 @@ class WorldCharacterService:
 
         char_ctx = self._build_character_context(char)
 
+        from apps.core.prompt_utils import render_prompt
         messages = render_prompt("worlds/character_enrich", char_ctx=char_ctx)
 
         try:
@@ -128,7 +136,7 @@ class WorldCharacterService:
                 ),
             )
             return data
-        except LLMRoutingError as exc:
+        except _get_routing_error() as exc:
             logger.error("enrich_character LLM-Fehler: %s", exc)
             return {}
         except Exception:
@@ -255,6 +263,7 @@ class WorldCharacterService:
         existing: list[str],
     ) -> list[dict]:
         """promptfw render_prompt() — raises PromptRenderError on failure."""
+        from apps.core.prompt_utils import render_prompt
         return render_prompt(
             "worlds/character_generate",
             world_ctx=world_ctx,

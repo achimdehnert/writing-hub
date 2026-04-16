@@ -7,12 +7,15 @@ Kein direkter Zugriff auf openai/anthropic/litellm.
 AIActionType wird im Django Admin konfiguriert — kein Code-Change noetig.
 """
 
+import concurrent.futures
 import logging
 from typing import Any
 
 from aifw import sync_completion
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_TIMEOUT_SECONDS = 120
 
 _TIER_QUALITY_MAP = {
     "free": 1,
@@ -68,32 +71,42 @@ class LLMRouter:
         messages: list[dict[str, Any]],
         quality_level: int | None = None,
         priority: str | None = None,
+        timeout: int | None = None,
         **kwargs: Any,
     ) -> str:
         """
-        Synchroner LLM-Call via aifw.
+        Synchroner LLM-Call via aifw mit Timeout-Schutz.
 
         Args:
             action_code: AIActionType.code (z.B. "chapter_write")
             messages: OpenAI-Format [{"role": "user", "content": "..."}]
             quality_level: 1-10, None = catch-all (ADR-097)
             priority: "quality"|"balanced"|"fast"|None
+            timeout: Max. Sekunden (default: DEFAULT_TIMEOUT_SECONDS)
 
         Returns:
             Antwort-String
 
         Raises:
-            LLMRoutingError: kein AIActionType konfiguriert oder aifw-Fehler
+            LLMRoutingError: kein AIActionType konfiguriert, Timeout oder aifw-Fehler
         """
         ConfigurationError = _get_configuration_error_class()
+        effective_timeout = timeout or DEFAULT_TIMEOUT_SECONDS
 
         try:
-            result = sync_completion(
-                action_code=action_code,
-                messages=messages,
-                quality_level=quality_level,
-                priority=priority,
-                **kwargs,
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                future = pool.submit(
+                    sync_completion,
+                    action_code=action_code,
+                    messages=messages,
+                    quality_level=quality_level,
+                    priority=priority,
+                    **kwargs,
+                )
+                result = future.result(timeout=effective_timeout)
+        except concurrent.futures.TimeoutError:
+            raise LLMRoutingError(
+                f"LLM-Timeout ({effective_timeout}s) fuer '{action_code}'. Bitte erneut versuchen."
             )
         except ConfigurationError as exc:
             raise LLMRoutingError(

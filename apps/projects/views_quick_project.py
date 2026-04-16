@@ -7,6 +7,11 @@ from __future__ import annotations
 
 import json
 
+from apps.authoring.defaults import (
+    DEFAULT_AUDIENCE,
+    DEFAULT_FRAMEWORK,
+    DEFAULT_PROJECT_TARGET_WORDS,
+)
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
@@ -33,6 +38,7 @@ class QuickProjectView(LoginRequiredMixin, View):
         return render(request, self.template_name, {
             "frameworks": frameworks,
             "fw_beats_json": json.dumps(fw_beats),
+            "default_target_words": DEFAULT_PROJECT_TARGET_WORDS,
         })
 
 
@@ -49,16 +55,16 @@ class QuickProjectStartView(LoginRequiredMixin, View):
             return redirect("projects:quick_project")
 
         topic = request.POST.get("topic", "").strip()
-        framework = request.POST.get("framework", "academic_essay")
-        target_words = request.POST.get("target_words", "5000")
-        audience = request.POST.get("audience", "Fachpublikum")
+        framework = request.POST.get("framework", DEFAULT_FRAMEWORK)
+        target_words = request.POST.get("target_words", str(DEFAULT_PROJECT_TARGET_WORDS))
+        audience = request.POST.get("audience", DEFAULT_AUDIENCE)
         do_research = bool(request.POST.get("do_research"))
         do_review = bool(request.POST.get("do_review"))
 
         try:
             target_words = int(target_words)
         except ValueError:
-            target_words = 5000
+            target_words = DEFAULT_PROJECT_TARGET_WORDS
 
         content_type = FRAMEWORK_TO_CONTENT_TYPE.get(framework, "academic")
         ct_lookup = ContentTypeLookup.objects.filter(

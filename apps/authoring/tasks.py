@@ -8,6 +8,14 @@ Flow: View → write_chapter_task.delay() → Polling-API → Ergebnis
 import structlog
 from celery import shared_task
 
+from apps.authoring.defaults import (
+    DEFAULT_CONTENT_TYPE,
+    DEFAULT_PROJECT_TARGET_WORDS,
+    DEFAULT_TARGET_WORD_COUNT,
+    FALLBACK_CHAPTER_TITLES,
+    PREV_CHAPTER_SUMMARY_MAX_CHARS,
+)
+
 logger = structlog.get_logger(__name__)
 
 
@@ -24,7 +32,7 @@ def write_chapter_task(
     chapter_number: int = 1,
     chapter_title: str = "",
     chapter_outline: str = "",
-    target_word_count: int = 2000,
+    target_word_count: int = DEFAULT_TARGET_WORD_COUNT,
     chapter_beat: str = "",
     emotional_arc: str = "",
     prev_chapter_summary: str = "",
@@ -142,10 +150,10 @@ def run_batch_write(self, job_id: str) -> dict:
             context.chapter_number = node.order
             context.chapter_title = node.title
             context.chapter_outline = node.description or ""
-            context.target_word_count = node.target_words or 2000
+            context.target_word_count = node.target_words or DEFAULT_TARGET_WORD_COUNT
             context.chapter_beat = node.beat_phase or ""
             context.emotional_arc = node.emotional_arc or ""
-            context.prev_chapter_summary = prev_content[-800:]
+            context.prev_chapter_summary = prev_content[-PREV_CHAPTER_SUMMARY_MAX_CHARS:]
 
             handler = ChapterWriterHandler()
             result = handler.write_chapter(context)
@@ -317,7 +325,7 @@ def _pipeline_generate_outline(project, user, job):
     if fw_obj:
         beats = list(fw_obj.beats.order_by("order"))
         if beats:
-            words_per = (project.target_word_count or 5000) // len(beats)
+            words_per = (project.target_word_count or DEFAULT_PROJECT_TARGET_WORDS) // len(beats)
             OutlineNode.objects.bulk_create([
                 OutlineNode(
                     outline_version=version,
@@ -333,16 +341,13 @@ def _pipeline_generate_outline(project, user, job):
             return list(version.nodes.order_by("order"))
 
     # Ultra-Fallback
-    words_per = (project.target_word_count or 5000) // 5
+    words_per = (project.target_word_count or DEFAULT_PROJECT_TARGET_WORDS) // 5
     OutlineNode.objects.bulk_create([
         OutlineNode(
             outline_version=version, title=t,
             beat_type="chapter", target_words=words_per, order=i + 1,
         )
-        for i, t in enumerate([
-            "Einleitung", "Theoretischer Rahmen", "Methodik",
-            "Ergebnisse & Analyse", "Fazit & Ausblick",
-        ])
+        for i, t in enumerate(FALLBACK_CHAPTER_TITLES)
     ])
     return list(version.nodes.order_by("order"))
 
@@ -403,16 +408,16 @@ def _pipeline_write_chapters(project, user, nodes, job):
                 project_id=str(project.pk),
                 chapter_ref=str(node.pk),
             )
-            context.content_type = project.content_type or "novel"
+            context.content_type = project.content_type or DEFAULT_CONTENT_TYPE
             context.target_audience = project.target_audience or ""
             context.premise = project.description or ""
             context.chapter_number = node.order
             context.chapter_title = node.title
             context.chapter_outline = node.description or ""
-            context.target_word_count = node.target_words or 2000
+            context.target_word_count = node.target_words or DEFAULT_TARGET_WORD_COUNT
             context.chapter_beat = node.beat_phase or ""
             context.emotional_arc = node.emotional_arc or ""
-            context.prev_chapter_summary = prev_content[-800:] if prev_content else ""
+            context.prev_chapter_summary = prev_content[-PREV_CHAPTER_SUMMARY_MAX_CHARS:] if prev_content else ""
             context.research_notes = node.notes or ""
 
             handler = ChapterWriterHandler()

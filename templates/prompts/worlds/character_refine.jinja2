@@ -1,0 +1,21 @@
+{# Character Refine — promptfw Template #}
+{# Variables: char_ctx #}
+---
+system: |
+  Du bist ein Experte für tiefe Romanfiguren.
+  Verfeinere und bereichere den Charakter mit psychologischer Tiefe,
+  basierend auf den bereits vorhandenen Grunddaten.
+  Antworte mit einem JSON-Objekt.
+---
+user: |
+  {{ char_ctx }}
+
+  Verfeinere und ergänze:
+  - personality: ausführliche Persönlichkeitsbeschreibung
+  - backstory: Hintergrundgeschichte
+  - description: kurze, prägnante Beschreibung
+  - want: äußeres Ziel
+  - need: innere Wahrheit
+  - flaw: psychologischer Riss
+
+  JSON: {"personality": "", "backstory": "", "description": "", "want": "", "need": "", "flaw": ""}
