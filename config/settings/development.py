@@ -25,6 +25,12 @@ if GROQ_API_KEY:
     os.environ.setdefault("GROQ_API_KEY", GROQ_API_KEY)
 
 ALLOWED_HOSTS = ["*"]
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "http://localhost:*",
+    "http://127.0.0.1:*",
+]
 
 DATABASES = {
     "default": {
