@@ -113,15 +113,14 @@ class CitationDashboardView(LoginRequiredMixin, View):
         )
 
     def _get_chapters(self, project):
-        """Return active outline chapters for chapter assignment."""
+        """Return active outline nodes for chapter assignment."""
         active_outline = OutlineVersion.objects.filter(
             project=project, is_active=True
         ).order_by("-created_at").first()
         if not active_outline:
             return []
         return list(
-            active_outline.nodes.filter(beat_type="chapter")
-            .order_by("order")
+            active_outline.nodes.order_by("order")
             .values_list("pk", "order", "title")
         )
 
@@ -300,7 +299,7 @@ class ResearchQueriesAjaxView(LoginRequiredMixin, View):
             return JsonResponse({"ok": False, "error": "Kein aktives Outline vorhanden."})
 
         chapters = list(
-            active_outline.nodes.filter(beat_type="chapter").order_by("order")
+            active_outline.nodes.order_by("order")
         )
         if not chapters:
             return JsonResponse({"ok": False, "error": "Keine Kapitel im Outline."})
