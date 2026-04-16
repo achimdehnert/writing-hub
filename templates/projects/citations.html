@@ -84,18 +84,36 @@
                         style="background:#1e1b4b;border:1px solid #4338ca;color:#a5b4fc;font-size:.68rem;"
                         onclick="generateResearchQueries()" type="button">
                     <span class="spinner-border spinner-border-sm me-1" id="genQueriesSpinner" style="display:none;" role="status"></span>
-                    <i class="bi bi-stars me-1" id="genQueriesIcon"></i>KI-Recherchefragen generieren
+                    <i class="bi bi-stars me-1" id="genQueriesIcon"></i>{% if has_research_queries %}Neu generieren{% else %}KI-Recherchefragen generieren{% endif %}
                 </button>
             </div>
-            <div id="research-queries-list" class="d-flex gap-1 flex-wrap">
-                {% for ch_pk, ch_order, ch_title in chapters %}
-                <button class="btn btn-sm py-0 px-2 ch-query-btn" type="button"
-                        style="background:#131929;border:1px solid #2d3748;color:#94a3b8;font-size:.7rem;"
-                        onclick="document.getElementById('searchQuery').value='{{ ch_title|escapejs }}'; document.getElementById('searchQuery').focus();"
-                        title="Suchfeld mit Kapitelthema füllen">
-                    {{ ch_order }}. {{ ch_title|truncatechars:20 }}
-                </button>
-                {% endfor %}
+            <div id="research-queries-list">
+                {% if has_research_queries %}
+                    {% for ch_pk, ch_order, ch_title, ch_queries in chapters %}
+                        {% if ch_queries %}
+                        <div class="w-100 mb-1">
+                            <small class="text-muted fw-semibold" style="font-size:.65rem;">{{ ch_order }}. {{ ch_title|truncatechars:30 }}</small>
+                            <div class="d-flex flex-wrap gap-0 mt-0">
+                                {% for q in ch_queries %}
+                                <button class="btn btn-sm py-0 px-2 me-1 mb-1" type="button"
+                                    style="background:#1a1a3a;border:1px solid #4338ca;color:#c7d2fe;font-size:.68rem;"
+                                    onclick="document.getElementById('searchQuery').value=this.textContent.trim(); document.getElementById('searchQuery').focus();"
+                                    title="Suchfeld füllen">{{ q }}</button>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    {% for ch_pk, ch_order, ch_title, ch_queries in chapters %}
+                    <button class="btn btn-sm py-0 px-2 ch-query-btn me-1 mb-1" type="button"
+                            style="background:#131929;border:1px solid #2d3748;color:#94a3b8;font-size:.7rem;"
+                            onclick="document.getElementById('searchQuery').value='{{ ch_title|escapejs }}'; document.getElementById('searchQuery').focus();"
+                            title="Suchfeld mit Kapitelthema füllen">
+                        {{ ch_order }}. {{ ch_title|truncatechars:20 }}
+                    </button>
+                    {% endfor %}
+                {% endif %}
             </div>
             <div id="genQueriesError" class="text-danger small mt-1" style="display:none;"></div>
         </div>
@@ -315,7 +333,7 @@
                                     style="width:auto;font-size:.72rem;padding:.15rem .5rem .15rem .3rem;"
                                     onchange="this.form.submit()">
                                 <option value="">— Kein Kapitel —</option>
-                                {% for ch_pk, ch_order, ch_title in chapters %}
+                                {% for ch_pk, ch_order, ch_title, ch_queries in chapters %}
                                 <option value="{{ ch_pk }}" {% if c.node_id == ch_pk %}selected{% endif %}>
                                     {{ ch_order }}. {{ ch_title|truncatechars:30 }}
                                 </option>
@@ -648,6 +666,8 @@ async function generateResearchQueries() {
             </div>`;
         }).join("");
 
+        btn.innerHTML = '<i class="bi bi-stars me-1" id="genQueriesIcon"></i>Neu generieren';
+
     } catch (err) {
         btn.disabled = false;
         spinner.style.display = "none";
@@ -656,5 +676,9 @@ async function generateResearchQueries() {
         errDiv.style.display = "";
     }
 }
+
+{% if chapters and not has_research_queries %}
+document.addEventListener("DOMContentLoaded", () => generateResearchQueries());
+{% endif %}
 </script>
 {% endblock %}

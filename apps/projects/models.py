@@ -426,6 +426,11 @@ class OutlineNode(ComputedFieldsMixin):
     )
     order = models.PositiveIntegerField(default=0)
     notes = models.TextField(blank=True)
+    research_queries = models.JSONField(
+        default=list, blank=True,
+        verbose_name="Recherchefragen",
+        help_text="KI-generierte Suchbegriffe für Literaturrecherche",
+    )
     content = models.TextField(blank=True)
     word_count = models.PositiveIntegerField(default=0)
     content_updated_at = models.DateTimeField(null=True, blank=True)

@@ -118,11 +118,13 @@ class CitationDashboardView(LoginRequiredMixin, View):
             project=project, is_active=True
         ).order_by("-created_at").first()
         if not active_outline:
-            return []
-        return list(
+            return [], False
+        nodes = list(
             active_outline.nodes.order_by("order")
-            .values_list("pk", "order", "title")
+            .values_list("pk", "order", "title", "research_queries")
         )
+        has_queries = any(rq for _, _, _, rq in nodes)
+        return nodes, has_queries
 
     def _render(self, request, project, style=None):
         """Render citations dashboard with current DB state."""
@@ -134,7 +136,7 @@ class CitationDashboardView(LoginRequiredMixin, View):
         default_style = profile.get("default_bib_style", "apa")
         style = style or request.GET.get("style", default_style)
         bibliography = format_bibliography(citations_dicts, style=style) if citations_dicts else ""
-        chapters = self._get_chapters(project)
+        chapters, has_research_queries = self._get_chapters(project)
         return render(request, self.template_name, {
             "project": project,
             "citations": citations_qs,
@@ -145,6 +147,7 @@ class CitationDashboardView(LoginRequiredMixin, View):
             "bibtex_export": export_bibtex(citations_dicts) if citations_dicts else "",
             "search_sources": SEARCH_SOURCES,
             "chapters": chapters,
+            "has_research_queries": has_research_queries,
         })
 
     def get(self, request, pk):
@@ -284,30 +287,50 @@ class ResearchQueriesAjaxView(LoginRequiredMixin, View):
     """
     AJAX: KI-generierte Recherchefragen pro Kapitel.
 
-    POST → generiert 2-3 englische Suchbegriffe pro Kapitel
-    basierend auf Outline-Inhalten via LLM.
+    GET  → liefert gespeicherte Queries aus OutlineNode.research_queries
+    POST → generiert neue Queries via LLM und speichert sie in DB
     """
 
-    def post(self, request, pk):
-        project = get_object_or_404(
-            BookProject, pk=pk, owner=request.user, is_active=True
-        )
+    def _get_outline_chapters(self, project):
         active_outline = OutlineVersion.objects.filter(
             project=project, is_active=True
         ).order_by("-created_at").first()
         if not active_outline:
-            return JsonResponse({"ok": False, "error": "Kein aktives Outline vorhanden."})
+            return None, []
+        return active_outline, list(active_outline.nodes.order_by("order"))
 
-        chapters = list(
-            active_outline.nodes.order_by("order")
+    def get(self, request, pk):
+        """Return cached research queries from DB."""
+        project = get_object_or_404(
+            BookProject, pk=pk, owner=request.user, is_active=True
         )
+        _, chapters = self._get_outline_chapters(project)
+        result = []
+        for ch in chapters:
+            if ch.research_queries:
+                result.append({
+                    "chapter_id": str(ch.pk),
+                    "chapter_order": ch.order,
+                    "chapter_title": ch.title,
+                    "queries": ch.research_queries,
+                })
+        return JsonResponse({"ok": True, "chapters": result, "from_cache": True})
+
+    def post(self, request, pk):
+        """Generate new research queries via LLM and save to DB."""
+        project = get_object_or_404(
+            BookProject, pk=pk, owner=request.user, is_active=True
+        )
+        _, chapters = self._get_outline_chapters(project)
         if not chapters:
-            return JsonResponse({"ok": False, "error": "Keine Kapitel im Outline."})
+            return JsonResponse({"ok": False, "error": "Kein Outline mit Kapiteln vorhanden."})
 
         chapters_block = "\n".join(
             f"{ch.order}. {ch.title}\n   {(ch.description or '')[:200]}"
             for ch in chapters
         )
+        chapter_map = {str(ch.pk): ch for ch in chapters}
+        order_map = {ch.order: ch for ch in chapters}
 
         from apps.core.prompt_utils import render_prompt
         from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
@@ -331,7 +354,29 @@ class ResearchQueriesAjaxView(LoginRequiredMixin, View):
             result = extract_json_list(raw)
             if not result:
                 return JsonResponse({"ok": False, "error": "Keine Ergebnisse generiert."})
-            return JsonResponse({"ok": True, "chapters": result})
+
+            for item in result:
+                queries = item.get("queries", [])
+                if not queries:
+                    continue
+                node = chapter_map.get(str(item.get("chapter_id", "")))
+                if not node:
+                    node = order_map.get(item.get("chapter_order"))
+                if node:
+                    node.research_queries = queries[:5]
+                    node.save(update_fields=["research_queries"])
+
+            saved = []
+            for ch in chapters:
+                ch.refresh_from_db(fields=["research_queries"])
+                if ch.research_queries:
+                    saved.append({
+                        "chapter_id": str(ch.pk),
+                        "chapter_order": ch.order,
+                        "chapter_title": ch.title,
+                        "queries": ch.research_queries,
+                    })
+            return JsonResponse({"ok": True, "chapters": saved})
         except LLMRoutingError as exc:
             return JsonResponse({"ok": False, "error": str(exc)})
         except Exception as exc:
