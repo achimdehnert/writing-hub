@@ -31,6 +31,13 @@ try:
 except ImportError:
     logger.info("iil-researchfw smart search/analysis not available — using basic search")
 
+_BRAVE_AVAILABLE = False
+try:
+    from iil_researchfw.search.brave import BraveSearchService
+    _BRAVE_AVAILABLE = True
+except ImportError:
+    logger.info("iil-researchfw brave search not available")
+
 
 def _run_async(coro: Any, timeout: int = 60) -> Any:
     """Run an async coroutine synchronously (Django context) with timeout."""
@@ -139,29 +146,78 @@ def export_bibtex(citations_data: list[dict[str, Any]]) -> str:
     return svc.export_bibtex(citations)
 
 
+def search_web(
+    query: str,
+    max_results: int = 10,
+) -> list[dict[str, Any]]:
+    """
+    Web-Recherche über Brave Search API.
+
+    Gibt Paper-kompatible Dicts zurück (title, url, abstract=snippet, source=brave).
+    Nützlich für Romane, Sachbücher und nicht-akademische Inhalte.
+    """
+    if not _BRAVE_AVAILABLE:
+        logger.warning("search_web: BraveSearchService not available")
+        return []
+    svc = BraveSearchService()
+    try:
+        results = _run_async(svc.search(query, count=min(max_results, 20)))
+    except Exception:
+        logger.exception("Brave web search failed for query: %s", query[:80])
+        return []
+    return [
+        {
+            "title": r.title,
+            "url": r.url,
+            "abstract": r.snippet,
+            "source": "brave",
+            "authors": [],
+            "publication_date": r.age or "",
+            "doi": "",
+            "journal": r.domain,
+        }
+        for r in results
+    ]
+
+
 def search_papers(
     query: str,
     sources: list[str] | None = None,
     max_results: int = 20,
 ) -> list[dict[str, Any]]:
     """
-    KI-gestützte Literaturrecherche über mehrere akademische Datenbanken.
+    Literaturrecherche über akademische Datenbanken + optionale Web-Suche.
 
-    Sucht parallel in: arXiv, Semantic Scholar, PubMed, OpenAlex.
+    Sucht parallel in: arXiv, Semantic Scholar, PubMed, OpenAlex, Brave Web.
     Gibt deduplizierte Liste von Paper-Dicts zurück.
 
     Args:
         query: Suchbegriff (Thema, Forschungsfrage, Stichworte)
-        sources: Optional — Teilmenge aus ['arxiv','semantic_scholar','pubmed','openalex']
+        sources: Optional — Teilmenge aus ['arxiv','semantic_scholar','pubmed','openalex','brave']
         max_results: Max. Treffer gesamt (Standard: 20)
 
     Returns empty list if researchfw not available.
     """
-    if not _RESEARCHFW_AVAILABLE:
-        return []
-    svc = AcademicSearchService()
-    papers = _run_async(svc.search(query, sources=sources, max_results=max_results))
-    return [_paper_to_dict(p) for p in papers]
+    from apps.projects.constants import ACADEMIC_SOURCES
+
+    results = []
+    source_set = set(sources) if sources else set()
+
+    if source_set & {"brave"} or (not source_set):
+        web_results = search_web(query, max_results=max_results // 2 if source_set != {"brave"} else max_results)
+        results.extend(web_results)
+        source_set -= {"brave"}
+
+    academic_sources = list(source_set & ACADEMIC_SOURCES) if source_set else None
+    if academic_sources is not None and not academic_sources:
+        return results
+
+    if _RESEARCHFW_AVAILABLE:
+        svc = AcademicSearchService()
+        papers = _run_async(svc.search(query, sources=academic_sources, max_results=max_results))
+        results.extend([_paper_to_dict(p) for p in papers])
+
+    return results[:max_results]
 
 
 def smart_search_papers(
@@ -193,14 +249,36 @@ def smart_search_papers(
     from django.conf import settings
     api_key = getattr(settings, "TOGETHER_API_KEY", "") or getattr(settings, "OPENAI_API_KEY", "")
 
+    from apps.projects.constants import ACADEMIC_SOURCES
+
+    source_set = set(sources) if sources else set()
+    want_brave = "brave" in source_set or not source_set
+    academic_only = list(source_set & ACADEMIC_SOURCES) if source_set else None
+
+    web_results = []
+    if want_brave:
+        web_count = max_results // 3 if academic_only != [] else max_results
+        web_results = search_web(topic, max_results=web_count)
+        if source_set:
+            academic_only = list((source_set - {"brave"}) & ACADEMIC_SOURCES) or None
+
     if not _SMART_SEARCH_AVAILABLE or not api_key:
         logger.info("smart_search_papers: no LLM key configured, falling back to search_papers()")
-        papers = search_papers(topic, sources=sources, max_results=max_results)
+        academic_papers = search_papers(topic, sources=academic_only, max_results=max_results) if academic_only is None or academic_only else []
+        papers = web_results + academic_papers
         return {
-            "papers": papers,
+            "papers": papers[:max_results],
             "queries_used": [topic],
             "total_found": len(papers),
             "total_after_filter": len(papers),
+        }
+
+    if academic_only is not None and not academic_only:
+        return {
+            "papers": web_results[:max_results],
+            "queries_used": [topic],
+            "total_found": len(web_results),
+            "total_after_filter": len(web_results),
         }
 
     llm_fn = make_together_llm(api_key=api_key)
@@ -210,18 +288,19 @@ def smart_search_papers(
         expand_citations=expand_citations,
         search_rounds=search_rounds,
     )
-    result = _run_async(svc.search(topic, max_results=max_results, sources=sources))
+    result = _run_async(svc.search(topic, max_results=max_results, sources=academic_only))
 
     papers = [_paper_to_dict(sp.paper) for sp in result.papers]
     for paper_dict, scored in zip(papers, result.papers):
         paper_dict["relevance_score"] = scored.relevance_score
         paper_dict["relevance_reason"] = scored.relevance_reason
 
+    combined = web_results + papers
     return {
-        "papers": papers,
+        "papers": combined[:max_results],
         "queries_used": result.queries_used,
-        "total_found": result.total_found,
-        "total_after_filter": result.total_after_filter,
+        "total_found": result.total_found + len(web_results),
+        "total_after_filter": result.total_after_filter + len(web_results),
     }
 
 

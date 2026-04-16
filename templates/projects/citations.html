@@ -148,7 +148,7 @@
             {% for src_id, src_label, src_color in search_sources %}
             <div class="form-check form-check-inline mb-0">
                 <input class="form-check-input search-source-cb" type="checkbox"
-                       id="src_{{ src_id }}" value="{{ src_id }}" checked>
+                       id="src_{{ src_id }}" value="{{ src_id }}"{% if src_id in default_sources %} checked{% endif %}>
                 <label class="form-check-label small" for="src_{{ src_id }}"
                        style="color:{{ src_color }};">{{ src_label }}</label>
             </div>
@@ -435,13 +435,15 @@ const SOURCE_COLORS = {
     arxiv: "#f59e0b",
     semantic_scholar: "#a78bfa",
     pubmed: "#34d399",
-    openalex: "#60a5fa"
+    openalex: "#60a5fa",
+    brave: "#ff7043"
 };
 const SOURCE_LABELS = {
     arxiv: "arXiv",
     semantic_scholar: "Semantic Scholar",
     pubmed: "PubMed",
-    openalex: "OpenAlex"
+    openalex: "OpenAlex",
+    brave: "Web"
 };
 
 async function runLiteraturrecherche() {

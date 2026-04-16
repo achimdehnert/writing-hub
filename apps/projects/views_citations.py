@@ -18,6 +18,7 @@ from django.views import View
 
 from .constants import (
     BIBLIOGRAPHY_STYLES,
+    DEFAULT_SOURCES_BY_CONTENT_TYPE,
     FORMAT_PROFILES,
     SEARCH_SOURCES,
     VALID_SEARCH_SOURCES,
@@ -137,6 +138,9 @@ class CitationDashboardView(LoginRequiredMixin, View):
         style = style or request.GET.get("style", default_style)
         bibliography = format_bibliography(citations_dicts, style=style) if citations_dicts else ""
         chapters, has_research_queries = self._get_chapters(project)
+        default_sources = DEFAULT_SOURCES_BY_CONTENT_TYPE.get(
+            project.content_type, [s[0] for s in SEARCH_SOURCES]
+        )
         return render(request, self.template_name, {
             "project": project,
             "citations": citations_qs,
@@ -148,6 +152,7 @@ class CitationDashboardView(LoginRequiredMixin, View):
             "search_sources": SEARCH_SOURCES,
             "chapters": chapters,
             "has_research_queries": has_research_queries,
+            "default_sources": default_sources,
         })
 
     def get(self, request, pk):

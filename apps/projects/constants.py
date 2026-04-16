@@ -22,9 +22,23 @@ SEARCH_SOURCES = [
     ("semantic_scholar", "Semantic Scholar", "#a78bfa"),
     ("pubmed", "PubMed", "#34d399"),
     ("openalex", "OpenAlex", "#60a5fa"),
+    ("brave", "Web (Brave)", "#ff7043"),
 ]
 
 VALID_SEARCH_SOURCES = frozenset(src_id for src_id, _, _ in SEARCH_SOURCES)
+
+ACADEMIC_SOURCES = frozenset({"arxiv", "semantic_scholar", "pubmed", "openalex"})
+WEB_SOURCES = frozenset({"brave"})
+
+DEFAULT_SOURCES_BY_CONTENT_TYPE = {
+    "novel": ["brave"],
+    "short_story": ["brave"],
+    "childrens_book": ["brave"],
+    "essay": ["brave", "semantic_scholar", "openalex"],
+    "nonfiction": ["brave", "semantic_scholar", "openalex"],
+    "scientific": ["arxiv", "semantic_scholar", "pubmed", "openalex"],
+    "academic": ["arxiv", "semantic_scholar", "pubmed", "openalex"],
+}
 
 SUMMARY_STYLES = [
     ("scientific", "Wissenschaftlich", "#7dd3fc"),
