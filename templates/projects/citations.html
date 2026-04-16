@@ -76,6 +76,21 @@
         <span class="ms-auto text-muted small">arXiv · Semantic Scholar · PubMed · OpenAlex</span>
     </div>
     <div class="card-body p-3">
+        {% if chapters %}
+        <div class="mb-2">
+            <small class="text-muted d-block mb-1"><i class="bi bi-lightbulb me-1"></i>Schlagworte aus Outline übernehmen:</small>
+            <div class="d-flex gap-1 flex-wrap">
+                {% for ch_pk, ch_order, ch_title in chapters %}
+                <button class="btn btn-sm py-0 px-2" type="button"
+                        style="background:#131929;border:1px solid #2d3748;color:#94a3b8;font-size:.7rem;"
+                        onclick="document.getElementById('searchQuery').value='{{ ch_title|escapejs }}'; document.getElementById('searchQuery').focus();"
+                        title="Suchfeld mit Kapitelthema füllen">
+                    {{ ch_order }}. {{ ch_title|truncatechars:20 }}
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
         <div class="row g-2 align-items-end mb-3">
             <div class="col-md-7">
                 <label class="form-label small text-muted mb-1">Forschungsthema / Suchbegriff</label>
@@ -281,6 +296,28 @@
                             <span class="cit-badge" style="background:#1a2a1a;color:#86efac;">DOI</span>
                             {% endif %}
                         </div>
+                        {% if chapters %}
+                        <form method="post" class="mt-1 d-flex align-items-center gap-1">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="assign_chapter">
+                            <input type="hidden" name="citation_id" value="{{ c.pk }}">
+                            <i class="bi bi-bookmark" style="font-size:.7rem;color:#6366f1;"></i>
+                            <select name="node_id" class="form-select form-select-sm inp-dark"
+                                    style="width:auto;font-size:.72rem;padding:.15rem .5rem .15rem .3rem;"
+                                    onchange="this.form.submit()">
+                                <option value="">— Kein Kapitel —</option>
+                                {% for ch_pk, ch_order, ch_title in chapters %}
+                                <option value="{{ ch_pk }}" {% if c.node_id == ch_pk %}selected{% endif %}>
+                                    {{ ch_order }}. {{ ch_title|truncatechars:30 }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                        {% elif c.node %}
+                        <div class="mt-1 small" style="color:#6366f1;">
+                            <i class="bi bi-bookmark-fill me-1"></i>{{ c.node.order }}. {{ c.node.title|truncatechars:30 }}
+                        </div>
+                        {% endif %}
                     </div>
                     <form method="post" class="ms-2 flex-shrink-0">
                         {% csrf_token %}

@@ -22,7 +22,7 @@ from .constants import (
     SEARCH_SOURCES,
     VALID_SEARCH_SOURCES,
 )
-from .models import BookProject, ProjectCitation
+from .models import BookProject, OutlineNode, OutlineVersion, ProjectCitation
 from .services.citation_service import (
     export_bibtex,
     format_bibliography,
@@ -112,14 +112,30 @@ class CitationDashboardView(LoginRequiredMixin, View):
             BookProject, pk=pk, owner=request.user, is_active=True
         )
 
+    def _get_chapters(self, project):
+        """Return active outline chapters for chapter assignment."""
+        active_outline = OutlineVersion.objects.filter(
+            project=project, is_active=True
+        ).order_by("-created_at").first()
+        if not active_outline:
+            return []
+        return list(
+            active_outline.nodes.filter(beat_type="chapter")
+            .order_by("order")
+            .values_list("pk", "order", "title")
+        )
+
     def _render(self, request, project, style=None):
         """Render citations dashboard with current DB state."""
-        citations_qs = ProjectCitation.objects.filter(project=project)
+        citations_qs = ProjectCitation.objects.filter(
+            project=project
+        ).select_related("node")
         citations_dicts = [_model_to_dict(c) for c in citations_qs]
         profile = FORMAT_PROFILES.get(project.content_type, {})
         default_style = profile.get("default_bib_style", "apa")
         style = style or request.GET.get("style", default_style)
         bibliography = format_bibliography(citations_dicts, style=style) if citations_dicts else ""
+        chapters = self._get_chapters(project)
         return render(request, self.template_name, {
             "project": project,
             "citations": citations_qs,
@@ -129,6 +145,7 @@ class CitationDashboardView(LoginRequiredMixin, View):
             "active_style": style,
             "bibtex_export": export_bibtex(citations_dicts) if citations_dicts else "",
             "search_sources": SEARCH_SOURCES,
+            "chapters": chapters,
         })
 
     def get(self, request, pk):
@@ -210,6 +227,25 @@ class CitationDashboardView(LoginRequiredMixin, View):
                     messages.warning(request, "Diese Quelle ist bereits in der Liste.")
             except (json.JSONDecodeError, KeyError):
                 messages.error(request, "Fehler beim Hinzufügen der Quelle.")
+
+        elif action == "assign_chapter":
+            citation_id = request.POST.get("citation_id", "")
+            node_id = request.POST.get("node_id", "") or None
+            if citation_id:
+                citation = ProjectCitation.objects.filter(
+                    pk=citation_id, project=project
+                ).first()
+                if citation:
+                    if node_id:
+                        node = OutlineNode.objects.filter(
+                            pk=node_id,
+                            outline_version__project=project,
+                        ).first()
+                        citation.node = node
+                    else:
+                        citation.node = None
+                    citation.save(update_fields=["node"])
+                    messages.success(request, "Kapitelzuordnung aktualisiert.")
 
         elif action == "clear_all":
             count, _ = ProjectCitation.objects.filter(project=project).delete()

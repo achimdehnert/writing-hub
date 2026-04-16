@@ -47,6 +47,18 @@
 ]
 </script>
 
+<script id="citations-data" type="application/json">
+{
+{% for ch in chapters %}
+  "{{ ch.id }}": [
+    {% for c in project_citations %}{% if c.node_id == ch.id %}
+    {"title": "{{ c.title|escapejs|truncatechars:60 }}", "authors": "{{ c.authors_display|escapejs }}", "year": "{{ c.year|default:'' }}", "doi": "{{ c.doi|escapejs }}"},
+    {% endif %}{% endfor %}
+  ]{% if not forloop.last %},{% endif %}
+{% endfor %}
+}
+</script>
+
 <div class="row g-0" style="height: calc(100vh - 80px);">
 
     <!-- Kapitel-Liste links -->
@@ -294,6 +306,26 @@
                 <div id="research-notes-preview" class="mt-1" style="font-size:.72rem;color:#94a3b8;max-height:120px;overflow-y:auto;white-space:pre-wrap;"></div>
             </div>
 
+            <!-- Zugeordnete Quellen -->
+            <div class="mb-3" id="citations-panel">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="small text-muted fw-semibold"><i class="bi bi-journal-bookmark me-1"></i>QUELLEN</span>
+                    <a href="{% url 'projects:citations' project.pk %}" class="text-decoration-none"
+                       style="font-size:.6rem;color:#7dd3fc;">
+                        <i class="bi bi-box-arrow-up-right me-1"></i>Alle Quellen
+                    </a>
+                </div>
+                <div id="chapter-citations-list" style="font-size:.72rem;color:#94a3b8;max-height:200px;overflow-y:auto;">
+                    <div class="text-muted small">Kapitel wählen…</div>
+                </div>
+                <div class="mt-1">
+                    <a id="btn-citations-page" href="{% url 'projects:citations' project.pk %}"
+                       class="btn btn-sm w-100" style="background:#131929;border:1px solid #2d3748;color:#7dd3fc;font-size:.72rem;">
+                        <i class="bi bi-plus-circle me-1"></i>Quellen recherchieren
+                    </a>
+                </div>
+            </div>
+
             <!-- KI-Aktionen -->
             <div class="mb-3">
                 <div class="small text-muted fw-semibold mb-2"><i class="bi bi-stars me-1"></i>KI-AKTIONEN</div>
@@ -338,6 +370,8 @@ const STYLES_MAP = {};
 PROJECT_STYLES.forEach(s => STYLES_MAP[s.id] = s);
 const CHAPTER_MAP = {};
 CHAPTERS.forEach(c => CHAPTER_MAP[c.id] = c);
+const CITATIONS_MAP = JSON.parse(document.getElementById('citations-data').textContent || '{}');
+const CITATIONS_URL = "{% url 'projects:citations' project.pk %}";
 
 let currentChapterId = null;
 let currentSaveUrl = null;
@@ -410,6 +444,9 @@ function selectChapter(id) {
         resPanel.style.display = 'none';
     }
 
+    // Citations panel
+    updateCitationsPanel(id);
+
     setSaveStatus('Lade...');
     fetch(currentSaveUrl)
         .then(r => r.json())
@@ -421,6 +458,24 @@ function selectChapter(id) {
             updateAiButton();
         })
         .catch(() => setSaveStatus(''));
+}
+
+function updateCitationsPanel(chapterId) {
+    const list = document.getElementById('chapter-citations-list');
+    const cits = CITATIONS_MAP[chapterId] || [];
+    if (cits.length === 0) {
+        list.innerHTML = '<div class="text-muted" style="font-size:.7rem;">Keine Quellen zugeordnet.<br><a href="' + CITATIONS_URL + '" style="color:#7dd3fc;">Quellen zuordnen →</a></div>';
+        return;
+    }
+    list.innerHTML = cits.map(c => {
+        const year = c.year ? ` (${c.year})` : '';
+        const doi = c.doi ? `<span class="d-block" style="font-size:.6rem;color:#86efac;">DOI: ${c.doi}</span>` : '';
+        return `<div class="py-1" style="border-bottom:1px solid #1e2235;">
+            <div style="color:#e2e8f0;font-size:.72rem;">${c.title}</div>
+            <div style="font-size:.65rem;color:#94a3b8;">${c.authors}${year}</div>
+            ${doi}
+        </div>`;
+    }).join('');
 }
 
 function updateStylePromptPreview(styleId) {

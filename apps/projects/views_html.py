@@ -565,6 +565,10 @@ class ChapterWriterView(LoginRequiredMixin, DetailView):
             TOAST_DISPLAY_MS,
         )
         from apps.projects.services.preparation_service import get_preparation_status
+        from .models import ProjectCitation
+        ctx["project_citations"] = ProjectCitation.objects.filter(
+            project=self.object
+        ).select_related("node").order_by("node__order", "-created_at")
         ctx["prep_status"] = get_preparation_status(self.object, chapters)
         ctx["defaults"] = {
             "target_word_count": DEFAULT_TARGET_WORD_COUNT,
