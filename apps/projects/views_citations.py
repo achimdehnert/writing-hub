@@ -323,7 +323,7 @@ class ResearchQueriesAjaxView(LoginRequiredMixin, View):
             )
             router = LLMRouter()
             raw = router.completion(
-                action_code="outline_generate",
+                action_code="research_queries",
                 messages=messages,
                 priority="fast",
                 timeout=60,

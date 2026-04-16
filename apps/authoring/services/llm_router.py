@@ -63,6 +63,7 @@ class LLMRouter:
       - idea_generate          — Buchideen generieren
       - idea_to_premise        — Idee zu Premise ausarbeiten
       - style_check            — Stil-Check
+      - research_queries       — Recherchefragen generieren
     """
 
     def completion(
