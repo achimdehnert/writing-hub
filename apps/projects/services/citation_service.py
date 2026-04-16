@@ -201,20 +201,26 @@ def search_papers(
     from apps.projects.constants import ACADEMIC_SOURCES
 
     results = []
+    has_explicit_sources = bool(sources)
     source_set = set(sources) if sources else set()
+    want_brave = "brave" in source_set or not has_explicit_sources
 
-    if source_set & {"brave"} or (not source_set):
-        web_results = search_web(query, max_results=max_results // 2 if source_set != {"brave"} else max_results)
+    if want_brave:
+        brave_only = source_set == {"brave"}
+        web_results = search_web(query, max_results=max_results if brave_only else max_results // 2)
         results.extend(web_results)
-        source_set -= {"brave"}
 
-    academic_sources = list(source_set & ACADEMIC_SOURCES) if source_set else None
-    if academic_sources is not None and not academic_sources:
-        return results
+    academic_requested = list(source_set & ACADEMIC_SOURCES)
+    if has_explicit_sources and not academic_requested:
+        return results[:max_results]
 
     if _RESEARCHFW_AVAILABLE:
         svc = AcademicSearchService()
-        papers = _run_async(svc.search(query, sources=academic_sources, max_results=max_results))
+        papers = _run_async(svc.search(
+            query,
+            sources=academic_requested if academic_requested else None,
+            max_results=max_results,
+        ))
         results.extend([_paper_to_dict(p) for p in papers])
 
     return results[:max_results]
@@ -251,34 +257,36 @@ def smart_search_papers(
 
     from apps.projects.constants import ACADEMIC_SOURCES
 
+    has_explicit_sources = bool(sources)
     source_set = set(sources) if sources else set()
-    want_brave = "brave" in source_set or not source_set
-    academic_only = list(source_set & ACADEMIC_SOURCES) if source_set else None
+    want_brave = "brave" in source_set or not has_explicit_sources
+    academic_requested = list(source_set & ACADEMIC_SOURCES)
 
     web_results = []
     if want_brave:
-        web_count = max_results // 3 if academic_only != [] else max_results
+        brave_only = has_explicit_sources and not academic_requested
+        web_count = max_results if brave_only else max_results // 3
         web_results = search_web(topic, max_results=web_count)
-        if source_set:
-            academic_only = list((source_set - {"brave"}) & ACADEMIC_SOURCES) or None
+
+    if has_explicit_sources and not academic_requested:
+        return {
+            "papers": web_results[:max_results],
+            "queries_used": [topic],
+            "total_found": len(web_results),
+            "total_after_filter": len(web_results),
+        }
+
+    academic_sources = academic_requested if academic_requested else None
 
     if not _SMART_SEARCH_AVAILABLE or not api_key:
         logger.info("smart_search_papers: no LLM key configured, falling back to search_papers()")
-        academic_papers = search_papers(topic, sources=academic_only, max_results=max_results) if academic_only is None or academic_only else []
+        academic_papers = search_papers(topic, sources=academic_sources, max_results=max_results)
         papers = web_results + academic_papers
         return {
             "papers": papers[:max_results],
             "queries_used": [topic],
             "total_found": len(papers),
             "total_after_filter": len(papers),
-        }
-
-    if academic_only is not None and not academic_only:
-        return {
-            "papers": web_results[:max_results],
-            "queries_used": [topic],
-            "total_found": len(web_results),
-            "total_after_filter": len(web_results),
         }
 
     llm_fn = make_together_llm(api_key=api_key)
@@ -288,7 +296,7 @@ def smart_search_papers(
         expand_citations=expand_citations,
         search_rounds=search_rounds,
     )
-    result = _run_async(svc.search(topic, max_results=max_results, sources=academic_only))
+    result = _run_async(svc.search(topic, max_results=max_results, sources=academic_sources))
 
     papers = [_paper_to_dict(sp.paper) for sp in result.papers]
     for paper_dict, scored in zip(papers, result.papers):
