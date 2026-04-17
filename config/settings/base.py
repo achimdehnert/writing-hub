@@ -166,7 +166,7 @@ SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = "SAMEORIGIN"
 
 LOGIN_URL = "/accounts/login/"
-LOGIN_REDIRECT_URL = "/projects/"
+LOGIN_REDIRECT_URL = "/projekte/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
 
 ADMIN_MEDIA_PREFIX = "/static/admin/"
