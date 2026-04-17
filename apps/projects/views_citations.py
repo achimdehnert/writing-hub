@@ -25,6 +25,7 @@ from .constants import (
 )
 from .models import BookProject, OutlineNode, OutlineVersion, ProjectCitation
 from .services.citation_service import (
+    SearchError,
     export_bibtex,
     format_bibliography,
     parse_bibtex,
@@ -426,7 +427,10 @@ class LiteraturrechercheAjaxView(LoginRequiredMixin, View):
         except (ValueError, TypeError):
             max_results = 20
 
-        result = smart_search_papers(query, sources=sources, max_results=max_results)
+        try:
+            result = smart_search_papers(query, sources=sources, max_results=max_results)
+        except SearchError as exc:
+            return JsonResponse({"ok": False, "error": str(exc)})
         return JsonResponse({
             "ok": True,
             "papers": result["papers"],

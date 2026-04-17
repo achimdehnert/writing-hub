@@ -13,6 +13,10 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
+class SearchError(Exception):
+    """User-facing search error (rate limit, timeout, etc.)."""
+
 try:
     from iil_researchfw import Citation, CitationService, CitationStyle, Author, SourceType
     from iil_researchfw.search import AcademicSearchService
@@ -159,10 +163,21 @@ def search_web(
     if not _BRAVE_AVAILABLE:
         logger.warning("search_web: BraveSearchService not available")
         return []
-    svc = BraveSearchService()
+    from decouple import config as dconfig
+    api_key = dconfig("BRAVE_API_KEY", default="")
+    if not api_key:
+        logger.warning("search_web: BRAVE_API_KEY not configured")
+        return []
+    svc = BraveSearchService(api_key=api_key)
     try:
         results = _run_async(svc.search(query, count=min(max_results, 20)))
-    except Exception:
+    except Exception as exc:
+        exc_str = str(exc)
+        if "429" in exc_str or "rate limit" in exc_str.lower():
+            logger.warning("Brave rate limit for query: %s", query[:80])
+            raise SearchError(
+                "Brave API Rate-Limit erreicht. Bitte 1–2 Sekunden warten und erneut versuchen."
+            ) from exc
         logger.exception("Brave web search failed for query: %s", query[:80])
         return []
     return [
