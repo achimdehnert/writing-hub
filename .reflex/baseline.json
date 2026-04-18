@@ -1,0 +1,945 @@
+{
+  "created_at": "2026-04-18T11:04:48.315715+00:00",
+  "findings": [
+    {
+      "rule_id": "adr.missing_frontmatter_title",
+      "severity": "block",
+      "message": "ADR-150-romanstruktur-4-ebenen-datenmodell: Missing required frontmatter field 'title'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-150-romanstruktur-4-ebenen-datenmodell.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_status",
+      "severity": "block",
+      "message": "ADR-150-romanstruktur-4-ebenen-datenmodell: Missing required frontmatter field 'status'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-150-romanstruktur-4-ebenen-datenmodell.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_date",
+      "severity": "block",
+      "message": "ADR-150-romanstruktur-4-ebenen-datenmodell: Missing required frontmatter field 'date'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-150-romanstruktur-4-ebenen-datenmodell.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_section_context",
+      "severity": "warn",
+      "message": "ADR-150-romanstruktur-4-ebenen-datenmodell: Missing recommended section containing 'context'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-150-romanstruktur-4-ebenen-datenmodell.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_drivers",
+      "severity": "warn",
+      "message": "ADR-150-romanstruktur-4-ebenen-datenmodell: Missing recommended section containing 'decision drivers'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-150-romanstruktur-4-ebenen-datenmodell.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_considered_options",
+      "severity": "warn",
+      "message": "ADR-150-romanstruktur-4-ebenen-datenmodell: Missing recommended section containing 'considered options'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-150-romanstruktur-4-ebenen-datenmodell.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_outcome",
+      "severity": "warn",
+      "message": "ADR-150-romanstruktur-4-ebenen-datenmodell: Missing recommended section containing 'decision outcome'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-150-romanstruktur-4-ebenen-datenmodell.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_title",
+      "severity": "block",
+      "message": "ADR-151-dramaturgische-felder-outlinenode-lookups: Missing required frontmatter field 'title'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-151-dramaturgische-felder-outlinenode-lookups.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_status",
+      "severity": "block",
+      "message": "ADR-151-dramaturgische-felder-outlinenode-lookups: Missing required frontmatter field 'status'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-151-dramaturgische-felder-outlinenode-lookups.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_date",
+      "severity": "block",
+      "message": "ADR-151-dramaturgische-felder-outlinenode-lookups: Missing required frontmatter field 'date'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-151-dramaturgische-felder-outlinenode-lookups.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_section_context",
+      "severity": "warn",
+      "message": "ADR-151-dramaturgische-felder-outlinenode-lookups: Missing recommended section containing 'context'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-151-dramaturgische-felder-outlinenode-lookups.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_drivers",
+      "severity": "warn",
+      "message": "ADR-151-dramaturgische-felder-outlinenode-lookups: Missing recommended section containing 'decision drivers'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-151-dramaturgische-felder-outlinenode-lookups.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_considered_options",
+      "severity": "warn",
+      "message": "ADR-151-dramaturgische-felder-outlinenode-lookups: Missing recommended section containing 'considered options'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-151-dramaturgische-felder-outlinenode-lookups.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_outcome",
+      "severity": "warn",
+      "message": "ADR-151-dramaturgische-felder-outlinenode-lookups: Missing recommended section containing 'decision outcome'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-151-dramaturgische-felder-outlinenode-lookups.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_title",
+      "severity": "block",
+      "message": "ADR-152-charakter-arc-dramaturgie: Missing required frontmatter field 'title'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-152-charakter-arc-dramaturgie.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_status",
+      "severity": "block",
+      "message": "ADR-152-charakter-arc-dramaturgie: Missing required frontmatter field 'status'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-152-charakter-arc-dramaturgie.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_date",
+      "severity": "block",
+      "message": "ADR-152-charakter-arc-dramaturgie: Missing required frontmatter field 'date'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-152-charakter-arc-dramaturgie.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_section_context",
+      "severity": "warn",
+      "message": "ADR-152-charakter-arc-dramaturgie: Missing recommended section containing 'context'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-152-charakter-arc-dramaturgie.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_drivers",
+      "severity": "warn",
+      "message": "ADR-152-charakter-arc-dramaturgie: Missing recommended section containing 'decision drivers'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-152-charakter-arc-dramaturgie.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_considered_options",
+      "severity": "warn",
+      "message": "ADR-152-charakter-arc-dramaturgie: Missing recommended section containing 'considered options'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-152-charakter-arc-dramaturgie.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_outcome",
+      "severity": "warn",
+      "message": "ADR-152-charakter-arc-dramaturgie: Missing recommended section containing 'decision outcome'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-152-charakter-arc-dramaturgie.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_title",
+      "severity": "block",
+      "message": "ADR-153-frontend-css-design-tokens-htmx: Missing required frontmatter field 'title'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-153-frontend-css-design-tokens-htmx.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_status",
+      "severity": "block",
+      "message": "ADR-153-frontend-css-design-tokens-htmx: Missing required frontmatter field 'status'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-153-frontend-css-design-tokens-htmx.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_date",
+      "severity": "block",
+      "message": "ADR-153-frontend-css-design-tokens-htmx: Missing required frontmatter field 'date'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-153-frontend-css-design-tokens-htmx.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_section_context",
+      "severity": "warn",
+      "message": "ADR-153-frontend-css-design-tokens-htmx: Missing recommended section containing 'context'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-153-frontend-css-design-tokens-htmx.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_drivers",
+      "severity": "warn",
+      "message": "ADR-153-frontend-css-design-tokens-htmx: Missing recommended section containing 'decision drivers'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-153-frontend-css-design-tokens-htmx.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_considered_options",
+      "severity": "warn",
+      "message": "ADR-153-frontend-css-design-tokens-htmx: Missing recommended section containing 'considered options'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-153-frontend-css-design-tokens-htmx.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_outcome",
+      "severity": "warn",
+      "message": "ADR-153-frontend-css-design-tokens-htmx: Missing recommended section containing 'decision outcome'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-153-frontend-css-design-tokens-htmx.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_title",
+      "severity": "block",
+      "message": "ADR-154-drama-dashboard-content-type-uis: Missing required frontmatter field 'title'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-154-drama-dashboard-content-type-uis.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_status",
+      "severity": "block",
+      "message": "ADR-154-drama-dashboard-content-type-uis: Missing required frontmatter field 'status'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-154-drama-dashboard-content-type-uis.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_date",
+      "severity": "block",
+      "message": "ADR-154-drama-dashboard-content-type-uis: Missing required frontmatter field 'date'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-154-drama-dashboard-content-type-uis.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_section_context",
+      "severity": "warn",
+      "message": "ADR-154-drama-dashboard-content-type-uis: Missing recommended section containing 'context'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-154-drama-dashboard-content-type-uis.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_drivers",
+      "severity": "warn",
+      "message": "ADR-154-drama-dashboard-content-type-uis: Missing recommended section containing 'decision drivers'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-154-drama-dashboard-content-type-uis.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_considered_options",
+      "severity": "warn",
+      "message": "ADR-154-drama-dashboard-content-type-uis: Missing recommended section containing 'considered options'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-154-drama-dashboard-content-type-uis.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_outcome",
+      "severity": "warn",
+      "message": "ADR-154-drama-dashboard-content-type-uis: Missing recommended section containing 'decision outcome'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-154-drama-dashboard-content-type-uis.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_title",
+      "severity": "block",
+      "message": "ADR-155-serien-dramaturgie: Missing required frontmatter field 'title'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-155-serien-dramaturgie.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_status",
+      "severity": "block",
+      "message": "ADR-155-serien-dramaturgie: Missing required frontmatter field 'status'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-155-serien-dramaturgie.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_date",
+      "severity": "block",
+      "message": "ADR-155-serien-dramaturgie: Missing required frontmatter field 'date'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-155-serien-dramaturgie.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_section_context",
+      "severity": "warn",
+      "message": "ADR-155-serien-dramaturgie: Missing recommended section containing 'context'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-155-serien-dramaturgie.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_drivers",
+      "severity": "warn",
+      "message": "ADR-155-serien-dramaturgie: Missing recommended section containing 'decision drivers'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-155-serien-dramaturgie.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_considered_options",
+      "severity": "warn",
+      "message": "ADR-155-serien-dramaturgie: Missing recommended section containing 'considered options'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-155-serien-dramaturgie.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_outcome",
+      "severity": "warn",
+      "message": "ADR-155-serien-dramaturgie: Missing recommended section containing 'decision outcome'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-155-serien-dramaturgie.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_title",
+      "severity": "block",
+      "message": "ADR-156-zeitstruktur-foreshadowing-sequenz: Missing required frontmatter field 'title'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-156-zeitstruktur-foreshadowing-sequenz.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_status",
+      "severity": "block",
+      "message": "ADR-156-zeitstruktur-foreshadowing-sequenz: Missing required frontmatter field 'status'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-156-zeitstruktur-foreshadowing-sequenz.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_date",
+      "severity": "block",
+      "message": "ADR-156-zeitstruktur-foreshadowing-sequenz: Missing required frontmatter field 'date'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-156-zeitstruktur-foreshadowing-sequenz.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_section_context",
+      "severity": "warn",
+      "message": "ADR-156-zeitstruktur-foreshadowing-sequenz: Missing recommended section containing 'context'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-156-zeitstruktur-foreshadowing-sequenz.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_drivers",
+      "severity": "warn",
+      "message": "ADR-156-zeitstruktur-foreshadowing-sequenz: Missing recommended section containing 'decision drivers'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-156-zeitstruktur-foreshadowing-sequenz.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_considered_options",
+      "severity": "warn",
+      "message": "ADR-156-zeitstruktur-foreshadowing-sequenz: Missing recommended section containing 'considered options'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-156-zeitstruktur-foreshadowing-sequenz.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_outcome",
+      "severity": "warn",
+      "message": "ADR-156-zeitstruktur-foreshadowing-sequenz: Missing recommended section containing 'decision outcome'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-156-zeitstruktur-foreshadowing-sequenz.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_title",
+      "severity": "block",
+      "message": "ADR-157-antagonist-bstory-mvn-health: Missing required frontmatter field 'title'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-157-antagonist-bstory-mvn-health.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_status",
+      "severity": "block",
+      "message": "ADR-157-antagonist-bstory-mvn-health: Missing required frontmatter field 'status'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-157-antagonist-bstory-mvn-health.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_date",
+      "severity": "block",
+      "message": "ADR-157-antagonist-bstory-mvn-health: Missing required frontmatter field 'date'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-157-antagonist-bstory-mvn-health.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_section_context",
+      "severity": "warn",
+      "message": "ADR-157-antagonist-bstory-mvn-health: Missing recommended section containing 'context'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-157-antagonist-bstory-mvn-health.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_drivers",
+      "severity": "warn",
+      "message": "ADR-157-antagonist-bstory-mvn-health: Missing recommended section containing 'decision drivers'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-157-antagonist-bstory-mvn-health.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_considered_options",
+      "severity": "warn",
+      "message": "ADR-157-antagonist-bstory-mvn-health: Missing recommended section containing 'considered options'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-157-antagonist-bstory-mvn-health.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_outcome",
+      "severity": "warn",
+      "message": "ADR-157-antagonist-bstory-mvn-health: Missing recommended section containing 'decision outcome'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-157-antagonist-bstory-mvn-health.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_title",
+      "severity": "block",
+      "message": "ADR-158-dialogue-subtext-genre-promise-quality: Missing required frontmatter field 'title'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-158-dialogue-subtext-genre-promise-quality.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_status",
+      "severity": "block",
+      "message": "ADR-158-dialogue-subtext-genre-promise-quality: Missing required frontmatter field 'status'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-158-dialogue-subtext-genre-promise-quality.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_date",
+      "severity": "block",
+      "message": "ADR-158-dialogue-subtext-genre-promise-quality: Missing required frontmatter field 'date'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-158-dialogue-subtext-genre-promise-quality.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_section_context",
+      "severity": "warn",
+      "message": "ADR-158-dialogue-subtext-genre-promise-quality: Missing recommended section containing 'context'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-158-dialogue-subtext-genre-promise-quality.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_drivers",
+      "severity": "warn",
+      "message": "ADR-158-dialogue-subtext-genre-promise-quality: Missing recommended section containing 'decision drivers'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-158-dialogue-subtext-genre-promise-quality.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_considered_options",
+      "severity": "warn",
+      "message": "ADR-158-dialogue-subtext-genre-promise-quality: Missing recommended section containing 'considered options'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-158-dialogue-subtext-genre-promise-quality.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_outcome",
+      "severity": "warn",
+      "message": "ADR-158-dialogue-subtext-genre-promise-quality: Missing recommended section containing 'decision outcome'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-158-dialogue-subtext-genre-promise-quality.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_title",
+      "severity": "block",
+      "message": "ADR-159-publikationsvorbereitung: Missing required frontmatter field 'title'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-159-publikationsvorbereitung.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_status",
+      "severity": "block",
+      "message": "ADR-159-publikationsvorbereitung: Missing required frontmatter field 'status'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-159-publikationsvorbereitung.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_date",
+      "severity": "block",
+      "message": "ADR-159-publikationsvorbereitung: Missing required frontmatter field 'date'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-159-publikationsvorbereitung.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_section_context",
+      "severity": "warn",
+      "message": "ADR-159-publikationsvorbereitung: Missing recommended section containing 'context'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-159-publikationsvorbereitung.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_drivers",
+      "severity": "warn",
+      "message": "ADR-159-publikationsvorbereitung: Missing recommended section containing 'decision drivers'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-159-publikationsvorbereitung.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_considered_options",
+      "severity": "warn",
+      "message": "ADR-159-publikationsvorbereitung: Missing recommended section containing 'considered options'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-159-publikationsvorbereitung.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_outcome",
+      "severity": "warn",
+      "message": "ADR-159-publikationsvorbereitung: Missing recommended section containing 'decision outcome'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-159-publikationsvorbereitung.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_title",
+      "severity": "block",
+      "message": "ADR-160-wissens-infrastruktur: Missing required frontmatter field 'title'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-160-wissens-infrastruktur.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_status",
+      "severity": "block",
+      "message": "ADR-160-wissens-infrastruktur: Missing required frontmatter field 'status'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-160-wissens-infrastruktur.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_date",
+      "severity": "block",
+      "message": "ADR-160-wissens-infrastruktur: Missing required frontmatter field 'date'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-160-wissens-infrastruktur.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_section_context",
+      "severity": "warn",
+      "message": "ADR-160-wissens-infrastruktur: Missing recommended section containing 'context'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-160-wissens-infrastruktur.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_drivers",
+      "severity": "warn",
+      "message": "ADR-160-wissens-infrastruktur: Missing recommended section containing 'decision drivers'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-160-wissens-infrastruktur.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_considered_options",
+      "severity": "warn",
+      "message": "ADR-160-wissens-infrastruktur: Missing recommended section containing 'considered options'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-160-wissens-infrastruktur.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_outcome",
+      "severity": "warn",
+      "message": "ADR-160-wissens-infrastruktur: Missing recommended section containing 'decision outcome'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-160-wissens-infrastruktur.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_title",
+      "severity": "block",
+      "message": "ADR-161-produktions-infrastruktur: Missing required frontmatter field 'title'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-161-produktions-infrastruktur.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_status",
+      "severity": "block",
+      "message": "ADR-161-produktions-infrastruktur: Missing required frontmatter field 'status'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-161-produktions-infrastruktur.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_date",
+      "severity": "block",
+      "message": "ADR-161-produktions-infrastruktur: Missing required frontmatter field 'date'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-161-produktions-infrastruktur.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_section_context",
+      "severity": "warn",
+      "message": "ADR-161-produktions-infrastruktur: Missing recommended section containing 'context'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-161-produktions-infrastruktur.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_drivers",
+      "severity": "warn",
+      "message": "ADR-161-produktions-infrastruktur: Missing recommended section containing 'decision drivers'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-161-produktions-infrastruktur.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_considered_options",
+      "severity": "warn",
+      "message": "ADR-161-produktions-infrastruktur: Missing recommended section containing 'considered options'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-161-produktions-infrastruktur.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_outcome",
+      "severity": "warn",
+      "message": "ADR-161-produktions-infrastruktur: Missing recommended section containing 'decision outcome'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-161-produktions-infrastruktur.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_title",
+      "severity": "block",
+      "message": "ADR-INDEX: Missing required frontmatter field 'title'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-INDEX.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_status",
+      "severity": "block",
+      "message": "ADR-INDEX: Missing required frontmatter field 'status'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-INDEX.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_frontmatter_date",
+      "severity": "block",
+      "message": "ADR-INDEX: Missing required frontmatter field 'date'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-INDEX.md",
+      "auto_fixable": false,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "adr.missing_section_context",
+      "severity": "warn",
+      "message": "ADR-INDEX: Missing recommended section containing 'context'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-INDEX.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_drivers",
+      "severity": "warn",
+      "message": "ADR-INDEX: Missing recommended section containing 'decision drivers'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-INDEX.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_considered_options",
+      "severity": "warn",
+      "message": "ADR-INDEX: Missing recommended section containing 'considered options'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-INDEX.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "adr.missing_section_decision_outcome",
+      "severity": "warn",
+      "message": "ADR-INDEX: Missing recommended section containing 'decision outcome'",
+      "adr_ref": "MADR 4.0",
+      "fix_hint": null,
+      "file_path": "docs/adr/ADR-INDEX.md",
+      "auto_fixable": false,
+      "fix_complexity": "moderate"
+    },
+    {
+      "rule_id": "compose.healthcheck_in_dockerfile",
+      "severity": "block",
+      "message": "HEALTHCHECK in Dockerfile — must be per-service in docker-compose.prod.yml only (coach-hub incident)",
+      "adr_ref": "ADR-021 §3.4",
+      "fix_hint": "Remove HEALTHCHECK from Dockerfile, add per-service in compose",
+      "file_path": "Dockerfile",
+      "auto_fixable": true,
+      "fix_complexity": "simple"
+    },
+    {
+      "rule_id": "security.missing_dockerignore",
+      "severity": "block",
+      "message": "Missing .dockerignore — .env, .git, secrets may leak into Docker image",
+      "adr_ref": "ADR-021 §3",
+      "fix_hint": "Create .dockerignore with: .env* .git .reflex __pycache__ *.pyc",
+      "file_path": null,
+      "auto_fixable": true,
+      "fix_complexity": "trivial"
+    },
+    {
+      "rule_id": "uc.no_uc_directory",
+      "severity": "warn",
+      "message": "No use-cases directory found. Expected: docs/use-cases/",
+      "adr_ref": "ADR-162",
+      "fix_hint": "mkdir -p docs/use-cases/",
+      "file_path": null,
+      "auto_fixable": true,
+      "fix_complexity": "trivial"
+    }
+  ]
+}

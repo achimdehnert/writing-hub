@@ -67,9 +67,16 @@ class QuickProjectStartView(LoginRequiredMixin, View):
             target_words = DEFAULT_PROJECT_TARGET_WORDS
 
         content_type = FRAMEWORK_TO_CONTENT_TYPE.get(framework, "academic")
-        ct_lookup = ContentTypeLookup.objects.filter(
-            slug__in=["academic", "wissenschaftlich", "scientific"]
-        ).first()
+        ct_slug_map = {
+            "novel": "roman",
+            "nonfiction": "sachbuch",
+            "short_story": "kurzgeschichte",
+            "essay": "essay",
+            "academic": "academic",
+            "scientific": "scientific",
+        }
+        ct_slug = ct_slug_map.get(content_type, "sachbuch")
+        ct_lookup = ContentTypeLookup.objects.filter(slug=ct_slug).first()
 
         project = BookProject.objects.create(
             owner=request.user,

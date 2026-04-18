@@ -19,13 +19,14 @@ services:
     image: postgres:15
     container_name: writing_hub_db_dev
     environment:
-      POSTGRES_DB: writing_hub_db
-      POSTGRES_USER: writing_hub
-      POSTGRES_PASSWORD: writing_hub_dev
+      POSTGRES_DB: writing_hub_test
+      POSTGRES_USER: dehnert
+      POSTGRES_PASSWORD: test
+      POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - pgdata_dev:/var/lib/postgresql/data
     ports:
-      - "5435:5432"
+      - "5434:5432"
 
 volumes:
   pgdata_dev:

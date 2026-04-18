@@ -146,6 +146,54 @@
     </div>
 </div>
 
+<!-- Rollenwechsel-Workflow (UC 6.1a) -->
+<div class="card mb-4" style="background:#0d1117;border-color:#2d3748;">
+    <div class="card-body py-3">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="fw-semibold small" style="color:#e2e8f0;"><i class="bi bi-person-workspace me-1"></i>Aktuelle Rolle</span>
+            <a href="{% url 'projects:publisher_profile' %}" class="text-decoration-none" style="font-size:.72rem;color:#6366f1;">
+                <i class="bi bi-building me-1"></i>Verlagsprofil
+            </a>
+        </div>
+        <div class="d-flex gap-2 mb-2">
+            {% with writing_pct=chapter_progress_pct|default:0 %}
+            <div class="flex-fill text-center py-2 rounded-2"
+                 style="background:{% if writing_pct < 80 %}#1e1b4b;border:1px solid #6366f1{% else %}#0d1117;border:1px solid #2d3748{% endif %};">
+                <i class="bi bi-pen" style="color:{% if writing_pct < 80 %}#a5b4fc{% else %}#4b5563{% endif %};"></i>
+                <div style="font-size:.68rem;color:{% if writing_pct < 80 %}#a5b4fc{% else %}#64748b{% endif %};margin-top:2px;">Autor</div>
+                {% if writing_pct < 80 %}<div style="font-size:.55rem;color:#6366f1;">← aktiv</div>{% endif %}
+            </div>
+            <div class="d-flex align-items-center"><i class="bi bi-chevron-right text-muted" style="font-size:.7rem;"></i></div>
+            <div class="flex-fill text-center py-2 rounded-2"
+                 style="background:{% if writing_pct >= 80 and writing_pct < 100 %}#1a2a1a;border:1px solid #22c55e{% else %}#0d1117;border:1px solid #2d3748{% endif %};">
+                <i class="bi bi-check2-square" style="color:{% if writing_pct >= 80 and writing_pct < 100 %}#86efac{% else %}#4b5563{% endif %};"></i>
+                <div style="font-size:.68rem;color:{% if writing_pct >= 80 and writing_pct < 100 %}#86efac{% else %}#64748b{% endif %};margin-top:2px;">Lektor</div>
+                {% if writing_pct >= 80 and writing_pct < 100 %}<div style="font-size:.55rem;color:#22c55e;">← aktiv</div>{% endif %}
+            </div>
+            <div class="d-flex align-items-center"><i class="bi bi-chevron-right text-muted" style="font-size:.7rem;"></i></div>
+            <div class="flex-fill text-center py-2 rounded-2"
+                 style="background:{% if writing_pct >= 100 %}#451a03;border:1px solid #f59e0b{% else %}#0d1117;border:1px solid #2d3748{% endif %};">
+                <i class="bi bi-bookmark-check" style="color:{% if writing_pct >= 100 %}#fcd34d{% else %}#4b5563{% endif %};"></i>
+                <div style="font-size:.68rem;color:{% if writing_pct >= 100 %}#fcd34d{% else %}#64748b{% endif %};margin-top:2px;">Verleger</div>
+                {% if writing_pct >= 100 %}<div style="font-size:.55rem;color:#f59e0b;">← aktiv</div>{% endif %}
+            </div>
+            {% endwith %}
+        </div>
+        <div class="text-muted" style="font-size:.7rem;">
+            {% if chapter_progress_pct < 80 %}
+            <i class="bi bi-lightbulb me-1" style="color:#a5b4fc;"></i>
+            <strong style="color:#a5b4fc;">Tipp:</strong> Erst alle Kapitel fertig schreiben, dann ins Lektorat wechseln.
+            {% elif chapter_progress_pct < 100 %}
+            <i class="bi bi-lightbulb me-1" style="color:#86efac;"></i>
+            <strong style="color:#86efac;">Tipp:</strong> Lektorat &amp; Review starten — dann die letzten Kapitel finalisieren.
+            {% else %}
+            <i class="bi bi-lightbulb me-1" style="color:#fcd34d;"></i>
+            <strong style="color:#fcd34d;">Tipp:</strong> Alle Kapitel geschrieben! Publishing-Metadaten vervollständigen und exportieren.
+            {% endif %}
+        </div>
+    </div>
+</div>
+
 <!-- Workflow-Phasen -->
 <h5 class="fw-bold mb-3" style="color:#e2e8f0;">Workflow-Phasen</h5>
 <div class="row g-3 mb-4">

@@ -41,7 +41,7 @@ from apps.authoring.defaults import (
 )
 from apps.core.prompt_utils import render_prompt
 from apps.authoring.services.chapter_production_service import _strip_chapter_heading
-from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
+from apps.authoring.services.llm_router import LLMRoutingError, router
 
 logger = logging.getLogger(__name__)
 
@@ -297,8 +297,8 @@ class ChapterContext:
                 }
                 if ws.style_prompt:
                     style_dna["style_prompt"] = ws.style_prompt
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("WritingStyle loading failed: %s", exc)
 
         if not style_dna:
             try:
@@ -315,7 +315,7 @@ class ChapterContext:
                         "taboo_list": dna_obj.taboo_list or [],
                     }
             except Exception as exc:
-                logger.warning("Could not load Style DNA: %s", exc)
+                logger.debug("AuthorStyleDNA loading failed: %s", exc)
 
         return cls(
             project_id=project_id,
@@ -384,11 +384,10 @@ class ChapterWriterHandler:
 
         messages = self._render_write_messages(context)
         try:
-            router = LLMRouter()
             raw = router.completion(
                 "chapter_generation", messages, max_tokens=max_tokens
             )
-        except (LLMRoutingError, Exception) as exc:
+        except LLMRoutingError as exc:
             logger.error("_write_single failed: %s", exc)
             return {"success": False, "error": str(exc)}
 
@@ -445,11 +444,10 @@ class ChapterWriterHandler:
                 {"role": "user", "content": chunk_prompt},
             ]
             try:
-                router = LLMRouter()
                 chunk_content = router.completion(
                     "chapter_generation", messages, max_tokens=self.MAX_TOKENS
                 )
-            except (LLMRoutingError, Exception) as exc:
+            except LLMRoutingError as exc:
                 logger.error("Chunk %d error: %s", chunk_num + 1, exc)
                 if all_content:
                     partial = "\n\n".join(all_content)
@@ -482,7 +480,6 @@ class ChapterWriterHandler:
                 {"role": "user", "content": cont_prompt},
             ]
             try:
-                router = LLMRouter()
                 continuation = router.completion(
                     "chapter_generation", messages, max_tokens=self.MAX_TOKENS
                 )
@@ -492,7 +489,7 @@ class ChapterWriterHandler:
                     "Continuation %d: %d/%d words",
                     continuations, current_words, context.target_word_count,
                 )
-            except (LLMRoutingError, Exception) as exc:
+            except LLMRoutingError as exc:
                 logger.warning("Continuation %d failed: %s", continuations, exc)
                 break
 
@@ -514,9 +511,8 @@ class ChapterWriterHandler:
             instruction=instruction,
         )
         try:
-            router = LLMRouter()
             raw = router.completion("chapter_generation", messages, max_tokens=MAX_TOKENS_REFINE)
-        except (LLMRoutingError, Exception) as exc:
+        except LLMRoutingError as exc:
             return {"success": False, "error": str(exc)}
 
         content = raw.strip()
@@ -548,13 +544,12 @@ class ChapterWriterHandler:
             remaining_words=remaining,
         )
         try:
-            router = LLMRouter()
             raw = router.completion(
                 "chapter_generation",
                 messages,
                 max_tokens=min(max(int(remaining * 1.5), 1000), self.MAX_TOKENS),
             )
-        except (LLMRoutingError, Exception) as exc:
+        except LLMRoutingError as exc:
             return {"success": False, "error": str(exc)}
 
         continuation = raw.strip()
@@ -572,9 +567,8 @@ class ChapterWriterHandler:
 
         messages = render_prompt(_TPL_SUMMARY, content=content)
         try:
-            router = LLMRouter()
             return router.completion("chapter_generation", messages, max_tokens=200).strip()
-        except (LLMRoutingError, Exception) as exc:
+        except LLMRoutingError as exc:
             logger.warning("Summary generation failed: %s", exc)
 
         return content[:200] + "..."

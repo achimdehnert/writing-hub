@@ -12,6 +12,7 @@ from . import (
     views_lektorat,
     views_manuscript,
     views_peer_review,
+    views_publisher,
     views_publishing,
     views_quick_project,
     views_research_summary,
@@ -96,6 +97,8 @@ urlpatterns = [
     path("<uuid:pk>/peer-review/start/", views_peer_review.PeerReviewStartView.as_view(), name="peer_review_start"),
     path("<uuid:pk>/peer-review/<uuid:session_pk>/", views_peer_review.PeerReviewSessionView.as_view(), name="peer_review_session"),
     path("<uuid:pk>/peer-review/finding/<uuid:finding_pk>/resolve/", views_peer_review.PeerReviewFindingResolveView.as_view(), name="peer_review_resolve"),
+    # Verlagsprofil (UC 6.9)
+    path("publisher/", views_publisher.PublisherProfileView.as_view(), name="publisher_profile"),
     # Quick Project (autonome Essay-Pipeline)
     path("quick/", views_quick_project.QuickProjectView.as_view(), name="quick_project"),
     path("quick/start/", views_quick_project.QuickProjectStartView.as_view(), name="quick_project_start"),

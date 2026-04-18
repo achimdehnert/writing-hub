@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Verlagsprofil — Writing Hub{% endblock %}
+{% block nav_projects %}active{% endblock %}
+{% block page_title %}<i class="bi bi-building me-2"></i>Verlagsprofil{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'projects:list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Projekte
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-lg-7">
+
+    <div class="card mb-4">
+        <div class="card-header py-2">
+            <span class="fw-semibold small"><i class="bi bi-building me-1"></i>Verlagsprofil</span>
+            <span class="text-muted ms-2 small">Wird bei neuen Projekten als Vorlage verwendet</span>
+        </div>
+        <div class="card-body">
+            <form method="post" action="{% url 'projects:publisher_profile' %}">
+                {% csrf_token %}
+
+                {% if form.errors %}
+                <div class="alert alert-danger py-2 small mb-3">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    {% for field, errors in form.errors.items %}
+                        {% for error in errors %}<div>{{ error }}</div>{% endfor %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <div class="mb-3">
+                    <label for="id_name" class="form-label small fw-semibold">Verlagsname *</label>
+                    {{ form.name }}
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_imprint" class="form-label small fw-semibold">Imprint</label>
+                    {{ form.imprint }}
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="id_default_copyright_holder" class="form-label small fw-semibold">Standard-Copyright-Inhaber</label>
+                        {{ form.default_copyright_holder }}
+                    </div>
+                    <div class="col-md-3">
+                        <label for="id_default_language" class="form-label small fw-semibold">Sprache</label>
+                        {{ form.default_language }}
+                    </div>
+                    <div class="col-md-3">
+                        <label for="id_default_age_rating" class="form-label small fw-semibold">Altersfreigabe</label>
+                        {{ form.default_age_rating }}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_default_bisac_category" class="form-label small fw-semibold">Standard-BISAC-Kategorie</label>
+                    {{ form.default_bisac_category }}
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="id_logo_url" class="form-label small fw-semibold">Logo-URL</label>
+                        {{ form.logo_url }}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="id_website" class="form-label small fw-semibold">Website</label>
+                        {{ form.website }}
+                    </div>
+                </div>
+
+                <button type="submit" class="btn w-100 py-2 fw-semibold"
+                        style="background:#6366f1;color:#fff;">
+                    <i class="bi bi-check-lg me-1"></i>
+                    {% if profile %}Profil aktualisieren{% else %}Verlagsprofil anlegen{% endif %}
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {% if profile %}
+    <div class="card">
+        <div class="card-body text-center py-3">
+            <div class="text-muted small">
+                <i class="bi bi-info-circle me-1"></i>
+                Bei neuen Projekten werden Verlagsname, Copyright und Sprache
+                automatisch in das Publishing-Profil übernommen.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+</div>
+{% endblock %}

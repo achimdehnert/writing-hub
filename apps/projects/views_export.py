@@ -82,9 +82,10 @@ class ProjectExportView(LoginRequiredMixin, DetailView):
         ctx = super().get_context_data(**kwargs)
         chapters = _get_chapters_with_content(self.object)
         ctx["chapters"] = chapters
-        ctx["word_count"] = _count_words(chapters)
+        word_count = _count_words(chapters)
+        ctx["word_count"] = word_count
         ctx["chapter_count"] = len(chapters)
-        ctx["page_count"] = max(1, _count_words(chapters) // 250)
+        ctx["page_count"] = max(1, word_count // 250)
         return ctx
 
     def post(self, request, pk):
@@ -92,6 +93,7 @@ class ProjectExportView(LoginRequiredMixin, DetailView):
         fmt = request.POST.get("format", "markdown")
         include_outline = request.POST.get("include_outline") == "on"
         include_title_page = request.POST.get("include_title_page") == "on"
+        include_toc = request.POST.get("include_toc") == "on"
         only_with_content = request.POST.get("all_chapters") != "on"
 
         chapters = _get_chapters_with_content(project)
@@ -106,12 +108,12 @@ class ProjectExportView(LoginRequiredMixin, DetailView):
             "epub": self._export_epub,
         }
         handler = dispatch.get(fmt, self._export_markdown)
-        return handler(project, chapters, include_outline, include_title_page)
+        return handler(project, chapters, include_outline, include_title_page, include_toc)
 
     # ------------------------------------------------------------------ #
     #  Markdown                                                            #
     # ------------------------------------------------------------------ #
-    def _export_markdown(self, project, chapters, include_outline, include_title_page):
+    def _export_markdown(self, project, chapters, include_outline, include_title_page, include_toc=False):
         lines = []
         if include_title_page:
             lines += [f"# {project.title}", ""]
@@ -120,6 +122,12 @@ class ProjectExportView(LoginRequiredMixin, DetailView):
             if project.description:
                 lines += [project.description, ""]
             lines += [f"*Exportiert am {date.today().strftime('%d.%m.%Y')}*", "", "---", ""]
+
+        if include_toc and chapters:
+            lines += ["## Inhaltsverzeichnis", ""]
+            for ch in chapters:
+                lines.append(f"- Kapitel {ch['order']}: {ch['title']}")
+            lines += ["", "---", ""]
 
         for ch in chapters:
             lines += [f"## Kapitel {ch['order']}: {ch['title']}", ""]
@@ -140,7 +148,7 @@ class ProjectExportView(LoginRequiredMixin, DetailView):
     # ------------------------------------------------------------------ #
     #  Plain Text                                                          #
     # ------------------------------------------------------------------ #
-    def _export_text(self, project, chapters, include_outline, include_title_page):
+    def _export_text(self, project, chapters, include_outline, include_title_page, include_toc=False):
         lines = []
         if include_title_page:
             lines += [
@@ -153,6 +161,12 @@ class ProjectExportView(LoginRequiredMixin, DetailView):
             if project.description:
                 lines += [project.description, ""]
             lines += [f"Exportiert am {date.today().strftime('%d.%m.%Y')}", "", ""]
+
+        if include_toc and chapters:
+            lines += ["INHALTSVERZEICHNIS", "=" * 20, ""]
+            for ch in chapters:
+                lines.append(f"  {ch['order']}. {ch['title']}")
+            lines += ["", ""]
 
         for ch in chapters:
             header = f"KAPITEL {ch['order']}: {ch['title'].upper()}"
@@ -174,8 +188,8 @@ class ProjectExportView(LoginRequiredMixin, DetailView):
     # ------------------------------------------------------------------ #
     #  HTML                                                                #
     # ------------------------------------------------------------------ #
-    def _export_html(self, project, chapters, include_outline, include_title_page):
-        content = self._build_html(project, chapters, include_outline, include_title_page)
+    def _export_html(self, project, chapters, include_outline, include_title_page, include_toc=False):
+        content = self._build_html(project, chapters, include_outline, include_title_page, include_toc)
         response = HttpResponse(content, content_type="text/html; charset=utf-8")
         filename = _safe_filename(project.title) + ".html"
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
@@ -185,8 +199,8 @@ class ProjectExportView(LoginRequiredMixin, DetailView):
     # ------------------------------------------------------------------ #
     #  PDF (via weasyprint)                                               #
     # ------------------------------------------------------------------ #
-    def _export_pdf(self, project, chapters, include_outline, include_title_page):
-        html_content = self._build_html(project, chapters, include_outline, include_title_page)
+    def _export_pdf(self, project, chapters, include_outline, include_title_page, include_toc=False):
+        html_content = self._build_html(project, chapters, include_outline, include_title_page, include_toc)
         try:
             from weasyprint import HTML
             pdf_bytes = HTML(string=html_content).write_pdf()
@@ -211,7 +225,7 @@ class ProjectExportView(LoginRequiredMixin, DetailView):
     # ------------------------------------------------------------------ #
     #  EPUB (via ebooklib)                                                #
     # ------------------------------------------------------------------ #
-    def _export_epub(self, project, chapters, include_outline, include_title_page):
+    def _export_epub(self, project, chapters, include_outline, include_title_page, include_toc=False):
         try:
             from ebooklib import epub
         except ImportError:
@@ -304,7 +318,7 @@ class ProjectExportView(LoginRequiredMixin, DetailView):
     # ------------------------------------------------------------------ #
     #  Shared HTML builder (used by HTML export + PDF)                     #
     # ------------------------------------------------------------------ #
-    def _build_html(self, project, chapters, include_outline, include_title_page):
+    def _build_html(self, project, chapters, include_outline, include_title_page, include_toc=False):
         parts = [textwrap.dedent(f"""\
             <!DOCTYPE html>
             <html lang="de">
@@ -312,30 +326,60 @@ class ProjectExportView(LoginRequiredMixin, DetailView):
             <meta charset="UTF-8">
             <title>{_esc(project.title)}</title>
             <style>
-              @page {{ size: A4; margin: 2.5cm; }}
-              body {{ font-family: Georgia, serif; max-width: 780px; margin: 3rem auto; line-height: 1.8; color: #1a1a1a; }}
-              h1 {{ font-size: 2.2rem; margin-bottom: .25rem; }}
-              h2 {{ font-size: 1.4rem; margin-top: 3rem; border-bottom: 1px solid #ccc; padding-bottom: .25rem; }}
-              .outline {{ color: #555; font-style: italic; margin-bottom: 1rem; }}
+              @page {{
+                size: A5;
+                margin: 2cm 1.8cm 2.5cm 1.8cm;
+                @top-center {{ content: "{_esc(project.title)}"; font-size: 8pt; color: #999; }}
+                @bottom-center {{ content: counter(page); font-size: 9pt; color: #666; }}
+              }}
+              @page :first {{ @top-center {{ content: none; }} }}
+              body {{
+                font-family: 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
+                max-width: 780px; margin: 3rem auto;
+                line-height: 1.7; color: #1a1a1a; font-size: 11pt;
+              }}
+              h1 {{ font-size: 18pt; margin-bottom: .5rem; text-align: center; }}
+              h2 {{
+                font-size: 14pt; margin-top: 2rem; padding-bottom: .3rem;
+                border-bottom: 0.5pt solid #ccc; page-break-before: always;
+              }}
+              h2:first-of-type {{ page-break-before: avoid; }}
+              .toc {{ page-break-after: always; }}
+              .toc h2 {{ page-break-before: avoid; border-bottom: none; }}
+              .outline {{ color: #555; font-style: italic; margin-bottom: 1rem; font-size: 10pt; }}
               .no-content {{ color: #999; font-style: italic; }}
-              .meta {{ color: #777; font-size: .9rem; }}
-              hr {{ border: none; border-top: 1px solid #ddd; margin: 2rem 0; }}
-              p {{ margin: 0 0 1rem; text-indent: 1.5rem; }}
+              .meta {{ color: #777; font-size: 9pt; }}
+              hr {{ border: none; border-top: 0.5pt solid #ddd; margin: 2rem 0; }}
+              p {{ margin: 0 0 0.8rem; text-indent: 1.5em; text-align: justify; orphans: 3; widows: 3; }}
+              p:first-of-type {{ text-indent: 0; }}
+              .title-page {{ text-align: center; padding-top: 6rem; page-break-after: always; }}
+              .title-page h1 {{ font-size: 24pt; margin-bottom: 1rem; }}
+              .title-page .subtitle {{ font-size: 12pt; color: #555; margin-bottom: 2rem; }}
             </style>
             </head>
             <body>
         """)]
 
         if include_title_page:
+            parts.append('<div class="title-page">')
             parts.append(f"<h1>{_esc(project.title)}</h1>")
             if project.genre:
-                parts.append(f'<p class="meta">Genre: {_esc(project.genre)}</p>')
+                parts.append(f'<p class="subtitle">{_esc(project.genre)}</p>')
             if project.description:
                 parts.append(f"<p>{_esc(project.description)}</p>")
-            parts.append(f'<p class="meta">Exportiert am {date.today().strftime("%d.%m.%Y")}</p><hr>')
+            parts.append(f'<p class="meta">Exportiert am {date.today().strftime("%d.%m.%Y")}</p>')
+            parts.append('</div>')
 
-        for ch in chapters:
-            parts.append(f"<h2>Kapitel {ch['order']}: {_esc(ch['title'])}</h2>")
+        if include_toc and chapters:
+            parts.append('<nav class="toc">')
+            parts.append('<h2 style="font-size:1.2rem;margin-bottom:.75rem;">Inhaltsverzeichnis</h2>')
+            parts.append('<ol style="padding-left:1.5rem;line-height:2;">')
+            for idx, ch in enumerate(chapters, 1):
+                parts.append(f'<li><a href="#ch-{idx}" style="color:#6366f1;text-decoration:none;">{_esc(ch["title"])}</a></li>')
+            parts.append('</ol></nav><hr>')
+
+        for idx_build, ch in enumerate(chapters, 1):
+            parts.append(f'<h2 id="ch-{idx_build}">Kapitel {ch["order"]}: {_esc(ch["title"])}</h2>')
             if include_outline and ch["description"]:
                 parts.append(f'<p class="outline">{_esc(ch["description"])}</p>')
             if ch["content"]:

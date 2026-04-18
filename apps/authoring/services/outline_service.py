@@ -157,13 +157,14 @@ def _save_outline_to_db(
             beat = ""
             try:
                 beat = node.act.value if hasattr(node.act, "value") else str(node.act)
-            except Exception:
+            except Exception as exc:
+                logger.debug("Beat resolution failed: %s", exc)
                 beat = "chapter"
             summary = ""
             try:
                 summary = node.summary or node.description or ""
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Node summary resolution failed: %s", exc)
             db_nodes.append(DBOutlineNode(
                 outline_version=version,
                 title=node.title,

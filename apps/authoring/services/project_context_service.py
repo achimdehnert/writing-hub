@@ -178,11 +178,11 @@ class ProjectContextService:
                     if link.flaw:
                         char_entry["flaw"] = link.flaw
                     characters.append(char_entry)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.debug("Character context unavailable: %s", exc)
             ctx.characters = characters
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Character loading failed: %s", exc)
 
         # Welten — SSoT ist WeltenHub, lokale Links als Referenz
         try:
@@ -197,11 +197,11 @@ class ProjectContextService:
                         "description": getattr(world, "description", ""),
                         "atmosphere": getattr(world, "atmosphere", ""),
                     })
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.debug("World context unavailable: %s", exc)
             ctx.worlds = worlds
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("World loading failed: %s", exc)
 
         # Aktive Outline
         try:
@@ -221,8 +221,8 @@ class ProjectContextService:
                     }
                     for n in nodes
                 ]
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Outline loading failed: %s", exc)
 
         # Autor-Stil: WritingStyle vom Projekt (primaer) → AuthorStyleDNA (fallback)
         try:
@@ -237,8 +237,8 @@ class ProjectContextService:
                     "dont_list": ws.dont_list or [],
                     "taboo_list": ws.taboo_list or [],
                 }
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("WritingStyle loading failed: %s", exc)
 
         if not ctx.author_style:
             try:
@@ -253,7 +253,7 @@ class ProjectContextService:
                         "dont_list": style_dna.dont_list,
                         "taboo_list": style_dna.taboo_list,
                     }
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("AuthorStyleDNA loading failed: %s", exc)
 
         return ctx

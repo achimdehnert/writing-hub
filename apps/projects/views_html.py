@@ -270,7 +270,15 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
 
         frameworks = _get_frameworks()
         ctx["frameworks"] = frameworks
-        active_fw_key = selected.source if selected else "three_act"
+        _CT_DEFAULT_FW = {
+            "nonfiction": "sachbuch",
+            "academic": "scientific_essay",
+            "scientific": "imrad",
+            "essay": "scientific_essay",
+        }
+        active_fw_key = selected.source if selected else _CT_DEFAULT_FW.get(
+            project.content_type, "three_act"
+        )
         ctx["selected_outline_framework"] = active_fw_key
         ctx["selected_fw_beat_count"] = _fw_beat_count(active_fw_key, frameworks)
 

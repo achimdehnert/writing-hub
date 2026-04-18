@@ -141,6 +141,39 @@ FRAMEWORKS = [
         "order": 99,
         "beats": [],
     },
+    # ── Sachbuch / Nonfiction Frameworks ─────────────────────────────────
+    {
+        "key": "sachbuch",
+        "name": "Sachbuch / Ratgeber",
+        "subtitle": "Praxisnahe Kapitelstruktur für Ratgeber, How-To und Sachtext",
+        "icon": "bi-journal-richtext",
+        "order": 85,
+        "beats": [
+            ("Einleitung & Versprechen", 0, 10),
+            ("Problemdarstellung", 10, 20),
+            ("Grundlagen & Hintergrund", 20, 35),
+            ("Kernkapitel 1: Methoden & Strategien", 35, 50),
+            ("Kernkapitel 2: Vertiefung & Praxis", 50, 65),
+            ("Kernkapitel 3: Fallbeispiele & Anwendung", 65, 78),
+            ("Umsetzung & Aktionsplan", 78, 88),
+            ("Zusammenfassung & Ausblick", 88, 95),
+            ("Anhang & Ressourcen", 95, 100),
+        ],
+    },
+    {
+        "key": "sachbuch_kurz",
+        "name": "Sachbuch kompakt",
+        "subtitle": "Kurzes Sachbuch / E-Book — 5 Kernkapitel",
+        "icon": "bi-file-earmark-richtext",
+        "order": 86,
+        "beats": [
+            ("Einleitung & Motivation", 0, 15),
+            ("Das Problem verstehen", 15, 30),
+            ("Die Lösung: Schritt für Schritt", 30, 55),
+            ("Praxisbeispiele & Tipps", 55, 78),
+            ("Fazit & nächste Schritte", 78, 100),
+        ],
+    },
     # ── Wissenschaftliche Frameworks ──────────────────────────────────────
     {
         "key": "imrad",

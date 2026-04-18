@@ -7,6 +7,7 @@ Kein direkter Zugriff auf openai/anthropic/litellm.
 AIActionType wird im Django Admin konfiguriert — kein Code-Change noetig.
 """
 
+import asyncio
 import concurrent.futures
 import logging
 from typing import Any
@@ -133,19 +134,28 @@ class LLMRouter:
         messages: list[dict[str, Any]],
         quality_level: int | None = None,
         priority: str | None = None,
+        timeout: int | None = None,
         **kwargs: Any,
     ) -> str:
-        """Async LLM-Call via aifw."""
+        """Async LLM-Call via aifw mit Timeout-Schutz."""
         from aifw import completion as aifw_completion
         ConfigurationError = _get_configuration_error_class()
+        effective_timeout = timeout or DEFAULT_TIMEOUT_SECONDS
 
         try:
-            result = await aifw_completion(
-                action_code=action_code,
-                messages=messages,
-                quality_level=quality_level,
-                priority=priority,
-                **kwargs,
+            result = await asyncio.wait_for(
+                aifw_completion(
+                    action_code=action_code,
+                    messages=messages,
+                    quality_level=quality_level,
+                    priority=priority,
+                    **kwargs,
+                ),
+                timeout=effective_timeout,
+            )
+        except asyncio.TimeoutError:
+            raise LLMRoutingError(
+                f"Async-Timeout ({effective_timeout}s) fuer '{action_code}'. Bitte erneut versuchen."
             )
         except ConfigurationError as exc:
             raise LLMRoutingError(
@@ -153,6 +163,12 @@ class LLMRouter:
             ) from exc
 
         if result.success:
+            logger.debug(
+                "LLMRouter async: action=%s model=%s ql=%s",
+                action_code,
+                result.model,
+                quality_level,
+            )
             return result.content
 
         raise LLMRoutingError(
@@ -165,3 +181,7 @@ class LLMRouter:
             return get_quality_level_for_tier(tier)
         except Exception:
             return None
+
+
+# Module-level singleton — LLMRouter is stateless, no need to re-instantiate.
+router = LLMRouter()

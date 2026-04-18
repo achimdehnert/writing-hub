@@ -7,7 +7,7 @@ from .models import (
     OutlineFramework, OutlineFrameworkBeat, OutlineNode,
     OutlineSequence, OutlineVersion, PeerReviewFinding,
     PeerReviewSession, PitchDocument, ProjectCitation,
-    ProjectGenrePromise, ProjectTurningPoint,
+    ProjectGenrePromise, ProjectTurningPoint, PublisherProfile,
     ResearchNote, SubplotArc, TextAnalysisSnapshot,
 )
 from .models_narrative import DialogueScene
@@ -61,6 +61,13 @@ class OutlineFrameworkAdmin(admin.ModelAdmin):
     def beat_count(self, obj):
         return obj.beats.count()
     beat_count.short_description = "Beats"
+
+
+@admin.register(PublisherProfile)
+class PublisherProfileAdmin(admin.ModelAdmin):
+    list_display = ["name", "imprint", "owner", "is_default", "updated_at"]
+    list_filter = ["is_default"]
+    search_fields = ["name", "imprint"]
 
 
 @admin.register(BookProject)

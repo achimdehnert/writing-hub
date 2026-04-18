@@ -115,6 +115,23 @@ class OutlineFramework(models.Model):
     def beat_count(self):
         return self.beats.count()
 
+    @property
+    def get_group(self):
+        """Group label for template {% regroup %} tag."""
+        _NONFICTION = {"sachbuch", "sachbuch_kurz"}
+        _ACADEMIC = {
+            "imrad", "dissertation", "expose", "systematic_review",
+            "research_proposal", "scientific_essay", "academic_essay",
+        }
+        _UNIVERSAL = {"blank"}
+        if self.key in _NONFICTION:
+            return "Sachbuch / Nonfiction"
+        if self.key in _ACADEMIC:
+            return "Akademisch / Wissenschaftlich"
+        if self.key in _UNIVERSAL:
+            return "Sonstige"
+        return "Belletristik / Fiktion"
+
 
 class OutlineFrameworkBeat(models.Model):
     framework = models.ForeignKey(
@@ -199,6 +216,23 @@ class BookProject(models.Model):
 
     def __str__(self):
         return self.title
+
+    def save(self, *args, **kwargs):
+        update_fields = kwargs.get("update_fields")
+        if (
+            self.content_type_lookup_id
+            and (update_fields is None or "content_type_lookup" in update_fields
+                 or "content_type_lookup_id" in update_fields)
+        ):
+            from .constants import LOOKUP_SLUG_TO_MODEL_CONTENT_TYPE
+            ct_slug = getattr(self.content_type_lookup, "slug", None)
+            if ct_slug:
+                mapped = LOOKUP_SLUG_TO_MODEL_CONTENT_TYPE.get(ct_slug)
+                if mapped:
+                    self.content_type = mapped
+                    if update_fields is not None and "content_type" not in update_fields:
+                        kwargs["update_fields"] = list(update_fields) + ["content_type"]
+        super().save(*args, **kwargs)
 
     def get_all_styles(self):
         styles = list(self.writing_styles.select_related("author").all())
@@ -1474,6 +1508,41 @@ class ProjectCitation(models.Model):
         if len(self.authors_json) > 3:
             result += " et al."
         return result
+
+
+class PublisherProfile(models.Model):
+    """
+    Verlagsprofil (UC 6.9): Einmal anlegen, bei jedem neuen Buch als Default.
+    Solo-Verleger hat genau ein Profil; bei Multi-Verlag-Betrieb ggf. mehrere.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="publisher_profiles",
+    )
+    name = models.CharField(max_length=300, verbose_name="Verlagsname")
+    imprint = models.CharField(max_length=300, blank=True, verbose_name="Imprint")
+    logo_url = models.URLField(blank=True, verbose_name="Logo-URL")
+    default_copyright_holder = models.CharField(max_length=300, blank=True)
+    default_language = models.CharField(max_length=10, default="de")
+    default_bisac_category = models.CharField(max_length=200, blank=True)
+    default_age_rating = models.CharField(max_length=30, blank=True, default="0")
+    website = models.URLField(blank=True)
+    is_default = models.BooleanField(
+        default=True,
+        help_text="Wird automatisch bei neuen Projekten als Vorlage verwendet.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "wh_publisher_profiles"
+        verbose_name = "Verlagsprofil"
+        verbose_name_plural = "Verlagsprofile"
+        ordering = ["-is_default", "-updated_at"]
+
+    def __str__(self):
+        return self.name
 
 
 # ADR-158: DialogueScene discoverable machen

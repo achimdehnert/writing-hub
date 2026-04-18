@@ -5,6 +5,8 @@ Tabs: Metadaten | Cover | Frontmatter | Backmatter | Export
 """
 from __future__ import annotations
 
+import datetime
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
@@ -19,20 +21,26 @@ from .constants import (
     PUBLISHING_STATUS_CHOICES,
     PUBLISHING_STATUS_COLORS,
 )
-from .models import BookProject, PublishingProfile
+from .models import BookProject, PublisherProfile, PublishingProfile
 
 
 def _get_or_create_profile(project: BookProject) -> PublishingProfile:
-    import datetime
+    pub = PublisherProfile.objects.filter(owner=project.owner, is_default=True).first()
+    defaults = {
+        "publisher_name": pub.name if pub else "Selbstverlag",
+        "imprint": pub.imprint if pub else "",
+        "language": pub.default_language if pub else "de",
+        "age_rating": pub.default_age_rating if pub else "0",
+        "bisac_category": pub.default_bisac_category if pub else "",
+        "copyright_year": str(datetime.date.today().year),
+        "copyright_holder": (
+            pub.default_copyright_holder if pub and pub.default_copyright_holder
+            else project.owner.get_full_name() or project.owner.username
+        ),
+    }
     profile, _ = PublishingProfile.objects.get_or_create(
         project=project,
-        defaults={
-            "publisher_name": "Selbstverlag",
-            "language": "de",
-            "age_rating": "0",
-            "copyright_year": str(datetime.date.today().year),
-            "copyright_holder": project.owner.username,
-        },
+        defaults=defaults,
     )
     return profile
 

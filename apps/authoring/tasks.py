@@ -98,8 +98,8 @@ def write_chapter_task(
                         context.research_notes = db_block + "\n\n" + context.research_notes
                     else:
                         context.research_notes = db_block
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Research notes loading failed", error=str(exc))
 
         handler = ChapterWriterHandler()
         result = handler.write_chapter(context)
@@ -124,8 +124,8 @@ def write_chapter_task(
             job.status = "failed"
             job.error = str(exc)
             job.save(update_fields=["status", "error"])
-        except Exception:
-            pass
+        except Exception as save_exc:
+            logger.debug("Job save in error handler failed", error=str(save_exc))
         raise self.retry(exc=exc)
 
 
@@ -464,8 +464,8 @@ def _pipeline_write_chapters(project, user, nodes, job):
                         context.research_notes = db_block + "\n\n" + context.research_notes
                     else:
                         context.research_notes = db_block
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Research notes loading failed", error=str(exc))
 
             handler = ChapterWriterHandler()
             result = handler.write_chapter(context)

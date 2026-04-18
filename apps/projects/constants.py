@@ -218,6 +218,15 @@ FRAMEWORK_TO_CONTENT_TYPE = {
     "research_proposal": "academic",
     "essay": "essay",
     "three_act": "novel",
+    "save_the_cat": "novel",
+    "heros_journey": "novel",
+    "five_act": "novel",
+    "dan_harmon": "novel",
+    "snowflake": "novel",
+    "seven_point": "novel",
+    "blank": "novel",
+    "sachbuch": "nonfiction",
+    "sachbuch_kurz": "nonfiction",
 }
 
 # ── Format-Profile (aus universal_writing_prompt_framework.md) ────

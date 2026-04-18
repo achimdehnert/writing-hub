@@ -134,7 +134,8 @@ class ChapterProductionService:
             from apps.projects.models import BookProject
             project = BookProject.objects.get(pk=self._project_id)
             return project.content_type or DEFAULT_CONTENT_TYPE
-        except Exception:
+        except Exception as exc:
+            logger.debug("Content type resolution failed: %s", exc)
             return DEFAULT_CONTENT_TYPE
 
     def _load_content_type_config(self):
@@ -177,7 +178,8 @@ class ChapterProductionService:
             if templates_dir and os.path.isdir(templates_dir):
                 return PromptStack.from_directory(templates_dir)
             return PromptStack()
-        except Exception:
+        except Exception as exc:
+            logger.debug("PromptStack loading failed: %s", exc)
             return None
 
     def _resolve_quality_level(self) -> int | None:
@@ -187,8 +189,8 @@ class ChapterProductionService:
             tier = getattr(project, "subscription_tier", None)
             if tier:
                 return get_quality_level_for_tier(str(tier))
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Quality level resolution failed: %s", exc)
         return None
 
     def _get_style_constraints(self) -> str:
@@ -200,7 +202,8 @@ class ChapterProductionService:
             if isinstance(constraints, list):
                 return "\n".join(f"- {c}" for c in constraints)
             return str(constraints)
-        except Exception:
+        except Exception as exc:
+            logger.debug("Style constraints failed: %s", exc)
             return ""
 
     def _get_context_block(self) -> str:

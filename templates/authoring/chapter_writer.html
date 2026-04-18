@@ -802,6 +802,13 @@ window.addEventListener('DOMContentLoaded', () => {
     const contentArea = document.getElementById('chapter-content');
     if (contentArea) contentArea.addEventListener('input', () => onContentChange());
 
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            if (currentSaveUrl) saveContent(false);
+        }
+    });
+
     const params = new URLSearchParams(window.location.search);
     const cId = params.get('chapter');
     if (cId && CHAPTER_MAP[cId]) selectChapter(cId);

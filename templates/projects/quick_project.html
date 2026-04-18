@@ -67,18 +67,23 @@
     <div class="col-md-5">
         <label class="form-label" for="id_framework"><i class="bi bi-diagram-3 me-1"></i>Framework</label>
         <select name="framework" id="id_framework" class="form-select">
-            {% for fw in frameworks %}
-            <option value="{{ fw.key }}" {% if fw.key == "scientific_essay" %}selected{% endif %}>
-                {{ fw.name }}{% if fw.subtitle %} — {{ fw.subtitle|truncatechars:60 }}{% endif %}
-            </option>
+            {% regroup frameworks by get_group as grouped %}
+            {% for group in grouped %}
+            <optgroup label="{{ group.grouper }}">
+                {% for fw in group.list %}
+                <option value="{{ fw.key }}" data-group="{{ fw.get_group }}"{% if fw.key == "sachbuch" %} selected{% endif %}>
+                    {{ fw.name }}{% if fw.subtitle %} — {{ fw.subtitle|truncatechars:60 }}{% endif %}
+                </option>
+                {% endfor %}
+            </optgroup>
             {% endfor %}
         </select>
     </div>
     <div class="col-md-4">
         <label class="form-label" for="id_audience"><i class="bi bi-people me-1"></i>Zielgruppe</label>
         <select name="audience" id="id_audience" class="form-select">
-            <option value="Interessierte Leser">Interessierte (allgemeinverstaendlich)</option>
-            <option value="Fachpublikum" selected>Fachpublikum (fundiert, mit Fachbegriffen)</option>
+            <option value="Interessierte Leser" selected>Interessierte (allgemeinverstaendlich)</option>
+            <option value="Fachpublikum">Fachpublikum (fundiert, mit Fachbegriffen)</option>
             <option value="Forschende Experten">Forschende Experten (hoechste Tiefe)</option>
         </select>
         <div class="form-text">Definiert Tiefe, Fachsprache und Qualitaet.</div>
@@ -105,7 +110,7 @@
                 <input class="form-check-input" type="checkbox" name="do_research" id="id_research" checked>
                 <label class="form-check-label" for="id_research">
                     <i class="bi bi-search me-1"></i>Literaturrecherche
-                    <div class="form-text mt-0">arXiv, Semantic Scholar, PubMed</div>
+                    <div class="form-text mt-0" id="research-hint">arXiv, Semantic Scholar, PubMed</div>
                 </label>
             </div>
         </div>
@@ -158,8 +163,31 @@ function updateBeatsPreview() {
     container.innerHTML = html;
 }
 
-document.getElementById('id_framework').addEventListener('change', updateBeatsPreview);
-document.addEventListener('DOMContentLoaded', updateBeatsPreview);
+function updateFormDefaults() {
+    const opt = document.getElementById('id_framework').selectedOptions[0];
+    const group = opt ? opt.dataset.group : '';
+    const audSel = document.getElementById('id_audience');
+    const hint = document.getElementById('research-hint');
+    if (group === 'Sachbuch / Nonfiction') {
+        audSel.value = 'Interessierte Leser';
+        hint.textContent = 'Web (Brave), Semantic Scholar, OpenAlex';
+    } else if (group === 'Akademisch / Wissenschaftlich') {
+        audSel.value = 'Fachpublikum';
+        hint.textContent = 'arXiv, Semantic Scholar, PubMed';
+    } else {
+        audSel.value = 'Interessierte Leser';
+        hint.textContent = 'Web (Brave)';
+    }
+}
+
+document.getElementById('id_framework').addEventListener('change', function() {
+    updateBeatsPreview();
+    updateFormDefaults();
+});
+document.addEventListener('DOMContentLoaded', function() {
+    updateBeatsPreview();
+    updateFormDefaults();
+});
 
 document.getElementById('btn-start').closest('form').addEventListener('submit', function() {
     const btn = document.getElementById('btn-start');
