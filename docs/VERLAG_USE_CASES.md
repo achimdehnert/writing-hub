@@ -30,7 +30,7 @@
 | 1.2 | **Projektanlage mit Inhaltstyp-Steuerung** — Roman, Sachbuch, Kurzgeschichte, akademisch anlegen mit typ-spezifischen Workflows | P0 | ✅ | — | `BookProject.content_type` + `ContentTypeLookup` + Quick Project. Sachbuch/Nonfiction gerade frisch implementiert |
 | 1.3 | **Framework-basierte Outline-Generierung** — KI-Outline aus 15+ Frameworks (3-Akt, Sachbuch, IMRaD, Dissertation etc.) | P0 | ✅ | — | `OutlineFramework` + `OutlineGeneratorService`, KI-Generator Modal |
 | 1.4 | **Kapitelstruktur manuell bearbeiten** — Drag & Drop, Reihenfolge, Beschreibungen, Beats | P0 | ✅ | — | `OutlineVersion` + `OutlineNode` mit CRUD |
-| 1.5 | **Verlagsseitige Projekt-Templates** — vordefinierte Buchstrukturen (z.B. "Ratgeber 200 Seiten", "Krimi 80k Wörter") als Vorlage | P1 | ❌ | M | Neue Entity `ProjectTemplate` mit vorgefüllten Werten (Framework, Wortziel, Genre, Zielgruppe). Admin-UI + Template-Picker beim Erstellen |
+| 1.5 | **Verlagsseitige Projekt-Templates** — vordefinierte Buchstrukturen (z.B. "Ratgeber 200 Seiten", "Krimi 80k Wörter") als Vorlage | P1 | ✅ | — | `ProjectTemplate` Model + `views_templates.py` (TemplateListView, TemplateApplyView). 6 System-Templates (Roman, Krimi, Sachbuch, IMRaD, Essay, Novelle). Template-Picker in Projektliste |
 | 1.6 | **Serien-Management** — Mehrere Bücher einer Reihe verwalten, übergreifende Kontinuität | P2 | ✅ | — | `apps/series/` mit `BookSeries`, `SeriesArc` |
 
 ---
@@ -45,7 +45,7 @@
 | 2.4 | **Weltenbau** — Orte, Szenen, Welten für Fiktion erstellen und verwalten | P2 | ✅ | — | `apps/worlds/` — Welten, Orte, Szenen mit KI-Generierung |
 | 2.5 | **Charakter-Entwicklung** — Figuren mit Profil, Beziehungen, Entwicklungsbogen | P2 | ✅ | — | `apps/worlds/` — CharacterService mit KI |
 | 2.6 | **Faktencheck-Service** — KI-gestützte Faktenprüfung für Sachbücher (Behauptungen gegen Quellen abgleichen) | P1 | ❌ | L | Neuer Service: Behauptungen extrahieren → gegen Citation-DB + Web prüfen → Konfidenz-Score. Kritisch für Sachbuch-Verlage |
-| 2.7 | **Kapitel-spezifische Recherche** — Pro Kapitel gezielt recherchieren, Ergebnisse dem Kapitel zuordnen | P1 | 🔶 | S | `outline_research` + `node_research` Endpoints existieren, aber Zuordnung Quelle→Kapitel fehlt |
+| 2.7 | **Kapitel-spezifische Recherche** — Pro Kapitel gezielt recherchieren, Ergebnisse dem Kapitel zuordnen | P1 | ✅ | — | `research_chapter_sources()` + `OutlineNodeResearchAjaxView` persistieren Papers als `ProjectCitation` mit `node`-FK. Citations-Dashboard: `assign_chapter`-Dropdown pro Quelle. `ResearchNote.relevant_nodes` M2M für Recherche-Notizen |
 
 ---
 
@@ -106,16 +106,16 @@
 
 | # | Use Case | Prio | Status | Aufwand | Details |
 |---|----------|------|--------|---------|---------|
-| 6.1a | **Rollenwechsel-Workflow (Solo)** — Ein User durchläuft Phasen als Autor→Lektor→Verleger mit phasenspezifischer UI | P0 | 🔶 | M | `ProjectPhaseExecution` existiert bereits. Benötigt: aktive Rolle pro Phase anzeigen, phasenspezifische Sidebar/Aktionen, "Hut wechseln"-Button. **Kein Multi-User nötig** |
+| 6.1a | **Rollenwechsel-Workflow (Solo)** — Ein User durchläuft Phasen als Autor→Lektor→Verleger mit phasenspezifischer UI | P0 | ✅ | — | `views_workflow.py` — ProjectWorkflowView mit Rollen-Buttons (Autor/Lektor/Verleger), phasenspezifischer Checkliste, Meilenstein-Integration |
 | 6.1b | **Multi-User mit Rollen (Team)** — Mehrere Personen mit Autor/Lektor/Verleger-Rolle am selben Projekt | P2 | ❌ | L | Team-Model, Einladungs-Link, rollenbasierte Berechtigungen. Erst relevant ab 3+ Personen im Verlag |
-| 6.2 | **Verlags-Dashboard** — Überblick über alle Projekte mit Status, Phase, Fortschritt, nächste Aktion | P0 | 🔶 | M | Projektliste existiert. Benötigt: Phasen-Status-Spalte, Fortschrittsbalken, Filter nach Phase/Typ, "Nächster Schritt"-Anzeige. Für Solo-Verleger: Kanban-Board (Idee→Schreiben→Lektorat→Produktion→Fertig) |
-| 6.3 | **Deadline & Meilenstein-Tracking** — Abgabetermine, Phasen-Deadlines, Erinnerungen | P1 | ❌ | M | Neues Model: `ProjectMilestone` (Phase, Deadline, Status). Kalender-View, E-Mail-Reminder |
-| 6.4 | **Phasen-Checkliste & Gate-Freigabe** — Pro Phase: Checkliste abarbeiten, dann nächste Phase freischalten | P1 | 🔶 | M | `ProjectPhaseExecution` + `gate_approved_by` existiert. Für kleinen Verlag: einfache Checkliste statt komplexer Workflow-Engine. Selbst-Freigabe mit Bestätigungs-Dialog |
-| 6.5 | **Notiz-System pro Kapitel** — Eigene Notizen, KI-Feedback und Lektorats-Anmerkungen an einem Ort | P1 | 🔶 | S | ChapterReview existiert. Für Solo: Notizen = Selbst-Kommentare beim Rollenwechsel ("als Lektor notiert: ..."). Inline-Annotationen und @mentions erst für Team-Modus (6.1b) |
+| 6.2 | **Verlags-Dashboard** — Überblick über alle Projekte mit Status, Phase, Fortschritt, nächste Aktion | P0 | ✅ | — | Workflow-View mit 5 Phasen-Karten, Fortschrittsbalken, Checklisten-Counter. Meilenstein-Übersicht integriert. Kanban-Ansicht via Phasen-Rail |
+| 6.3 | **Deadline & Meilenstein-Tracking** — Abgabetermine, Phasen-Deadlines, Erinnerungen | P1 | ✅ | — | `ProjectMilestone` Model + `views_milestones.py` (CRUD, Toggle, Überfällig-Anzeige). Template mit offenen/erledigten Meilensteinen |
+| 6.4 | **Phasen-Checkliste & Gate-Freigabe** — Pro Phase: Checkliste abarbeiten, dann nächste Phase freischalten | P1 | ✅ | — | `PhaseChecklistItem` Model + ChecklistToggleView/ChecklistAddView. 16 Default-Items über 5 Phasen, eigene Items hinzufügbar. Fortschrittsbalken pro Phase |
+| 6.5 | **Notiz-System pro Kapitel** — Eigene Notizen, KI-Feedback und Lektorats-Anmerkungen an einem Ort | P1 | ✅ | — | `ChapterNote` Model + ChapterNoteAddView/ChapterNoteResolveView. Rollen-Tag (Autor/Lektor/Verleger), Resolved-Toggle |
 | 6.6 | **Aktivitäts-Log / Audit-Trail** — Wer hat wann was geändert | P2 | ❌ | M | Benötigt: Django-Signals oder Middleware für Change-Tracking |
 | 6.7 | **API für externe Systeme** — REST/GraphQL für Integration mit Verlagssystemen (ERP, Warenwirtschaft) | P2 | 🔶 | L | Basis-REST existiert (`views.py`). Benötigt: vollständige API, Auth (API-Keys/OAuth), Dokumentation |
 | 6.8 | **White-Label / Mandantenfähigkeit** — Mehrere Verlage auf einer Instanz | P3 | ❌ | XL | Django-Tenants oder Schema-basierte Trennung. Branding pro Verlag |
-| 6.9 | **Verlagsprofil & Imprint** — Verlagsname, Logo, Standard-Copyright, Standard-Metadaten als Voreinstellung für alle Projekte | P1 | ❌ | S | Neues Model `PublisherProfile` (Name, Logo, Default-Copyright, BISAC-Präferenzen). Wird in `PublishingProfile` als Default übernommen. Spart Eingabe-Zeit bei jedem neuen Buch |
+| 6.9 | **Verlagsprofil & Imprint** — Verlagsname, Logo, Standard-Copyright, Standard-Metadaten als Voreinstellung für alle Projekte | P1 | ✅ | — | `PublisherProfile` Model + `views_publisher.py` (PublisherProfileView). Form-basierte Bearbeitung, Default-Profile, Imprint-Verwaltung |
 
 ---
 

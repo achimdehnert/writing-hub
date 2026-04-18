@@ -74,6 +74,12 @@
         <a href="{% url 'projects:beta_dashboard' project.pk %}" class="btn btn-sm btn-action btn-action-beta">
             <i class="bi bi-people me-1"></i> Beta
         </a>
+        <a href="{% url 'projects:workflow' project.pk %}" class="btn btn-sm btn-action" style="background:#1a1a2e;border-color:#5a3e9c;color:#a78bfa;">
+            <i class="bi bi-kanban me-1"></i> Workflow
+        </a>
+        <a href="{% url 'projects:milestones' project.pk %}" class="btn btn-sm btn-action" style="background:#1a2e1a;border-color:#3e7a3e;color:#86efac;">
+            <i class="bi bi-flag me-1"></i> Meilensteine
+        </a>
         <a href="{% url 'projects:edit' project.pk %}" class="btn btn-sm btn-action btn-action-neutral">
             <i class="bi bi-gear me-1"></i> Einstellungen
         </a>

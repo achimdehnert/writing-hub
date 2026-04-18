@@ -16,6 +16,7 @@ from django.views import View
 from .constants import SUMMARY_CITATION_FORMATS, SUMMARY_STYLES
 from .models import BookProject, OutlineNode, OutlineVersion
 from .services.citation_service import (
+    _persist_papers_as_citations,
     research_outline_node,
     summarize_papers,
 )
@@ -151,6 +152,9 @@ class OutlineNodeResearchAjaxView(LoginRequiredMixin, View):
             llm_api_key=llm_key or None,
         )
 
+        papers = result.get("papers", [])[:8]
+        citations_created = _persist_papers_as_citations(project, node, papers)
+
         return JsonResponse({
             "ok": True,
             "node_title": node.title,
@@ -158,7 +162,8 @@ class OutlineNodeResearchAjaxView(LoginRequiredMixin, View):
             "writing_brief": result.get("writing_brief", ""),
             "summary": result.get("summary", ""),
             "key_points": result.get("key_points", []),
-            "papers": result.get("papers", [])[:8],
+            "papers": papers,
             "ai_generated": result.get("ai_generated", False),
             "source_count": result.get("source_count", 0),
+            "citations_created": citations_created,
         })

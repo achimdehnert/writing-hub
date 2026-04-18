@@ -619,6 +619,7 @@ class ChapterResearchView(LoginRequiredMixin, View):
             "ok": True,
             "paper_count": result.get("paper_count", 0),
             "notes_preview": result.get("notes_preview", ""),
+            "citations_created": result.get("citations_created", 0),
         })
 
 

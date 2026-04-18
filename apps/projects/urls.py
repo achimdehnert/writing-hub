@@ -11,13 +11,16 @@ from . import (
     views_knowledge,
     views_lektorat,
     views_manuscript,
+    views_milestones,
     views_peer_review,
     views_publisher,
     views_publishing,
     views_quick_project,
     views_research_summary,
     views_review,
+    views_templates,
     views_versions,
+    views_workflow,
 )
 
 app_name = "projects"
@@ -99,6 +102,20 @@ urlpatterns = [
     path("<uuid:pk>/peer-review/finding/<uuid:finding_pk>/resolve/", views_peer_review.PeerReviewFindingResolveView.as_view(), name="peer_review_resolve"),
     # Verlagsprofil (UC 6.9)
     path("publisher/", views_publisher.PublisherProfileView.as_view(), name="publisher_profile"),
+    # Meilensteine (UC 6.3)
+    path("<uuid:pk>/milestones/", views_milestones.ProjectMilestonesView.as_view(), name="milestones"),
+    path("<uuid:pk>/milestones/<uuid:milestone_pk>/toggle/", views_milestones.MilestoneToggleView.as_view(), name="milestone_toggle"),
+    path("<uuid:pk>/milestones/<uuid:milestone_pk>/delete/", views_milestones.MilestoneDeleteView.as_view(), name="milestone_delete"),
+    # Workflow / Rollenwechsel / Checkliste (UC 6.1a, 6.4)
+    path("<uuid:pk>/workflow/", views_workflow.ProjectWorkflowView.as_view(), name="workflow"),
+    path("<uuid:pk>/workflow/checklist/<uuid:item_pk>/toggle/", views_workflow.ChecklistToggleView.as_view(), name="checklist_toggle"),
+    path("<uuid:pk>/workflow/checklist/add/", views_workflow.ChecklistAddView.as_view(), name="checklist_add"),
+    # Kapitel-Notizen (UC 6.5)
+    path("<uuid:pk>/note/<uuid:node_pk>/add/", views_workflow.ChapterNoteAddView.as_view(), name="chapter_note_add"),
+    path("<uuid:pk>/note/<uuid:note_pk>/resolve/", views_workflow.ChapterNoteResolveView.as_view(), name="chapter_note_resolve"),
+    # Projekt-Vorlagen (UC 1.5)
+    path("templates/", views_templates.TemplateListView.as_view(), name="template_list"),
+    path("templates/<uuid:template_pk>/apply/", views_templates.TemplateApplyView.as_view(), name="template_apply"),
     # Quick Project (autonome Essay-Pipeline)
     path("quick/", views_quick_project.QuickProjectView.as_view(), name="quick_project"),
     path("quick/start/", views_quick_project.QuickProjectStartView.as_view(), name="quick_project_start"),

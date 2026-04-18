@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Workflow — {{ project.title }} — Writing Hub{% endblock %}
+{% block nav_projects %}active{% endblock %}
+
+{% block content %}
+<div style="max-width: 1000px; margin: 0 auto;">
+
+<!-- Zurück -->
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <a href="{% url 'projects:detail' project.pk %}" class="btn btn-link text-muted ps-0">
+        <i class="bi bi-arrow-left me-1"></i> {{ project.title }}
+    </a>
+</div>
+
+<h3 class="fw-bold mb-2" style="color:#e2e8f0;">
+    <i class="bi bi-kanban me-2" style="color:#a78bfa;"></i>Workflow &amp; Phasen
+</h3>
+<p class="text-muted small mb-4">Arbeite dich durch die Phasen — als Autor, Lektor und Verleger.</p>
+
+<!-- Rollenwechsel-Buttons (UC 6.1a) -->
+<div class="d-flex gap-2 mb-4">
+    {% for role_key, role_label, role_icon in roles %}
+    <a href="?role={{ role_key }}"
+       class="btn btn-sm {% if active_role == role_key %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+        <i class="bi {{ role_icon }} me-1"></i> {{ role_label }}
+    </a>
+    {% endfor %}
+</div>
+
+<!-- Phasen-Rail -->
+<div class="row g-3 mb-4">
+    {% for phase in phases %}
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100 {% if active_phase.key == phase.key %}border-primary{% else %}border-secondary{% endif %}"
+             style="background:#161b22;">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h6 class="mb-0" style="color:#e2e8f0;">
+                        <i class="bi {{ phase.icon }} me-1" style="color:#a78bfa;"></i>{{ phase.label }}
+                    </h6>
+                    {% if phase.is_complete %}
+                    <span class="badge bg-success" style="font-size:.65rem;">Fertig</span>
+                    {% else %}
+                    <span class="badge bg-dark border border-secondary" style="font-size:.65rem;">{{ phase.checked }}/{{ phase.total }}</span>
+                    {% endif %}
+                </div>
+
+                <!-- Progress bar -->
+                <div class="progress mb-3" style="height:4px;">
+                    <div class="progress-bar {% if phase.is_complete %}bg-success{% else %}bg-primary{% endif %}"
+                         style="width:{{ phase.progress_pct }}%;"></div>
+                </div>
+
+                <!-- Checkliste (UC 6.4) -->
+                {% for item in phase.items %}
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <form method="post" action="{% url 'projects:checklist_toggle' project.pk item.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm p-0 border-0"
+                                style="color:{% if item.is_checked %}#86efac{% else %}#4b5563{% endif %};">
+                            <i class="bi {% if item.is_checked %}bi-check-square-fill{% else %}bi-square{% endif %}"></i>
+                        </button>
+                    </form>
+                    <span class="small {% if item.is_checked %}text-decoration-line-through text-muted{% else %}{% endif %}"
+                          style="color:#cbd5e1;">{{ item.label }}</span>
+                </div>
+                {% endfor %}
+
+                <!-- Add custom checklist item -->
+                {% if active_phase.key == phase.key %}
+                <form method="post" action="{% url 'projects:checklist_add' project.pk %}" class="mt-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="phase" value="{{ phase.key }}">
+                    <div class="input-group input-group-sm">
+                        <input type="text" name="label" class="form-control bg-dark text-light border-secondary"
+                               placeholder="Eigenen Punkt hinzufügen…">
+                        <button type="submit" class="btn btn-outline-secondary"><i class="bi bi-plus"></i></button>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Nächste Meilensteine -->
+{% if milestones %}
+<div class="card mb-4" style="background:#161b22;border-color:#2d3748;">
+    <div class="card-body">
+        <h6 class="card-title mb-3">
+            <i class="bi bi-flag me-1" style="color:#86efac;"></i> Nächste Meilensteine
+        </h6>
+        {% for ms in milestones %}
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="small" style="color:#cbd5e1;">{{ ms.title }}</span>
+            <div>
+                <span class="text-muted small">{{ ms.due_date|date:"d.m.Y" }}</span>
+                {% if ms.is_overdue %}
+                <span class="badge bg-danger ms-1" style="font-size:.6rem;">überfällig</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        <a href="{% url 'projects:milestones' project.pk %}" class="btn btn-sm btn-outline-secondary mt-2">
+            <i class="bi bi-flag me-1"></i> Alle Meilensteine
+        </a>
+    </div>
+</div>
+{% endif %}
+
+</div>
+{% endblock %}

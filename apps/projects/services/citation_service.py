@@ -483,19 +483,21 @@ def research_chapter_sources(
     max_results: int = 15,
 ) -> dict[str, Any]:
     """
-    Recherchiert Quellen für ein OutlineNode und speichert als Notizen.
+    Recherchiert Quellen für ein OutlineNode und speichert als Notizen + Citations.
 
     Liest Titel, Beschreibung und Projekt-Thema aus dem Node,
     ruft search_papers() auf und formatiert die Ergebnisse als
     strukturierte Recherche-Notizen in node.notes.
+    Zusätzlich werden die Papers als ProjectCitation mit Kapitel-Zuordnung
+    persistiert (UC 2.7).
 
     Args:
         node_id: UUID des OutlineNode
         max_results: Max. Treffer (Standard: 15)
 
-    Returns dict mit 'paper_count', 'notes_preview', 'papers'.
+    Returns dict mit 'paper_count', 'notes_preview', 'papers', 'citations_created'.
     """
-    from apps.projects.models import OutlineNode
+    from apps.projects.models import OutlineNode, ProjectCitation
 
     node = OutlineNode.objects.select_related(
         "outline_version__project"
@@ -513,17 +515,76 @@ def research_chapter_sources(
     result = smart_search_papers(topic, max_results=max_results, search_rounds=2)
     papers = result["papers"]
     if not papers:
-        return {"paper_count": 0, "notes_preview": "", "papers": []}
+        return {"paper_count": 0, "notes_preview": "", "papers": [], "citations_created": 0}
 
     notes = format_research_notes(papers, node.title)
     node.notes = notes
     node.save(update_fields=["notes"])
 
+    citations_created = _persist_papers_as_citations(project, node, papers)
+
     return {
         "paper_count": len(papers),
         "notes_preview": notes[:500],
         "papers": papers,
+        "citations_created": citations_created,
     }
+
+
+def _persist_papers_as_citations(project, node, papers: list[dict[str, Any]]) -> int:
+    """
+    Persist search-result papers as ProjectCitation records linked to a chapter node.
+    Skips duplicates (same DOI or title within project). Returns count of newly created.
+    """
+    from apps.projects.models import ProjectCitation
+
+    created_count = 0
+    for paper in papers:
+        doi = paper.get("doi") or ""
+        title = paper.get("title") or ""
+        if not title:
+            continue
+
+        if doi and ProjectCitation.objects.filter(project=project, doi=doi).exists():
+            continue
+        if ProjectCitation.objects.filter(project=project, title=title).exists():
+            continue
+
+        authors_raw = paper.get("authors", [])
+        if authors_raw and isinstance(authors_raw[0], str):
+            authors_json = [
+                {
+                    "family": a.split()[-1] if a.split() else a,
+                    "given": " ".join(a.split()[:-1]) if len(a.split()) > 1 else "",
+                }
+                for a in authors_raw
+            ]
+        else:
+            authors_json = authors_raw
+
+        year_raw = paper.get("year")
+        if year_raw is None and paper.get("publication_date"):
+            y = str(paper["publication_date"])[:4]
+            year_raw = int(y) if y.isdigit() else None
+
+        try:
+            ProjectCitation.objects.create(
+                project=project,
+                node=node,
+                title=title,
+                authors_json=authors_json or [],
+                year=int(year_raw) if year_raw else None,
+                doi=doi,
+                url=paper.get("url") or "",
+                abstract=(paper.get("abstract") or "")[:2000],
+                source_type=paper.get("source_type") or "journal",
+                added_via="search",
+            )
+            created_count += 1
+        except Exception:
+            logger.debug("Skipping duplicate citation: %s", title[:60])
+
+    return created_count
 
 
 def format_research_notes(papers: list[dict[str, Any]], chapter_title: str) -> str:

@@ -1545,6 +1545,190 @@ class PublisherProfile(models.Model):
         return self.name
 
 
+# =====================================================================
+# UC 6.3: ProjectMilestone — Deadline & Meilenstein-Tracking
+# =====================================================================
+
+
+class ProjectMilestone(models.Model):
+    """
+    Meilenstein/Deadline pro Projekt (UC 6.3).
+    Solo-Verleger trackt Phasen-Deadlines und Abgabetermine.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        BookProject, on_delete=models.CASCADE, related_name="milestones",
+    )
+    title = models.CharField(max_length=300, verbose_name="Meilenstein")
+    PHASE_CHOICES = [
+        ("concept", "Konzept & Planung"),
+        ("research", "Recherche"),
+        ("writing", "Schreiben"),
+        ("review", "Lektorat & Review"),
+        ("production", "Publikation & Export"),
+    ]
+    phase = models.CharField(
+        max_length=30, choices=PHASE_CHOICES, blank=True, default="",
+        verbose_name="Phase",
+    )
+    due_date = models.DateField(verbose_name="Fälligkeitsdatum")
+    is_completed = models.BooleanField(default=False)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True, verbose_name="Notizen")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "wh_project_milestones"
+        ordering = ["due_date"]
+        verbose_name = "Meilenstein"
+        verbose_name_plural = "Meilensteine"
+
+    def __str__(self):
+        return f"{self.title} — {self.due_date}"
+
+    @property
+    def is_overdue(self):
+        return not self.is_completed and self.due_date < datetime.date.today()
+
+    @property
+    def days_remaining(self):
+        if self.is_completed:
+            return 0
+        return (self.due_date - datetime.date.today()).days
+
+
+# =====================================================================
+# UC 1.5: ProjectTemplate — Vordefinierte Buchstruktur-Vorlagen
+# =====================================================================
+
+
+class ProjectTemplate(models.Model):
+    """
+    Verlagsseitige Projekt-Vorlage (UC 1.5).
+    z.B. "Ratgeber 200 Seiten", "Krimi 80k Wörter", "Dissertation IMRaD".
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=300, verbose_name="Template-Name")
+    description = models.TextField(blank=True)
+    content_type = models.CharField(
+        max_length=30, choices=BookProject.ContentType.choices,
+        default=BookProject.ContentType.NOVEL,
+    )
+    framework_key = models.CharField(
+        max_length=100, blank=True, default="three_act",
+        verbose_name="Outline-Framework",
+    )
+    default_target_words = models.PositiveIntegerField(
+        default=60000, verbose_name="Ziel-Wortzahl",
+    )
+    default_genre = models.CharField(max_length=100, blank=True)
+    default_audience = models.CharField(max_length=200, blank=True)
+    chapter_count_hint = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="Kapitelanzahl (Richtwert)",
+    )
+    is_active = models.BooleanField(default=True)
+    is_system = models.BooleanField(
+        default=False,
+        help_text="System-Templates können nicht gelöscht werden.",
+    )
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        null=True, blank=True, related_name="project_templates",
+        help_text="NULL = globales Template für alle User.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "wh_project_templates"
+        ordering = ["content_type", "name"]
+        verbose_name = "Projekt-Vorlage"
+        verbose_name_plural = "Projekt-Vorlagen"
+
+    def __str__(self):
+        return self.name
+
+
+# =====================================================================
+# UC 6.5: ChapterNote — Notizen pro Kapitel beim Rollenwechsel
+# =====================================================================
+
+
+class ChapterNote(models.Model):
+    """
+    Kapitel-Notiz (UC 6.5).
+    Solo-Verleger hinterlässt sich selbst Notizen beim Rollenwechsel:
+    "Als Lektor notiert: Kapitel 4 braucht bessere Überleitung."
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    node = models.ForeignKey(
+        OutlineNode, on_delete=models.CASCADE, related_name="chapter_notes",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True,
+    )
+    ROLE_CHOICES = [
+        ("autor", "Autor"),
+        ("lektor", "Lektor"),
+        ("verleger", "Verleger"),
+    ]
+    role = models.CharField(
+        max_length=20, choices=ROLE_CHOICES, default="autor",
+        verbose_name="Geschrieben als",
+    )
+    content = models.TextField(verbose_name="Notiz")
+    is_resolved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "wh_chapter_notes"
+        ordering = ["-created_at"]
+        verbose_name = "Kapitel-Notiz"
+        verbose_name_plural = "Kapitel-Notizen"
+
+    def __str__(self):
+        return f"{self.node.title} — {self.get_role_display()}: {self.content[:60]}"
+
+
+# =====================================================================
+# UC 6.4: PhaseChecklistItem — Checkliste pro Projektphase
+# =====================================================================
+
+
+class PhaseChecklistItem(models.Model):
+    """
+    Checklisten-Eintrag pro Phase (UC 6.4).
+    Solo-Verleger arbeitet Punkte ab, bevor er die Phase freigibt.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        BookProject, on_delete=models.CASCADE, related_name="checklist_items",
+    )
+    phase = models.CharField(
+        max_length=30, choices=ProjectMilestone.PHASE_CHOICES,
+        verbose_name="Phase",
+    )
+    label = models.CharField(max_length=300, verbose_name="Checkpunkt")
+    is_checked = models.BooleanField(default=False)
+    checked_at = models.DateTimeField(null=True, blank=True)
+    order = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "wh_phase_checklist_items"
+        ordering = ["phase", "order"]
+        verbose_name = "Phasen-Checkpunkt"
+        verbose_name_plural = "Phasen-Checkpunkte"
+
+    def __str__(self):
+        check = "✓" if self.is_checked else "○"
+        return f"[{check}] {self.label}"
+
+
 # ADR-158: DialogueScene discoverable machen
 from apps.projects.models_narrative import DialogueScene  # noqa: E402, F401
 

@@ -2,12 +2,13 @@ from django.contrib import admin
 
 from .models import (
     AudienceLookup, AuthorStyleLookup, BetaReaderFeedback,
-    BetaReaderSession, BookProject, ComparableTitle,
+    BetaReaderSession, BookProject, ChapterNote, ComparableTitle,
     ContentTypeLookup, GenreConventionProfile, GenreLookup,
     OutlineFramework, OutlineFrameworkBeat, OutlineNode,
     OutlineSequence, OutlineVersion, PeerReviewFinding,
-    PeerReviewSession, PitchDocument, ProjectCitation,
-    ProjectGenrePromise, ProjectTurningPoint, PublisherProfile,
+    PeerReviewSession, PhaseChecklistItem, PitchDocument,
+    ProjectCitation, ProjectGenrePromise, ProjectMilestone,
+    ProjectTemplate, ProjectTurningPoint, PublisherProfile,
     ResearchNote, SubplotArc, TextAnalysisSnapshot,
 )
 from .models_narrative import DialogueScene
@@ -337,4 +338,39 @@ class ProjectCitationAdmin(admin.ModelAdmin):
     search_fields = ["title", "doi", "project__title"]
     raw_id_fields = ["project", "node"]
     readonly_fields = ["id", "created_at", "updated_at"]
+
+
+@admin.register(ProjectMilestone)
+class ProjectMilestoneAdmin(admin.ModelAdmin):
+    list_display = ["title", "project", "phase", "due_date", "is_completed", "created_at"]
+    list_filter = ["phase", "is_completed"]
+    search_fields = ["title", "project__title"]
+    raw_id_fields = ["project"]
+    readonly_fields = ["id", "created_at"]
+
+
+@admin.register(ProjectTemplate)
+class ProjectTemplateAdmin(admin.ModelAdmin):
+    list_display = ["name", "content_type", "default_target_words", "is_active", "is_system", "owner"]
+    list_filter = ["content_type", "is_active", "is_system"]
+    search_fields = ["name"]
+    readonly_fields = ["id", "created_at"]
+
+
+@admin.register(ChapterNote)
+class ChapterNoteAdmin(admin.ModelAdmin):
+    list_display = ["node", "role", "created_by", "is_resolved", "created_at"]
+    list_filter = ["role", "is_resolved"]
+    search_fields = ["content", "node__title"]
+    raw_id_fields = ["node"]
+    readonly_fields = ["id", "created_at"]
+
+
+@admin.register(PhaseChecklistItem)
+class PhaseChecklistItemAdmin(admin.ModelAdmin):
+    list_display = ["label", "project", "phase", "is_checked", "order"]
+    list_filter = ["phase", "is_checked"]
+    search_fields = ["label", "project__title"]
+    raw_id_fields = ["project"]
+    readonly_fields = ["id", "created_at"]
 

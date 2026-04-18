@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Projekt-Vorlagen — Writing Hub{% endblock %}
+{% block nav_projects %}active{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto;">
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <a href="{% url 'projects:list' %}" class="btn btn-link text-muted ps-0">
+        <i class="bi bi-arrow-left me-1"></i> Alle Projekte
+    </a>
+</div>
+
+<h3 class="fw-bold mb-2" style="color:#e2e8f0;">
+    <i class="bi bi-grid-3x3-gap me-2" style="color:#f472b6;"></i>Projekt-Vorlagen
+</h3>
+<p class="text-muted small mb-4">Wähle eine Vorlage, um schnell ein neues Projekt zu starten.</p>
+
+{% if templates %}
+<div class="row g-3">
+    {% for tpl in templates %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100" style="background:#161b22;border-color:#2d3748;">
+            <div class="card-body">
+                <h5 class="card-title fw-semibold" style="font-size:1rem;color:#e2e8f0;">{{ tpl.name }}</h5>
+                <div class="d-flex flex-wrap gap-1 mb-2">
+                    <span class="badge bg-dark border border-secondary" style="font-size:.65rem;">{{ tpl.get_content_type_display }}</span>
+                    {% if tpl.default_genre %}
+                    <span class="badge bg-secondary" style="font-size:.65rem;">{{ tpl.default_genre }}</span>
+                    {% endif %}
+                </div>
+                {% if tpl.description %}
+                <p class="text-muted small mb-2">{{ tpl.description|truncatechars:120 }}</p>
+                {% endif %}
+                <div class="text-muted small mb-3">
+                    <i class="bi bi-bullseye me-1"></i> {{ tpl.default_target_words|default:"—" }} Wörter
+                    {% if tpl.chapter_count_hint %}
+                    <span class="ms-2"><i class="bi bi-list-ol me-1"></i> ~{{ tpl.chapter_count_hint }} Kapitel</span>
+                    {% endif %}
+                </div>
+                <form method="post" action="{% url 'projects:template_apply' tpl.pk %}">
+                    {% csrf_token %}
+                    <div class="input-group input-group-sm">
+                        <input type="text" name="title" class="form-control bg-dark text-light border-secondary"
+                               placeholder="Projekttitel eingeben…" required>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-plus-lg me-1"></i> Erstellen
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-grid-3x3-gap display-4"></i>
+    <h4 class="mt-3">Noch keine Vorlagen vorhanden</h4>
+    <p>Vorlagen können in der Admin-Oberfläche angelegt werden.</p>
+    <a href="{% url 'projects:create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i> Projekt manuell erstellen
+    </a>
+</div>
+{% endif %}
+
+</div>
+{% endblock %}

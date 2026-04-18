@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Meilensteine — {{ project.title }} — Writing Hub{% endblock %}
+{% block nav_projects %}active{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto;">
+
+<!-- Zurück -->
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <a href="{% url 'projects:detail' project.pk %}" class="btn btn-link text-muted ps-0">
+        <i class="bi bi-arrow-left me-1"></i> {{ project.title }}
+    </a>
+</div>
+
+<h3 class="fw-bold mb-4" style="color:#e2e8f0;">
+    <i class="bi bi-flag me-2" style="color:#86efac;"></i>Meilensteine &amp; Deadlines
+</h3>
+
+<!-- Neuen Meilenstein anlegen -->
+<div class="card mb-4" style="background:#161b22;border-color:#2d3748;">
+    <div class="card-body">
+        <h6 class="card-title mb-3"><i class="bi bi-plus-circle me-1"></i> Neuer Meilenstein</h6>
+        <form method="post" class="row g-2 align-items-end">
+            {% csrf_token %}
+            <div class="col-md-4">
+                <label class="form-label small text-muted">Titel</label>
+                <input type="text" name="title" class="form-control form-control-sm bg-dark text-light border-secondary" required placeholder="z.B. Manuskript fertig">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted">Fällig</label>
+                <input type="date" name="due_date" class="form-control form-control-sm bg-dark text-light border-secondary" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted">Phase</label>
+                <select name="phase" class="form-select form-select-sm bg-dark text-light border-secondary">
+                    <option value="">— keine —</option>
+                    <option value="concept">Konzept</option>
+                    <option value="research">Recherche</option>
+                    <option value="writing">Schreiben</option>
+                    <option value="review">Lektorat</option>
+                    <option value="production">Publikation</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted">Notizen</label>
+                <input type="text" name="notes" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Optional">
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-sm btn-success w-100"><i class="bi bi-plus-lg"></i></button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Offene Meilensteine -->
+{% if upcoming %}
+<h5 class="mb-3 text-muted"><i class="bi bi-clock me-1"></i> Offen ({{ upcoming|length }})</h5>
+<div class="list-group mb-4">
+    {% for ms in upcoming %}
+    <div class="list-group-item d-flex align-items-center justify-content-between
+        {% if ms.is_overdue %}border-danger{% else %}border-secondary{% endif %}"
+        style="background:#161b22;">
+        <div class="d-flex align-items-center gap-3">
+            <form method="post" action="{% url 'projects:milestone_toggle' project.pk ms.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-secondary" title="Erledigt markieren">
+                    <i class="bi bi-circle"></i>
+                </button>
+            </form>
+            <div>
+                <span class="fw-semibold" style="color:#e2e8f0;">{{ ms.title }}</span>
+                {% if ms.phase %}
+                <span class="badge bg-dark border border-secondary ms-2" style="font-size:.65rem;">{{ ms.get_phase_display }}</span>
+                {% endif %}
+                {% if ms.notes %}<div class="text-muted small">{{ ms.notes }}</div>{% endif %}
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            {% if ms.is_overdue %}
+            <span class="badge bg-danger" style="font-size:.7rem;">
+                {{ ms.days_remaining|cut:"-" }} Tage überfällig
+            </span>
+            {% else %}
+            <span class="text-muted small">{{ ms.due_date|date:"d.m.Y" }}</span>
+            <span class="badge bg-dark border border-secondary" style="font-size:.65rem;">
+                noch {{ ms.days_remaining }} Tag{{ ms.days_remaining|pluralize:"e" }}
+            </span>
+            {% endif %}
+            <form method="post" action="{% url 'projects:milestone_delete' project.pk ms.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-danger" title="Löschen"><i class="bi bi-trash"></i></button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-4 text-muted mb-4">
+    <i class="bi bi-flag display-4"></i>
+    <p class="mt-2">Noch keine Meilensteine angelegt.</p>
+</div>
+{% endif %}
+
+<!-- Erledigte Meilensteine -->
+{% if completed %}
+<h5 class="mb-3 text-muted"><i class="bi bi-check-circle me-1"></i> Erledigt ({{ completed|length }})</h5>
+<div class="list-group mb-4">
+    {% for ms in completed %}
+    <div class="list-group-item d-flex align-items-center justify-content-between border-secondary" style="background:#0d1117;opacity:0.7;">
+        <div class="d-flex align-items-center gap-3">
+            <form method="post" action="{% url 'projects:milestone_toggle' project.pk ms.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-success" title="Wieder öffnen">
+                    <i class="bi bi-check-circle-fill"></i>
+                </button>
+            </form>
+            <div>
+                <span class="text-decoration-line-through" style="color:#94a3b8;">{{ ms.title }}</span>
+                {% if ms.completed_at %}
+                <span class="text-muted small ms-2">{{ ms.completed_at|date:"d.m.Y" }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+</div>
+{% endblock %}
