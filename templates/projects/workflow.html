@@ -32,8 +32,8 @@
 <div class="row g-3 mb-4">
     {% for phase in phases %}
     <div class="col-12 col-md-6 col-lg-4">
-        <div class="card h-100 {% if active_phase.key == phase.key %}border-primary{% else %}border-secondary{% endif %}"
-             style="background:#161b22;">
+        <div class="card h-100 {% if active_phase.key == phase.key %}border-primary{% else %}{% endif %}"
+             style="background:#161b22;{% if active_phase.key == phase.key %}box-shadow:0 0 0 1px rgba(99,102,241,.3);{% endif %}">
             <div class="card-body">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                     <h6 class="mb-0" style="color:#e2e8f0;">
@@ -68,17 +68,15 @@
                 {% endfor %}
 
                 <!-- Add custom checklist item -->
-                {% if active_phase.key == phase.key %}
                 <form method="post" action="{% url 'projects:checklist_add' project.pk %}" class="mt-2">
                     {% csrf_token %}
                     <input type="hidden" name="phase" value="{{ phase.key }}">
                     <div class="input-group input-group-sm">
-                        <input type="text" name="label" class="form-control bg-dark text-light border-secondary"
-                               placeholder="Eigenen Punkt hinzufügen…">
+                        <input type="text" name="label" class="form-control"
+                               placeholder="+ Eigenen Punkt…">
                         <button type="submit" class="btn btn-outline-secondary"><i class="bi bi-plus"></i></button>
                     </div>
                 </form>
-                {% endif %}
             </div>
         </div>
     </div>

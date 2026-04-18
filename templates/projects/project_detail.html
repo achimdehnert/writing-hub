@@ -28,61 +28,73 @@
         {% if project.content_type_lookup %}• {{ project.content_type_lookup }}{% endif %}
     </div>
 
-    <!-- Quick-Action Badges -->
-    <div class="d-flex flex-wrap gap-2 mb-3">
-        <a href="{% url 'projects:chapter_writer' project.pk %}" class="btn btn-sm btn-action btn-action-write">
-            <i class="bi bi-pen me-1"></i> Schreiben
-        </a>
-        <a href="{% url 'projects:chapter_writer' project.pk %}" class="btn btn-sm btn-action btn-action-write">
-            <i class="bi bi-stars me-1"></i> KI-Schreiben
-        </a>
-        {% if selected_outline %}
-        <a href="{% url 'outlines:detail' selected_outline.pk %}" class="btn btn-sm btn-action btn-action-neutral">
-            <i class="bi bi-list-ol me-1"></i> Outline
-        </a>
-        {% endif %}
-        <button class="btn btn-sm btn-action btn-action-neutral" data-bs-toggle="modal" data-bs-target="#generateModal">
-            <i class="bi bi-magic me-1"></i> KI-Outline
-        </button>
-        <a href="{% url 'projects:drama_dashboard' project.pk %}" class="btn btn-sm btn-action btn-action-drama">
-            <i class="bi bi-activity me-1"></i> Drama
-        </a>
-        <a href="{% url 'projects:health' project.pk %}" class="btn btn-sm btn-action btn-action-health">
-            <i class="bi bi-heart-pulse me-1"></i> Health
-        </a>
-        <a href="{% url 'projects:pitch_dashboard' project.pk %}" class="btn btn-sm btn-action btn-action-pitch">
-            <i class="bi bi-send me-1"></i> Pitch
-        </a>
-        <a href="{% url 'projects:analysis' project.pk %}" class="btn btn-sm btn-action btn-action-analysis">
-            <i class="bi bi-bar-chart me-1"></i> Analyse
-        </a>
-        <a href="{% url 'projects:batch' project.pk %}" class="btn btn-sm btn-action btn-action-batch">
-            <i class="bi bi-collection-play me-1"></i> Batch
-        </a>
-        <a href="{% url 'projects:budget' project.pk %}" class="btn btn-sm btn-action btn-action-budget">
-            <i class="bi bi-calculator me-1"></i> Budget
-        </a>
-        <a href="{% url 'projects:research_dashboard' project.pk %}" class="btn btn-sm btn-action btn-action-research">
-            <i class="bi bi-journal-text me-1"></i> Recherche
-        </a>
-        <a href="{% url 'projects:citations' project.pk %}" class="btn btn-sm btn-action" style="background:#1a2a3a;border-color:#3b5a7a;color:#7dd3fc;">
-            <i class="bi bi-journal-bookmark me-1"></i> Quellen &amp; Zitation
-        </a>
-        <a href="{% url 'projects:outline_research' project.pk %}" class="btn btn-sm btn-action" style="background:#1a2a1a;border-color:#3b7a5a;color:#7dd3a0;">
-            <i class="bi bi-diagram-3 me-1"></i> Outline-Recherche
-        </a>
-        <a href="{% url 'projects:beta_dashboard' project.pk %}" class="btn btn-sm btn-action btn-action-beta">
-            <i class="bi bi-people me-1"></i> Beta
-        </a>
-        <a href="{% url 'projects:workflow' project.pk %}" class="btn btn-sm btn-action" style="background:#1a1a2e;border-color:#5a3e9c;color:#a78bfa;">
-            <i class="bi bi-kanban me-1"></i> Workflow
-        </a>
-        <a href="{% url 'projects:milestones' project.pk %}" class="btn btn-sm btn-action" style="background:#1a2e1a;border-color:#3e7a3e;color:#86efac;">
-            <i class="bi bi-flag me-1"></i> Meilensteine
-        </a>
-        <a href="{% url 'projects:edit' project.pk %}" class="btn btn-sm btn-action btn-action-neutral">
-            <i class="bi bi-gear me-1"></i> Einstellungen
-        </a>
+    <!-- Quick-Actions — grouped by workflow phase -->
+    <div class="mb-3">
+        <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+            <span class="text-muted me-1" style="font-size:.65rem;text-transform:uppercase;letter-spacing:.05em;">Schreiben</span>
+            <a href="{% url 'projects:chapter_writer' project.pk %}" class="btn btn-sm btn-action btn-action-write">
+                <i class="bi bi-pen me-1"></i> Schreiben
+            </a>
+            <a href="{% url 'projects:chapter_writer' project.pk %}" class="btn btn-sm btn-action btn-action-write">
+                <i class="bi bi-stars me-1"></i> KI-Schreiben
+            </a>
+            {% if selected_outline %}
+            <a href="{% url 'outlines:detail' selected_outline.pk %}" class="btn btn-sm btn-action btn-action-neutral">
+                <i class="bi bi-list-ol me-1"></i> Outline
+            </a>
+            {% endif %}
+            <button class="btn btn-sm btn-action btn-action-neutral" data-bs-toggle="modal" data-bs-target="#generateModal">
+                <i class="bi bi-magic me-1"></i> KI-Outline
+            </button>
+            <a href="{% url 'projects:batch' project.pk %}" class="btn btn-sm btn-action btn-action-batch">
+                <i class="bi bi-collection-play me-1"></i> Batch
+            </a>
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+            <span class="text-muted me-1" style="font-size:.65rem;text-transform:uppercase;letter-spacing:.05em;">Recherche</span>
+            <a href="{% url 'projects:research_dashboard' project.pk %}" class="btn btn-sm btn-action btn-action-research">
+                <i class="bi bi-journal-text me-1"></i> Recherche
+            </a>
+            <a href="{% url 'projects:citations' project.pk %}" class="btn btn-sm btn-action btn-action-research">
+                <i class="bi bi-journal-bookmark me-1"></i> Quellen
+            </a>
+            <a href="{% url 'projects:outline_research' project.pk %}" class="btn btn-sm btn-action btn-action-research">
+                <i class="bi bi-diagram-3 me-1"></i> Outline-Recherche
+            </a>
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+            <span class="text-muted me-1" style="font-size:.65rem;text-transform:uppercase;letter-spacing:.05em;">Qualität</span>
+            <a href="{% url 'projects:drama_dashboard' project.pk %}" class="btn btn-sm btn-action btn-action-drama">
+                <i class="bi bi-activity me-1"></i> Drama
+            </a>
+            <a href="{% url 'projects:health' project.pk %}" class="btn btn-sm btn-action btn-action-health">
+                <i class="bi bi-heart-pulse me-1"></i> Health
+            </a>
+            <a href="{% url 'projects:analysis' project.pk %}" class="btn btn-sm btn-action btn-action-analysis">
+                <i class="bi bi-bar-chart me-1"></i> Analyse
+            </a>
+            <a href="{% url 'projects:beta_dashboard' project.pk %}" class="btn btn-sm btn-action btn-action-beta">
+                <i class="bi bi-people me-1"></i> Beta
+            </a>
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <span class="text-muted me-1" style="font-size:.65rem;text-transform:uppercase;letter-spacing:.05em;">Projekt</span>
+            <a href="{% url 'projects:workflow' project.pk %}" class="btn btn-sm btn-action btn-action-neutral">
+                <i class="bi bi-kanban me-1"></i> Workflow
+            </a>
+            <a href="{% url 'projects:milestones' project.pk %}" class="btn btn-sm btn-action btn-action-neutral">
+                <i class="bi bi-flag me-1"></i> Meilensteine
+            </a>
+            <a href="{% url 'projects:pitch_dashboard' project.pk %}" class="btn btn-sm btn-action btn-action-pitch">
+                <i class="bi bi-send me-1"></i> Pitch
+            </a>
+            <a href="{% url 'projects:budget' project.pk %}" class="btn btn-sm btn-action btn-action-budget">
+                <i class="bi bi-calculator me-1"></i> Budget
+            </a>
+            <a href="{% url 'projects:edit' project.pk %}" class="btn btn-sm btn-action btn-action-neutral">
+                <i class="bi bi-gear me-1"></i> Einstellungen
+            </a>
+        </div>
     </div>
 
     <!-- Stat-Kästchen -->
@@ -206,8 +218,7 @@
 
     <!-- Konzept -->
     <div class="col-md-4">
-        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
-             onclick="location.href='{% url 'projects:edit' project.pk %}'">
+        <a href="{% url 'projects:edit' project.pk %}" class="card h-100 workflow-card text-decoration-none" style="background:#0d1117;border-color:#2d3748;">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-lightbulb me-2" style="color:#6366f1;font-size:1.2rem;"></i>
@@ -220,22 +231,21 @@
                         </div>
                     </div>
                 </div>
-                <div class="progress mb-1" style="height:3px;background:#1e2235;">
-                    <div class="progress-bar" style="width:{% if project.description %}100{% else %}0{% endif %}%;background:#6366f1;"></div>
+                <div class="progress mb-1" style="height:3px;">
+                    <div class="progress-bar" style="width:{% if project.description %}100{% else %}2{% endif %}%;background:{% if project.description %}#6366f1{% else %}#3d4468{% endif %};"></div>
                 </div>
                 <div class="d-flex justify-content-between" style="font-size:.7rem;">
                     <span class="text-primary">{% if project.description %}100%{% else %}0%{% endif %}</span>
                     <span class="text-muted">{% if project.description %}Fertig{% else %}Ausstehend{% endif %}</span>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
     {% if project.content_type == 'academic' or project.content_type == 'scientific' %}
     <!-- Literaturrecherche (nur academic/scientific) -->
     <div class="col-md-4">
-        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
-             onclick="location.href='{% url 'projects:citations' project.pk %}'">
+        <a href="{% url 'projects:citations' project.pk %}" class="card h-100 workflow-card text-decoration-none" style="background:#0d1117;border-color:#2d3748;">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-journal-bookmark me-2" style="color:#7dd3fc;font-size:1.2rem;"></i>
@@ -244,21 +254,20 @@
                         <div class="text-muted" style="font-size:.72rem;">Quellen &amp; Zitationen</div>
                     </div>
                 </div>
-                <div class="progress mb-1" style="height:3px;background:#1e2235;">
-                    <div class="progress-bar" style="width:0%;background:#7dd3fc;"></div>
+                <div class="progress mb-1" style="height:3px;">
+                    <div class="progress-bar" style="width:2%;background:#3d4468;"></div>
                 </div>
                 <div class="d-flex justify-content-between" style="font-size:.7rem;">
-                    <span style="color:#7dd3fc;">→ Quellen verwalten</span>
+                    <span style="color:#7dd3fc;">Quellen verwalten</span>
                     <span class="text-muted">Ausstehend</span>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
     <!-- Methodik (nur academic/scientific) -->
     <div class="col-md-4">
-        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
-             onclick="location.href='{% url 'projects:research_dashboard' project.pk %}'">
+        <a href="{% url 'projects:research_dashboard' project.pk %}" class="card h-100 workflow-card text-decoration-none" style="background:#0d1117;border-color:#2d3748;">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-diagram-3 me-2" style="color:#7dd3fc;font-size:1.2rem;"></i>
@@ -267,21 +276,21 @@
                         <div class="text-muted" style="font-size:.72rem;">Forschungsnotizen</div>
                     </div>
                 </div>
-                <div class="progress mb-1" style="height:3px;background:#1e2235;">
-                    <div class="progress-bar" style="width:0%;background:#7dd3fc;"></div>
+                <div class="progress mb-1" style="height:3px;">
+                    <div class="progress-bar" style="width:2%;background:#3d4468;"></div>
                 </div>
                 <div class="d-flex justify-content-between" style="font-size:.7rem;">
-                    <span style="color:#7dd3fc;">→ Recherche öffnen</span>
+                    <span style="color:#7dd3fc;">Recherche öffnen</span>
                     <span class="text-muted">Ausstehend</span>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
     {% else %}
     <!-- Charaktere (nur fiktionale Projekte) -->
     <div class="col-md-4">
         <a href="{% if world_links %}{% url 'worlds_html:detail' world_links.0.pk %}{% else %}{% url 'worlds_html:list' %}{% endif %}"
-           class="card h-100 workflow-card text-decoration-none" style="background:#0d1117;border-color:#2d3748;cursor:pointer;">
+           class="card h-100 workflow-card text-decoration-none" style="background:#0d1117;border-color:#2d3748;">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-people me-2" style="color:#6366f1;font-size:1.2rem;"></i>
@@ -290,8 +299,8 @@
                         <div class="text-muted" style="font-size:.72rem;">{{ stat_characters }} Charaktere</div>
                     </div>
                 </div>
-                <div class="progress mb-1" style="height:3px;background:#1e2235;">
-                    <div class="progress-bar" style="width:{% if stat_characters > 0 %}100{% else %}0{% endif %}%;background:#6366f1;"></div>
+                <div class="progress mb-1" style="height:3px;">
+                    <div class="progress-bar" style="width:{% if stat_characters > 0 %}100{% else %}2{% endif %}%;background:{% if stat_characters > 0 %}#6366f1{% else %}#3d4468{% endif %};"></div>
                 </div>
                 <div class="d-flex justify-content-between" style="font-size:.7rem;">
                     <span class="text-primary">{% if stat_characters > 0 %}100%{% else %}0%{% endif %}</span>
@@ -304,7 +313,7 @@
     <!-- Weltenbau (nur fiktionale Projekte) -->
     <div class="col-md-4">
         <a href="{% if world_links %}{% url 'worlds_html:detail' world_links.0.pk %}{% else %}{% url 'worlds_html:list' %}{% endif %}"
-           class="card h-100 workflow-card text-decoration-none" style="background:#0d1117;border-color:#2d3748;cursor:pointer;">
+           class="card h-100 workflow-card text-decoration-none" style="background:#0d1117;border-color:#2d3748;">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-globe2 me-2" style="color:#6366f1;font-size:1.2rem;"></i>
@@ -313,8 +322,8 @@
                         <div class="text-muted" style="font-size:.72rem;">{{ stat_worlds }} Welten</div>
                     </div>
                 </div>
-                <div class="progress mb-1" style="height:3px;background:#1e2235;">
-                    <div class="progress-bar" style="width:{% if stat_worlds > 0 %}100{% else %}0{% endif %}%;background:#6366f1;"></div>
+                <div class="progress mb-1" style="height:3px;">
+                    <div class="progress-bar" style="width:{% if stat_worlds > 0 %}100{% else %}2{% endif %}%;background:{% if stat_worlds > 0 %}#6366f1{% else %}#3d4468{% endif %};"></div>
                 </div>
                 <div class="d-flex justify-content-between" style="font-size:.7rem;">
                     <span class="text-primary">{% if stat_worlds > 0 %}100%{% else %}0%{% endif %}</span>
@@ -322,14 +331,14 @@
                 </div>
             </div>
         </a>
-        </div>
     </div>
     {% endif %}
 
     <!-- Outline -->
     <div class="col-md-4">
-        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
-             {% if selected_outline %}onclick="location.href='{% url 'outlines:detail' selected_outline.pk %}'"{% else %}data-bs-toggle="modal" data-bs-target="#outlineModal"{% endif %}>
+        <a href="{% if selected_outline %}{% url 'outlines:detail' selected_outline.pk %}{% else %}#{% endif %}"
+           class="card h-100 workflow-card text-decoration-none" style="background:#0d1117;border-color:#2d3748;"
+           {% if not selected_outline %}data-bs-toggle="modal" data-bs-target="#outlineModal"{% endif %}>
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-list-ol me-2" style="color:#6366f1;font-size:1.2rem;"></i>
@@ -338,21 +347,20 @@
                         <div class="text-muted" style="font-size:.72rem;">{{ stat_chapters_total }}/{{ stat_chapters_total }} Kapitel</div>
                     </div>
                 </div>
-                <div class="progress mb-1" style="height:3px;background:#1e2235;">
-                    <div class="progress-bar" style="width:{% if stat_chapters_total > 0 %}100{% else %}0{% endif %}%;background:#6366f1;"></div>
+                <div class="progress mb-1" style="height:3px;">
+                    <div class="progress-bar" style="width:{% if stat_chapters_total > 0 %}100{% else %}2{% endif %}%;background:{% if stat_chapters_total > 0 %}#6366f1{% else %}#3d4468{% endif %};"></div>
                 </div>
                 <div class="d-flex justify-content-between" style="font-size:.7rem;">
                     <span class="text-primary">{% if stat_chapters_total > 0 %}100%{% else %}0%{% endif %}</span>
                     <span class="text-muted">{% if stat_chapters_total > 0 %}Angelegt{% else %}Ausstehend{% endif %}</span>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
     <!-- Schreiben -->
     <div class="col-md-4">
-        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
-             onclick="location.href='{% url 'projects:chapter_writer' project.pk %}'">
+        <a href="{% url 'projects:chapter_writer' project.pk %}" class="card h-100 workflow-card text-decoration-none" style="background:#0d1117;border-color:#2d3748;">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-pen me-2" style="color:#6366f1;font-size:1.2rem;"></i>
@@ -361,21 +369,20 @@
                         <div class="text-muted" style="font-size:.72rem;">{{ stat_chapters_written }}/{{ stat_chapters_total }} geschrieben</div>
                     </div>
                 </div>
-                <div class="progress mb-1" style="height:3px;background:#1e2235;">
-                    <div class="progress-bar" style="width:{{ chapter_progress_pct|default:0 }}%;background:#6366f1;"></div>
+                <div class="progress mb-1" style="height:3px;">
+                    <div class="progress-bar" style="width:{% if chapter_progress_pct > 0 %}{{ chapter_progress_pct }}{% else %}2{% endif %}%;background:{% if chapter_progress_pct > 0 %}#6366f1{% else %}#3d4468{% endif %};"></div>
                 </div>
                 <div class="d-flex justify-content-between" style="font-size:.7rem;">
                     <span class="text-primary">{{ chapter_progress_pct|default:0 }}%</span>
                     <span class="text-muted">{% if chapter_progress_pct > 0 %}In Arbeit{% else %}Ausstehend{% endif %}</span>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
     <!-- Lektorat -->
     <div class="col-md-4">
-        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
-             onclick="location.href='{% url 'projects:lektorat' project.pk %}'">
+        <a href="{% url 'projects:lektorat' project.pk %}" class="card h-100 workflow-card text-decoration-none" style="background:#0d1117;border-color:#2d3748;">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-check2-square me-2" style="color:#6366f1;font-size:1.2rem;"></i>
@@ -384,21 +391,20 @@
                         <div class="text-muted" style="font-size:.72rem;">Konsistenzprüfung</div>
                     </div>
                 </div>
-                <div class="progress mb-1" style="height:3px;background:#1e2235;">
-                    <div class="progress-bar" style="width:0%;background:#6366f1;"></div>
+                <div class="progress mb-1" style="height:3px;">
+                    <div class="progress-bar" style="width:2%;background:#3d4468;"></div>
                 </div>
                 <div class="d-flex justify-content-between" style="font-size:.7rem;">
                     <span class="text-primary">0%</span>
                     <span class="text-muted">Ausstehend</span>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
     <!-- Review -->
     <div class="col-md-4">
-        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
-             onclick="location.href='{% url 'projects:review' project.pk %}'">
+        <a href="{% url 'projects:review' project.pk %}" class="card h-100 workflow-card text-decoration-none" style="background:#0d1117;border-color:#2d3748;">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-shield-check me-2" style="color:#6366f1;font-size:1.2rem;"></i>
@@ -407,21 +413,20 @@
                         <div class="text-muted" style="font-size:.72rem;">Qualitätsprüfung</div>
                     </div>
                 </div>
-                <div class="progress mb-1" style="height:3px;background:#1e2235;">
-                    <div class="progress-bar" style="width:0%;background:#6366f1;"></div>
+                <div class="progress mb-1" style="height:3px;">
+                    <div class="progress-bar" style="width:2%;background:#3d4468;"></div>
                 </div>
                 <div class="d-flex justify-content-between" style="font-size:.7rem;">
                     <span class="text-primary">0%</span>
                     <span class="text-muted">Ausstehend</span>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
     <!-- Editing / Redaktion -->
     <div class="col-md-4">
-        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
-             onclick="location.href='{% url 'projects:editing' project.pk %}'">
+        <a href="{% url 'projects:editing' project.pk %}" class="card h-100 workflow-card text-decoration-none" style="background:#0d1117;border-color:#2d3748;">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-pencil-square me-2" style="color:#f59e0b;font-size:1.2rem;"></i>
@@ -430,21 +435,20 @@
                         <div class="text-muted" style="font-size:.72rem;">KI-Textverbesserung</div>
                     </div>
                 </div>
-                <div class="progress mb-1" style="height:3px;background:#1e2235;">
-                    <div class="progress-bar" style="width:0%;background:#f59e0b;"></div>
+                <div class="progress mb-1" style="height:3px;">
+                    <div class="progress-bar" style="width:2%;background:#3d4468;"></div>
                 </div>
                 <div class="d-flex justify-content-between" style="font-size:.7rem;">
-                    <span style="color:#f59e0b;">→ Redaktion öffnen</span>
+                    <span style="color:#f59e0b;">Redaktion öffnen</span>
                     <span class="text-muted">Ausstehend</span>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
     <!-- Manuskript -->
     <div class="col-md-4">
-        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
-             onclick="location.href='{% url 'projects:manuscript' project.pk %}'">
+        <a href="{% url 'projects:manuscript' project.pk %}" class="card h-100 workflow-card text-decoration-none" style="background:#0d1117;border-color:#2d3748;">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-file-earmark-text me-2" style="color:#6366f1;font-size:1.2rem;"></i>
@@ -453,22 +457,21 @@
                         <div class="text-muted" style="font-size:.72rem;">Komplettes Buch anzeigen</div>
                     </div>
                 </div>
-                <div class="progress mb-1" style="height:3px;background:#1e2235;">
-                    <div class="progress-bar" style="width:{{ chapter_progress_pct|default:0 }}%;background:#6366f1;"></div>
+                <div class="progress mb-1" style="height:3px;">
+                    <div class="progress-bar" style="width:{% if chapter_progress_pct > 0 %}{{ chapter_progress_pct }}{% else %}2{% endif %}%;background:{% if chapter_progress_pct > 0 %}#6366f1{% else %}#3d4468{% endif %};"></div>
                 </div>
                 <div class="d-flex justify-content-between" style="font-size:.7rem;">
                     <span class="text-primary">{{ chapter_progress_pct|default:0 }}%</span>
                     <span class="text-muted">{% if chapter_progress_pct > 0 %}In Arbeit{% else %}Ausstehend{% endif %}</span>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
     {% if project.content_type == 'academic' or project.content_type == 'scientific' or project.content_type == 'essay' %}
     <!-- Peer Review (nur academic/scientific/essay) -->
     <div class="col-md-4">
-        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
-             onclick="location.href='{% url 'projects:peer_review' project.pk %}'">
+        <a href="{% url 'projects:peer_review' project.pk %}" class="card h-100 workflow-card text-decoration-none" style="background:#0d1117;border-color:#2d3748;">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-journal-check me-2" style="color:#8b5cf6;font-size:1.2rem;"></i>
@@ -477,22 +480,21 @@
                         <div class="text-muted" style="font-size:.72rem;">KI-Gutachten (Methodik, Quellen, Struktur)</div>
                     </div>
                 </div>
-                <div class="progress mb-1" style="height:3px;background:#1e2235;">
-                    <div class="progress-bar" style="width:0%;background:#8b5cf6;"></div>
+                <div class="progress mb-1" style="height:3px;">
+                    <div class="progress-bar" style="width:2%;background:#3d4468;"></div>
                 </div>
                 <div class="d-flex justify-content-between" style="font-size:.7rem;">
-                    <span style="color:#8b5cf6;">→ Peer Review öffnen</span>
+                    <span style="color:#8b5cf6;">Peer Review öffnen</span>
                     <span class="text-muted">Ausstehend</span>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
     {% endif %}
 
     <!-- Publishing / Einreichung -->
     <div class="col-md-4">
-        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
-             onclick="location.href='{% url 'projects:publishing' project.pk %}'">
+        <a href="{% url 'projects:publishing' project.pk %}" class="card h-100 workflow-card text-decoration-none" style="background:#0d1117;border-color:#2d3748;">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-bookmark-check me-2" style="color:#6366f1;font-size:1.2rem;"></i>
@@ -505,21 +507,20 @@
                         </div>
                     </div>
                 </div>
-                <div class="progress mb-1" style="height:3px;background:#1e2235;">
-                    <div class="progress-bar" style="width:0%;background:#6366f1;"></div>
+                <div class="progress mb-1" style="height:3px;">
+                    <div class="progress-bar" style="width:2%;background:#3d4468;"></div>
                 </div>
                 <div class="d-flex justify-content-between" style="font-size:.7rem;">
                     <span class="text-primary">0%</span>
                     <span class="text-muted">Ausstehend</span>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
     <!-- Export -->
     <div class="col-md-4">
-        <div class="card h-100 workflow-card" style="background:#0d1117;border-color:#2d3748;cursor:pointer;"
-             onclick="location.href='{% url 'projects:export' project.pk %}'">
+        <a href="{% url 'projects:export' project.pk %}" class="card h-100 workflow-card text-decoration-none" style="background:#0d1117;border-color:#2d3748;">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-download me-2" style="color:#6366f1;font-size:1.2rem;"></i>
@@ -528,15 +529,15 @@
                         <div class="text-muted" style="font-size:.72rem;">Manuskript exportieren</div>
                     </div>
                 </div>
-                <div class="progress mb-1" style="height:3px;background:#1e2235;">
-                    <div class="progress-bar" style="width:0%;background:#6366f1;"></div>
+                <div class="progress mb-1" style="height:3px;">
+                    <div class="progress-bar" style="width:2%;background:#3d4468;"></div>
                 </div>
                 <div class="d-flex justify-content-between" style="font-size:.7rem;">
                     <span class="text-primary">0%</span>
                     <span class="text-muted">Ausstehend</span>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 </div>
 
@@ -550,7 +551,7 @@
                 <span class="fw-semibold small"><i class="bi bi-list-ol me-1"></i>Aktives Outline</span>
                 {% if outlines %}
                 <div class="d-flex align-items-center gap-2">
-                    <select class="form-select form-select-sm bg-dark text-light border-secondary w-auto"
+                    <select class="form-select form-select-sm w-auto"
                             onchange="location.href='?outline=' + this.value">
                         {% for o in outlines %}
                         <option value="{{ o.pk }}" {% if o.pk == selected_outline.pk %}selected{% endif %}>
@@ -785,7 +786,7 @@
           <div class="mb-3">
             <label class="form-label small text-muted">Framework wählen *</label>
             <select id="outlineFrameworkSelect" name="framework_template"
-                    class="form-select bg-dark text-light border-secondary" required
+                    class="form-select" required
                     onchange="onOutlineFrameworkChange(this.value)">
               <option value="">— Framework auswählen —</option>
               {% for fw in frameworks %}
@@ -801,14 +802,14 @@
               <span id="chapter-count-hint" class="text-muted" style="font-size:.75em;">(wird aus Framework übernommen)</span>
             </label>
             <input type="number" name="chapter_count" id="outlineChapterCount"
-                   class="form-control bg-dark text-light border-secondary"
+                   class="form-control"
                    placeholder="z.B. 12" min="1" max="50" value="12">
           </div>
           <div class="mb-2" id="outlineChapterInfo" style="font-size:.8rem;color:#6366f1;"></div>
           <div class="mb-3">
             <label class="form-label small text-muted">Name der Version</label>
             <input id="outlineNameInput" type="text" name="name"
-                   class="form-control bg-dark text-light border-secondary"
+                   class="form-control"
                    placeholder="wird automatisch gesetzt">
           </div>
           {% if project.description %}
@@ -852,7 +853,7 @@
           <div class="mb-3">
             <label class="form-label small text-muted">Framework</label>
             <select id="kiFrameworkSelect" name="framework"
-                    class="form-select bg-dark text-light border-secondary"
+                    class="form-select"
                     onchange="onKiFrameworkChange(this.value)">
               {% for fw in frameworks %}
               {% if fw.key != 'blank' %}

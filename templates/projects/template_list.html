@@ -21,11 +21,11 @@
 <div class="row g-3">
     {% for tpl in templates %}
     <div class="col-md-6 col-lg-4">
-        <div class="card h-100" style="background:#161b22;border-color:#2d3748;">
+        <div class="card h-100" style="background:#161b22;border-color:#2d3748;transition:box-shadow .15s ease,border-color .15s ease;" onmouseover="this.style.borderColor='#4f46e5';this.style.boxShadow='0 4px 12px rgba(99,102,241,.1)'" onmouseout="this.style.borderColor='#2d3748';this.style.boxShadow='none'">
             <div class="card-body">
                 <h5 class="card-title fw-semibold" style="font-size:1rem;color:#e2e8f0;">{{ tpl.name }}</h5>
                 <div class="d-flex flex-wrap gap-1 mb-2">
-                    <span class="badge bg-dark border border-secondary" style="font-size:.65rem;">{{ tpl.get_content_type_display }}</span>
+                    <span class="badge" style="font-size:.65rem;background:#1e2235;color:#a5b4fc;border:1px solid #3730a3;">{{ tpl.get_content_type_display }}</span>
                     {% if tpl.default_genre %}
                     <span class="badge bg-secondary" style="font-size:.65rem;">{{ tpl.default_genre }}</span>
                     {% endif %}
@@ -42,7 +42,7 @@
                 <form method="post" action="{% url 'projects:template_apply' tpl.pk %}">
                     {% csrf_token %}
                     <div class="input-group input-group-sm">
-                        <input type="text" name="title" class="form-control bg-dark text-light border-secondary"
+                        <input type="text" name="title" class="form-control"
                                placeholder="Projekttitel eingeben…" required>
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-plus-lg me-1"></i> Erstellen

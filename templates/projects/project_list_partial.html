@@ -11,7 +11,7 @@
         <div class="card h-100">
             <div class="card-body">
                 <div class="d-flex align-items-start justify-content-between mb-1">
-                    <h5 class="card-title mb-0 fw-semibold" style="font-size:1rem;">{{ project.title }}</h5>
+                    <h5 class="card-title mb-0 fw-semibold" style="font-size:1rem;color:#e2e8f0;">{{ project.title }}</h5>
                 </div>
                 <div class="d-flex flex-wrap gap-1 mb-2">
                     {% if project.series %}
@@ -41,8 +41,8 @@
                         <div class="progress-bar
                             {% if project.progress_pct >= 100 %}bg-success
                             {% elif project.progress_pct >= 50 %}bg-primary
-                            {% else %}bg-secondary{% endif %}"
-                             style="width:{{ project.progress_pct }}%;"></div>
+                            {% else %}{% endif %}"
+                             style="width:{% if project.progress_pct > 0 %}{{ project.progress_pct }}{% else %}2{% endif %}%;background:{% if project.progress_pct >= 100 %}#22c55e{% elif project.progress_pct >= 50 %}#6366f1{% elif project.progress_pct > 0 %}#6366f1{% else %}#3d4468{% endif %};"></div>
                     </div>
                 </div>
                 {% endif %}
@@ -69,7 +69,7 @@
     <ul class="pagination pagination-sm">
         {% if page_obj.has_previous %}
         <li class="page-item">
-            <a class="page-link bg-dark text-light border-secondary"
+            <a class="page-link"
                hx-get="{% url 'projects:list_partial' %}?page={{ page_obj.previous_page_number }}"
                hx-target="#project-results"
                hx-include="#filter-q, #filter-typ, #filter-genre, #filter-serie"
@@ -80,7 +80,7 @@
         {% endif %}
         {% for num in page_obj.paginator.page_range %}
         <li class="page-item {% if num == page_obj.number %}active{% endif %}">
-            <a class="page-link {% if num == page_obj.number %}bg-primary border-primary{% else %}bg-dark text-light border-secondary{% endif %}"
+            <a class="page-link"
                hx-get="{% url 'projects:list_partial' %}?page={{ num }}"
                hx-target="#project-results"
                hx-include="#filter-q, #filter-typ, #filter-genre, #filter-serie"
@@ -89,7 +89,7 @@
         {% endfor %}
         {% if page_obj.has_next %}
         <li class="page-item">
-            <a class="page-link bg-dark text-light border-secondary"
+            <a class="page-link"
                hx-get="{% url 'projects:list_partial' %}?page={{ page_obj.next_page_number }}"
                hx-target="#project-results"
                hx-include="#filter-q, #filter-typ, #filter-genre, #filter-serie"

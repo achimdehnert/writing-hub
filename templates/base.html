@@ -8,19 +8,41 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         body { background: #0f1117; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; }
-        .sidebar { background: #1a1d27; border-right: 1px solid #2d3148; min-height: 100vh; width: 240px; position: fixed; top: 0; left: 0; z-index: 100; }
-        .sidebar .nav-link { color: #94a3b8; padding: .5rem 1.25rem; border-radius: .375rem; margin: .125rem .5rem; }
-        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: #2d3148; }
+        .sidebar { background: #1a1d27; border-right: 1px solid #2d3148; min-height: 100vh; width: 240px; position: fixed; top: 0; left: 0; z-index: 100; transition: transform .2s ease; }
+        .sidebar .nav-link { color: #94a3b8; padding: .5rem 1.25rem; border-radius: .375rem; margin: .125rem .5rem; border-left: 3px solid transparent; transition: all .15s ease; }
+        .sidebar .nav-link:hover { color: #cbd5e1; background: #2d3148; }
+        .sidebar .nav-link.active { color: #fff; background: #2d3148; border-left-color: #6366f1; }
+        .sidebar .nav-link.active i { color: #a5b4fc; }
         .sidebar .nav-link i { margin-right: .5rem; }
         .main-content { margin-left: 240px; padding: 2rem; }
         .topbar { background: #1a1d27; border-bottom: 1px solid #2d3148; padding: .75rem 2rem; margin-left: 240px; position: sticky; top: 0; z-index: 99; }
-        .card { background: #1a1d27; border: 1px solid #2d3148; border-radius: .75rem; }
+        .card { background: #1a1d27; border: 1px solid #2d3148; border-radius: .75rem; transition: border-color .15s ease, box-shadow .15s ease; }
+        .card:hover { border-color: #3d4468; }
         .card-header { background: #1e2235; border-bottom: 1px solid #2d3148; }
         .btn-primary { background: #6366f1; border-color: #6366f1; }
         .btn-primary:hover { background: #4f46e5; border-color: #4f46e5; }
         .badge-quality { font-size: .7rem; padding: .25rem .5rem; border-radius: .25rem; }
         .text-muted { color: #64748b !important; }
         .brand { font-size: 1.1rem; font-weight: 700; color: #6366f1; letter-spacing: -.02em; padding: 1.25rem 1.5rem .75rem; }
+        /* Dark-theme form controls — better contrast */
+        .form-control, .form-select { background: #131620; border-color: #3d4468; color: #e2e8f0; }
+        .form-control:focus, .form-select:focus { background: #131620; border-color: #6366f1; color: #e2e8f0; box-shadow: 0 0 0 .2rem rgba(99,102,241,.18); }
+        .form-control::placeholder { color: #64748b; }
+        /* Pagination links — dark theme */
+        .page-link { background: #131620; border-color: #3d4468; color: #e2e8f0; }
+        .page-link:hover { background: #1e2235; border-color: #6366f1; color: #a5b4fc; }
+        .page-item.active .page-link { background: #6366f1; border-color: #6366f1; }
+        /* Improved progress bars — subtle glow at 0% */
+        .progress { background: #1e2235; }
+        /* Mobile hamburger */
+        .sidebar-toggle { display: none; position: fixed; top: .75rem; left: .75rem; z-index: 200; background: #1a1d27; border: 1px solid #2d3148; color: #e2e8f0; border-radius: .5rem; padding: .35rem .6rem; font-size: 1.2rem; cursor: pointer; }
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.show { transform: translateX(0); }
+            .sidebar-toggle { display: block; }
+            .main-content, .topbar { margin-left: 0; }
+            .topbar { padding-left: 3.5rem; }
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@1.9.12/dist/htmx.min.js" defer></script>
     <style>
@@ -55,6 +77,9 @@
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>{% comment %}HTMX global CSRF{% endcomment %}
 
+<button class="sidebar-toggle" onclick="document.querySelector('.sidebar').classList.toggle('show')">
+    <i class="bi bi-list"></i>
+</button>
 <div class="sidebar d-flex flex-column">
     <div class="brand"><i class="bi bi-pen"></i> Writing Hub</div>
     {% with app=request.resolver_match.app_name %}
