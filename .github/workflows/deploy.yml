@@ -38,7 +38,7 @@ jobs:
     with:
       app_name: "writing-hub"
       app_path: "/opt/writing-hub"
-      health_check_url: "https://writing.iil.pet/healthz/"
+      health_check_url: "https://writing.iil.pet/livez/"
       image_tag_override: ${{ inputs.image_tag_override || '' }}
       target_environment: ${{ inputs.target_environment || 'production' }}
       notify_discord: true

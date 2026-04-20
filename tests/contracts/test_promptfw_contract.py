@@ -10,6 +10,8 @@ import inspect
 
 import pytest
 
+pytestmark = pytest.mark.contract
+
 
 class TestFrontmatterContract:
     """Contract tests for promptfw.frontmatter module (SSoT for .jinja2 templates)."""

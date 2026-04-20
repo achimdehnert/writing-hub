@@ -11,6 +11,8 @@ Verifies writing-hub's assumptions about authoringfw's content_types API:
 
 import pytest
 
+pytestmark = pytest.mark.contract
+
 authoringfw = pytest.importorskip("authoringfw", reason="authoringfw not installed")
 
 

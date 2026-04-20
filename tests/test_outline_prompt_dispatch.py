@@ -352,6 +352,7 @@ class TestOutlineQualityRating:
 
 
 @pytest.mark.django_db
+@pytest.mark.integration
 class TestSeedData:
     """Test that seed migration creates expected templates."""
 
