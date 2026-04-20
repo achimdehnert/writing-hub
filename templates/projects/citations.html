@@ -23,6 +23,8 @@
 .source-badge { font-size:.65rem; padding:.2rem .45rem; border-radius:3px; font-weight:600; letter-spacing:.03em; }
 .paper-card { background:#0d1117; border:1px solid #2d3748; border-radius:.4rem; transition:border-color .2s; }
 .paper-card:hover { border-color:#6366f1; }
+.paper-link { color:#e2e8f0; text-decoration:none; }
+.paper-link:hover { color:#818cf8; text-decoration:underline; }
 .search-spinner { display:none; }
 .search-spinner.active { display:inline-block; }
 </style>
@@ -391,7 +393,7 @@ function renderPapers(papers) {
         return `<div class="paper-card p-3 mb-2" id="paper-${i}" data-paper-idx="${i}">
             <div class="d-flex align-items-start gap-2">
                 <div class="flex-grow-1">
-                    <div class="fw-semibold" style="font-size:.88rem;">${(p.url || p.doi) ? `<a href="${p.url || ('https://doi.org/' + p.doi)}" target="_blank" rel="noopener" style="color:#e2e8f0;text-decoration:none;" onmouseover="this.style.color='#818cf8';this.style.textDecoration='underline'" onmouseout="this.style.color='#e2e8f0';this.style.textDecoration='none'">${p.title || 'Kein Titel'} <i class="bi bi-box-arrow-up-right" style="font-size:.7rem;opacity:.5;"></i></a>` : (p.title || "Kein Titel")}</div>
+                    <div class="fw-semibold" style="font-size:.88rem;">${(p.url || p.doi) ? `<a href="${p.url || ('https://doi.org/' + p.doi)}" target="_blank" rel="noopener" class="paper-link">${p.title || 'Kein Titel'} <i class="bi bi-box-arrow-up-right" style="font-size:.7rem;opacity:.5;"></i></a>` : (p.title || "Kein Titel")}</div>
                     <div class="text-muted small mt-1">${authors}${authMore}${year ? " (" + year + ")" : ""}
                         ${p.journal ? `&nbsp;·&nbsp;<em>${p.journal.slice(0,40)}</em>` : ""}
                     </div>

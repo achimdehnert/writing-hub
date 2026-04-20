@@ -26,8 +26,7 @@
     {% for session in sessions %}
     <div class="col-md-4">
         <a href="{% url 'projects:lektorat_session' project.pk session.pk %}" class="text-decoration-none">
-            <div class="card h-100" style="background:#0d1117;border-color:#2d3748;transition:border-color .15s;"
-                 onmouseover="this.style.borderColor='#6366f1'" onmouseout="this.style.borderColor='#2d3748'">
+            <div class="card h-100 card-hover-indigo" style="background:#0d1117;border-color:#2d3748;transition:border-color .15s;">
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <span class="fw-semibold" style="color:#e2e8f0;">{{ session.name }}</span>

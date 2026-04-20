@@ -134,17 +134,32 @@
 
 **`onclick=` Patterns:** Bereits in B3 plattformweit entfernt (0 Hits).
 
+## Nachbesserung 2026-04-20 (B)
+
+| # | Fix | Beschreibung | Status |
+|---|-----|-------------|--------|
+| 15 | Inline Event-Handler | 4× `onmouseover`/`onmouseout` → CSS `.card-hover-indigo` + `.paper-link` | ✅ |
+
+**Betroffene Dateien:**
+- `templates/base.html` (`.card-hover-indigo` CSS-Klasse hinzugefügt)
+- `templates/projects/template_list.html` (1 Hit)
+- `templates/projects/lektorat.html` (1 Hit)
+- `templates/projects/peer_review.html` (1 Hit)
+- `templates/projects/citations.html` (1 Hit in JS + `.paper-link` CSS)
+
+**Ergebnis:** 0 inline Event-Handler (`onclick`, `onmouseover`, `onmouseout`, `onchange`, `onsubmit`, `onkeydown`) in allen Templates.
+
 ---
 
 ## Fazit
 
 **COMPLETE ✅**
 
-- 14 Fixes implementiert (7 geplant + 7 Nachbesserungen)
+- 15 Fixes implementiert (7 geplant + 8 Nachbesserungen)
 - 8/8 Seiten HTTP 200
 - 0 JS-Errors
 - 39/40 Links OK (1× expected)
 - 9/9 Templates parsen
-- 0 Banned Patterns (onclick, bg-dark text-light)
+- 0 Banned Patterns (onclick, bg-dark text-light, inline handlers)
 - Mobile-Support funktioniert
 - Favicon vorhanden
