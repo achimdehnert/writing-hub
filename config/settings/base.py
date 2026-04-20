@@ -12,6 +12,8 @@ SECRET_KEY = config("DJANGO_SECRET_KEY", default="django-insecure-writing-hub-de
 DEBUG = config("DEBUG", default="True").lower() in ("true", "1", "yes")
 
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1").split(",")
+# ADR-021: Internal hosts for Docker/LB health probes — always present
+ALLOWED_HOSTS.extend(h for h in ("localhost", "127.0.0.1") if h not in ALLOWED_HOSTS)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
