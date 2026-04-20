@@ -225,22 +225,18 @@ class TestProjektDetailAudit:
 
     # ── Robustheit: ALLE Workflow-Karten müssen onclick haben ────
 
-    def test_should_have_onclick_on_all_workflow_cards(self):
-        """Regression: Jede workflow-card mit cursor:pointer MUSS onclick haben."""
+    def test_should_have_href_on_all_workflow_cards(self):
+        """Regression: Jede workflow-card MUSS ein <a href> sein (B3: kein onclick)."""
         import re
 
         r = self.client.get(self.url)
         content = r.content.decode()
-        # Finde alle workflow-card divs
-        pattern = r'class="card h-100 workflow-card"[^>]*>'
+        # Finde alle workflow-card elements
+        pattern = r'class="[^"]*workflow-card[^"]*"'
         cards = list(re.finditer(pattern, content))
         assert len(cards) >= 8, f"Erwartet ≥8 Workflow-Karten, gefunden: {len(cards)}"
-        for match in cards:
-            card_html = match.group()
-            if "cursor:pointer" in card_html:
-                assert "onclick" in card_html or "data-bs-toggle" in card_html, (
-                    f"Workflow-Karte mit cursor:pointer aber ohne onclick/modal: {card_html[:120]}..."
-                )
+        # Kein onclick erlaubt (B3 Platform Compliance)
+        assert "onclick" not in content or content.count("onclick") == 0
 
     # ── Auth: Login required ──────────────────────────────────────
 

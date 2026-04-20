@@ -12,6 +12,9 @@ import uuid
 from django.db import models
 
 
+from .models_creative import BookIdea, CreativeSession  # noqa: F401
+
+
 class IdeaImportDraft(models.Model):
     """
     Staging-Tabelle für KI-extrahierte Ideen vor dem Commit.
