@@ -89,6 +89,7 @@ class chapter_write_start(APIView):
                 context.chapter_beat = data.get("chapter_beat", "")
                 context.emotional_arc = data.get("emotional_arc", "")
                 context.prev_chapter_summary = data.get("prev_chapter_summary", "")
+                context.load_research_context()
                 result = ChapterWriterHandler().write_chapter(context)
                 if result.get("success"):
                     job.status = "done"
@@ -152,6 +153,7 @@ class chapter_refine_start(APIView):
         context.target_word_count = data.get("target_word_count", DEFAULT_TARGET_WORD_COUNT)
         context.chapter_beat = data.get("chapter_beat", "")
         context.emotional_arc = data.get("emotional_arc", "")
+        context.load_research_context()
 
         handler = ChapterWriterHandler()
         try:

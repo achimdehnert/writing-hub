@@ -766,6 +766,17 @@ document.addEventListener('click', function(e) {
     var conf = e.target.closest('[data-confirm]');
     if (conf && !confirm(conf.dataset.confirm)) e.preventDefault();
 });
+// Pre-fill from URL params (?node=<id>&q=<query>) — deep-link from Write-Page
+(function() {
+    var params = new URLSearchParams(window.location.search);
+    var nodeParam = params.get('node');
+    var qParam = params.get('q');
+    if (nodeParam) currentSearchChapterId = nodeParam;
+    if (qParam) {
+        var sq = document.getElementById('searchQuery');
+        if (sq) sq.value = qParam;
+    }
+})();
 document.addEventListener('change', function(e) {
     var el = e.target.closest('[data-action]');
     if (!el) return;

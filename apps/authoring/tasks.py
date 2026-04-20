@@ -75,30 +75,7 @@ def write_chapter_task(
         context.emotional_arc = emotional_arc
         context.prev_chapter_summary = prev_chapter_summary
 
-        try:
-            from apps.projects.models import BookProject, OutlineNode, ProjectCitation
-
-            node = OutlineNode.objects.filter(pk=chapter_ref).first()
-            project_obj = BookProject.objects.filter(pk=project_id).first()
-            if node and project_obj:
-                context.research_notes = node.notes or ""
-                db_cits = ProjectCitation.objects.filter(project=project_obj, node=node).order_by("-created_at")[:20]
-                if db_cits.exists():
-                    cit_lines = [f"## Zugeordnete Quellen ({db_cits.count()})"]
-                    for c in db_cits:
-                        year = f" ({c.year})" if c.year else ""
-                        cit_lines.append(f"- {c.authors_display}{year}: {c.title}")
-                        if c.doi:
-                            cit_lines.append(f"  DOI: {c.doi}")
-                        if c.abstract:
-                            cit_lines.append(f"  Abstract: {c.abstract[:200]}")
-                    db_block = "\n".join(cit_lines)
-                    if context.research_notes:
-                        context.research_notes = db_block + "\n\n" + context.research_notes
-                    else:
-                        context.research_notes = db_block
-        except Exception as exc:
-            logger.debug("Research notes loading failed", error=str(exc))
+        context.load_research_context()
 
         handler = ChapterWriterHandler()
         result = handler.write_chapter(context)
@@ -456,26 +433,7 @@ def _pipeline_write_chapters(project, user, nodes, job):
             context.emotional_arc = node.emotional_arc or ""
             context.prev_chapter_summary = prev_content[-PREV_CHAPTER_SUMMARY_MAX_CHARS:] if prev_content else ""
             context.research_notes = node.notes or ""
-            try:
-                from apps.projects.models import ProjectCitation
-
-                db_cits = ProjectCitation.objects.filter(project=project, node=node).order_by("-created_at")[:20]
-                if db_cits.exists():
-                    cit_lines = [f"## Zugeordnete Quellen ({db_cits.count()})"]
-                    for c in db_cits:
-                        year = f" ({c.year})" if c.year else ""
-                        cit_lines.append(f"- {c.authors_display}{year}: {c.title}")
-                        if c.doi:
-                            cit_lines.append(f"  DOI: {c.doi}")
-                        if c.abstract:
-                            cit_lines.append(f"  Abstract: {c.abstract[:200]}")
-                    db_block = "\n".join(cit_lines)
-                    if context.research_notes:
-                        context.research_notes = db_block + "\n\n" + context.research_notes
-                    else:
-                        context.research_notes = db_block
-            except Exception as exc:
-                logger.debug("Research notes loading failed", error=str(exc))
+            context.load_research_context()
 
             handler = ChapterWriterHandler()
             result = handler.write_chapter(context)

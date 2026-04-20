@@ -463,8 +463,12 @@ function selectChapter(id) {
 function updateCitationsPanel(chapterId) {
     const list = document.getElementById('chapter-citations-list');
     const cits = CITATIONS_MAP[chapterId] || [];
+    const ch = CHAPTER_MAP[chapterId];
+    const citLink = CITATIONS_URL + '?node=' + chapterId + (ch ? '&q=' + encodeURIComponent(ch.title) : '');
+    const btnLink = document.getElementById('btn-citations-page');
+    if (btnLink) btnLink.href = citLink;
     if (cits.length === 0) {
-        list.innerHTML = '<div class="text-muted" style="font-size:.7rem;">Keine Quellen zugeordnet.<br><a href="' + CITATIONS_URL + '" style="color:#7dd3fc;">Quellen zuordnen →</a></div>';
+        list.innerHTML = '<div class="text-muted" style="font-size:.7rem;">Keine Quellen zugeordnet.<br><a href="' + citLink + '" style="color:#7dd3fc;">Quellen zuordnen →</a></div>';
         return;
     }
     list.innerHTML = cits.map(c => {

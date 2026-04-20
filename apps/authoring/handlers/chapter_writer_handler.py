@@ -246,6 +246,38 @@ class ChapterContext:
         parts.append("=" * 50)
         return "\n".join(parts)
 
+    def load_research_context(self) -> None:
+        """Load research notes + ProjectCitation records for this chapter."""
+        try:
+            from apps.projects.models import BookProject, OutlineNode, ProjectCitation
+
+            node = OutlineNode.objects.filter(pk=self.chapter_ref).first()
+            project_obj = BookProject.objects.filter(pk=self.project_id).first()
+            if not node or not project_obj:
+                return
+
+            self.research_notes = node.notes or ""
+            db_cits = (
+                ProjectCitation.objects.filter(project=project_obj, node=node)
+                .order_by("-created_at")[:20]
+            )
+            if db_cits.exists():
+                cit_lines = [f"## Zugeordnete Quellen ({db_cits.count()})"]
+                for c in db_cits:
+                    year = f" ({c.year})" if c.year else ""
+                    cit_lines.append(f"- {c.authors_display}{year}: {c.title}")
+                    if c.doi:
+                        cit_lines.append(f"  DOI: {c.doi}")
+                    if c.abstract:
+                        cit_lines.append(f"  Abstract: {c.abstract[:200]}")
+                db_block = "\n".join(cit_lines)
+                if self.research_notes:
+                    self.research_notes = db_block + "\n\n" + self.research_notes
+                else:
+                    self.research_notes = db_block
+        except Exception as exc:
+            logger.debug("load_research_context failed: %s", exc)
+
     @classmethod
     def from_project(cls, project_id: str, chapter_ref: str) -> "ChapterContext":
         """
