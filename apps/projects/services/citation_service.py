@@ -518,7 +518,7 @@ def research_chapter_sources(
     node.notes = notes
     node.save(update_fields=["notes"])
 
-    citations_created = _persist_papers_as_citations(project, node, papers)
+    citations_created = persist_papers_as_citations(project, node, papers)
 
     return {
         "paper_count": len(papers),
@@ -528,7 +528,7 @@ def research_chapter_sources(
     }
 
 
-def _persist_papers_as_citations(project, node, papers: list[dict[str, Any]]) -> int:
+def persist_papers_as_citations(project, node, papers: list[dict[str, Any]]) -> int:
     """
     Persist search-result papers as ProjectCitation records linked to a chapter node.
     Skips duplicates (same DOI or title within project). Returns count of newly created.

@@ -236,8 +236,8 @@ class ProjectCreateView(LoginRequiredMixin, View):
                 if styles:
                     project.writing_style = styles.first()
                     project.save(update_fields=["writing_style"])
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Writing style assignment failed for new project: %s", exc)
         messages.success(request, f"Projekt „{project.title}“ angelegt.")
         return redirect("projects:detail", pk=project.pk)
 
@@ -362,8 +362,8 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
             if first:
                 self.object.writing_style = first
                 self.object.save(update_fields=["writing_style"])
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Writing style assignment failed on update: %s", exc)
         return response
 
     def get_success_url(self):
@@ -464,8 +464,8 @@ class OutlineCreateView(LoginRequiredMixin, View):
                             summary = ""
                             try:
                                 summary = node.summary or node.description or ""
-                            except Exception:
-                                pass
+                            except Exception as exc:
+                                logger.debug("AI node summary extraction failed: %s", exc)
                             db_nodes.append(
                                 _ON(
                                     outline_version=version,
@@ -699,8 +699,8 @@ class DramaDashboardView(LoginRequiredMixin, View):
             from apps.core.models_lookups_drama import TurningPointTypeLookup
 
             turning_point_types = list(TurningPointTypeLookup.objects.order_by("sort_order"))
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("TurningPointTypeLookup not available: %s", exc)
 
         return render(
             request,
@@ -758,8 +758,8 @@ class DramaTurningPointAddView(LoginRequiredMixin, View):
                 from apps.core.models_lookups_drama import TurningPointTypeLookup
 
                 tp_type = TurningPointTypeLookup.objects.filter(pk=tp_type_pk).first()
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("TurningPointTypeLookup query failed: %s", exc)
 
         try:
             position = max(0, min(100, int(pos)))

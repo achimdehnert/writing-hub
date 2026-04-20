@@ -17,7 +17,7 @@ from django.views import View
 from .constants import SUMMARY_CITATION_FORMATS, SUMMARY_STYLES
 from .models import BookProject, OutlineNode, OutlineVersion
 from .services.citation_service import (
-    _persist_papers_as_citations,
+    persist_papers_as_citations,
     research_outline_node,
     summarize_papers,
 )
@@ -157,7 +157,7 @@ class OutlineNodeResearchAjaxView(LoginRequiredMixin, View):
         )
 
         papers = result.get("papers", [])[:8]
-        citations_created = _persist_papers_as_citations(project, node, papers)
+        citations_created = persist_papers_as_citations(project, node, papers)
 
         return JsonResponse(
             {
