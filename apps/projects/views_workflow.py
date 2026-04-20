@@ -14,7 +14,6 @@ from .models import (
     ChapterNote,
     OutlineNode,
     PhaseChecklistItem,
-    ProjectMilestone,
 )
 
 logger = logging.getLogger(__name__)

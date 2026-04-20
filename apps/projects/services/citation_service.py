@@ -497,7 +497,7 @@ def research_chapter_sources(
 
     Returns dict mit 'paper_count', 'notes_preview', 'papers', 'citations_created'.
     """
-    from apps.projects.models import OutlineNode, ProjectCitation
+    from apps.projects.models import OutlineNode
 
     node = OutlineNode.objects.select_related(
         "outline_version__project"

@@ -9,7 +9,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 
-from .models import BookProject, ContentTypeLookup, OutlineFramework, ProjectTemplate
+from .models import BookProject, ContentTypeLookup, ProjectTemplate
 
 logger = logging.getLogger(__name__)
 
