@@ -16,9 +16,7 @@ class TestLoadResearchContext:
         from apps.projects.models import BookProject, OutlineVersion
 
         self.user = User.objects.create_user(username="ctx_user", password="pass123")
-        self.project = BookProject.objects.create(
-            title="Test Project", owner=self.user
-        )
+        self.project = BookProject.objects.create(title="Test Project", owner=self.user)
         self.version = OutlineVersion.objects.create(
             project=self.project,
             created_by=self.user,

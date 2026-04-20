@@ -257,10 +257,7 @@ class ChapterContext:
                 return
 
             self.research_notes = node.notes or ""
-            db_cits = (
-                ProjectCitation.objects.filter(project=project_obj, node=node)
-                .order_by("-created_at")[:20]
-            )
+            db_cits = ProjectCitation.objects.filter(project=project_obj, node=node).order_by("-created_at")[:20]
             if db_cits.exists():
                 cit_lines = [f"## Zugeordnete Quellen ({db_cits.count()})"]
                 for c in db_cits:
