@@ -87,18 +87,18 @@
                 <div class="col-md-6">
                     <label class="form-label small text-muted">Titel</label>
                     <input type="text" name="title" value="{{ node.title }}"
-                           class="form-control form-control-sm bg-dark text-light border-secondary">
+                           class="form-control form-control-sm">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small text-muted">Beat / Phase</label>
                     <input type="text" name="beat_phase" value="{{ node.beat_phase }}"
-                           class="form-control form-control-sm bg-dark text-light border-secondary"
+                           class="form-control form-control-sm"
                            placeholder="z.B. Opening Image">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small text-muted">Akt</label>
                     <input type="text" name="act" value="{{ node.act }}"
-                           class="form-control form-control-sm bg-dark text-light border-secondary"
+                           class="form-control form-control-sm"
                            placeholder="z.B. Akt 1 - Setup">
                 </div>
             </div>
@@ -106,26 +106,26 @@
                 <div class="col-md-3">
                     <label class="form-label small text-muted">Ziel-Wörter</label>
                     <input type="number" name="target_words" value="{{ node.target_words|default:'' }}"
-                           class="form-control form-control-sm bg-dark text-light border-secondary"
+                           class="form-control form-control-sm"
                            placeholder="3000">
                 </div>
                 <div class="col-md-9">
                     <label class="form-label small text-muted"><i class="bi bi-heart me-1"></i>Emotionaler Bogen</label>
                     <input type="text" name="emotional_arc" value="{{ node.emotional_arc }}"
-                           class="form-control form-control-sm bg-dark text-light border-secondary"
+                           class="form-control form-control-sm"
                            placeholder="z.B. Neugierig und optimistisch">
                 </div>
             </div>
             <div class="mb-2">
                 <label class="form-label small text-muted">Kapitel-Outline</label>
                 <textarea name="description" rows="8"
-                          class="form-control form-control-sm bg-dark text-light border-secondary"
+                          class="form-control form-control-sm"
                           style="font-size:.83rem;" placeholder="Was passiert in diesem Beat/Kapitel?">{{ node.description }}</textarea>
             </div>
             <div class="mb-3">
                 <label class="form-label small text-muted">Notizen</label>
                 <textarea name="notes" rows="2"
-                          class="form-control form-control-sm bg-dark text-light border-secondary">{{ node.notes }}</textarea>
+                          class="form-control form-control-sm">{{ node.notes }}</textarea>
             </div>
             <div class="d-flex gap-2 align-items-center">
                 <button type="submit" class="btn btn-primary btn-sm">

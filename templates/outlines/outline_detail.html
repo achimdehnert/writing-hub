@@ -228,7 +228,7 @@
             <div class="col-md-5">
                 <label class="form-label small text-muted">Framework ({{ frameworks|length }} verfügbar)</label>
                 <select id="fw-listbox" size="8"
-                        class="form-select bg-dark text-light border-secondary"
+                        class="form-select"
                         style="height:auto;"
                         data-action="framework-select">
                     {% for fw in frameworks %}
@@ -300,11 +300,11 @@
               hx-trigger="input changed delay:400ms, change"
               class="d-flex gap-2 flex-wrap">
             <input type="text" name="q"
-                   class="form-control form-control-sm bg-dark text-light border-secondary"
+                   class="form-control form-control-sm"
                    style="max-width:200px;"
                    placeholder="Suche…">
             <select name="beat_type"
-                    class="form-select form-select-sm bg-dark text-light border-secondary"
+                    class="form-select form-select-sm"
                     style="max-width:160px;">
                 <option value="">Alle Typen</option>
                 <option value="chapter">Kapitel</option>
@@ -314,7 +314,7 @@
                 <option value="part">Teil</option>
             </select>
             <input type="text" name="act"
-                   class="form-control form-control-sm bg-dark text-light border-secondary"
+                   class="form-control form-control-sm"
                    style="max-width:160px;"
                    placeholder="Akt filtern…">
             <button type="button" class="btn btn-outline-secondary btn-sm"
@@ -344,7 +344,7 @@
         <form method="post" action="{% url 'outlines:node_add' outline.pk %}" class="d-flex gap-2">
             {% csrf_token %}
             <input type="text" name="title"
-                   class="form-control form-control-sm bg-dark text-light border-secondary"
+                   class="form-control form-control-sm"
                    placeholder="Titel des neuen Kapitels...">
             <button class="btn btn-outline-success btn-sm px-3">
                 <i class="bi bi-plus-circle me-1"></i>Hinzufügen
@@ -401,7 +401,7 @@
           <div class="mb-3">
             <label class="form-label small text-muted">Framework</label>
             <select id="genFwSelect" name="framework"
-                    class="form-select bg-dark text-light border-secondary"
+                    class="form-select"
                     data-action="update-gen-info">
               {% for fw in frameworks %}
               <option value="{{ fw.key }}" {% if active_fw and active_fw.key == fw.key %}selected{% endif %}>
@@ -441,13 +441,13 @@
           <div class="mb-3">
             <label class="form-label small text-muted">Versions-Name *</label>
             <input type="text" name="version_name"
-                   class="form-control bg-dark text-light border-secondary"
+                   class="form-control"
                    placeholder="z.B. Version 2 — nach Feedback" value="{{ outline.name }}">
           </div>
           <div class="mb-3">
             <label class="form-label small text-muted">Label / Notiz</label>
             <input type="text" name="version_label"
-                   class="form-control bg-dark text-light border-secondary"
+                   class="form-control"
                    placeholder="Optionale Beschreibung">
           </div>
           <div class="alert py-2 px-3" style="background:#1e2235;border:1px solid #2d3148;font-size:.8rem;color:#94a3b8;">

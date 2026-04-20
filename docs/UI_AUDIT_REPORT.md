@@ -115,16 +115,24 @@
 
 ---
 
-## Bekannte verbleibende Issues (außerhalb Scope)
+## Nachbesserung 2026-04-20
 
-| Datei | Issue | Priorität |
-|-------|-------|-----------|
-| `outlines/outline_detail.html` | `onclick=` Patterns (4×) | Low — andere Page |
-| `authors/style_form.html` | `onclick=` Patterns (8×) | Low — andere Page |
-| `projects/review.html` | `onclick=` Pattern (1×) | Low — andere Page |
-| `projects/drama_dashboard.html` | `bg-dark text-light` (6×) | Low — andere Page |
-| `projects/versions.html` | `bg-dark text-light` (2×) | Low — andere Page |
-| Alle Templates | `favicon.ico` 404 | Low — fehlende Datei |
+| # | Fix | Beschreibung | Status |
+|---|-----|-------------|--------|
+| 13 | `bg-dark text-light border-secondary` | 31 Hits in 6 Templates entfernt (global CSS übernimmt) | ✅ |
+| 14 | Favicon | SVG-Favicon erstellt + `{% static %}` Link in base.html | ✅ |
+
+**Betroffene Dateien:**
+- `templates/ideas/idea_upload.html` (3 Hits)
+- `templates/outlines/outline_detail.html` (8 Hits)
+- `templates/outlines/partials/node_row.html` (7 Hits)
+- `templates/projects/drama_dashboard.html` (7 Hits)
+- `templates/projects/versions.html` (2 Hits)
+- `templates/series/series_form.html` (4 Hits)
+- `templates/base.html` (Favicon-Link)
+- `static/favicon.svg` (neu)
+
+**`onclick=` Patterns:** Bereits in B3 plattformweit entfernt (0 Hits).
 
 ---
 
@@ -132,10 +140,11 @@
 
 **COMPLETE ✅**
 
-- 12 Fixes implementiert (7 geplant + 5 Nachbesserungen)
+- 14 Fixes implementiert (7 geplant + 7 Nachbesserungen)
 - 8/8 Seiten HTTP 200
 - 0 JS-Errors
 - 39/40 Links OK (1× expected)
 - 9/9 Templates parsen
-- 0 Banned Patterns in Scope
+- 0 Banned Patterns (onclick, bg-dark text-light)
 - Mobile-Support funktioniert
+- Favicon vorhanden

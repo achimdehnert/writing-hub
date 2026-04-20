@@ -24,7 +24,7 @@
 
             <div class="mb-4">
                 <label class="form-label small text-muted">Projekt *</label>
-                <select name="project_id" class="form-select bg-dark text-light border-secondary" required>
+                <select name="project_id" class="form-select" required>
                     <option value="">— Projekt auswählen —</option>
                     {% for p in projects %}
                     <option value="{{ p.pk }}">{{ p.title }}</option>
@@ -49,14 +49,14 @@
                 <div id="fileSection">
                     <label class="form-label small text-muted">Datei <span class="text-muted">(txt, md, docx, pdf — max. 10 MB)</span></label>
                     <input type="file" name="document_file" id="document_file"
-                           class="form-control bg-dark text-light border-secondary"
+                           class="form-control"
                            accept=".txt,.md,.docx,.pdf">
                 </div>
 
                 <div id="freetextSection" class="d-none">
                     <label class="form-label small text-muted">Freitext eingeben</label>
                     <textarea name="freetext_content" rows="8"
-                              class="form-control bg-dark text-light border-secondary"
+                              class="form-control"
                               placeholder="Ideen, Konzepte, Figuren, Welt-Beschreibungen ..."></textarea>
                 </div>
             </div>

@@ -130,7 +130,7 @@
                 {% csrf_token %}
                 <div class="col-md-3">
                     <label class="form-label small text-muted">Typ</label>
-                    <select name="turning_point_type" class="form-select form-select-sm bg-dark text-light border-secondary">
+                    <select name="turning_point_type" class="form-select form-select-sm">
                         <option value="">— keiner —</option>
                         {% for tp in turning_point_types %}
                         <option value="{{ tp.pk }}">{{ tp.label }}</option>
@@ -139,12 +139,12 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small text-muted">Bezeichnung</label>
-                    <input type="text" name="label" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Optionaler Override">
+                    <input type="text" name="label" class="form-control form-control-sm" placeholder="Optionaler Override">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small text-muted">Position (%)</label>
                     <input type="number" name="position_percent" min="0" max="100" value="25"
-                           class="form-control form-control-sm bg-dark text-light border-secondary">
+                           class="form-control form-control-sm">
                 </div>
                 <div class="col-md-2">
                     <button type="submit" class="btn btn-success btn-sm">Speichern</button>
@@ -221,14 +221,14 @@
                         <td>
                             <input type="number" min="1" max="10"
                                    value="{{ node_data.tension_numeric|default:'' }}"
-                                   class="form-control form-control-sm bg-dark text-light border-secondary"
+                                   class="form-control form-control-sm"
                                    style="width:70px;"
                                    data-node-pk="{{ node_data.pk }}"
                                    data-field="tension_numeric"
                                    data-action="save-drama-field">
                         </td>
                         <td>
-                            <select class="form-select form-select-sm bg-dark text-light border-secondary"
+                            <select class="form-select form-select-sm"
                                     data-node-pk="{{ node_data.pk }}"
                                     data-field="outcome"
                                     data-action="save-drama-field">
@@ -242,7 +242,7 @@
                         <td>
                             <input type="text"
                                    value="{{ node_data.emotion_start }}"
-                                   class="form-control form-control-sm bg-dark text-light border-secondary"
+                                   class="form-control form-control-sm"
                                    placeholder="z.B. Hoffnung"
                                    data-node-pk="{{ node_data.pk }}"
                                    data-field="emotion_start"
@@ -251,7 +251,7 @@
                         <td>
                             <input type="text"
                                    value="{{ node_data.emotion_end }}"
-                                   class="form-control form-control-sm bg-dark text-light border-secondary"
+                                   class="form-control form-control-sm"
                                    placeholder="z.B. Verzweiflung"
                                    data-node-pk="{{ node_data.pk }}"
                                    data-field="emotion_end"
