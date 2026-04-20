@@ -93,7 +93,7 @@
 <div class="d-flex gap-2 mb-3 align-items-center">
     <button class="btn btn-sm" id="bulkFixBtn"
             style="background:#1a1a3a;border:1px solid #4338ca;color:#a5b4fc;"
-            onclick="bulkFixAll()" title="KI-Korrektur für alle offenen Probleme generieren">
+            data-action="bulk-fix-all" title="KI-Korrektur für alle offenen Probleme generieren">
         <i class="bi bi-wrench me-1"></i>Alle offenen beheben
         <span class="badge ms-1" style="background:#4338ca;" id="bulkFixCount">{{ open_count }}</span>
     </button>
@@ -159,13 +159,13 @@
                 <div class="d-flex gap-2 mt-1 action-buttons" id="actions-{{ issue.id }}">
                     <button class="btn btn-sm py-0 px-2"
                             style="background:#1a1a3a;border:1px solid #4338ca;color:#a5b4fc;font-size:.7rem;"
-                            onclick="generateFix('{{ issue.id }}', this)"
+                            data-action="generate-fix" data-id="{{ issue.id }}"
                             title="KI-Korrekturvorschlag generieren">
                         <i class="bi bi-wrench me-1"></i>Problem beheben
                     </button>
                     <button class="btn btn-sm py-0 px-2"
                             style="background:#1a1a2a;border:1px solid #475569;color:#94a3b8;font-size:.7rem;"
-                            onclick="skipIssue('{{ issue.id }}', this)"
+                            data-action="skip-issue" data-id="{{ issue.id }}"
                             title="Problem überspringen — wird bei ‚Alle beheben' ausgelassen">
                         <i class="bi bi-skip-forward me-1"></i>Überspringen
                     </button>
@@ -175,7 +175,7 @@
             <!-- Resolve-Button -->
             <button class="btn btn-sm py-0 px-1 flex-shrink-0 mt-1"
                     style="{% if issue.is_resolved %}color:#22c55e;{% else %}color:#64748b;{% endif %}font-size:.8rem;"
-                    onclick="resolveIssue('{{ issue.id }}', this)"
+                    data-action="resolve-issue" data-id="{{ issue.id }}"
                     title="{% if issue.is_resolved %}Wiederöffnen{% else %}Als erledigt markieren{% endif %}">
                 <i class="bi {% if issue.is_resolved %}bi-check-circle-fill{% else %}bi-circle{% endif %}"></i>
             </button>
@@ -268,7 +268,7 @@ function skipIssue(issueId, btn) {
     if (actionsDiv) {
         actionsDiv.innerHTML = '<span class="small" style="color:#64748b;"><i class="bi bi-skip-forward me-1"></i>Übersprungen</span>' +
             ' <button class="btn btn-sm py-0 px-2" style="color:#64748b;font-size:.65rem;border:1px solid #334155;" ' +
-            'onclick="unskipIssue(\'' + issueId + '\', this.parentElement)"><i class="bi bi-arrow-counterclockwise"></i></button>';
+            'data-action="unskip-issue" data-id="' + issueId + '"><i class="bi bi-arrow-counterclockwise"></i></button>';
     }
     updateBulkCount();
 }
@@ -279,10 +279,10 @@ function unskipIssue(issueId, actionsDiv) {
     card.style.opacity = '1';
     actionsDiv.innerHTML =
         '<button class="btn btn-sm py-0 px-2" style="background:#1a1a3a;border:1px solid #4338ca;color:#a5b4fc;font-size:.7rem;" ' +
-        'onclick="generateFix(\'' + issueId + '\', this)" title="KI-Korrekturvorschlag generieren">' +
+        'data-action="generate-fix" data-id="' + issueId + '" title="KI-Korrekturvorschlag generieren">' +
         '<i class="bi bi-wrench me-1"></i>Problem beheben</button>' +
         '<button class="btn btn-sm py-0 px-2" style="background:#1a1a2a;border:1px solid #475569;color:#94a3b8;font-size:.7rem;" ' +
-        'onclick="skipIssue(\'' + issueId + '\', this)" title="Problem überspringen">' +
+        'data-action="skip-issue" data-id="' + issueId + '" title="Problem überspringen">' +
         '<i class="bi bi-skip-forward me-1"></i>Überspringen</button>';
     updateBulkCount();
 }
@@ -344,5 +344,16 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 });
 
 document.querySelectorAll('.toast').forEach(el => setTimeout(() => el.classList.remove('show'), 5000));
+document.addEventListener('click', function(e) {
+    var el = e.target.closest('[data-action]');
+    if (!el) return;
+    switch (el.dataset.action) {
+        case 'bulk-fix-all': bulkFixAll(); break;
+        case 'generate-fix': generateFix(el.dataset.id, el); break;
+        case 'skip-issue': skipIssue(el.dataset.id, el); break;
+        case 'resolve-issue': resolveIssue(el.dataset.id, el); break;
+        case 'unskip-issue': unskipIssue(el.dataset.id, el.parentElement); break;
+    }
+});
 </script>
 {% endblock %}

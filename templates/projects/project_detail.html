@@ -552,7 +552,7 @@
                 {% if outlines %}
                 <div class="d-flex align-items-center gap-2">
                     <select class="form-select form-select-sm w-auto"
-                            onchange="location.href='?outline=' + this.value">
+                            data-action="navigate-outline">
                         {% for o in outlines %}
                         <option value="{{ o.pk }}" {% if o.pk == selected_outline.pk %}selected{% endif %}>
                             {{ o.name }} ({{ o.created_at|date:"d.m.Y" }})
@@ -787,7 +787,7 @@
             <label class="form-label small text-muted">Framework wählen *</label>
             <select id="outlineFrameworkSelect" name="framework_template"
                     class="form-select" required
-                    onchange="onOutlineFrameworkChange(this.value)">
+                    data-action="outline-framework-change">
               <option value="">— Framework auswählen —</option>
               {% for fw in frameworks %}
               <option value="{{ fw.key }}" data-beats="{{ fw.beat_count }}">
@@ -854,7 +854,7 @@
             <label class="form-label small text-muted">Framework</label>
             <select id="kiFrameworkSelect" name="framework"
                     class="form-select"
-                    onchange="onKiFrameworkChange(this.value)">
+                    data-action="ki-framework-change">
               {% for fw in frameworks %}
               {% if fw.key != 'blank' %}
               <option value="{{ fw.key }}" data-beats="{{ fw.beat_count }}"
@@ -939,5 +939,14 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 document.querySelectorAll('.toast').forEach(el => setTimeout(() => el.classList.remove('show'), 5000));
+document.addEventListener('change', function(e) {
+    var el = e.target.closest('[data-action]');
+    if (!el) return;
+    switch (el.dataset.action) {
+        case 'navigate-outline': location.href = '?outline=' + el.value; break;
+        case 'outline-framework-change': onOutlineFrameworkChange(el.value); break;
+        case 'ki-framework-change': onKiFrameworkChange(el.value); break;
+    }
+});
 </script>
 {% endblock %}

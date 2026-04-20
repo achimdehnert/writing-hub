@@ -54,7 +54,7 @@
                                 <label class="d-flex align-items-center gap-2 p-2 rounded"
                                        style="border:1px solid #2d3748;cursor:pointer;background:#131929;"
                                        id="agent-label-{{ agent.key }}"
-                                       onclick="selectAgent('{{ agent.key }}')">
+                                       data-action="select-agent" data-key="{{ agent.key }}">
                                     <input type="radio" name="agent" value="{{ agent.key }}"
                                            id="agent-{{ agent.key }}" class="d-none"
                                            {% if forloop.first %}checked{% endif %}>
@@ -129,7 +129,7 @@
                 {% if reviews %}
                 <button class="btn btn-sm w-100" id="bulkResolveBtn"
                         style="background:#1a2a1a;border:1px solid #22c55e44;color:#86efac;font-size:.72rem;"
-                        onclick="bulkResolveAll()">
+                        data-action="bulk-resolve-all">
                     <i class="bi bi-check-all me-1"></i>Alle offenen erledigen
                     <span class="badge ms-1" style="background:#22c55e33;" id="bulkResolveCount">{{ open_count }}</span>
                 </button>
@@ -165,14 +165,14 @@
                         <div class="d-flex flex-column gap-1 flex-shrink-0 align-items-center">
                             <button class="btn btn-sm py-0 px-1"
                                     style="font-size:.7rem;{% if r.is_resolved %}color:#22c55e;{% else %}color:#64748b;{% endif %}"
-                                    onclick="resolveReview('{{ r.id }}', this)"
+                                    data-action="resolve-review" data-id="{{ r.id }}"
                                     title="{% if r.is_resolved %}Wiederöffnen{% else %}Erledigen{% endif %}">
                                 <i class="bi {% if r.is_resolved %}bi-check-circle-fill{% else %}bi-circle{% endif %}"></i>
                             </button>
                             {% if not r.is_resolved %}
                             <button class="btn btn-sm py-0 px-1 skip-btn"
                                     style="font-size:.65rem;color:#64748b;"
-                                    onclick="skipReview('{{ r.id }}', this)"
+                                    data-action="skip-review" data-id="{{ r.id }}"
                                     title="Überspringen — wird bei ‚Alle erledigen' ausgelassen">
                                 <i class="bi bi-skip-forward"></i>
                             </button>
@@ -247,7 +247,7 @@ function skipReview(id, btn) {
     row.dataset.skipped = 'true';
     row.style.opacity = '.25';
     btn.outerHTML = '<button class="btn btn-sm py-0 px-1" style="font-size:.6rem;color:#64748b;" ' +
-        'onclick="unskipReview(\'' + id + '\', this)" title="Zurückholen">' +
+        'data-action="unskip-review" data-id="' + id + '" title="Zurückholen">' +
         '<i class="bi bi-arrow-counterclockwise"></i></button>';
     updateBulkCount();
 }
@@ -257,7 +257,7 @@ function unskipReview(id, btn) {
     row.dataset.skipped = 'false';
     row.style.opacity = '1';
     btn.outerHTML = '<button class="btn btn-sm py-0 px-1 skip-btn" style="font-size:.65rem;color:#64748b;" ' +
-        'onclick="skipReview(\'' + id + '\', this)" title="Überspringen">' +
+        'data-action="skip-review" data-id="' + id + '" title="Überspringen">' +
         '<i class="bi bi-skip-forward"></i></button>';
     updateBulkCount();
 }
@@ -293,7 +293,7 @@ async function bulkResolveAll() {
             if (row && data.is_resolved) {
                 row.style.opacity = '.5';
                 row.dataset.resolved = 'true';
-                const resolveBtn = row.querySelector('button[onclick*="resolveReview"]');
+                const resolveBtn = row.querySelector('[data-action="resolve-review"]');
                 if (resolveBtn) { resolveBtn.style.color = '#22c55e'; resolveBtn.querySelector('i').className = 'bi bi-check-circle-fill'; }
                 const skipBtn = row.querySelector('.skip-btn');
                 if (skipBtn) skipBtn.remove();
@@ -311,5 +311,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (first) { first.style.borderColor = '#6366f1'; first.style.background = '#1e1b4b'; }
 });
 document.querySelectorAll('.toast').forEach(el => setTimeout(() => el.classList.remove('show'), 5000));
+document.addEventListener('click', function(e) {
+    var el = e.target.closest('[data-action]');
+    if (!el) return;
+    switch (el.dataset.action) {
+        case 'select-agent': selectAgent(el.dataset.key); break;
+        case 'bulk-resolve-all': bulkResolveAll(); break;
+        case 'resolve-review': resolveReview(el.dataset.id, el); break;
+        case 'skip-review': skipReview(el.dataset.id, el); break;
+        case 'unskip-review': unskipReview(el.dataset.id, el); break;
+    }
+});
 </script>
 {% endblock %}

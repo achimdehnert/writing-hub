@@ -52,7 +52,7 @@
     <form method="post">
         {% csrf_token %}
         <input type="hidden" name="action" value="clear_all">
-        <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Alle Quellen entfernen?')">
+        <button class="btn btn-sm btn-outline-danger" data-confirm="Alle Quellen entfernen?">
             <i class="bi bi-trash me-1"></i>Alle löschen
         </button>
     </form>
@@ -82,7 +82,7 @@
                 <small class="text-muted"><i class="bi bi-lightbulb me-1"></i>Recherchefragen pro Kapitel</small>
                 <button id="genQueriesBtn" class="btn btn-sm py-0 px-2"
                         style="background:#1e1b4b;border:1px solid #4338ca;color:#a5b4fc;font-size:.68rem;"
-                        onclick="generateResearchQueries()" type="button">
+                        data-action="generate-research-queries" type="button">
                     <span class="spinner-border spinner-border-sm me-1" id="genQueriesSpinner" style="display:none;" role="status"></span>
                     <i class="bi bi-stars me-1" id="genQueriesIcon"></i>{% if has_research_queries %}Neu generieren{% else %}KI-Recherchefragen generieren{% endif %}
                 </button>
@@ -97,7 +97,7 @@
                                 {% for q in ch_queries %}
                                 <button class="btn btn-sm py-0 px-2 me-1 mb-1" type="button"
                                     style="background:#1a1a3a;border:1px solid #4338ca;color:#c7d2fe;font-size:.68rem;"
-                                    onclick="currentSearchChapterId='{{ ch_pk }}'; document.getElementById('searchQuery').value=this.textContent.trim(); document.getElementById('searchQuery').focus();"
+                                    data-action="fill-search" data-chapter-id="{{ ch_pk }}"
                                     title="Suchfeld füllen → Kapitel {{ ch_order }}">{{ q }}</button>
                                 {% endfor %}
                             </div>
@@ -108,7 +108,7 @@
                     {% for ch_pk, ch_order, ch_title, ch_queries in chapters %}
                     <button class="btn btn-sm py-0 px-2 ch-query-btn me-1 mb-1" type="button"
                             style="background:#131929;border:1px solid #2d3748;color:#94a3b8;font-size:.7rem;"
-                            onclick="currentSearchChapterId='{{ ch_pk }}'; document.getElementById('searchQuery').value='{{ ch_title|escapejs }}'; document.getElementById('searchQuery').focus();"
+                            data-action="fill-search-title" data-chapter-id="{{ ch_pk }}" data-title="{{ ch_title|escapejs }}"
                             title="Suchfeld füllen → Kapitel {{ ch_order }}">
                         {{ ch_order }}. {{ ch_title|truncatechars:20 }}
                     </button>
@@ -136,7 +136,7 @@
             </div>
             <div class="col-md-2">
                 <button id="searchBtn" class="btn btn-sm w-100" style="background:#1a3a5a;border-color:#7dd3fc;color:#7dd3fc;"
-                        onclick="runLiteraturrecherche()">
+                        data-action="run-literaturrecherche">
                     <span class="search-spinner spinner-border spinner-border-sm me-1" id="searchSpinner" role="status"></span>
                     <i class="bi bi-search me-1" id="searchIcon"></i>Suchen
                 </button>
@@ -162,7 +162,7 @@
                     <small class="text-muted">Klick auf <strong>+ Hinzufügen</strong> um Quelle zu übernehmen</small>
                     <button id="summarizeBtn" class="btn btn-sm"
                             style="background:#1a1a4a;border-color:#6366f1;color:#818cf8;font-size:.75rem;padding:.2rem .6rem;"
-                            onclick="runSummarize()">
+                            data-action="run-summarize">
                         <i class="bi bi-stars me-1"></i>KI-Zusammenfassung
                     </button>
                 </div>
@@ -198,7 +198,7 @@
                     <ul id="summaryKpList" style="list-style:none;padding:0;margin:0;color:#94a3b8;font-size:.82rem;"></ul>
                 </div>
                 <button class="btn btn-sm btn-outline-secondary"
-                        onclick="navigator.clipboard.writeText(document.getElementById('summaryText').textContent); this.textContent='✓ Kopiert!'; setTimeout(()=>this.textContent='Zusammenfassung kopieren',2000)">
+                        data-action="copy-text" data-source="summaryText" data-label="Zusammenfassung kopieren">
                     <i class="bi bi-clipboard me-1"></i>Zusammenfassung kopieren
                 </button>
             </div>
@@ -331,7 +331,7 @@
                             <i class="bi bi-bookmark" style="font-size:.7rem;color:#6366f1;"></i>
                             <select name="node_id" class="form-select form-select-sm inp-dark"
                                     style="width:auto;font-size:.72rem;padding:.15rem .5rem .15rem .3rem;"
-                                    onchange="this.form.submit()">
+                                    data-action="auto-submit">
                                 <option value="">— Kein Kapitel —</option>
                                 {% for ch_pk, ch_order, ch_title, ch_queries in chapters %}
                                 <option value="{{ ch_pk }}" {% if c.node_id == ch_pk %}selected{% endif %}>
@@ -380,7 +380,7 @@
                 {% csrf_token %}
                 <input type="hidden" name="action" value="clear_all" style="display:none!important">
                 <select name="style" class="form-select form-select-sm inp-dark" style="width:auto;"
-                        onchange="this.form.action='{% url 'projects:citations' project.pk %}?style='+this.value; this.form.method='get'; this.form.submit();">
+                        data-action="bib-style-change" data-base-url="{% url 'projects:citations' project.pk %}">
                     {% for val, label in citation_styles %}
                     <option value="{{ val }}" {% if val == active_style %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
@@ -391,7 +391,7 @@
             {% if bibliography %}
             <pre class="bib-output p-3 mb-2">{{ bibliography }}</pre>
             <button class="btn btn-sm btn-outline-secondary w-100"
-                    onclick="navigator.clipboard.writeText(document.querySelector('.bib-output').textContent); this.textContent='✓ Kopiert!'; setTimeout(()=>this.textContent='Bibliographie kopieren',2000)">
+                    data-action="copy-selector" data-selector=".bib-output" data-label="Bibliographie kopieren">
                 <i class="bi bi-clipboard me-1"></i>Bibliographie kopieren
             </button>
             {% else %}
@@ -410,7 +410,7 @@
             {% if bibtex_export %}
             <pre class="bibtex-output p-3 mb-2" style="max-height:250px;overflow-y:auto;">{{ bibtex_export }}</pre>
             <button class="btn btn-sm btn-outline-warning w-100"
-                    onclick="navigator.clipboard.writeText(document.querySelector('.bibtex-output').textContent); this.textContent='✓ Kopiert!'; setTimeout(()=>this.textContent='BibTeX kopieren',2000)">
+                    data-action="copy-selector" data-selector=".bibtex-output" data-label="BibTeX kopieren">
                 <i class="bi bi-clipboard me-1"></i>BibTeX kopieren
             </button>
             {% endif %}
@@ -528,7 +528,7 @@ function renderPapers(papers) {
                     ${abstract}
                 </div>
                 <button class="btn btn-sm flex-shrink-0" style="background:#3a1a1a;border-color:#f87171;color:#f87171;white-space:nowrap;"
-                        onclick="dismissPaper(${i})" title="Treffer entfernen">
+                        data-action="dismiss-paper" data-idx="${i}" title="Treffer entfernen">
                     <i class="bi bi-x-lg"></i>
                 </button>
             </div>
@@ -707,7 +707,7 @@ async function generateResearchQueries() {
             const queries = (ch.queries || []).map(q =>
                 `<button class="btn btn-sm py-0 px-2 me-1 mb-1" type="button"
                     style="background:#1a1a3a;border:1px solid #4338ca;color:#c7d2fe;font-size:.68rem;"
-                    onclick="currentSearchChapterId='${chId}'; document.getElementById('searchQuery').value=this.textContent.trim(); document.getElementById('searchQuery').focus();"
+                    data-action="fill-search" data-chapter-id="${chId}"
                     title="Suchfeld füllen → Kap. ${ch.chapter_order || ''}">
                     ${q}
                 </button>`
@@ -732,5 +732,51 @@ async function generateResearchQueries() {
 {% if chapters and not has_research_queries %}
 document.addEventListener("DOMContentLoaded", () => generateResearchQueries());
 {% endif %}
+document.addEventListener('click', function(e) {
+    var el = e.target.closest('[data-action]');
+    if (!el) return;
+    switch (el.dataset.action) {
+        case 'generate-research-queries': generateResearchQueries(); break;
+        case 'fill-search':
+            currentSearchChapterId = el.dataset.chapterId;
+            document.getElementById('searchQuery').value = el.textContent.trim();
+            document.getElementById('searchQuery').focus();
+            break;
+        case 'fill-search-title':
+            currentSearchChapterId = el.dataset.chapterId;
+            document.getElementById('searchQuery').value = el.dataset.title;
+            document.getElementById('searchQuery').focus();
+            break;
+        case 'run-literaturrecherche': runLiteraturrecherche(); break;
+        case 'run-summarize': runSummarize(); break;
+        case 'copy-text':
+            navigator.clipboard.writeText(document.getElementById(el.dataset.source).textContent);
+            el.textContent = '\u2713 Kopiert!';
+            var lbl = el.dataset.label;
+            setTimeout(function() { el.textContent = lbl; }, 2000);
+            break;
+        case 'copy-selector':
+            navigator.clipboard.writeText(document.querySelector(el.dataset.selector).textContent);
+            el.textContent = '\u2713 Kopiert!';
+            var lbl2 = el.dataset.label;
+            setTimeout(function() { el.textContent = lbl2; }, 2000);
+            break;
+        case 'dismiss-paper': dismissPaper(parseInt(el.dataset.idx)); break;
+    }
+    var conf = e.target.closest('[data-confirm]');
+    if (conf && !confirm(conf.dataset.confirm)) e.preventDefault();
+});
+document.addEventListener('change', function(e) {
+    var el = e.target.closest('[data-action]');
+    if (!el) return;
+    switch (el.dataset.action) {
+        case 'auto-submit': el.form.submit(); break;
+        case 'bib-style-change':
+            el.form.action = el.dataset.baseUrl + '?style=' + el.value;
+            el.form.method = 'get';
+            el.form.submit();
+            break;
+    }
+});
 </script>
 {% endblock %}

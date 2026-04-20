@@ -39,7 +39,7 @@
             <div class="ms-4 text-muted small" style="white-space:pre-wrap;line-height:1.6;max-height:100px;overflow:hidden;" id="desc-{{ node.pk }}">{{ node.description }}</div>
             {% if node.description|length > 300 %}
             <button class="btn btn-link btn-sm ms-4 p-0 text-muted" style="font-size:.72rem;"
-                    onclick="toggleDesc('{{ node.pk }}')" id="toggle-{{ node.pk }}">mehr anzeigen</button>
+                    data-action="toggle-desc" data-pk="{{ node.pk }}" id="toggle-{{ node.pk }}">mehr anzeigen</button>
             {% endif %}
             {% endif %}
             <!-- Emotionaler Bogen -->
@@ -56,7 +56,7 @@
                 <button type="submit" class="btn btn-sm"
                         style="background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3;"
                         title="KI Outline"
-                        onclick="this.disabled=true;this.innerHTML='<span class=\'spinner-border spinner-border-sm\'></span>';this.form.submit();">
+                        data-action="spinner-submit">
                     <i class="bi bi-stars"></i>
                 </button>
             </form>
@@ -66,7 +66,7 @@
                 <i class="bi bi-pencil"></i>
             </button>
             <form method="post" action="{% url 'outlines:node_delete' node.pk %}"
-                  style="display:inline;" onsubmit="return confirm('Kapitel löschen?')">
+                  style="display:inline;" data-confirm-submit="Kapitel löschen?">
                 {% csrf_token %}
                 <button class="btn btn-outline-danger btn-sm" title="Löschen">
                     <i class="bi bi-trash"></i>
@@ -137,3 +137,18 @@
         </form>
     </div>
 </div>
+<script>
+if (!window._nodeRowDelegationInit) {
+    window._nodeRowDelegationInit = true;
+    document.addEventListener('click', function(e) {
+        var el = e.target.closest('[data-action="spinner-submit"]');
+        if (el) { el.disabled = true; el.innerHTML = '<span class="spinner-border spinner-border-sm"></span>'; el.form.submit(); }
+        var td = e.target.closest('[data-action="toggle-desc"]');
+        if (td) toggleDesc(td.dataset.pk);
+    });
+    document.addEventListener('submit', function(e) {
+        var form = e.target.closest('[data-confirm-submit]');
+        if (form && !confirm(form.dataset.confirmSubmit)) e.preventDefault();
+    });
+}
+</script>

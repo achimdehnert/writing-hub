@@ -225,13 +225,13 @@
                                    style="width:70px;"
                                    data-node-pk="{{ node_data.pk }}"
                                    data-field="tension_numeric"
-                                   onchange="saveDramaField(this)">
+                                   data-action="save-drama-field">
                         </td>
                         <td>
                             <select class="form-select form-select-sm bg-dark text-light border-secondary"
                                     data-node-pk="{{ node_data.pk }}"
                                     data-field="outcome"
-                                    onchange="saveDramaField(this)">
+                                    data-action="save-drama-field">
                                 <option value="" {% if not node_data.outcome %}selected{% endif %}>—</option>
                                 <option value="yes" {% if node_data.outcome == "yes" %}selected{% endif %} style="color:#22c55e;">Yes ✓</option>
                                 <option value="yes_but" {% if node_data.outcome == "yes_but" %}selected{% endif %} style="color:#f59e0b;">Yes, but…</option>
@@ -246,7 +246,7 @@
                                    placeholder="z.B. Hoffnung"
                                    data-node-pk="{{ node_data.pk }}"
                                    data-field="emotion_start"
-                                   onchange="saveDramaField(this)">
+                                   data-action="save-drama-field">
                         </td>
                         <td>
                             <input type="text"
@@ -255,7 +255,7 @@
                                    placeholder="z.B. Verzweiflung"
                                    data-node-pk="{{ node_data.pk }}"
                                    data-field="emotion_end"
-                                   onchange="saveDramaField(this)">
+                                   data-action="save-drama-field">
                         </td>
                         <td id="status-{{ node_data.pk }}"></td>
                     </tr>
@@ -351,5 +351,9 @@ function getCookie(name) {
     if (parts.length === 2) return parts.pop().split(';').shift();
     return '';
 }
+document.addEventListener('change', function(e) {
+    var el = e.target.closest('[data-action="save-drama-field"]');
+    if (el) saveDramaField(el);
+});
 </script>
 {% endblock %}

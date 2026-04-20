@@ -147,7 +147,7 @@
         <div class="col-md-6">
             <label class="style-card w-100 d-block {% if is_edit and style.pk|stringformat:'s' in selected_style_ids|stringformat:'s' %}selected{% endif %}"
                    id="style-label-{{ style.pk }}"
-                   onclick="toggleStyle('{{ style.pk }}', this)">
+                   data-action="toggle-style" data-pk="{{ style.pk }}">
                 <input type="checkbox" name="writing_styles" value="{{ style.pk }}"
                        id="style-cb-{{ style.pk }}" class="d-none"
                        {% if is_edit and style.pk|stringformat:'s' in selected_style_ids|join:',' %}checked{% endif %}>
@@ -246,6 +246,10 @@ function toggleStyle(pk, label) {
     label.classList.toggle('selected', cb.checked);
     updateStyleCount();
 }
+document.addEventListener('click', function(e) {
+    var el = e.target.closest('[data-action="toggle-style"]');
+    if (el) toggleStyle(el.dataset.pk, el);
+});
 
 function updateStyleCount() {
     const count = document.querySelectorAll('input[name="writing_styles"]:checked').length;

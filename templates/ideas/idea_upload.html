@@ -36,12 +36,12 @@
                 <div class="d-flex gap-3 mb-3">
                     <div class="form-check">
                         <input class="form-check-input" type="radio" name="input_type" id="inputFile" value="file" checked
-                               onchange="document.getElementById('fileSection').classList.remove('d-none');document.getElementById('freetextSection').classList.add('d-none');">
+                               data-action="switch-input" data-show="fileSection" data-hide="freetextSection">
                         <label class="form-check-label small" for="inputFile"><i class="bi bi-file-earmark me-1"></i>Datei hochladen</label>
                     </div>
                     <div class="form-check">
                         <input class="form-check-input" type="radio" name="input_type" id="inputFreetext" value="freetext"
-                               onchange="document.getElementById('freetextSection').classList.remove('d-none');document.getElementById('fileSection').classList.add('d-none');">
+                               data-action="switch-input" data-show="freetextSection" data-hide="fileSection">
                         <label class="form-check-label small" for="inputFreetext"><i class="bi bi-pencil me-1"></i>Freitext eingeben</label>
                     </div>
                 </div>
@@ -88,6 +88,13 @@ document.querySelector('form').addEventListener('submit', function() {
     const btn = document.getElementById('submitBtn');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> KI analysiert...';
+});
+document.addEventListener('change', function(e) {
+    var el = e.target.closest('[data-action="switch-input"]');
+    if (el) {
+        document.getElementById(el.dataset.show).classList.remove('d-none');
+        document.getElementById(el.dataset.hide).classList.add('d-none');
+    }
 });
 </script>
 {% endblock %}

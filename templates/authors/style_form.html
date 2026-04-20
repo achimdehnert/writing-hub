@@ -41,7 +41,7 @@
         <div class="text-muted small mt-1">für <span style="color:#a5b4fc;">{{ author.name }}</span></div>
     </div>
     {% if is_edit and style and style.source_text %}
-    <button type="button" class="ai-btn" id="btnExtractRules" onclick="extractRules()">
+    <button type="button" class="ai-btn" id="btnExtractRules" data-action="extract-rules">
         <i class="bi bi-stars"></i> DO/DONT aus Text extrahieren
     </button>
     {% endif %}
@@ -172,8 +172,8 @@
             <span class="text-muted fw-normal" style="font-size:.75rem;">(Beispieltext des Autors, wird per LLM analysiert)</span>
         </h6>
         <div class="mb-2" style="display:flex;gap:.5rem;">
-            <button type="button" class="tab-btn active" id="tab-text" onclick="switchTab('text')">Text eingeben</button>
-            <button type="button" class="tab-btn" id="tab-file" onclick="switchTab('file')">Datei hochladen</button>
+            <button type="button" class="tab-btn active" id="tab-text" data-action="switch-tab" data-tab="text">Text eingeben</button>
+            <button type="button" class="tab-btn" id="tab-file" data-action="switch-tab" data-tab="file">Datei hochladen</button>
         </div>
         <div id="panel-text">
             <textarea name="source_text" rows="8"
@@ -196,36 +196,36 @@
 
             <div class="col-md-6">
                 <label class="section-label"><i class="bi bi-check-circle-fill me-1" style="color:#22c55e;"></i>DO &mdash; Erlaubt &amp; empfohlen</label>
-                <div class="tag-area" id="area-do" onclick="focusInput('input-do')">
-                    {% if style %}{% for item in style.do_list %}<span class="tag tag-do">{{ item }}<button type="button" class="tag-remove" onclick="removeTag(this)"><i class="bi bi-x"></i></button></span>{% endfor %}{% endif %}
-                    <input class="tag-input" id="input-do" placeholder="Stilmittel hinzufügen..." onkeydown="handleTagInput(event,'do-list','area-do','input-do','tag-do')">
+                <div class="tag-area" id="area-do" data-action="focus-input" data-input="input-do">
+                    {% if style %}{% for item in style.do_list %}<span class="tag tag-do">{{ item }}<button type="button" class="tag-remove" data-action="remove-tag"><i class="bi bi-x"></i></button></span>{% endfor %}{% endif %}
+                    <input class="tag-input" id="input-do" placeholder="Stilmittel hinzufügen..." data-tag-textarea="do-list" data-tag-area="area-do" data-tag-input="input-do" data-tag-class="tag-do">
                 </div>
                 <textarea name="do_list" id="do-list" style="display:none;">{{ do_list_str|default:'' }}</textarea>
             </div>
 
             <div class="col-md-6">
                 <label class="section-label"><i class="bi bi-x-circle-fill me-1" style="color:#f87171;"></i>DON'T &mdash; Vermeiden</label>
-                <div class="tag-area" id="area-dont" onclick="focusInput('input-dont')">
-                    {% if style %}{% for item in style.dont_list %}<span class="tag tag-dont">{{ item }}<button type="button" class="tag-remove" onclick="removeTag(this)"><i class="bi bi-x"></i></button></span>{% endfor %}{% endif %}
-                    <input class="tag-input" id="input-dont" placeholder="Zu vermeidendes hinzufügen..." onkeydown="handleTagInput(event,'dont-list','area-dont','input-dont','tag-dont')">
+                <div class="tag-area" id="area-dont" data-action="focus-input" data-input="input-dont">
+                    {% if style %}{% for item in style.dont_list %}<span class="tag tag-dont">{{ item }}<button type="button" class="tag-remove" data-action="remove-tag"><i class="bi bi-x"></i></button></span>{% endfor %}{% endif %}
+                    <input class="tag-input" id="input-dont" placeholder="Zu vermeidendes hinzufügen..." data-tag-textarea="dont-list" data-tag-area="area-dont" data-tag-input="input-dont" data-tag-class="tag-dont">
                 </div>
                 <textarea name="dont_list" id="dont-list" style="display:none;">{{ dont_list_str|default:'' }}</textarea>
             </div>
 
             <div class="col-md-6">
                 <label class="section-label"><i class="bi bi-slash-circle-fill me-1" style="color:#fb923c;"></i>TABOO &mdash; Niemals verwenden</label>
-                <div class="tag-area" id="area-taboo" onclick="focusInput('input-taboo')">
-                    {% if style %}{% for item in style.taboo_list %}<span class="tag tag-taboo">{{ item }}<button type="button" class="tag-remove" onclick="removeTag(this)"><i class="bi bi-x"></i></button></span>{% endfor %}{% endif %}
-                    <input class="tag-input" id="input-taboo" placeholder="Tabu-Wort hinzufügen..." onkeydown="handleTagInput(event,'taboo-list','area-taboo','input-taboo','tag-taboo')">
+                <div class="tag-area" id="area-taboo" data-action="focus-input" data-input="input-taboo">
+                    {% if style %}{% for item in style.taboo_list %}<span class="tag tag-taboo">{{ item }}<button type="button" class="tag-remove" data-action="remove-tag"><i class="bi bi-x"></i></button></span>{% endfor %}{% endif %}
+                    <input class="tag-input" id="input-taboo" placeholder="Tabu-Wort hinzufügen..." data-tag-textarea="taboo-list" data-tag-area="area-taboo" data-tag-input="input-taboo" data-tag-class="tag-taboo">
                 </div>
                 <textarea name="taboo_list" id="taboo-list" style="display:none;">{{ taboo_list_str|default:'' }}</textarea>
             </div>
 
             <div class="col-md-6">
                 <label class="section-label"><i class="bi bi-stars me-1" style="color:#a5b4fc;"></i>Signature Moves &mdash; Charakteristisch</label>
-                <div class="tag-area" id="area-sig" onclick="focusInput('input-sig')">
-                    {% if style %}{% for item in style.signature_moves %}<span class="tag tag-sig">{{ item }}<button type="button" class="tag-remove" onclick="removeTag(this)"><i class="bi bi-x"></i></button></span>{% endfor %}{% endif %}
-                    <input class="tag-input" id="input-sig" placeholder="Charakteristisches Stilmittel..." onkeydown="handleTagInput(event,'signature-moves','area-sig','input-sig','tag-sig')">
+                <div class="tag-area" id="area-sig" data-action="focus-input" data-input="input-sig">
+                    {% if style %}{% for item in style.signature_moves %}<span class="tag tag-sig">{{ item }}<button type="button" class="tag-remove" data-action="remove-tag"><i class="bi bi-x"></i></button></span>{% endfor %}{% endif %}
+                    <input class="tag-input" id="input-sig" placeholder="Charakteristisches Stilmittel..." data-tag-textarea="signature-moves" data-tag-area="area-sig" data-tag-input="input-sig" data-tag-class="tag-sig">
                 </div>
                 <textarea name="signature_moves" id="signature-moves" style="display:none;">{{ signature_moves_str|default:'' }}</textarea>
             </div>
@@ -283,7 +283,7 @@ function addTag(text, textareaId, areaId, inputId, tagClass) {
     const input = document.getElementById(inputId);
     const span = document.createElement('span');
     span.className = `tag ${tagClass}`;
-    span.innerHTML = `${text}<button type="button" class="tag-remove" onclick="removeTag(this)"><i class="bi bi-x"></i></button>`;
+    span.innerHTML = `${text}<button type="button" class="tag-remove" data-action="remove-tag"><i class="bi bi-x"></i></button>`;
     area.insertBefore(span, input);
     syncTextarea(textareaId, areaId);
 }
@@ -348,5 +348,19 @@ function applyExtracted(key, items, taId, areaId, inputId, tagClass) {
     items.forEach(item => addTag(item, taId, areaId, inputId, tagClass));
 }
 {% endif %}
+document.addEventListener('click', function(e) {
+    var el = e.target.closest('[data-action]');
+    if (!el) return;
+    switch (el.dataset.action) {
+        case 'extract-rules': extractRules(); break;
+        case 'switch-tab': switchTab(el.dataset.tab); break;
+        case 'focus-input': if (!e.target.closest('.tag-remove')) focusInput(el.dataset.input); break;
+        case 'remove-tag': removeTag(el); break;
+    }
+});
+document.addEventListener('keydown', function(e) {
+    var el = e.target.closest('.tag-input[data-tag-textarea]');
+    if (el) handleTagInput(e, el.dataset.tagTextarea, el.dataset.tagArea, el.dataset.tagInput, el.dataset.tagClass);
+});
 </script>
 {% endblock %}

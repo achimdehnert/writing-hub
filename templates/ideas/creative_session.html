@@ -94,7 +94,7 @@
                     <div class="d-flex gap-1 mt-2 mb-2" id="stars-{{ idea.pk }}">
                         {% for i in "1234" %}
                         <button class="star-btn {% if idea.rating >= forloop.counter %}active{% endif %}"
-                                onclick="rateIdea('{{ idea.pk }}', {{ forloop.counter }}, this)"
+                                data-action="rate-idea" data-pk="{{ idea.pk }}" data-rating="{{ forloop.counter }}"
                                 title="{{ forloop.counter }} Stern{% if forloop.counter > 1 %}e{% endif %}">
                             &#9829;
                         </button>
@@ -121,7 +121,7 @@
                         </form>
                         {% if not session.created_project %}
                         <button type="button" class="btn btn-success action-btn"
-                                onclick="selectAndCreate('{{ idea.pk }}', '{{ idea.title|escapejs }}')"
+                                data-action="select-and-create" data-pk="{{ idea.pk }}" data-title="{{ idea.title|escapejs }}"
                                 title="Direkt als Projekt anlegen">
                             <i class="bi bi-check me-1"></i>Auswählen
                         </button>
@@ -216,7 +216,7 @@
                     <i class="bi bi-grid me-1"></i> Zum Dashboard
                 </a>
                 <form method="post" action="{% url 'ideas:creative_delete' session.pk %}"
-                      onsubmit="return confirm('Session wirklich löschen?');">
+                      data-confirm-submit="Session wirklich löschen?">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-link p-0" style="color:#f87171;font-size:.83rem;text-decoration:none;">
                         <i class="bi bi-trash me-1"></i> Session löschen
@@ -280,5 +280,17 @@ function selectAndCreate(ideaPk, ideaTitle) {
     document.getElementById('modalIdeaPk').value = ideaPk;
     new bootstrap.Modal(document.getElementById('modalCreateProject')).show();
 }
+document.addEventListener('click', function(e) {
+    var el = e.target.closest('[data-action]');
+    if (!el) return;
+    switch (el.dataset.action) {
+        case 'rate-idea': rateIdea(el.dataset.pk, parseInt(el.dataset.rating), el); break;
+        case 'select-and-create': selectAndCreate(el.dataset.pk, el.dataset.title); break;
+    }
+});
+document.addEventListener('submit', function(e) {
+    var form = e.target.closest('[data-confirm-submit]');
+    if (form && !confirm(form.dataset.confirmSubmit)) e.preventDefault();
+});
 </script>
 {% endblock %}

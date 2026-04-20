@@ -168,7 +168,7 @@
                         <div class="d-flex gap-2">
                             <label class="flex-fill" style="cursor:pointer;">
                                 <input type="radio" name="session_type" value="literary" id="typeLiterary" checked
-                                       onchange="toggleSessionType('literary')" style="display:none;">
+                                       data-action="toggle-session-type" data-type="literary" style="display:none;">
                                 <div id="btnLiterary" class="rounded p-2 text-center" style="background:#1e1b4b;border:2px solid #6366f1;">
                                     <i class="bi bi-book d-block mb-1" style="color:#a5b4fc;font-size:1.2rem;"></i>
                                     <div style="color:#e2e8f0;font-size:.78rem;font-weight:600;">Belletristik</div>
@@ -177,7 +177,7 @@
                             </label>
                             <label class="flex-fill" style="cursor:pointer;">
                                 <input type="radio" name="session_type" value="scientific" id="typeScientific"
-                                       onchange="toggleSessionType('scientific')" style="display:none;">
+                                       data-action="toggle-session-type" data-type="scientific" style="display:none;">
                                 <div id="btnScientific" class="rounded p-2 text-center" style="background:#0d1117;border:2px solid #2d3148;">
                                     <i class="bi bi-mortarboard d-block mb-1" style="color:#7dd3fc;font-size:1.2rem;"></i>
                                     <div style="color:#e2e8f0;font-size:.78rem;font-weight:600;">Wissenschaftlich</div>
@@ -241,5 +241,9 @@ function toggleSessionType(type) {
     document.getElementById('btnScientific').style.borderColor = isScientific ? '#7dd3fc' : '#2d3148';
     document.getElementById('btnScientific').style.background = isScientific ? '#0d1a2d' : '#0d1117';
 }
+document.addEventListener('change', function(e) {
+    var el = e.target.closest('[data-action="toggle-session-type"]');
+    if (el) toggleSessionType(el.dataset.type);
+});
 </script>
 {% endblock %}

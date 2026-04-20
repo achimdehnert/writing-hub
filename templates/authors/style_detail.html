@@ -29,7 +29,7 @@
             <i class="bi bi-pencil me-1"></i>Bearbeiten
         </a>
         <form method="post" action="{% url 'authors:style_delete' style.pk %}"
-              onsubmit="return confirm('Schreibstil löschen?')">
+              data-confirm-submit="Schreibstil löschen?">
             {% csrf_token %}
             <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
         </form>
@@ -371,5 +371,9 @@ if (btnPrompt) btnPrompt.addEventListener('click', () => inlineSave('field-style
         next();
     });
 })();
+document.addEventListener('submit', function(e) {
+    var form = e.target.closest('[data-confirm-submit]');
+    if (form && !confirm(form.dataset.confirmSubmit)) e.preventDefault();
+});
 </script>
 {% endblock %}

@@ -29,7 +29,7 @@
             {% csrf_token %}
             <input type="hidden" name="detail_level" value="full">
             <button type="submit" class="btn btn-primary btn-sm" id="btn-full-gen"
-                    onclick="this.disabled=true;this.innerHTML='<span class=\'spinner-border spinner-border-sm me-1\'></span>Generiert...';this.form.submit();">
+                    data-action="spinner-submit">
                 <i class="bi bi-lightning-fill me-1"></i> Vollständiges Outline generieren
             </button>
         </form>
@@ -215,7 +215,7 @@
 <!-- Framework-Wahl / KI-Generierung -->
 <div class="card mb-4" style="background:#0d1117;border-color:#2d3748;">
     <div class="card-header py-2" style="border-color:#2d3748;{% if has_outline_content %}cursor:pointer;{% endif %}"
-         {% if has_outline_content %}onclick="var b=document.getElementById('fw-body');var c=this.querySelector('.bi-chevron-down,.bi-chevron-up');if(b.style.display==='none'){b.style.display='';c.className=c.className.replace('chevron-down','chevron-up');}else{b.style.display='none';c.className=c.className.replace('chevron-up','chevron-down');}"{% endif %}>
+         {% if has_outline_content %}data-action="toggle-fw-body"{% endif %}>
         <span class="fw-semibold">
             <i class="bi bi-diagram-3 me-2"></i>Struktur {% if has_outline_content %}&amp; KI-Generierung{% else %}wählen{% endif %}
         </span>
@@ -230,7 +230,7 @@
                 <select id="fw-listbox" size="8"
                         class="form-select bg-dark text-light border-secondary"
                         style="height:auto;"
-                        onchange="onFrameworkSelect(this.value)">
+                        data-action="framework-select">
                     {% for fw in frameworks %}
                     <option value="{{ fw.key }}"
                             data-beats="{{ fw.beat_count }}"
@@ -241,7 +241,7 @@
                     {% endfor %}
                 </select>
                 <div class="mt-2 d-flex gap-2">
-                    <button class="btn btn-primary btn-sm" onclick="openGenerateWithFw()">
+                    <button class="btn btn-primary btn-sm" data-action="open-generate-with-fw">
                         <i class="bi bi-stars me-1"></i>KI generieren
                     </button>
                     <form method="post" action="{% url 'projects:outline_create' project.pk %}" id="fw-apply-form">
@@ -318,7 +318,7 @@
                    style="max-width:160px;"
                    placeholder="Akt filtern…">
             <button type="button" class="btn btn-outline-secondary btn-sm"
-                    onclick="this.closest('form').reset();htmx.trigger(this.closest('form'),'change')">
+                    data-action="reset-filter">
                 <i class="bi bi-x-circle me-1"></i>Reset
             </button>
         </form>
@@ -358,7 +358,7 @@
 <div class="card" style="background:#0d1117;border-color:#3a1a1a;">
     <div class="card-body d-flex gap-2">
         <form method="post" action="{% url 'outlines:delete' outline.pk %}"
-              onsubmit="return confirm('Outline wirklich löschen?')">
+              data-confirm-submit="Outline wirklich löschen?">
             {% csrf_token %}
             <button class="btn btn-outline-danger btn-sm">
                 <i class="bi bi-trash me-1"></i>Outline löschen
@@ -402,7 +402,7 @@
             <label class="form-label small text-muted">Framework</label>
             <select id="genFwSelect" name="framework"
                     class="form-select bg-dark text-light border-secondary"
-                    onchange="updateGenInfo(this.value)">
+                    data-action="update-gen-info">
               {% for fw in frameworks %}
               <option value="{{ fw.key }}" {% if active_fw and active_fw.key == fw.key %}selected{% endif %}>
                 {{ fw.name }} ({{ fw.beat_count }} Beats)
@@ -523,5 +523,32 @@ function toggleDesc(nodeId) {
 const initKey = document.getElementById('genFwSelect')?.value;
 if (initKey) updateGenInfo(initKey);
 document.querySelectorAll('.toast').forEach(el => setTimeout(() => el.classList.remove('show'), 5000));
+document.addEventListener('click', function(e) {
+    var el = e.target.closest('[data-action]');
+    if (!el) return;
+    switch (el.dataset.action) {
+        case 'spinner-submit': el.disabled = true; el.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Generiert...'; el.form.submit(); break;
+        case 'toggle-fw-body':
+            var b = document.getElementById('fw-body');
+            var c = el.querySelector('.bi-chevron-down,.bi-chevron-up');
+            if (b.style.display === 'none') { b.style.display = ''; c.className = c.className.replace('chevron-down','chevron-up'); }
+            else { b.style.display = 'none'; c.className = c.className.replace('chevron-up','chevron-down'); }
+            break;
+        case 'open-generate-with-fw': openGenerateWithFw(); break;
+        case 'reset-filter': el.closest('form').reset(); htmx.trigger(el.closest('form'),'change'); break;
+    }
+});
+document.addEventListener('change', function(e) {
+    var el = e.target.closest('[data-action]');
+    if (!el) return;
+    switch (el.dataset.action) {
+        case 'framework-select': onFrameworkSelect(el.value); break;
+        case 'update-gen-info': updateGenInfo(el.value); break;
+    }
+});
+document.addEventListener('submit', function(e) {
+    var form = e.target.closest('[data-confirm-submit]');
+    if (form && !confirm(form.dataset.confirmSubmit)) e.preventDefault();
+});
 </script>
 {% endblock %}

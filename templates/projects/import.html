@@ -72,7 +72,7 @@
             <p style="font-size:.82rem;color:#6b7280;margin-bottom:1rem;">
                 Lade Markdown-Dateien (.md) von deinem Computer hoch. Mehrfachauswahl möglich!
             </p>
-            <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+            <div class="drop-zone" id="dropZone" data-action="trigger-file-input">
                 <i class="bi bi-file-earmark-plus"></i>
                 <div class="dz-main">Dateien auswählen oder hierher ziehen</div>
                 <div class="dz-sub">Mehrere Dateien mit Strg+Klick auswählen</div>
@@ -194,7 +194,7 @@ function renderFileList() {
                 <div class="fn">${f.name}</div>
                 <div class="fp">${(f.size/1024).toFixed(1)} KB</div>
             </div>
-            <button type="button" onclick="removeFile(${i})"
+            <button type="button" data-action="remove-file" data-idx="${i}"
                     style="background:none;border:none;color:#9ca3af;cursor:pointer;">
                 <i class="bi bi-x-lg" style="font-size:.8rem;"></i>
             </button>`;
@@ -303,6 +303,14 @@ async function previewFiles() {
 document.getElementById('importForm').addEventListener('submit', () => {
     spinnerOverlay.classList.add('show');
     btnImport.disabled = true;
+});
+document.addEventListener('click', function(e) {
+    var el = e.target.closest('[data-action]');
+    if (!el) return;
+    switch (el.dataset.action) {
+        case 'trigger-file-input': document.getElementById('fileInput').click(); break;
+        case 'remove-file': removeFile(parseInt(el.dataset.idx)); break;
+    }
 });
 </script>
 {% endblock %}

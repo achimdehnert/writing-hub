@@ -172,7 +172,7 @@
     <a href="{% url 'projects:export' project.pk %}" class="btn btn-primary">
         <i class="bi bi-download me-1"></i> Exportieren
     </a>
-    <button class="btn btn-outline-secondary" onclick="window.print()">
+    <button class="btn btn-outline-secondary" data-action="print-page">
         <i class="bi bi-printer me-1"></i> Drucken
     </button>
     <a href="{% url 'projects:versions' project.pk %}" class="btn btn-outline-secondary">
@@ -264,6 +264,10 @@ document.querySelectorAll('.toc-item').forEach(function(a) {
             target.scrollIntoView({behavior: 'smooth', block: 'start'});
         }
     });
+});
+document.addEventListener('click', function(e) {
+    var el = e.target.closest('[data-action="print-page"]');
+    if (el) window.print();
 });
 </script>
 {% endblock %}

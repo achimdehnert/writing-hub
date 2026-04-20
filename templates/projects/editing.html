@@ -22,7 +22,7 @@
     <form method="post" action="" id="analyze-all-form">
         {% csrf_token %}
         <button type="button" class="btn" style="background:#fff;color:#ea580c;font-weight:600;"
-                onclick="confirmAnalyzeAll()">
+                data-action="analyze-all">
             <i class="bi bi-search me-1"></i>Alle Texte analysieren
         </button>
     </form>
@@ -153,5 +153,9 @@ function confirmAnalyzeAll() {
     next();
 }
 document.querySelectorAll('.toast').forEach(el => setTimeout(() => el.classList.remove('show'), 5000));
+document.addEventListener('click', function(e) {
+    var el = e.target.closest('[data-action="analyze-all"]');
+    if (el) confirmAnalyzeAll();
+});
 </script>
 {% endblock %}

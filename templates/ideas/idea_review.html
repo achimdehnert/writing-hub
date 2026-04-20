@@ -166,7 +166,7 @@
         <div class="d-flex gap-2 justify-content-end mt-3">
             <button type="submit" name="action" value="discard"
                     class="btn btn-outline-danger btn-sm"
-                    onclick="return confirm('Import verwerfen?')">
+                    data-confirm="Import verwerfen?">
                 <i class="bi bi-trash me-1"></i> Verwerfen
             </button>
             {% if sections %}
@@ -179,4 +179,13 @@
 </div>
 
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('click', function(e) {
+    var el = e.target.closest('[data-confirm]');
+    if (el && !confirm(el.dataset.confirm)) e.preventDefault();
+});
+</script>
 {% endblock %}
