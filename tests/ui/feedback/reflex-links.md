@@ -1,6 +1,6 @@
 # REFLEX Link Report — writing-hub
 
-Generated: 2026-04-20 15:21 UTC  
+Generated: 2026-04-20 15:41 UTC  
 Base URL: http://localhost:8000  
 Tests: 6 URLs geprüft
 

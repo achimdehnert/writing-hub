@@ -121,6 +121,8 @@ class CitationDashboardView(LoginRequiredMixin, View):
         has_queries = any(rq for _, _, _, rq in nodes)
         return nodes, has_queries
 
+    PARTIAL_TEMPLATE = "projects/partials/_citations_panel.html"
+
     def _render(self, request, project, style=None):
         """Render citations dashboard with current DB state."""
         citations_qs = ProjectCitation.objects.filter(project=project).select_related("node")
@@ -131,23 +133,22 @@ class CitationDashboardView(LoginRequiredMixin, View):
         bibliography = format_bibliography(citations_dicts, style=style) if citations_dicts else ""
         chapters, has_research_queries = self._get_chapters(project)
         default_sources = DEFAULT_SOURCES_BY_CONTENT_TYPE.get(project.content_type, [s[0] for s in SEARCH_SOURCES])
-        return render(
-            request,
-            self.template_name,
-            {
-                "project": project,
-                "citations": citations_qs,
-                "citations_dicts": citations_dicts,
-                "bibliography": bibliography,
-                "citation_styles": BIBLIOGRAPHY_STYLES,
-                "active_style": style,
-                "bibtex_export": export_bibtex(citations_dicts) if citations_dicts else "",
-                "search_sources": SEARCH_SOURCES,
-                "chapters": chapters,
-                "has_research_queries": has_research_queries,
-                "default_sources": default_sources,
-            },
-        )
+        ctx = {
+            "project": project,
+            "citations": citations_qs,
+            "citations_dicts": citations_dicts,
+            "bibliography": bibliography,
+            "citation_styles": BIBLIOGRAPHY_STYLES,
+            "active_style": style,
+            "bibtex_export": export_bibtex(citations_dicts) if citations_dicts else "",
+            "search_sources": SEARCH_SOURCES,
+            "chapters": chapters,
+            "has_research_queries": has_research_queries,
+            "default_sources": default_sources,
+        }
+        is_partial = request.headers.get("X-Citations-Partial") == "1"
+        template = self.PARTIAL_TEMPLATE if is_partial else self.template_name
+        return render(request, template, ctx)
 
     def get(self, request, pk):
         project = self._get_project(request, pk)

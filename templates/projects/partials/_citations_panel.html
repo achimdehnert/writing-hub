@@ -1,0 +1,129 @@
+<!-- Quellenliste -->
+<div class="cit-card mb-3">
+    <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-list-ul text-primary"></i>
+        <strong>Quellenliste</strong>
+        <span class="badge bg-secondary ms-1">{{ citations|length }}</span>
+    </div>
+    <div class="card-body p-0">
+        {% if citations %}
+        {% for c in citations %}
+        <div class="citation-row p-3">
+            <div class="d-flex align-items-start gap-2">
+                <div class="flex-grow-1">
+                    <div class="fw-semibold" style="color:#e2e8f0;font-size:.9rem;">
+                        {{ c.title|truncatechars:80 }}
+                    </div>
+                    <div class="text-muted small mt-1">
+                        {{ c.authors_display }}
+                        {% if c.year %}&nbsp;({{ c.year }}){% endif %}
+                    </div>
+                    <div class="mt-1 d-flex flex-wrap gap-1">
+                        {% if c.source_type %}
+                        <span class="cit-badge" style="background:#1a2a3a;color:#7dd3fc;">{{ c.source_type }}</span>
+                        {% endif %}
+                        {% if c.journal %}
+                        <span class="cit-badge" style="background:#1a1a2e;color:#a5b4fc;">{{ c.journal|truncatechars:30 }}</span>
+                        {% endif %}
+                        {% if c.doi %}
+                        <span class="cit-badge" style="background:#1a2a1a;color:#86efac;">DOI</span>
+                        {% endif %}
+                    </div>
+                    {% if chapters %}
+                    <form method="post" class="mt-1 d-flex align-items-center gap-1"
+                          hx-post="{% url 'projects:citations' project.pk %}" hx-target="#citations-panel"
+                          hx-swap="innerHTML" hx-headers='{"X-Citations-Partial": "1"}'
+                          hx-indicator=".htmx-indicator">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="assign_chapter">
+                        <input type="hidden" name="citation_id" value="{{ c.pk }}">
+                        <i class="bi bi-bookmark" style="font-size:.7rem;color:#6366f1;"></i>
+                        <select name="node_id" class="form-select form-select-sm inp-dark"
+                                style="width:auto;font-size:.72rem;padding:.15rem .5rem .15rem .3rem;"
+                                data-action="auto-submit">
+                            <option value="">— Kein Kapitel —</option>
+                            {% for ch_pk, ch_order, ch_title, ch_queries in chapters %}
+                            <option value="{{ ch_pk }}" {% if c.node_id == ch_pk %}selected{% endif %}>
+                                {{ ch_order }}. {{ ch_title|truncatechars:30 }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                    {% elif c.node %}
+                    <div class="mt-1 small" style="color:#6366f1;">
+                        <i class="bi bi-bookmark-fill me-1"></i>{{ c.node.order }}. {{ c.node.title|truncatechars:30 }}
+                    </div>
+                    {% endif %}
+                </div>
+                <form method="post" class="ms-2 flex-shrink-0"
+                      hx-post="{% url 'projects:citations' project.pk %}" hx-target="#citations-panel"
+                      hx-swap="innerHTML" hx-headers='{"X-Citations-Partial": "1"}'>
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="remove">
+                    <input type="hidden" name="citation_id" value="{{ c.pk }}">
+                    <button class="btn btn-sm btn-outline-danger" title="Entfernen">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="p-4 text-center text-muted">
+            <i class="bi bi-journal-x fs-3 d-block mb-2"></i>
+            Noch keine Quellen hinzugefügt.<br>
+            <small>DOI oder ISBN nachschlagen oder BibTeX importieren.</small>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Bibliographie -->
+{% if citations %}
+<div class="cit-card mb-3">
+    <div class="card-header d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-text-left text-primary"></i>
+            <strong>Bibliographie</strong>
+        </div>
+        <form method="post" class="d-flex gap-1 align-items-center">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="clear_all" style="display:none!important">
+            <select name="style" class="form-select form-select-sm inp-dark" style="width:auto;"
+                    data-action="bib-style-change" data-base-url="{% url 'projects:citations' project.pk %}">
+                {% for val, label in citation_styles %}
+                <option value="{{ val }}" {% if val == active_style %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+    <div class="card-body p-3">
+        {% if bibliography %}
+        <pre class="bib-output p-3 mb-2">{{ bibliography }}</pre>
+        <button class="btn btn-sm btn-outline-secondary w-100"
+                data-action="copy-selector" data-selector=".bib-output" data-label="Bibliographie kopieren">
+            <i class="bi bi-clipboard me-1"></i>Bibliographie kopieren
+        </button>
+        {% else %}
+        <p class="text-muted small mb-0">Keine formatierten Einträge — bitte Quellen hinzufügen.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- BibTeX Export -->
+<div class="cit-card mb-3">
+    <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-file-earmark-code text-warning"></i>
+        <strong>BibTeX Export</strong>
+    </div>
+    <div class="card-body p-3">
+        {% if bibtex_export %}
+        <pre class="bibtex-output p-3 mb-2" style="max-height:250px;overflow-y:auto;">{{ bibtex_export }}</pre>
+        <button class="btn btn-sm btn-outline-warning w-100"
+                data-action="copy-selector" data-selector=".bibtex-output" data-label="BibTeX kopieren">
+            <i class="bi bi-clipboard me-1"></i>BibTeX kopieren
+        </button>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
