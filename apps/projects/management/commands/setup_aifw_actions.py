@@ -13,6 +13,7 @@ Usage:
     python manage.py setup_aifw_actions --force
     python manage.py setup_aifw_actions --model gpt-4o
 """
+
 import logging
 
 from decouple import config as decouple_config
@@ -21,16 +22,16 @@ from django.core.management.base import BaseCommand
 logger = logging.getLogger(__name__)
 
 ACTION_CODES = [
-    ("outline.generate",   "Outline generieren (outlinefw)",    4000),
-    ("outline_generate",   "Outline generieren (Slug-Fallback)", 4000),
-    ("chapter_outline",    "Kapitel-Outline / Node-Verfeinerung", 2000),
-    ("chapter_write",      "Kapitel schreiben",                  4000),
-    ("chapter_brief",      "Kapitel-Brief generieren",           1000),
-    ("chapter_analyze",    "Kapitel-Qualitätsanalyse",           2000),
-    ("idea_extraction",    "Ideen-Extraktion aus Dokumenten",    4000),
-    ("idea_generate",      "Buchideen generieren",               2000),
-    ("character_generate", "Charaktere generieren",              2000),
-    ("style_check",        "Stil-Check",                         2000),
+    ("outline.generate", "Outline generieren (outlinefw)", 4000),
+    ("outline_generate", "Outline generieren (Slug-Fallback)", 4000),
+    ("chapter_outline", "Kapitel-Outline / Node-Verfeinerung", 2000),
+    ("chapter_write", "Kapitel schreiben", 4000),
+    ("chapter_brief", "Kapitel-Brief generieren", 1000),
+    ("chapter_analyze", "Kapitel-Qualitätsanalyse", 2000),
+    ("idea_extraction", "Ideen-Extraktion aus Dokumenten", 4000),
+    ("idea_generate", "Buchideen generieren", 2000),
+    ("character_generate", "Charaktere generieren", 2000),
+    ("style_check", "Stil-Check", 2000),
 ]
 
 
@@ -55,9 +56,7 @@ class Command(BaseCommand):
 
         api_key_env = "OPENAI_API_KEY" if provider_name == "openai" else "LLM_API_KEY"
         if not decouple_config(api_key_env, default=""):
-            self.stdout.write(self.style.WARNING(
-                f"Hinweis: {api_key_env} nicht gesetzt."
-            ))
+            self.stdout.write(self.style.WARNING(f"Hinweis: {api_key_env} nicht gesetzt."))
 
         # 1. LLMProvider
         self.stdout.write(f"\n[1] LLMProvider '{provider_name}' ...")
@@ -144,7 +143,5 @@ class Command(BaseCommand):
                 self.stderr.write(self.style.ERROR(f"  ! {code}: {exc}"))
 
         self.stdout.write("")
-        self.stdout.write(self.style.SUCCESS(
-            f"Fertig: {created_count} erstellt, {updated_count} aktualisiert."
-        ))
+        self.stdout.write(self.style.SUCCESS(f"Fertig: {created_count} erstellt, {updated_count} aktualisiert."))
         self.stdout.write(self.style.SUCCESS(f"Provider: {provider_name} | Model: {model_name}"))

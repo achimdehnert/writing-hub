@@ -3,6 +3,7 @@ Seed-Command: SeriesArcTypeLookup (ADR-155)
 
 Idempotent — kann beliebig oft ausgeführt werden.
 """
+
 from django.core.management.base import BaseCommand
 
 SERIES_ARC_TYPES = [

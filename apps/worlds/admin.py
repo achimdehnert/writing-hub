@@ -13,7 +13,14 @@ class ProjectWorldLinkAdmin(admin.ModelAdmin):
 
 @admin.register(ProjectCharacterLink)
 class ProjectCharacterLinkAdmin(admin.ModelAdmin):
-    list_display = ["project", "weltenhub_character_id", "narrative_role", "character_status", "project_role", "created_at"]
+    list_display = [
+        "project",
+        "weltenhub_character_id",
+        "narrative_role",
+        "character_status",
+        "project_role",
+        "created_at",
+    ]
     list_filter = ["narrative_role", "antagonist_type", "character_status"]
     search_fields = ["weltenhub_character_id", "project_arc", "notes"]
     readonly_fields = ["id", "created_at", "updated_at"]
@@ -21,10 +28,18 @@ class ProjectCharacterLinkAdmin(admin.ModelAdmin):
         ("Verknüpfung", {"fields": ["id", "project", "weltenhub_character_id", "project_role", "notes"]}),
         ("Narrative Rolle (ADR-157)", {"fields": ["narrative_role"]}),
         ("Charakter-Arc (ADR-152)", {"fields": ["want", "need", "flaw", "ghost", "false_belief", "true_belief"]}),
-        ("Antagonisten-Felder (ADR-157)", {"fields": [
-            "antagonist_type", "antagonist_logic",
-            "mirror_to_protagonist", "shared_trait_with_protagonist", "information_advantage",
-        ]}),
+        (
+            "Antagonisten-Felder (ADR-157)",
+            {
+                "fields": [
+                    "antagonist_type",
+                    "antagonist_logic",
+                    "mirror_to_protagonist",
+                    "shared_trait_with_protagonist",
+                    "information_advantage",
+                ]
+            },
+        ),
         ("Stimme / Sprechmuster", {"fields": ["voice_pattern"]}),
         ("Geheimnis", {"fields": ["secret_what", "secret_from_whom", "secret_why"]}),
         ("Plot-Status", {"fields": ["character_status", "first_appearance"]}),

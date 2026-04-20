@@ -8,10 +8,14 @@ class SeriesArcInline(admin.StackedInline):
     model = SeriesArc
     extra = 0
     fields = [
-        "arc_type", "total_volumes_planned",
-        "series_want", "series_need",
-        "series_false_belief", "series_true_belief",
-        "overarching_conflict", "series_theme_question",
+        "arc_type",
+        "total_volumes_planned",
+        "series_want",
+        "series_need",
+        "series_false_belief",
+        "series_true_belief",
+        "overarching_conflict",
+        "series_theme_question",
     ]
     readonly_fields = ["id"]
 
@@ -33,6 +37,7 @@ class BookSeriesAdmin(admin.ModelAdmin):
 
     def has_arc(self, obj):
         return hasattr(obj, "arc")
+
     has_arc.boolean = True
     has_arc.short_description = "Arc"
 
@@ -41,9 +46,12 @@ class SeriesVolumeRoleInline(admin.StackedInline):
     model = SeriesVolumeRole
     extra = 0
     fields = [
-        "arc_position", "series_arc_contribution",
-        "promise_to_reader", "promise_fulfilled_from",
-        "cliffhanger_type", "cliffhanger_description",
+        "arc_position",
+        "series_arc_contribution",
+        "promise_to_reader",
+        "promise_fulfilled_from",
+        "cliffhanger_type",
+        "cliffhanger_description",
     ]
     readonly_fields = ["id"]
 
@@ -57,6 +65,7 @@ class SeriesVolumeAdmin(admin.ModelAdmin):
 
     def has_role(self, obj):
         return hasattr(obj, "role")
+
     has_role.boolean = True
     has_role.short_description = "Rolle"
 

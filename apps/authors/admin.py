@@ -29,6 +29,7 @@ class GenreProfileAdmin(admin.ModelAdmin):
 
     def situation_count(self, obj):
         return obj.situation_count
+
     situation_count.short_description = "Typen"
 
 
@@ -58,6 +59,7 @@ class AuthorAdmin(admin.ModelAdmin):
 
     def style_count(self, obj):
         return obj.style_count
+
     style_count.short_description = "Stile"
 
 
@@ -77,4 +79,5 @@ class WritingStyleAdmin(admin.ModelAdmin):
 
     def sample_count(self, obj):
         return obj.sample_count
+
     sample_count.short_description = "Beispiele"

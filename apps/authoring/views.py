@@ -23,6 +23,7 @@ class chapter_write_start(APIView):
     Startet async Kapitel-Generierung.
     Erstellt ChapterWriteJob + startet Celery Task.
     """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request, project_id, chapter_ref):
@@ -75,6 +76,7 @@ class chapter_write_start(APIView):
                 ChapterContext,
                 ChapterWriterHandler,
             )
+
             try:
                 context = ChapterContext.from_project(
                     project_id=str(project_id),
@@ -116,6 +118,7 @@ class chapter_refine_start(APIView):
     Verfeinert bestehendes Kapitel synchron (kein Celery nötig).
     Body: {existing_content, instruction, target_word_count?}
     """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request, project_id, chapter_ref):
@@ -155,17 +158,23 @@ class chapter_refine_start(APIView):
             if mode == "continue":
                 result = handler.continue_chapter(context)
             else:
-                result = handler.refine_chapter(context, instruction or "Verfeinere und erweitere diesen Text mit mehr Details, tieferen Beschreibungen und lebendigeren Szenen.")
+                result = handler.refine_chapter(
+                    context,
+                    instruction
+                    or "Verfeinere und erweitere diesen Text mit mehr Details, tieferen Beschreibungen und lebendigeren Szenen.",
+                )
         except Exception as exc:
             logger.exception("chapter_refine_start error: %s", exc)
             return Response({"success": False, "error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         if result.get("success"):
-            return Response({
-                "success": True,
-                "content": result["content"],
-                "word_count": result.get("word_count", 0),
-            })
+            return Response(
+                {
+                    "success": True,
+                    "content": result["content"],
+                    "word_count": result.get("word_count", 0),
+                }
+            )
         return Response(
             {"success": False, "error": result.get("error", "Verfeinerung fehlgeschlagen")},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -179,6 +188,7 @@ class chapter_write_status(APIView):
     Polling-Endpunkt für Kapitel-Generierung.
     Response: {status, content?, word_count?, error?}
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, job_id):
@@ -218,6 +228,7 @@ class chapter_quality_score(APIView):
     GET:  Letzten Quality Score abrufen.
     POST: Neuen Score erstellen (dimension_scores im Body).
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, project_id, chapter_ref):
@@ -227,17 +238,19 @@ class chapter_quality_score(APIView):
         if not score:
             return Response({"detail": "Kein Score vorhanden."}, status=status.HTTP_404_NOT_FOUND)
 
-        return Response({
-            "chapter_ref": score.chapter_ref,
-            "overall_score": str(score.overall_score),
-            "gate_decision": score.gate_decision.code,
-            "allows_commit": score.gate_decision.allows_commit,
-            "scored_at": score.scored_at.isoformat(),
-            "dimensions": [
-                {"code": ds.dimension.code, "score": str(ds.score)}
-                for ds in score.dimension_scores.select_related("dimension").all()
-            ],
-        })
+        return Response(
+            {
+                "chapter_ref": score.chapter_ref,
+                "overall_score": str(score.overall_score),
+                "gate_decision": score.gate_decision.code,
+                "allows_commit": score.gate_decision.allows_commit,
+                "scored_at": score.scored_at.isoformat(),
+                "dimensions": [
+                    {"code": ds.dimension.code, "score": str(ds.score)}
+                    for ds in score.dimension_scores.select_related("dimension").all()
+                ],
+            }
+        )
 
     def post(self, request, project_id, chapter_ref):
         from decimal import Decimal
@@ -286,6 +299,7 @@ class OutlineGenerateView(APIView):
     Gliederung via OutlineGeneratorService (aifw) generieren.
     Body: {genre, premise, chapter_count, style}
     """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request, project_id):
@@ -301,12 +315,15 @@ class OutlineGenerateView(APIView):
         if not result.success:
             return Response({"detail": result.error}, status=status.HTTP_502_BAD_GATEWAY)
 
-        return Response({
-            "title": result.title,
-            "premise": result.premise,
-            "acts": result.acts,
-            "beats": result.beats,
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            {
+                "title": result.title,
+                "premise": result.premise,
+                "acts": result.acts,
+                "beats": result.beats,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class OutlineBeatExpandView(APIView):
@@ -315,6 +332,7 @@ class OutlineBeatExpandView(APIView):
 
     Einzelnen Beat via LLM vertiefen.
     """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request, project_id, beat_id):
@@ -338,6 +356,7 @@ class IdeaGenerateView(APIView):
     Buch-Ideen via IdeaGeneratorService (aifw) generieren.
     Body: {genre, keywords, count}
     """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -361,6 +380,7 @@ class IdeaToPremiseView(APIView):
 
     Rohe Idee in strukturiertes Premise umwandeln.
     """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request, idea_id):
@@ -377,10 +397,13 @@ class IdeaToPremiseView(APIView):
         if not result.success:
             return Response({"detail": result.error}, status=status.HTTP_502_BAD_GATEWAY)
 
-        return Response({
-            "idea_id": str(idea_id),
-            "premise": result.premise,
-            "genre": result.genre,
-            "themes": result.themes,
-            "protagonist": result.protagonist,
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            {
+                "idea_id": str(idea_id),
+                "premise": result.premise,
+                "genre": result.genre,
+                "themes": result.themes,
+                "protagonist": result.protagonist,
+            },
+            status=status.HTTP_201_CREATED,
+        )

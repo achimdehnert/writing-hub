@@ -4,6 +4,7 @@ REFLEX Zirkel 2 — UI Audit: Workflow-Views erreichbar (UC-003 Ergänzung)
 Stellt sicher, dass alle Workflow-Phasen-Links von der Projekt-Detailseite
 tatsächlich HTTP 200 liefern (keine toten Links).
 """
+
 import pytest
 from django.urls import reverse
 
@@ -17,7 +18,9 @@ def _seed_project(db):
     user = User.objects.first()
     if not user:
         user = User.objects.create_superuser(
-            username="reflex-test", email="test@iil.gmbh", password="test",
+            username="reflex-test",
+            email="test@iil.gmbh",
+            password="test",
         )
     project = BookProject.objects.filter(owner=user).first()
     if not project:
@@ -32,11 +35,17 @@ def _seed_project(db):
     version = OutlineVersion.objects.filter(project=project, is_active=True).first()
     if not version:
         version = OutlineVersion.objects.create(
-            project=project, name="Test", is_active=True, source="three_act",
+            project=project,
+            name="Test",
+            is_active=True,
+            source="three_act",
         )
         OutlineNode.objects.create(
-            outline_version=version, title="Kapitel 1",
-            order=1, beat_type="chapter", word_count=500,
+            outline_version=version,
+            title="Kapitel 1",
+            order=1,
+            beat_type="chapter",
+            word_count=500,
         )
     return project
 

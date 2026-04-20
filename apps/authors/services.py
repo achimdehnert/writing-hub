@@ -1,6 +1,7 @@
 """
 Authors — LLM-Service für Stil-Analyse, Regel-Extraktion und Beispieltext-Generierung.
 """
+
 import logging
 
 from promptfw.parsing import extract_json
@@ -30,9 +31,7 @@ def get_situations_for_style(style: WritingStyle) -> list[tuple[str, str, str]]:
     if style.genre_profile:
         return [
             (st.slug, st.label, st.llm_prompt_hint or "")
-            for st in style.genre_profile.situation_types.filter(
-                is_active=True
-            ).order_by("sort_order")
+            for st in style.genre_profile.situation_types.filter(is_active=True).order_by("sort_order")
         ]
     return [(key, label, "") for key, label in LEGACY_SITUATIONS]
 
@@ -54,6 +53,7 @@ def analyze_style(style: WritingStyle) -> bool:
         return False
 
     from apps.core.prompt_utils import render_prompt
+
     prompt_msgs = render_prompt(
         "authors/analyze_style",
         source_text=text,
@@ -109,6 +109,7 @@ def extract_style_rules(style: WritingStyle) -> tuple[bool, dict]:
     source = text[:3000] if text else profile[:2000]
 
     from apps.core.prompt_utils import render_prompt
+
     prompt_msgs = render_prompt(
         "authors/extract_rules",
         source_text=source,

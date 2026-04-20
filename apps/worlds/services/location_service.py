@@ -10,6 +10,7 @@ Packages:
   - iil-promptfw:   render_to_messages() — strukturierte Prompts aus Templates
   - iil-weltenfw:   get_client().locations / .scenes — WeltenHub API
 """
+
 from __future__ import annotations
 
 import logging
@@ -21,11 +22,13 @@ logger = logging.getLogger(__name__)
 
 def _get_router():
     from apps.authoring.services.llm_router import LLMRouter
+
     return LLMRouter()
 
 
 def _get_routing_error():
     from apps.authoring.services.llm_router import LLMRoutingError
+
     return LLMRoutingError
 
 
@@ -82,9 +85,7 @@ class WorldLocationService:
         )
 
         try:
-            raw = self._router.completion(
-                "world_locations", messages, quality_level=quality_level
-            )
+            raw = self._router.completion("world_locations", messages, quality_level=quality_level)
             locations = self._parse_locations(raw)
             return LocationGenerationResult(success=True, locations=locations)
         except _get_routing_error() as exc:
@@ -135,6 +136,7 @@ class WorldLocationService:
         """Orte mit lokalem Projekt via ProjectLocationLink verknüpfen."""
         from apps.projects.models import BookProject
         from apps.worlds.models import ProjectLocationLink
+
         try:
             project = BookProject.objects.get(pk=project_id)
         except Exception:
@@ -155,6 +157,7 @@ class WorldLocationService:
         """
         from apps.worlds.models import ProjectLocationLink
         from weltenfw.django import get_client
+
         links = ProjectLocationLink.objects.filter(project_id=project_id)
         client = get_client()
         results = []
@@ -170,6 +173,7 @@ class WorldLocationService:
         Alle Orte einer Welt direkt aus WeltenHub laden (gefiltert nach world).
         """
         from weltenfw.django import get_client
+
         try:
             page = get_client().locations.list(world=str(weltenhub_world_id))
             return list(page.results)
@@ -180,6 +184,7 @@ class WorldLocationService:
     def _get_world_context(self, world_id: UUID) -> str:
         try:
             from weltenfw.django import get_client
+
             world = get_client().worlds.get(world_id)
             parts = [f"Welt: {world.name}"]
             if world.description:
@@ -193,6 +198,7 @@ class WorldLocationService:
     def _get_project_context(self, project_id: str) -> str:
         try:
             from apps.projects.models import BookProject
+
             p = BookProject.objects.get(pk=project_id)
             return f"Projekt: {p.title}\nGenre: {p.genre}"
         except Exception:
@@ -207,6 +213,7 @@ class WorldLocationService:
     ) -> list[dict]:
         """promptfw render_prompt() — raises PromptRenderError on failure."""
         from apps.core.prompt_utils import render_prompt
+
         return render_prompt(
             "worlds/location_generate",
             world_ctx=world_ctx,
@@ -218,6 +225,7 @@ class WorldLocationService:
     @staticmethod
     def _parse_locations(raw: str) -> list[dict]:
         from promptfw.parsing import extract_json, extract_json_list
+
         data = extract_json_list(raw)
         if not data:
             obj = extract_json(raw)
@@ -262,9 +270,7 @@ class WorldSceneService:
             requirements=requirements,
         )
         try:
-            raw = self._router.completion(
-                "scene_generate", messages, quality_level=quality_level
-            )
+            raw = self._router.completion("scene_generate", messages, quality_level=quality_level)
             scenes = self._parse_scenes(raw)
             return SceneGenerationResult(success=True, scenes=scenes)
         except _get_routing_error() as exc:
@@ -282,6 +288,7 @@ class WorldSceneService:
         """Szenen via iil-weltenfw in WeltenHub speichern."""
         from weltenfw.django import get_client
         from weltenfw.schema import SceneCreateInput
+
         client = get_client()
         created_ids = []
         for i, scene in enumerate(scenes):
@@ -312,6 +319,7 @@ class WorldSceneService:
         """Szenen mit lokalem Projekt via ProjectSceneLink verknüpfen."""
         from apps.projects.models import BookProject
         from apps.worlds.models import ProjectSceneLink
+
         try:
             project = BookProject.objects.get(pk=project_id)
         except Exception:
@@ -331,6 +339,7 @@ class WorldSceneService:
         """Alle Szenen eines Projekts aus WeltenHub laden."""
         from apps.worlds.models import ProjectSceneLink
         from weltenfw.django import get_client
+
         links = ProjectSceneLink.objects.filter(project_id=project_id)
         client = get_client()
         results = []
@@ -344,6 +353,7 @@ class WorldSceneService:
     def _get_world_context(self, world_id: UUID) -> str:
         try:
             from weltenfw.django import get_client
+
             world = get_client().worlds.get(world_id)
             return f"Welt: {world.name}\nBeschreibung: {world.description or ''}"
         except Exception:
@@ -352,6 +362,7 @@ class WorldSceneService:
     def _get_project_context(self, project_id: str) -> str:
         try:
             from apps.projects.models import BookProject
+
             p = BookProject.objects.get(pk=project_id)
             return f"Projekt: {p.title}\nGenre: {p.genre}"
         except Exception:
@@ -366,6 +377,7 @@ class WorldSceneService:
     ) -> list[dict]:
         """promptfw render_prompt() — raises PromptRenderError on failure."""
         from apps.core.prompt_utils import render_prompt
+
         return render_prompt(
             "worlds/scene_generate",
             world_ctx=world_ctx,
@@ -377,6 +389,7 @@ class WorldSceneService:
     @staticmethod
     def _parse_scenes(raw: str) -> list[dict]:
         from promptfw.parsing import extract_json, extract_json_list
+
         data = extract_json_list(raw)
         if not data:
             obj = extract_json(raw)

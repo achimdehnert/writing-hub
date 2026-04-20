@@ -8,6 +8,7 @@ Testet alle HTML-Views auf:
 
 Abgedeckte Apps: projects, outlines, series, authors, worlds, idea_import
 """
+
 import pytest
 from django.contrib.auth.models import User
 from django.test import Client
@@ -20,6 +21,7 @@ from apps.series.models import BookSeries
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def user(db):
@@ -40,12 +42,8 @@ def anon_client():
 
 @pytest.fixture
 def project(db, user):
-    ct, _ = ContentTypeLookup.objects.get_or_create(
-        slug="roman", defaults={"name": "Roman", "order": 1}
-    )
-    genre, _ = GenreLookup.objects.get_or_create(
-        name="Fantasy", defaults={"order": 1}
-    )
+    ct, _ = ContentTypeLookup.objects.get_or_create(slug="roman", defaults={"name": "Roman", "order": 1})
+    genre, _ = GenreLookup.objects.get_or_create(name="Fantasy", defaults={"order": 1})
     return BookProject.objects.create(
         title="Test-Projekt FE",
         owner=user,
@@ -58,6 +56,7 @@ def project(db, user):
 @pytest.fixture
 def outline_node(db, project):
     from apps.projects.models import OutlineVersion
+
     version = OutlineVersion.objects.create(
         project=project,
         name="Test Version",
@@ -89,28 +88,24 @@ def batch_job(db, project, user):
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def ok(response):
     """Akzeptiert 200 und Redirect 301/302."""
-    assert response.status_code in (200, 301, 302), (
-        f"Expected 200/302, got {response.status_code}"
-    )
+    assert response.status_code in (200, 301, 302), f"Expected 200/302, got {response.status_code}"
 
 
 def must_200(response):
-    assert response.status_code == 200, (
-        f"Expected 200, got {response.status_code}"
-    )
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
 
 
 def must_redirect(response):
-    assert response.status_code in (301, 302), (
-        f"Expected redirect, got {response.status_code}"
-    )
+    assert response.status_code in (301, 302), f"Expected redirect, got {response.status_code}"
 
 
 # ---------------------------------------------------------------------------
 # Anonyme Requests → Login-Redirect
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.django_db
 class TestLoginRequired:
@@ -140,9 +135,9 @@ class TestLoginRequired:
 # Projects App
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestProjectViews:
-
     def test_project_list(self, auth_client):
         must_200(auth_client.get("/projekte/"))
 
@@ -210,9 +205,7 @@ class TestProjectViews:
         must_200(auth_client.get(f"/projekte/{project.pk}/batch/"))
 
     def test_project_batch_status_partial(self, auth_client, project, batch_job):
-        must_200(auth_client.get(
-            f"/projekte/{project.pk}/batch/{batch_job.pk}/status/"
-        ))
+        must_200(auth_client.get(f"/projekte/{project.pk}/batch/{batch_job.pk}/status/"))
 
     def test_project_research_dashboard(self, auth_client, project):
         must_200(auth_client.get(f"/projekte/{project.pk}/research/"))
@@ -243,9 +236,9 @@ class TestProjectViews:
 # Projects — Chapter Node Views
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestProjectNodeViews:
-
     def test_node_content_get(self, auth_client, outline_node):
         must_200(auth_client.get(f"/projekte/node/{outline_node.pk}/content/"))
 
@@ -254,9 +247,9 @@ class TestProjectNodeViews:
 # Outlines App
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestOutlineViews:
-
     def test_outline_list(self, auth_client):
         must_200(auth_client.get("/outlines/"))
 
@@ -265,9 +258,9 @@ class TestOutlineViews:
 # Series App
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestSeriesViews:
-
     def test_series_list(self, auth_client):
         must_200(auth_client.get("/serien/"))
 
@@ -285,9 +278,9 @@ class TestSeriesViews:
 # Authors App
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestAuthorViews:
-
     def test_author_list(self, auth_client):
         must_200(auth_client.get("/autoren/"))
 
@@ -299,9 +292,9 @@ class TestAuthorViews:
 # Worlds App
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestWorldViews:
-
     def test_world_list(self, auth_client):
         must_200(auth_client.get("/welten/"))
 
@@ -310,9 +303,9 @@ class TestWorldViews:
 # Idea Import App
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestIdeaImportViews:
-
     def test_idea_list(self, auth_client):
         must_200(auth_client.get("/ideen/"))
 
@@ -320,6 +313,7 @@ class TestIdeaImportViews:
 # ---------------------------------------------------------------------------
 # HTMX-spezifische Tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.django_db
 class TestHTMXHeaders:
@@ -332,9 +326,7 @@ class TestHTMXHeaders:
         must_200(response)
 
     def test_project_health_partial_htmx_header(self, auth_client, project):
-        response = auth_client.get(
-            f"/projekte/{project.pk}/health/partial/", **self.HTMX_HEADER
-        )
+        response = auth_client.get(f"/projekte/{project.pk}/health/partial/", **self.HTMX_HEADER)
         must_200(response)
 
     def test_batch_status_partial_htmx_header(self, auth_client, project, batch_job):
@@ -348,6 +340,7 @@ class TestHTMXHeaders:
 # ---------------------------------------------------------------------------
 # Template-Vollständigkeit: Kritische Context-Keys
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.django_db
 class TestContextKeys:

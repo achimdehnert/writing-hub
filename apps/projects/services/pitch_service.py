@@ -3,6 +3,7 @@ PitchGeneratorService — ADR-159
 
 Generiert Logline, Exposé, Synopsis und Query Letter via LLM.
 """
+
 from __future__ import annotations
 
 from apps.core.prompt_utils import render_prompt
@@ -34,6 +35,7 @@ def generate_logline(project):
 
 def generate_expose_de(project):
     from apps.projects.models import ComparableTitle
+
     comps = ComparableTitle.objects.filter(project=project).order_by("sort_order")[:3]
     comps_text = "; ".join(c.to_comp_string() for c in comps) or "—"
 
@@ -68,10 +70,9 @@ def generate_expose_de(project):
 
 def generate_query(project):
     from apps.projects.models import ComparableTitle, PitchDocument
+
     comps = ComparableTitle.objects.filter(project=project).order_by("sort_order")[:2]
-    logline_doc = PitchDocument.objects.filter(
-        project=project, pitch_type="logline", is_current=True
-    ).first()
+    logline_doc = PitchDocument.objects.filter(project=project, pitch_type="logline", is_current=True).first()
 
     messages = render_prompt(
         "projects/pitch_query",
@@ -92,6 +93,7 @@ def generate_query(project):
 
 def _call_llm_messages(action_code: str, messages: list[dict]) -> str:
     from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
+
     try:
         router = LLMRouter()
         return router.completion(action_code=action_code, messages=messages).strip()
@@ -110,13 +112,10 @@ def _get_character(project, role: str):
 
 def _save_pitch(project, pitch_type: str, content: str, is_ai: bool = False):
     from apps.projects.models import PitchDocument
-    PitchDocument.objects.filter(
-        project=project, pitch_type=pitch_type, is_current=True
-    ).update(is_current=False)
 
-    last = PitchDocument.objects.filter(
-        project=project, pitch_type=pitch_type
-    ).order_by("-version").first()
+    PitchDocument.objects.filter(project=project, pitch_type=pitch_type, is_current=True).update(is_current=False)
+
+    last = PitchDocument.objects.filter(project=project, pitch_type=pitch_type).order_by("-version").first()
 
     return PitchDocument.objects.create(
         project=project,

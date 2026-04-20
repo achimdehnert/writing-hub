@@ -10,6 +10,7 @@ Usage:
     python manage.py seed_drama_lookups
     python manage.py seed_drama_lookups --force
 """
+
 from django.core.management.base import BaseCommand
 
 
@@ -107,13 +108,9 @@ GENRE_PROMISES = [
         genre_slug="thriller",
         genre_label="Thriller",
         core_promise=(
-            "Eskalation bis zur letzten Seite. Alle Geheimnisse aufgelöst. "
-            "Spannung nie unter dem Eröffnungslevel."
+            "Eskalation bis zur letzten Seite. Alle Geheimnisse aufgelöst. Spannung nie unter dem Eröffnungslevel."
         ),
-        reader_expectation=(
-            "Clock is ticking. Protagonist in echtem Danger. "
-            "Antagonist einen Schritt voraus."
-        ),
+        reader_expectation=("Clock is ticking. Protagonist in echtem Danger. Antagonist einen Schritt voraus."),
         must_haves=["Bedrohung ab Seite 1", "Clock is ticking", "Alle Fäden aufgelöst"],
         must_not_haves=["Deus Ex Machina", "Erklärungen statt Handlung"],
         sort_order=1,
@@ -122,8 +119,7 @@ GENRE_PROMISES = [
         genre_slug="romance",
         genre_label="Romance",
         core_promise=(
-            "Emotionale Intensität. HEA (Happily Ever After) oder HFN "
-            "(Happy For Now) — PFLICHT, keine Ausnahmen."
+            "Emotionale Intensität. HEA (Happily Ever After) oder HFN (Happy For Now) — PFLICHT, keine Ausnahmen."
         ),
         reader_expectation="Meet-Cute. Obstacles. Black Moment. Reunion.",
         must_haves=["HEA oder HFN", "Emotionaler Schwarzpunkt", "Chemie ab Seite 1"],
@@ -133,10 +129,7 @@ GENRE_PROMISES = [
     dict(
         genre_slug="literary",
         genre_label="Literarisch",
-        core_promise=(
-            "Thematische Tiefe und Stilqualität. Sprache ist das Erlebnis. "
-            "Innenwelt über Außenwelt."
-        ),
+        core_promise=("Thematische Tiefe und Stilqualität. Sprache ist das Erlebnis. Innenwelt über Außenwelt."),
         reader_expectation="Ambiguität erlaubt. Langsame Entfaltung. Sprachliche Dichte.",
         must_haves=["Stilistische Kohärenz", "Thematische Resonanz"],
         must_not_haves=["Klischierte Auflösung", "On-Nose-Dialog"],
@@ -146,8 +139,7 @@ GENRE_PROMISES = [
         genre_slug="fantasy",
         genre_label="Fantasy",
         core_promise=(
-            "Weltenkonsistenz. Magie-System-Integrität. "
-            "Die Regeln der Welt gelten auch für den Protagonisten."
+            "Weltenkonsistenz. Magie-System-Integrität. Die Regeln der Welt gelten auch für den Protagonisten."
         ),
         reader_expectation="Immersives Worldbuilding. Konsequentes Magie-System.",
         must_haves=["Konsistente Weltregeln", "Kosten der Magie"],
@@ -158,8 +150,7 @@ GENRE_PROMISES = [
         genre_slug="scifi",
         genre_label="Science-Fiction",
         core_promise=(
-            "Wissenschaftliche oder technische Prämisse, konsequent durchgedacht. "
-            "Worldbuilding mit innerer Logik."
+            "Wissenschaftliche oder technische Prämisse, konsequent durchgedacht. Worldbuilding mit innerer Logik."
         ),
         reader_expectation="Sense of Wonder. Technologische Kohärenz.",
         must_haves=["Konsistente Technik-/Wissenschaftsregeln", "Worldbuilding-Tiefe"],
@@ -170,8 +161,7 @@ GENRE_PROMISES = [
         genre_slug="mystery",
         genre_label="Krimi / Mystery",
         core_promise=(
-            "Fair-Play-Prinzip: alle Hinweise lagen offen. "
-            "Täter identifiziert. Alle relevanten Fragen beantwortet."
+            "Fair-Play-Prinzip: alle Hinweise lagen offen. Täter identifiziert. Alle relevanten Fragen beantwortet."
         ),
         reader_expectation="Rätsel. Clues. Roter Hering. Befriedigende Auflösung.",
         must_haves=["Fair-Play-Clues", "Täter-Identifikation", "Alle Fäden aufgelöst"],
@@ -181,10 +171,7 @@ GENRE_PROMISES = [
     dict(
         genre_slug="horror",
         genre_label="Horror",
-        core_promise=(
-            "Bedrohung realisiert sich oder bleibt unheimlich — aber nie harmlos. "
-            "Kosten sind real."
-        ),
+        core_promise=("Bedrohung realisiert sich oder bleibt unheimlich — aber nie harmlos. Kosten sind real."),
         reader_expectation="Angst. Unbehagen. Konsequenzen.",
         must_haves=["Reale Bedrohung", "Kosten für den Protagonisten"],
         must_not_haves=["Alles war nur ein Traum"],
@@ -193,10 +180,7 @@ GENRE_PROMISES = [
     dict(
         genre_slug="historical",
         genre_label="Historisch",
-        core_promise=(
-            "Historische Authentizität im Detail. "
-            "Figuren denken und handeln ihrer Zeit entsprechend."
-        ),
+        core_promise=("Historische Authentizität im Detail. Figuren denken und handeln ihrer Zeit entsprechend."),
         reader_expectation="Immersion. Historische Details ohne Info-Dump.",
         must_haves=["Historische Korrektheit", "Zeitgemäße Figurenpsychologie"],
         must_not_haves=["Moderne Denkweise in historischer Figur"],
@@ -206,8 +190,7 @@ GENRE_PROMISES = [
         genre_slug="ya",
         genre_label="Young Adult",
         core_promise=(
-            "Coming-of-Age-Transformation. Protagonistin im Teenager-Alter. "
-            "Zugänglicher Stil ohne Vereinfachung."
+            "Coming-of-Age-Transformation. Protagonistin im Teenager-Alter. Zugänglicher Stil ohne Vereinfachung."
         ),
         reader_expectation="Identifikation. Erste Male. Emanzipation.",
         must_haves=["Protagonist im Teenager-Alter", "Coming-of-Age-Arc"],
@@ -242,8 +225,7 @@ DRAMATIC_QUALITY_DIMENSIONS = [
         code="theme_resonance",
         label="Thematische Resonanz",
         description=(
-            "Zahlt diese Szene auf das Thema ein? "
-            "Jede Szene sollte das Thema berühren — direkt oder durch Kontrast."
+            "Zahlt diese Szene auf das Thema ein? Jede Szene sollte das Thema berühren — direkt oder durch Kontrast."
         ),
         weight=2,
     ),
@@ -325,9 +307,7 @@ class Command(BaseCommand):
             else:
                 skipped += 1
 
-        self.stdout.write(
-            f"   Erstellt: {created}  Aktualisiert: {updated}  Übersprungen: {skipped}"
-        )
+        self.stdout.write(f"   Erstellt: {created}  Aktualisiert: {updated}  Übersprungen: {skipped}")
 
     def _seed_genre_promises(self, force: bool) -> None:
         from apps.core.models_lookups_drama import GenrePromiseLookup
@@ -358,17 +338,13 @@ class Command(BaseCommand):
             else:
                 skipped += 1
 
-        self.stdout.write(
-            f"   Erstellt: {created}  Aktualisiert: {updated}  Übersprungen: {skipped}"
-        )
+        self.stdout.write(f"   Erstellt: {created}  Aktualisiert: {updated}  Übersprungen: {skipped}")
 
     def _seed_quality_dimensions(self, force: bool) -> None:
         try:
             from apps.core.models import QualityDimension
         except ImportError:
-            self.stdout.write(self.style.WARNING(
-                "\n[3] QualityDimension — Modell nicht gefunden, übersprungen."
-            ))
+            self.stdout.write(self.style.WARNING("\n[3] QualityDimension — Modell nicht gefunden, übersprungen."))
             return
 
         self.stdout.write("\n[3] QualityDimension (dramaturgisch) ...")
@@ -394,6 +370,4 @@ class Command(BaseCommand):
             else:
                 skipped += 1
 
-        self.stdout.write(
-            f"   Erstellt: {created}  Aktualisiert: {updated}  Übersprungen: {skipped}"
-        )
+        self.stdout.write(f"   Erstellt: {created}  Aktualisiert: {updated}  Übersprungen: {skipped}")

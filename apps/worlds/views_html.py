@@ -4,6 +4,7 @@ Worlds — HTML Frontend Views
 Lädt Welt-/Charakter-/Orts-Daten live aus WeltenHub (iil-weltenfw)
 und zeigt sie im Writing-Hub-Kontext an.
 """
+
 import logging
 
 from django.contrib import messages
@@ -21,14 +22,14 @@ class WorldListView(LoginRequiredMixin, ListView):
     """
     Übersicht aller verknüpften Welten + Live-Daten aus WeltenHub.
     """
+
     model = ProjectWorldLink
     template_name = "worlds/world_list.html"
     context_object_name = "world_links"
 
     def get_queryset(self):
         return (
-            ProjectWorldLink.objects
-            .filter(project__owner=self.request.user)
+            ProjectWorldLink.objects.filter(project__owner=self.request.user)
             .select_related("project")
             .order_by("project__title", "role")
         )
@@ -41,6 +42,7 @@ class WorldListView(LoginRequiredMixin, ListView):
         enriched = []
         try:
             from weltenfw.django import get_client
+
             client = get_client()
             for link in ctx["world_links"]:
                 try:
@@ -61,14 +63,13 @@ class ProjectWorldDetailView(LoginRequiredMixin, View):
     Primär: lokale Daten (ProjectCharacterLink/ProjectLocationLink).
     Sekundär: WeltenHub-Anreicherung wenn verfügbar.
     """
+
     template_name = "worlds/world_detail.html"
 
     def get(self, request, pk):
         from apps.worlds.models import ProjectCharacterLink, ProjectLocationLink
 
-        link = get_object_or_404(
-            ProjectWorldLink, pk=pk, project__owner=request.user
-        )
+        link = get_object_or_404(ProjectWorldLink, pk=pk, project__owner=request.user)
 
         # WeltenHub optional laden
         world = None
@@ -78,6 +79,7 @@ class ProjectWorldDetailView(LoginRequiredMixin, View):
         if link.weltenhub_world_id:
             try:
                 from weltenfw.django import get_client
+
                 client = get_client()
                 world = client.worlds.get(link.weltenhub_world_id)
                 weltenhub_available = True
@@ -87,6 +89,7 @@ class ProjectWorldDetailView(LoginRequiredMixin, View):
                     link.save(update_fields=["name"])
                 # WeltenHub-Daten als Enrichment
                 from apps.worlds.services import WorldCharacterService, WorldLocationService
+
                 for c in WorldCharacterService().get_world_characters(link.weltenhub_world_id):
                     wh_chars[str(c.id)] = c
                 for loc in WorldLocationService().get_world_locations(link.weltenhub_world_id):
@@ -100,64 +103,69 @@ class ProjectWorldDetailView(LoginRequiredMixin, View):
         enriched_chars = []
         for pcl in local_chars:
             wh_char = wh_chars.get(str(pcl.weltenhub_character_id)) if pcl.weltenhub_character_id else None
-            enriched_chars.append({
-                "pcl": pcl,
-                "pcl_pk": str(pcl.pk),
-                "name": pcl.name or (wh_char.name if wh_char else "Unbekannt"),
-                "personality": pcl.personality or (getattr(wh_char, "personality", "") if wh_char else ""),
-                "backstory": pcl.backstory or (getattr(wh_char, "backstory", "") if wh_char else ""),
-                "is_protagonist": pcl.is_protagonist or (getattr(wh_char, "is_protagonist", False) if wh_char else False),
-                "narrative_role": pcl.get_narrative_role_display(),
-                "narrative_role_key": pcl.narrative_role,
-                "voice_pattern": pcl.voice_pattern,
-                "secret_what": pcl.secret_what,
-                "character_status": pcl.get_character_status_display(),
-                "first_appearance": pcl.first_appearance,
-                "source": pcl.source,
-            })
+            enriched_chars.append(
+                {
+                    "pcl": pcl,
+                    "pcl_pk": str(pcl.pk),
+                    "name": pcl.name or (wh_char.name if wh_char else "Unbekannt"),
+                    "personality": pcl.personality or (getattr(wh_char, "personality", "") if wh_char else ""),
+                    "backstory": pcl.backstory or (getattr(wh_char, "backstory", "") if wh_char else ""),
+                    "is_protagonist": pcl.is_protagonist
+                    or (getattr(wh_char, "is_protagonist", False) if wh_char else False),
+                    "narrative_role": pcl.get_narrative_role_display(),
+                    "narrative_role_key": pcl.narrative_role,
+                    "voice_pattern": pcl.voice_pattern,
+                    "secret_what": pcl.secret_what,
+                    "character_status": pcl.get_character_status_display(),
+                    "first_appearance": pcl.first_appearance,
+                    "source": pcl.source,
+                }
+            )
 
         # Lokale Orte — primäre Datenquelle
         local_locs = ProjectLocationLink.objects.filter(project=link.project)
         enriched_locs = []
         for pll in local_locs:
             wh_loc = wh_locs.get(str(pll.weltenhub_location_id)) if pll.weltenhub_location_id else None
-            enriched_locs.append({
-                "pll": pll,
-                "pll_pk": str(pll.pk),
-                "name": pll.name or (wh_loc.name if wh_loc else "Unbekannt"),
-                "description": pll.description or (getattr(wh_loc, "description", "") if wh_loc else ""),
-                "atmosphere": pll.atmosphere or (getattr(wh_loc, "atmosphere", "") if wh_loc else ""),
-                "source": pll.source,
-            })
+            enriched_locs.append(
+                {
+                    "pll": pll,
+                    "pll_pk": str(pll.pk),
+                    "name": pll.name or (wh_loc.name if wh_loc else "Unbekannt"),
+                    "description": pll.description or (getattr(wh_loc, "description", "") if wh_loc else ""),
+                    "atmosphere": pll.atmosphere or (getattr(wh_loc, "atmosphere", "") if wh_loc else ""),
+                    "source": pll.source,
+                }
+            )
 
         # Outline vorhanden?
         from apps.projects.models import OutlineVersion
-        has_outline = OutlineVersion.objects.filter(
-            project=link.project, is_active=True
-        ).exists()
 
-        world_display_name = (
-            link.name
-            or (world.name if world else None)
-            or link.project.title
+        has_outline = OutlineVersion.objects.filter(project=link.project, is_active=True).exists()
+
+        world_display_name = link.name or (world.name if world else None) or link.project.title
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "link": link,
+                "world": world,
+                "world_display_name": world_display_name,
+                "weltenhub_available": weltenhub_available,
+                "characters": enriched_chars,
+                "locations": enriched_locs,
+                "project": link.project,
+                "has_outline": has_outline,
+            },
         )
-
-        return render(request, self.template_name, {
-            "link": link,
-            "world": world,
-            "world_display_name": world_display_name,
-            "weltenhub_available": weltenhub_available,
-            "characters": enriched_chars,
-            "locations": enriched_locs,
-            "project": link.project,
-            "has_outline": has_outline,
-        })
 
 
 class WorldGenerateView(LoginRequiredMixin, View):
     """
     POST: Neue Welt per LLM generieren + in WeltenHub speichern + Projekt verknüpfen.
     """
+
     def post(self, request):
         from apps.projects.models import BookProject
         from apps.worlds.services import WorldBuilderService
@@ -179,7 +187,7 @@ class WorldGenerateView(LoginRequiredMixin, View):
         world_id = svc.save_to_weltenhub(result)
         if world_id:
             svc.link_to_project(str(project.pk), world_id)
-            messages.success(request, f'Welt \u201e{result.name}\u201c in WeltenHub erstellt und verknüpft.')
+            messages.success(request, f"Welt \u201e{result.name}\u201c in WeltenHub erstellt und verknüpft.")
         else:
             messages.error(request, "Welt generiert, aber WeltenHub-Speicherung fehlgeschlagen.")
         return redirect("worlds_html:list")
@@ -190,13 +198,12 @@ class WorldCharacterGenerateView(LoginRequiredMixin, View):
     POST: Charaktere per LLM generieren.
     Speichert in WeltenHub wenn verfügbar, sonst lokal.
     """
+
     def post(self, request, pk):
         from apps.worlds.models import ProjectCharacterLink
         from apps.worlds.services import WorldCharacterService
 
-        link = get_object_or_404(
-            ProjectWorldLink, pk=pk, project__owner=request.user
-        )
+        link = get_object_or_404(ProjectWorldLink, pk=pk, project__owner=request.user)
         count = int(request.POST.get("count", 5))
         svc = WorldCharacterService()
         result = svc.generate_cast(
@@ -247,13 +254,12 @@ class WorldLocationGenerateView(LoginRequiredMixin, View):
     POST: Orte per LLM generieren.
     Speichert in WeltenHub wenn verfügbar, sonst lokal.
     """
+
     def post(self, request, pk):
         from apps.worlds.models import ProjectLocationLink
         from apps.worlds.services import WorldLocationService
 
-        link = get_object_or_404(
-            ProjectWorldLink, pk=pk, project__owner=request.user
-        )
+        link = get_object_or_404(ProjectWorldLink, pk=pk, project__owner=request.user)
         count = int(request.POST.get("count", 5))
         svc = WorldLocationService()
         result = svc.generate_locations(
@@ -302,30 +308,32 @@ class CharacterCreateView(LoginRequiredMixin, View):
     GET:  Formular zum manuellen Erstellen eines Charakters.
     POST: Charakter in WeltenHub anlegen + mit Projekt verknüpfen.
     """
+
     template_name = "worlds/character_create.html"
 
     def get(self, request, pk):
-        link = get_object_or_404(
-            ProjectWorldLink, pk=pk, project__owner=request.user
-        )
+        link = get_object_or_404(ProjectWorldLink, pk=pk, project__owner=request.user)
         world = None
         try:
             from weltenfw.django import get_client
+
             world = get_client().worlds.get(link.weltenhub_world_id)
         except Exception:
             pass
-        return render(request, self.template_name, {
-            "link": link,
-            "world": world,
-            "project": link.project,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "link": link,
+                "world": world,
+                "project": link.project,
+            },
+        )
 
     def post(self, request, pk):
         from apps.worlds.services import WorldCharacterService
 
-        link = get_object_or_404(
-            ProjectWorldLink, pk=pk, project__owner=request.user
-        )
+        link = get_object_or_404(ProjectWorldLink, pk=pk, project__owner=request.user)
         name = request.POST.get("name", "").strip()
         if not name:
             messages.error(request, "Name ist erforderlich.")
@@ -383,7 +391,7 @@ class CharacterCreateView(LoginRequiredMixin, View):
                 source="manual",
             )
 
-        messages.success(request, f'Charakter \u201e{name}\u201c erstellt.')
+        messages.success(request, f"Charakter \u201e{name}\u201c erstellt.")
         return redirect("worlds_html:detail", pk=pk)
 
 
@@ -392,12 +400,11 @@ class CharacterLinkView(LoginRequiredMixin, View):
     GET:  Zeigt alle Charaktere der Welt aus WeltenHub — bereits verknüpfte markiert.
     POST: Ausgewählte Charaktere mit Projekt verknüpfen.
     """
+
     template_name = "worlds/character_link.html"
 
     def get(self, request, pk):
-        link = get_object_or_404(
-            ProjectWorldLink, pk=pk, project__owner=request.user
-        )
+        link = get_object_or_404(ProjectWorldLink, pk=pk, project__owner=request.user)
         world = None
         all_characters = []
         linked_ids = set()
@@ -411,29 +418,31 @@ class CharacterLinkView(LoginRequiredMixin, View):
             all_characters = WorldCharacterService().get_world_characters(link.weltenhub_world_id)
 
             linked_ids = set(
-                ProjectCharacterLink.objects.filter(
-                    project=link.project
-                ).values_list("weltenhub_character_id", flat=True)
+                ProjectCharacterLink.objects.filter(project=link.project).values_list(
+                    "weltenhub_character_id", flat=True
+                )
             )
         except Exception as exc:
             logger.warning("CharacterLinkView: WeltenHub nicht erreichbar: %s", exc)
             messages.warning(request, "WeltenHub derzeit nicht erreichbar.")
 
-        return render(request, self.template_name, {
-            "link": link,
-            "world": world,
-            "project": link.project,
-            "all_characters": all_characters,
-            "linked_ids": linked_ids,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "link": link,
+                "world": world,
+                "project": link.project,
+                "all_characters": all_characters,
+                "linked_ids": linked_ids,
+            },
+        )
 
     def post(self, request, pk):
         from uuid import UUID
         from apps.worlds.services import WorldCharacterService
 
-        link = get_object_or_404(
-            ProjectWorldLink, pk=pk, project__owner=request.user
-        )
+        link = get_object_or_404(ProjectWorldLink, pk=pk, project__owner=request.user)
         selected = request.POST.getlist("character_ids")
         if not selected:
             messages.warning(request, "Keine Charaktere ausgewählt.")
@@ -457,13 +466,13 @@ class CharacterDetailView(LoginRequiredMixin, View):
     GET:  Charakter-Detailseite mit allen Feldern + Edit-Formular.
     POST: Speichert editierte lokale Felder (ProjectCharacterLink).
     """
+
     template_name = "worlds/character_detail.html"
 
     def _load_context(self, request, pcl_pk):
         from apps.worlds.models import ProjectCharacterLink
-        pcl = get_object_or_404(
-            ProjectCharacterLink, pk=pcl_pk, project__owner=request.user
-        )
+
+        pcl = get_object_or_404(ProjectCharacterLink, pk=pcl_pk, project__owner=request.user)
         # Load WeltenHub character data (graceful degradation)
         char = None
         try:
@@ -472,11 +481,7 @@ class CharacterDetailView(LoginRequiredMixin, View):
             logger.warning("CharacterDetailView: WeltenHub nicht erreichbar: %s", exc)
 
         # Find the world link for back-navigation
-        world_link = (
-            ProjectWorldLink.objects
-            .filter(project=pcl.project)
-            .first()
-        )
+        world_link = ProjectWorldLink.objects.filter(project=pcl.project).first()
         return pcl, char, world_link
 
     def get(self, request, pk):
@@ -484,39 +489,40 @@ class CharacterDetailView(LoginRequiredMixin, View):
 
         # Load relationships (bidirectional)
         from apps.worlds.models import CharacterRelationship
+
         rels_from = CharacterRelationship.objects.filter(from_character=pcl).select_related("to_character")
         rels_to = CharacterRelationship.objects.filter(to_character=pcl).select_related("from_character")
 
         # All other characters in this project (for relationship dropdown)
         from apps.worlds.models import ProjectCharacterLink
-        other_characters = (
-            ProjectCharacterLink.objects
-            .filter(project=pcl.project)
-            .exclude(pk=pcl.pk)
-        )
+
+        other_characters = ProjectCharacterLink.objects.filter(project=pcl.project).exclude(pk=pcl.pk)
 
         display_name = pcl.name or (char.name if char else None) or ""
 
-        return render(request, self.template_name, {
-            "pcl": pcl,
-            "char": char,
-            "display_name": display_name,
-            "world_link": world_link,
-            "project": pcl.project,
-            "narrative_roles": pcl.NARRATIVE_ROLES,
-            "antagonist_types": pcl.ANTAGONIST_TYPES,
-            "character_statuses": pcl.CHARACTER_STATUS,
-            "rels_from": rels_from,
-            "rels_to": rels_to,
-            "other_characters": other_characters,
-            "relationship_types": CharacterRelationship.RELATIONSHIP_TYPES,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "pcl": pcl,
+                "char": char,
+                "display_name": display_name,
+                "world_link": world_link,
+                "project": pcl.project,
+                "narrative_roles": pcl.NARRATIVE_ROLES,
+                "antagonist_types": pcl.ANTAGONIST_TYPES,
+                "character_statuses": pcl.CHARACTER_STATUS,
+                "rels_from": rels_from,
+                "rels_to": rels_to,
+                "other_characters": other_characters,
+                "relationship_types": CharacterRelationship.RELATIONSHIP_TYPES,
+            },
+        )
 
     def post(self, request, pk):
         from apps.worlds.models import ProjectCharacterLink
-        pcl = get_object_or_404(
-            ProjectCharacterLink, pk=pk, project__owner=request.user
-        )
+
+        pcl = get_object_or_404(ProjectCharacterLink, pk=pk, project__owner=request.user)
 
         # Update all editable local fields
         field_map = {
@@ -569,9 +575,7 @@ class RelationshipAddView(LoginRequiredMixin, View):
     def post(self, request, pk):
         from apps.worlds.models import ProjectCharacterLink, CharacterRelationship
 
-        pcl = get_object_or_404(
-            ProjectCharacterLink, pk=pk, project__owner=request.user
-        )
+        pcl = get_object_or_404(ProjectCharacterLink, pk=pk, project__owner=request.user)
         to_pk = request.POST.get("to_character")
         rel_type = request.POST.get("relationship_type", "knows")
         description = request.POST.get("description", "").strip()
@@ -581,9 +585,7 @@ class RelationshipAddView(LoginRequiredMixin, View):
             messages.warning(request, "Bitte Zielcharakter auswählen.")
             return redirect("worlds_html:character_detail", pk=pk)
 
-        to_char = get_object_or_404(
-            ProjectCharacterLink, pk=to_pk, project=pcl.project
-        )
+        to_char = get_object_or_404(ProjectCharacterLink, pk=to_pk, project=pcl.project)
 
         _, created = CharacterRelationship.objects.get_or_create(
             project=pcl.project,
@@ -632,9 +634,7 @@ class OutlineExtractView(LoginRequiredMixin, View):
     def post(self, request, pk):
         from apps.worlds.services import extract_from_outline, save_extracted_to_project
 
-        link = get_object_or_404(
-            ProjectWorldLink, pk=pk, project__owner=request.user
-        )
+        link = get_object_or_404(ProjectWorldLink, pk=pk, project__owner=request.user)
         extracted = extract_from_outline(link.project)
         counts = save_extracted_to_project(link.project, extracted, world_link=link)
 
@@ -657,9 +657,7 @@ class CharacterRefineView(LoginRequiredMixin, View):
         from apps.worlds.models import ProjectCharacterLink
         from apps.worlds.services import refine_character_with_llm
 
-        pcl = get_object_or_404(
-            ProjectCharacterLink, pk=pk, project__owner=request.user
-        )
+        pcl = get_object_or_404(ProjectCharacterLink, pk=pk, project__owner=request.user)
         ok = refine_character_with_llm(pcl)
         if ok:
             messages.success(request, f'Charakter „{pcl.name}" per KI verfeinert.')
@@ -673,29 +671,28 @@ class LocationDetailView(LoginRequiredMixin, View):
     GET:  Ort-Detailseite mit allen Feldern + Edit-Formular.
     POST: Speichert editierte lokale Felder (ProjectLocationLink).
     """
+
     template_name = "worlds/location_detail.html"
 
     def get(self, request, pk):
         from apps.worlds.models import ProjectLocationLink
-        pll = get_object_or_404(
-            ProjectLocationLink, pk=pk, project__owner=request.user
+
+        pll = get_object_or_404(ProjectLocationLink, pk=pk, project__owner=request.user)
+        world_link = ProjectWorldLink.objects.filter(project=pll.project).first()
+        return render(
+            request,
+            self.template_name,
+            {
+                "pll": pll,
+                "world_link": world_link,
+                "project": pll.project,
+            },
         )
-        world_link = (
-            ProjectWorldLink.objects
-            .filter(project=pll.project)
-            .first()
-        )
-        return render(request, self.template_name, {
-            "pll": pll,
-            "world_link": world_link,
-            "project": pll.project,
-        })
 
     def post(self, request, pk):
         from apps.worlds.models import ProjectLocationLink
-        pll = get_object_or_404(
-            ProjectLocationLink, pk=pk, project__owner=request.user
-        )
+
+        pll = get_object_or_404(ProjectLocationLink, pk=pk, project__owner=request.user)
 
         field_map = {
             "name": ("name", str),
@@ -728,9 +725,7 @@ class LocationRefineView(LoginRequiredMixin, View):
         from apps.worlds.models import ProjectLocationLink
         from apps.worlds.services import refine_location_with_llm
 
-        pll = get_object_or_404(
-            ProjectLocationLink, pk=pk, project__owner=request.user
-        )
+        pll = get_object_or_404(ProjectLocationLink, pk=pk, project__owner=request.user)
         ok = refine_location_with_llm(pll)
         if ok:
             messages.success(request, f'Ort „{pll.name}" per KI verfeinert.')

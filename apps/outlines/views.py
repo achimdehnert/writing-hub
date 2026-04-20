@@ -1,6 +1,7 @@
 """
 Outlines — HTML Views
 """
+
 import logging
 
 from django.contrib import messages
@@ -22,8 +23,7 @@ class OutlineListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         return (
-            OutlineVersion.objects
-            .filter(project__owner=self.request.user)
+            OutlineVersion.objects.filter(project__owner=self.request.user)
             .select_related("project")
             .order_by("-created_at")
         )
@@ -34,9 +34,7 @@ class OutlineDetailView(LoginRequiredMixin, DetailView):
     context_object_name = "outline"
 
     def get_queryset(self):
-        return OutlineVersion.objects.filter(
-            project__owner=self.request.user
-        ).select_related("project")
+        return OutlineVersion.objects.filter(project__owner=self.request.user).select_related("project")
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -47,15 +45,10 @@ class OutlineDetailView(LoginRequiredMixin, DetailView):
         ctx["nodes"] = nodes
         ctx["node_count"] = len(nodes)
         ctx["project"] = project
-        ctx["all_versions"] = OutlineVersion.objects.filter(
-            project=project
-        ).order_by("-created_at")
+        ctx["all_versions"] = OutlineVersion.objects.filter(project=project).order_by("-created_at")
 
         frameworks = list(
-            OutlineFramework.objects
-            .filter(is_active=True)
-            .prefetch_related("beats")
-            .order_by("order", "name")
+            OutlineFramework.objects.filter(is_active=True).prefetch_related("beats").order_by("order", "name")
         )
         ctx["frameworks"] = frameworks
         active_fw = next((f for f in frameworks if f.key == outline.source), None)
@@ -101,9 +94,7 @@ class OutlineDeleteView(LoginRequiredMixin, View):
 class OutlineSetActiveView(LoginRequiredMixin, View):
     def post(self, request, pk):
         outline = get_object_or_404(OutlineVersion, pk=pk, project__owner=request.user)
-        OutlineVersion.objects.filter(
-            project=outline.project, is_active=True
-        ).update(is_active=False)
+        OutlineVersion.objects.filter(project=outline.project, is_active=True).update(is_active=False)
         outline.is_active = True
         outline.save(update_fields=["is_active"])
         messages.success(request, f'„{outline.name}" ist jetzt die aktive Version.')
@@ -129,9 +120,7 @@ class OutlineNodeUpdateView(LoginRequiredMixin, View):
         from django.template.loader import render_to_string
         from django.http import HttpResponse
 
-        node = get_object_or_404(
-            OutlineNode, pk=pk, outline_version__project__owner=request.user
-        )
+        node = get_object_or_404(OutlineNode, pk=pk, outline_version__project__owner=request.user)
         node.title = request.POST.get("title", node.title).strip() or node.title
         node.description = request.POST.get("description", node.description)
         node.notes = request.POST.get("notes", node.notes)
@@ -145,10 +134,18 @@ class OutlineNodeUpdateView(LoginRequiredMixin, View):
                 node.target_words = int(tw)
             except ValueError:
                 pass
-        node.save(update_fields=[
-            "title", "description", "notes", "beat_type",
-            "beat_phase", "act", "emotional_arc", "target_words",
-        ])
+        node.save(
+            update_fields=[
+                "title",
+                "description",
+                "notes",
+                "beat_type",
+                "beat_phase",
+                "act",
+                "emotional_arc",
+                "target_words",
+            ]
+        )
 
         if request.headers.get("HX-Request"):
             html = render_to_string(
@@ -212,9 +209,7 @@ class OutlineNodeAddView(LoginRequiredMixin, View):
 
 class OutlineNodeDeleteView(LoginRequiredMixin, View):
     def post(self, request, pk):
-        node = get_object_or_404(
-            OutlineNode, pk=pk, outline_version__project__owner=request.user
-        )
+        node = get_object_or_404(OutlineNode, pk=pk, outline_version__project__owner=request.user)
         outline_pk = node.outline_version.pk
         name = node.title
         node.delete()
@@ -242,8 +237,7 @@ class OutlineGenerateFullView(LoginRequiredMixin, View):
             messages.warning(request, "Keine Kapitel vorhanden. Zuerst Outline anlegen.")
         else:
             messages.success(
-                request,
-                f'Outline vollständig generiert: {result["updated"]}/{result["total"]} Kapitel mit Details.'
+                request, f"Outline vollständig generiert: {result['updated']}/{result['total']} Kapitel mit Details."
             )
         return redirect("outlines:detail", pk=pk)
 
@@ -254,9 +248,7 @@ class OutlineNodeEnrichView(LoginRequiredMixin, View):
     def post(self, request, pk):
         from apps.outlines.services import OutlineGenerationService
 
-        node = get_object_or_404(
-            OutlineNode, pk=pk, outline_version__project__owner=request.user
-        )
+        node = get_object_or_404(OutlineNode, pk=pk, outline_version__project__owner=request.user)
 
         svc = OutlineGenerationService()
         result = svc.enrich_node(node)

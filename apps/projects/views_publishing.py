@@ -3,6 +3,7 @@ Publishing — Publikations-Profil verwalten (ADR-083)
 
 Tabs: Metadaten | Cover | Frontmatter | Backmatter | Export
 """
+
 from __future__ import annotations
 
 import datetime
@@ -34,7 +35,8 @@ def _get_or_create_profile(project: BookProject) -> PublishingProfile:
         "bisac_category": pub.default_bisac_category if pub else "",
         "copyright_year": str(datetime.date.today().year),
         "copyright_holder": (
-            pub.default_copyright_holder if pub and pub.default_copyright_holder
+            pub.default_copyright_holder
+            if pub and pub.default_copyright_holder
             else project.owner.get_full_name() or project.owner.username
         ),
     }
@@ -116,6 +118,7 @@ class PublishingKeywordsAIView(LoginRequiredMixin, View):
         project = get_object_or_404(BookProject, pk=pk, owner=request.user)
         try:
             from apps.authoring.services.llm_router import LLMRouter
+
             router = LLMRouter()
             genre = ""
             if hasattr(project, "genre_lookup") and project.genre_lookup:
@@ -124,6 +127,7 @@ class PublishingKeywordsAIView(LoginRequiredMixin, View):
                 genre = project.genre
 
             from apps.core.prompt_utils import render_prompt
+
             messages = render_prompt(
                 "projects/generate_keywords",
                 title=project.title,
@@ -146,6 +150,7 @@ class PitchDashboardView(LoginRequiredMixin, View):
 
     def get(self, request, pk):
         from .models import ComparableTitle, PitchDocument
+
         project = get_object_or_404(BookProject, pk=pk)
         comps = ComparableTitle.objects.filter(project=project).order_by("sort_order")
         pitch_docs = {}
@@ -157,6 +162,7 @@ class PitchDashboardView(LoginRequiredMixin, View):
 
     def post(self, request, pk):
         from .models import ComparableTitle, PitchDocument
+
         project = get_object_or_404(BookProject, pk=pk)
         action = request.POST.get("action", "")
 
@@ -181,12 +187,10 @@ class PitchDashboardView(LoginRequiredMixin, View):
             pitch_type = request.POST.get("pitch_type", "")
             content = request.POST.get("content", "")
             if pitch_type and content:
-                PitchDocument.objects.filter(
-                    project=project, pitch_type=pitch_type, is_current=True
-                ).update(is_current=False)
-                last = PitchDocument.objects.filter(
-                    project=project, pitch_type=pitch_type
-                ).order_by("-version").first()
+                PitchDocument.objects.filter(project=project, pitch_type=pitch_type, is_current=True).update(
+                    is_current=False
+                )
+                last = PitchDocument.objects.filter(project=project, pitch_type=pitch_type).order_by("-version").first()
                 PitchDocument.objects.create(
                     project=project,
                     pitch_type=pitch_type,
@@ -200,12 +204,17 @@ class PitchDashboardView(LoginRequiredMixin, View):
 
     def _render(self, request, project, comps, pitch_docs):
         from .models import ComparableTitle
-        return render(request, self.template_name, {
-            "project": project,
-            "comps": comps,
-            "pitch_docs": pitch_docs,
-            "comp_relation_choices": ComparableTitle.COMP_RELATION,
-        })
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "project": project,
+                "comps": comps,
+                "pitch_docs": pitch_docs,
+                "comp_relation_choices": ComparableTitle.COMP_RELATION,
+            },
+        )
 
 
 class GeneratePitchView(LoginRequiredMixin, View):
@@ -213,8 +222,11 @@ class GeneratePitchView(LoginRequiredMixin, View):
 
     def post(self, request, pk, pitch_type):
         from .services.pitch_service import (
-            generate_expose_de, generate_logline, generate_query,
+            generate_expose_de,
+            generate_logline,
+            generate_query,
         )
+
         project = get_object_or_404(BookProject, pk=pk)
 
         generators = {

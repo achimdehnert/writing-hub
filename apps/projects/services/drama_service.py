@@ -4,17 +4,18 @@ DramaDashboardService — ADR-154
 Bereitet Chart.js-kompatible Daten für Spannungskurve,
 Emotion-Deltas und Wendepunkte auf.
 """
+
 from __future__ import annotations
 
 import json
 
 
 OUTCOME_COLORS = {
-    "yes":     "#22c55e",
-    "no":      "#ef4444",
+    "yes": "#22c55e",
+    "no": "#ef4444",
     "yes_but": "#f59e0b",
-    "no_and":  "#7f1d1d",
-    "":        "#94a3b8",
+    "no_and": "#7f1d1d",
+    "": "#94a3b8",
 }
 
 
@@ -43,20 +44,24 @@ class DramaDashboardService:
         emotion_deltas = []
         drama_nodes = []
         for n in nodes:
-            emotion_deltas.append({
-                "label": f"{n.order}. {n.title[:25]}",
-                "start": n.emotion_start or None,
-                "end":   n.emotion_end or None,
-            })
-            drama_nodes.append({
-                "pk": str(n.pk),
-                "order": n.order,
-                "title": n.title,
-                "tension_numeric": n.tension_numeric,
-                "outcome": n.outcome,
-                "emotion_start": n.emotion_start,
-                "emotion_end": n.emotion_end,
-            })
+            emotion_deltas.append(
+                {
+                    "label": f"{n.order}. {n.title[:25]}",
+                    "start": n.emotion_start or None,
+                    "end": n.emotion_end or None,
+                }
+            )
+            drama_nodes.append(
+                {
+                    "pk": str(n.pk),
+                    "order": n.order,
+                    "title": n.title,
+                    "tension_numeric": n.tension_numeric,
+                    "outcome": n.outcome,
+                    "emotion_start": n.emotion_start,
+                    "emotion_end": n.emotion_end,
+                }
+            )
 
         return {
             "labels": labels,
@@ -101,17 +106,21 @@ class DramaDashboardService:
 
     def get_chart_json(self) -> str:
         data = self.get_tension_chart_data()
-        return json.dumps({
-            "labels": data["labels"],
-            "datasets": [{
-                "label": "Spannung",
-                "data": data["tension"],
-                "borderColor": "#6366f1",
-                "backgroundColor": "rgba(99,102,241,0.08)",
-                "tension": 0.4,
-                "fill": True,
-                "pointBackgroundColor": data["point_colors"],
-                "pointRadius": 6,
-                "pointHoverRadius": 9,
-            }],
-        })
+        return json.dumps(
+            {
+                "labels": data["labels"],
+                "datasets": [
+                    {
+                        "label": "Spannung",
+                        "data": data["tension"],
+                        "borderColor": "#6366f1",
+                        "backgroundColor": "rgba(99,102,241,0.08)",
+                        "tension": 0.4,
+                        "fill": True,
+                        "pointBackgroundColor": data["point_colors"],
+                        "pointRadius": 6,
+                        "pointHoverRadius": 9,
+                    }
+                ],
+            }
+        )

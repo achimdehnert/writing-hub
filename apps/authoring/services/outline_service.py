@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from outlinefw import OutlineGenerator, OutlineNode, ProjectContext
+
     _OUTLINEFW_AVAILABLE = True
 except ImportError:
     _OUTLINEFW_AVAILABLE = False
@@ -125,6 +126,7 @@ def _project_context_from_db(project_id: str):
         return None
 
     from apps.authoring.services.project_context_service import ProjectContextService
+
     svc = ProjectContextService()
     ctx = svc.get_context(project_id)
     return _build_project_context(ctx)
@@ -165,13 +167,15 @@ def _save_outline_to_db(
                 summary = node.summary or node.description or ""
             except Exception as exc:
                 logger.debug("Node summary resolution failed: %s", exc)
-            db_nodes.append(DBOutlineNode(
-                outline_version=version,
-                title=node.title,
-                description=summary,
-                beat_type=beat or "chapter",
-                order=i + 1,
-            ))
+            db_nodes.append(
+                DBOutlineNode(
+                    outline_version=version,
+                    title=node.title,
+                    description=summary,
+                    beat_type=beat or "chapter",
+                    order=i + 1,
+                )
+            )
         ct = getattr(project, "content_type", DEFAULT_CONTENT_TYPE) or DEFAULT_CONTENT_TYPE
         ptarget = project.target_word_count or DEFAULT_PROJECT_TARGET_WORDS
         targets = distribute_chapter_targets(ptarget, len(db_nodes), ct)
@@ -246,7 +250,7 @@ class OutlineGeneratorService:
         if ctx is None:
             return _FallbackResult(
                 success=False,
-                error_message="Projektkontext konnte nicht erstellt werden. Bitte Projektbeschreibung ergänzen."
+                error_message="Projektkontext konnte nicht erstellt werden. Bitte Projektbeschreibung ergänzen.",
             )
 
         outlinefw_key = self._map_framework(framework)

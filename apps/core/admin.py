@@ -11,11 +11,16 @@ class TurningPointTypeLookupAdmin(admin.ModelAdmin):
     readonly_fields = ["id"]
     fieldsets = [
         ("Kern", {"fields": ["code", "label", "description"]}),
-        ("Position", {"fields": [
-            "default_position_percent",
-            "default_position_normalized",
-            "outlinefw_beat_name",
-        ]}),
+        (
+            "Position",
+            {
+                "fields": [
+                    "default_position_percent",
+                    "default_position_normalized",
+                    "outlinefw_beat_name",
+                ]
+            },
+        ),
         ("Spiegel & Sortierung", {"fields": ["mirrors_type_code", "sort_order"]}),
     ]
 
@@ -28,10 +33,17 @@ class GenrePromiseLookupAdmin(admin.ModelAdmin):
     readonly_fields = ["created_at", "updated_at"]
     fieldsets = [
         ("Genre", {"fields": ["genre_slug", "genre_label", "sort_order"]}),
-        ("Versprechen", {"fields": [
-            "core_promise", "reader_expectation",
-            "must_haves", "must_not_haves",
-        ]}),
+        (
+            "Versprechen",
+            {
+                "fields": [
+                    "core_promise",
+                    "reader_expectation",
+                    "must_haves",
+                    "must_not_haves",
+                ]
+            },
+        ),
         ("LLM-Prompt", {"fields": ["llm_prompt_block"]}),
         ("Meta", {"fields": ["created_at", "updated_at"]}),
     ]

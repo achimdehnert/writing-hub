@@ -1,6 +1,7 @@
 """
 Projects — Workflow Views (UC 6.1a Rollenwechsel, UC 6.4 Checkliste, UC 6.5 Notizen)
 """
+
 import logging
 
 from django.contrib import messages
@@ -87,12 +88,14 @@ def _ensure_checklist(project):
     items = []
     for phase_def in PHASE_DEFINITIONS:
         for i, label in enumerate(phase_def["default_checklist"]):
-            items.append(PhaseChecklistItem(
-                project=project,
-                phase=phase_def["key"],
-                label=label,
-                order=i,
-            ))
+            items.append(
+                PhaseChecklistItem(
+                    project=project,
+                    phase=phase_def["key"],
+                    label=label,
+                    order=i,
+                )
+            )
     PhaseChecklistItem.objects.bulk_create(items)
 
 
@@ -111,14 +114,16 @@ class ProjectWorkflowView(LoginRequiredMixin, View):
             items = [c for c in checklist if c.phase == phase_def["key"]]
             total = len(items)
             checked = sum(1 for c in items if c.is_checked)
-            phases.append({
-                **phase_def,
-                "items": items,
-                "total": total,
-                "checked": checked,
-                "progress_pct": round(checked / total * 100) if total else 0,
-                "is_complete": total > 0 and checked == total,
-            })
+            phases.append(
+                {
+                    **phase_def,
+                    "items": items,
+                    "total": total,
+                    "checked": checked,
+                    "progress_pct": round(checked / total * 100) if total else 0,
+                    "is_complete": total > 0 and checked == total,
+                }
+            )
 
         milestones = project.milestones.filter(is_completed=False).order_by("due_date")[:5]
 
@@ -131,18 +136,22 @@ class ProjectWorkflowView(LoginRequiredMixin, View):
         if not active_phase and phases:
             active_phase = phases[0]
 
-        return render(request, self.template_name, {
-            "project": project,
-            "phases": phases,
-            "active_phase": active_phase,
-            "active_role": active_role,
-            "roles": [
-                ("autor", "Autor", "bi-pen"),
-                ("lektor", "Lektor", "bi-chat-left-text"),
-                ("verleger", "Verleger", "bi-book"),
-            ],
-            "milestones": milestones,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "project": project,
+                "phases": phases,
+                "active_phase": active_phase,
+                "active_role": active_role,
+                "roles": [
+                    ("autor", "Autor", "bi-pen"),
+                    ("lektor", "Lektor", "bi-chat-left-text"),
+                    ("verleger", "Verleger", "bi-book"),
+                ],
+                "milestones": milestones,
+            },
+        )
 
 
 class ChecklistToggleView(LoginRequiredMixin, View):
@@ -169,9 +178,10 @@ class ChecklistAddView(LoginRequiredMixin, View):
         label = request.POST.get("label", "").strip()
         phase = request.POST.get("phase", "writing")
         if label:
-            max_order = project.checklist_items.filter(
-                phase=phase
-            ).order_by("-order").values_list("order", flat=True).first() or 0
+            max_order = (
+                project.checklist_items.filter(phase=phase).order_by("-order").values_list("order", flat=True).first()
+                or 0
+            )
             PhaseChecklistItem.objects.create(
                 project=project,
                 phase=phase,

@@ -3,6 +3,7 @@ Quick Project Views — Autonome Essay-Pipeline mit Web-UI.
 
 Form → Celery Task → Progress-Polling → Projekt-Detail.
 """
+
 from __future__ import annotations
 
 import json
@@ -35,11 +36,15 @@ class QuickProjectView(LoginRequiredMixin, View):
             beats = list(fw.beats.order_by("order").values_list("name", flat=True))
             fw_beats[fw.key] = beats
 
-        return render(request, self.template_name, {
-            "frameworks": frameworks,
-            "fw_beats_json": json.dumps(fw_beats),
-            "default_target_words": DEFAULT_PROJECT_TARGET_WORDS,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "frameworks": frameworks,
+                "fw_beats_json": json.dumps(fw_beats),
+                "default_target_words": DEFAULT_PROJECT_TARGET_WORDS,
+            },
+        )
 
 
 class QuickProjectStartView(LoginRequiredMixin, View):
@@ -114,11 +119,16 @@ class QuickProjectProgressView(LoginRequiredMixin, View):
     def get(self, request, pk, job_id):
         project = get_object_or_404(BookProject, pk=pk, owner=request.user)
         from apps.authoring.models_jobs import EssayPipelineJob
+
         job = get_object_or_404(EssayPipelineJob, pk=job_id, project=project)
-        return render(request, self.template_name, {
-            "project": project,
-            "job": job,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "project": project,
+                "job": job,
+            },
+        )
 
 
 class QuickProjectStatusView(LoginRequiredMixin, View):
@@ -127,16 +137,19 @@ class QuickProjectStatusView(LoginRequiredMixin, View):
     def get(self, request, pk, job_id):
         project = get_object_or_404(BookProject, pk=pk, owner=request.user)
         from apps.authoring.models_jobs import EssayPipelineJob
+
         job = get_object_or_404(EssayPipelineJob, pk=job_id, project=project)
-        return JsonResponse({
-            "status": job.status,
-            "step": job.current_step,
-            "step_label": job.get_current_step_display(),
-            "progress": job.progress_pct,
-            "total_chapters": job.total_chapters,
-            "completed_chapters": job.completed_chapters,
-            "current_chapter": job.current_chapter_title,
-            "log": job.log_messages[-10:],
-            "error": job.error,
-            "is_done": job.is_terminal,
-        })
+        return JsonResponse(
+            {
+                "status": job.status,
+                "step": job.current_step,
+                "step_label": job.get_current_step_display(),
+                "progress": job.progress_pct,
+                "total_chapters": job.total_chapters,
+                "completed_chapters": job.completed_chapters,
+                "current_chapter": job.current_chapter_title,
+                "log": job.log_messages[-10:],
+                "error": job.error,
+                "is_done": job.is_terminal,
+            }
+        )

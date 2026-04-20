@@ -4,6 +4,7 @@ Versionierung — Manuskript-Snapshots (Komplettstand sichern)
 Ein Snapshot speichert den kompletten Inhalt aller Kapitel des aktiven
 Outlines als JSON. Max. 10 Snapshots pro Projekt (FIFO).
 """
+
 from __future__ import annotations
 
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -19,9 +20,7 @@ MAX_SNAPSHOTS = 10
 
 def _collect_snapshot_data(project: BookProject) -> dict:
     """Sammelt aktuellen Stand aller Kapitel des aktiven Outlines."""
-    active_outline = OutlineVersion.objects.filter(
-        project=project, is_active=True
-    ).order_by("-created_at").first()
+    active_outline = OutlineVersion.objects.filter(project=project, is_active=True).order_by("-created_at").first()
 
     if not active_outline:
         return {"outline_id": None, "outline_name": "", "chapters": [], "word_count": 0}
@@ -31,15 +30,17 @@ def _collect_snapshot_data(project: BookProject) -> dict:
     for node in active_outline.nodes.order_by("order"):
         wc = node.word_count or (len(node.content.split()) if node.content else 0)
         total_words += wc
-        chapters.append({
-            "id": str(node.pk),
-            "order": node.order,
-            "title": node.title,
-            "description": node.description,
-            "beat_type": node.beat_type,
-            "content": node.content,
-            "word_count": wc,
-        })
+        chapters.append(
+            {
+                "id": str(node.pk),
+                "order": node.order,
+                "title": node.title,
+                "description": node.description,
+                "beat_type": node.beat_type,
+                "content": node.content,
+                "word_count": wc,
+            }
+        )
 
     return {
         "outline_id": str(active_outline.pk),
@@ -90,6 +91,7 @@ class SnapshotCreateView(LoginRequiredMixin, View):
 
         if not name:
             from django.utils.timezone import now
+
             name = f"Snapshot {now().strftime('%d.%m.%Y %H:%M')}"
 
         ManuscriptSnapshot.objects.create(

@@ -1,6 +1,7 @@
 """
 Serien-Dramaturgie — SeriesArc, SeriesVolumeRole, SeriesCharacterContinuity (ADR-155)
 """
+
 from __future__ import annotations
 
 import uuid
@@ -25,34 +26,41 @@ class SeriesArc(models.Model):
     arc_type = models.ForeignKey(
         "core.SeriesArcTypeLookup",
         on_delete=models.SET_NULL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         related_name="series_arcs",
     )
     series_want = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Serien-Want",
         help_text="Was verfolgt die Hauptfigur über ALLE Bände hinweg?",
     )
     series_need = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Serien-Need",
         help_text="Was braucht sie wirklich — wird erst im letzten Band klar.",
     )
     series_false_belief = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Überzeugung Serien-Beginn",
     )
     series_true_belief = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Erkenntnis Serien-Ende",
     )
     overarching_conflict = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Übergreifender Konflikt",
         help_text="Antagonist / Hindernis, das über alle Bände aktiv ist.",
     )
     series_theme_question = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Serien-Themen-Frage",
         help_text="Die Frage, die die gesamte Serie stellt.",
     )
@@ -78,20 +86,20 @@ class SeriesVolumeRole(models.Model):
     """
 
     VOLUME_ARC_POSITION = [
-        ("opening",     "Eröffnung — Welt und Figuren einführen"),
-        ("escalation",  "Eskalation — Einsätze erhöhen"),
-        ("midpoint",    "Serien-Midpoint — alles dreht sich"),
-        ("darkest",     "Dunkelster Band — alles scheint verloren"),
+        ("opening", "Eröffnung — Welt und Figuren einführen"),
+        ("escalation", "Eskalation — Einsätze erhöhen"),
+        ("midpoint", "Serien-Midpoint — alles dreht sich"),
+        ("darkest", "Dunkelster Band — alles scheint verloren"),
         ("climax_prep", "Climax-Vorbereitung"),
-        ("finale",      "Finale — Serien-Arc auflösen"),
-        ("standalone",  "Eigenständig (Anthologie)"),
+        ("finale", "Finale — Serien-Arc auflösen"),
+        ("standalone", "Eigenständig (Anthologie)"),
     ]
     CLIFFHANGER_TYPES = [
-        ("none",          "Kein Cliffhanger"),
-        ("question",      "Offene Frage"),
-        ("revelation",    "Enthüllung"),
+        ("none", "Kein Cliffhanger"),
+        ("question", "Offene Frage"),
+        ("revelation", "Enthüllung"),
         ("status_change", "Figurenstatus verändert"),
-        ("threat",        "Neue Bedrohung etabliert"),
+        ("threat", "Neue Bedrohung etabliert"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -101,26 +109,33 @@ class SeriesVolumeRole(models.Model):
         related_name="role",
     )
     arc_position = models.CharField(
-        max_length=20, choices=VOLUME_ARC_POSITION, default="escalation",
+        max_length=20,
+        choices=VOLUME_ARC_POSITION,
+        default="escalation",
         verbose_name="Arc-Position im Serien-Bogen",
     )
     series_arc_contribution = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Beitrag zum Serien-Arc",
         help_text="Welchen Teil des Serien-Arcs trägt dieser Band?",
     )
     promise_to_reader = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Versprechen an den Leser",
         help_text="Was verspricht dieses Buch für den nächsten Band?",
     )
     promise_fulfilled_from = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Eingelöstes Versprechen",
         help_text="Welches Versprechen aus dem Vorgänger-Band wird hier eingelöst?",
     )
     cliffhanger_type = models.CharField(
-        max_length=20, choices=CLIFFHANGER_TYPES, default="none",
+        max_length=20,
+        choices=CLIFFHANGER_TYPES,
+        default="none",
     )
     cliffhanger_description = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)

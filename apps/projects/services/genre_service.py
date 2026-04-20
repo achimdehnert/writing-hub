@@ -4,6 +4,7 @@ GenreConventionService — ADR-160
 Prüft Projekt gegen Genre-Konventionen (maschinenlesbar).
 Regelbasiert — kein LLM.
 """
+
 from __future__ import annotations
 
 import logging
@@ -26,12 +27,14 @@ def check_genre_conventions(project) -> list[dict]:
     results = []
     for conv in profile.conventions:
         passed = _evaluate_convention(project, conv)
-        results.append({
-            "label": conv.get("label", ""),
-            "description": conv.get("description", ""),
-            "passed": passed,
-            "weight": conv.get("weight", "recommended"),
-        })
+        results.append(
+            {
+                "label": conv.get("label", ""),
+                "description": conv.get("description", ""),
+                "passed": passed,
+                "weight": conv.get("weight", "recommended"),
+            }
+        )
     return results
 
 
@@ -53,10 +56,7 @@ def _evaluate_convention(project, conv: dict) -> bool:
         if entries is None:
             return True
         planted = entries.filter(is_planted=True)
-        return all(
-            e.setup_node and getattr(e.setup_node, "position_start", 0) <= 75
-            for e in planted
-        )
+        return all(e.setup_node and getattr(e.setup_node, "position_start", 0) <= 75 for e in planted)
 
     if check_type == "none":
         return True

@@ -5,6 +5,7 @@ Formate: Markdown, Text, HTML, PDF (weasyprint), EPUB (ebooklib)
 
 Kapitelinhalt: OutlineNode.content (primär), ChapterWriteJob.content (Fallback).
 """
+
 from __future__ import annotations
 
 import io
@@ -30,9 +31,7 @@ def _get_chapters_with_content(project: BookProject) -> list[dict]:
     """
     from apps.authoring.models_jobs import ChapterWriteJob
 
-    active_outline = OutlineVersion.objects.filter(
-        project=project, is_active=True
-    ).order_by("-created_at").first()
+    active_outline = OutlineVersion.objects.filter(project=project, is_active=True).order_by("-created_at").first()
 
     if not active_outline:
         return []
@@ -51,13 +50,15 @@ def _get_chapters_with_content(project: BookProject) -> list[dict]:
     result = []
     for node in nodes:
         content = node.content or done_jobs.get(str(node.pk), "")
-        result.append({
-            "order": node.order,
-            "title": node.title,
-            "description": node.description,
-            "content": content,
-            "has_content": bool(content),
-        })
+        result.append(
+            {
+                "order": node.order,
+                "title": node.title,
+                "description": node.description,
+                "content": content,
+                "has_content": bool(content),
+            }
+        )
     return result
 
 
@@ -195,7 +196,6 @@ class ProjectExportView(LoginRequiredMixin, DetailView):
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
 
-
     # ------------------------------------------------------------------ #
     #  PDF (via weasyprint)                                               #
     # ------------------------------------------------------------------ #
@@ -203,18 +203,23 @@ class ProjectExportView(LoginRequiredMixin, DetailView):
         html_content = self._build_html(project, chapters, include_outline, include_title_page, include_toc)
         try:
             from weasyprint import HTML
+
             pdf_bytes = HTML(string=html_content).write_pdf()
         except ImportError:
             logger.warning("weasyprint not installed — PDF export unavailable")
             from django.contrib import messages
+
             messages.error(self.request, "PDF-Export nicht verfügbar (weasyprint fehlt).")
             from django.shortcuts import redirect
+
             return redirect("projects:export", pk=project.pk)
         except Exception as exc:
             logger.exception("PDF export error: %s", exc)
             from django.contrib import messages
+
             messages.error(self.request, f"PDF-Export fehlgeschlagen: {exc}")
             from django.shortcuts import redirect
+
             return redirect("projects:export", pk=project.pk)
 
         response = HttpResponse(pdf_bytes, content_type="application/pdf")
@@ -231,8 +236,10 @@ class ProjectExportView(LoginRequiredMixin, DetailView):
         except ImportError:
             logger.warning("ebooklib not installed — EPUB export unavailable")
             from django.contrib import messages
+
             messages.error(self.request, "EPUB-Export nicht verfügbar (ebooklib fehlt).")
             from django.shortcuts import redirect
+
             return redirect("projects:export", pk=project.pk)
 
         try:
@@ -248,11 +255,11 @@ class ProjectExportView(LoginRequiredMixin, DetailView):
                 file_name="style/default.css",
                 media_type="text/css",
                 content="body { font-family: Georgia, serif; line-height: 1.8; } "
-                        "h1 { font-size: 2rem; margin-bottom: 1rem; } "
-                        "h2 { font-size: 1.3rem; margin-top: 2rem; border-bottom: 1px solid #ccc; padding-bottom: .25rem; } "
-                        "p { margin: 0 0 1rem; text-indent: 1.5rem; } "
-                        ".outline { color: #555; font-style: italic; } "
-                        ".no-content { color: #999; font-style: italic; }",
+                "h1 { font-size: 2rem; margin-bottom: 1rem; } "
+                "h2 { font-size: 1.3rem; margin-top: 2rem; border-bottom: 1px solid #ccc; padding-bottom: .25rem; } "
+                "p { margin: 0 0 1rem; text-indent: 1.5rem; } "
+                ".outline { color: #555; font-style: italic; } "
+                ".no-content { color: #999; font-style: italic; }",
             )
             book.add_item(style)
 
@@ -265,7 +272,9 @@ class ProjectExportView(LoginRequiredMixin, DetailView):
                     title_html += f'<p style="color:#555;">Genre: {_esc(project.genre)}</p>'
                 if project.description:
                     title_html += f"<p>{_esc(project.description)}</p>"
-                title_html += f'<p style="color:#777;font-size:.9rem;">Exportiert am {date.today().strftime("%d.%m.%Y")}</p>'
+                title_html += (
+                    f'<p style="color:#777;font-size:.9rem;">Exportiert am {date.today().strftime("%d.%m.%Y")}</p>'
+                )
                 title_ch = epub.EpubHtml(title="Titelseite", file_name="title.xhtml", lang="de")
                 title_ch.content = title_html
                 title_ch.add_item(style)
@@ -306,8 +315,10 @@ class ProjectExportView(LoginRequiredMixin, DetailView):
         except Exception as exc:
             logger.exception("EPUB export error: %s", exc)
             from django.contrib import messages
+
             messages.error(self.request, f"EPUB-Export fehlgeschlagen: {exc}")
             from django.shortcuts import redirect
+
             return redirect("projects:export", pk=project.pk)
 
         response = HttpResponse(buf.read(), content_type="application/epub+zip")
@@ -319,7 +330,8 @@ class ProjectExportView(LoginRequiredMixin, DetailView):
     #  Shared HTML builder (used by HTML export + PDF)                     #
     # ------------------------------------------------------------------ #
     def _build_html(self, project, chapters, include_outline, include_title_page, include_toc=False):
-        parts = [textwrap.dedent(f"""\
+        parts = [
+            textwrap.dedent(f"""\
             <!DOCTYPE html>
             <html lang="de">
             <head>
@@ -358,7 +370,8 @@ class ProjectExportView(LoginRequiredMixin, DetailView):
             </style>
             </head>
             <body>
-        """)]
+        """)
+        ]
 
         if include_title_page:
             parts.append('<div class="title-page">')
@@ -368,15 +381,17 @@ class ProjectExportView(LoginRequiredMixin, DetailView):
             if project.description:
                 parts.append(f"<p>{_esc(project.description)}</p>")
             parts.append(f'<p class="meta">Exportiert am {date.today().strftime("%d.%m.%Y")}</p>')
-            parts.append('</div>')
+            parts.append("</div>")
 
         if include_toc and chapters:
             parts.append('<nav class="toc">')
             parts.append('<h2 style="font-size:1.2rem;margin-bottom:.75rem;">Inhaltsverzeichnis</h2>')
             parts.append('<ol style="padding-left:1.5rem;line-height:2;">')
             for idx, ch in enumerate(chapters, 1):
-                parts.append(f'<li><a href="#ch-{idx}" style="color:#6366f1;text-decoration:none;">{_esc(ch["title"])}</a></li>')
-            parts.append('</ol></nav><hr>')
+                parts.append(
+                    f'<li><a href="#ch-{idx}" style="color:#6366f1;text-decoration:none;">{_esc(ch["title"])}</a></li>'
+                )
+            parts.append("</ol></nav><hr>")
 
         for idx_build, ch in enumerate(chapters, 1):
             parts.append(f'<h2 id="ch-{idx_build}">Kapitel {ch["order"]}: {_esc(ch["title"])}</h2>')
@@ -396,15 +411,11 @@ class ProjectExportView(LoginRequiredMixin, DetailView):
 
 def _safe_filename(title: str) -> str:
     import re
+
     name = re.sub(r"[^\w\s-]", "", title).strip()
     name = re.sub(r"[\s]+", "_", name)
     return name[:60] or "manuskript"
 
 
 def _esc(text: str) -> str:
-    return (
-        text.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace('"', "&quot;")
-    )
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")

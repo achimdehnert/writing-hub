@@ -3,6 +3,7 @@ TextAnalysisService — ADR-161
 
 Strukturelle Manuskript-Analyse (regelbasiert, kein LLM).
 """
+
 from __future__ import annotations
 
 import logging
@@ -27,9 +28,7 @@ def compute_text_analysis(project, check_voice_drift: bool = False, triggered_by
 
     version = project.outline_versions.filter(is_active=True).first()
     if not version:
-        return TextAnalysisSnapshot.objects.create(
-            project=project, triggered_by=triggered_by
-        )
+        return TextAnalysisSnapshot.objects.create(project=project, triggered_by=triggered_by)
 
     nodes = list(version.nodes.order_by("order"))
 
@@ -40,21 +39,13 @@ def compute_text_analysis(project, check_voice_drift: bool = False, triggered_by
     screen_time = _compute_screen_time(nodes, project)
 
     # C — Pacing
-    word_counts = [
-        {"order": n.order, "word_count": n.word_count, "title": n.title[:40]}
-        for n in nodes
-        if n.word_count
-    ]
+    word_counts = [{"order": n.order, "word_count": n.word_count, "title": n.title[:40]} for n in nodes if n.word_count]
     wc_values = [x["word_count"] for x in word_counts]
     variance = statistics.stdev(wc_values) if len(wc_values) > 1 else 0.0
     pacing_issues = _detect_pacing_issues(word_counts)
 
     # D — Dialogue Ratio
-    dialogue_ratios = {
-        str(n.order): _estimate_dialogue_ratio(n.content)
-        for n in nodes
-        if n.content
-    }
+    dialogue_ratios = {str(n.order): _estimate_dialogue_ratio(n.content) for n in nodes if n.content}
 
     snap = TextAnalysisSnapshot(
         project=project,
@@ -113,9 +104,7 @@ def _compute_screen_time(nodes: list, project) -> dict:
         counts[key]["last_seen_order"] = n.order
 
     for key in counts:
-        counts[key]["percent"] = (
-            round(counts[key]["chapters"] / total * 100, 1) if total else 0.0
-        )
+        counts[key]["percent"] = round(counts[key]["chapters"] / total * 100, 1) if total else 0.0
 
     return counts
 
@@ -134,15 +123,16 @@ def _detect_pacing_issues(word_counts: list) -> list:
     top3_orders = {o for o, _ in sorted(wc, key=lambda x: -x[1])[:3]}
     overlap = top3_orders & last_q_orders
     if overlap:
-        issues.append({
-            "type": "long_climax",
-            "severity": "warning",
-            "description": (
-                "Längste Kapitel im letzten Viertel — kurze Kapitel "
-                "vor dem Climax erzeugen mehr Tempo."
-            ),
-            "chapter_orders": sorted(overlap),
-        })
+        issues.append(
+            {
+                "type": "long_climax",
+                "severity": "warning",
+                "description": (
+                    "Längste Kapitel im letzten Viertel — kurze Kapitel vor dem Climax erzeugen mehr Tempo."
+                ),
+                "chapter_orders": sorted(overlap),
+            }
+        )
 
     # Anti-Pattern 2: Monotonie (5+ Kapitel ±10% Länge)
     streak = 0
@@ -157,12 +147,14 @@ def _detect_pacing_issues(word_counts: list) -> list:
         else:
             streak = 0
         if streak >= 4:
-            issues.append({
-                "type": "monotone_pacing",
-                "severity": "info",
-                "description": "5+ Kapitel nahezu gleicher Länge — Variation erhöht Lesefluss.",
-                "chapter_orders": [wc[j][0] for j in range(streak_start, i + 1)],
-            })
+            issues.append(
+                {
+                    "type": "monotone_pacing",
+                    "severity": "info",
+                    "description": "5+ Kapitel nahezu gleicher Länge — Variation erhöht Lesefluss.",
+                    "chapter_orders": [wc[j][0] for j in range(streak_start, i + 1)],
+                }
+            )
             break
 
     return issues
@@ -172,10 +164,7 @@ def _estimate_dialogue_ratio(content: str) -> float:
     if not content:
         return 0.0
     total = len(content)
-    dialogue_chars = sum(
-        len(m.group())
-        for m in re.finditer(r'[„»"][^"„»«]*["«»]', content)
-    )
+    dialogue_chars = sum(len(m.group()) for m in re.finditer(r'[„»"][^"„»«]*["«»]', content))
     return round(dialogue_chars / total, 2) if total else 0.0
 
 
@@ -190,7 +179,7 @@ def _check_voice_drift(project, nodes, snap):
         return snap
 
     written = [n for n in nodes if n.content and len(n.content) > 300]
-    samples = written[::max(1, len(written) // MAX_CHARACTERS_IN_PROMPT)][:MAX_CHARACTERS_IN_PROMPT]
+    samples = written[:: max(1, len(written) // MAX_CHARACTERS_IN_PROMPT)][:MAX_CHARACTERS_IN_PROMPT]
 
     from apps.core.prompt_utils import render_prompt
 
@@ -209,6 +198,7 @@ def _check_voice_drift(project, nodes, snap):
                 messages=messages,
             )
             from promptfw.parsing import extract_json
+
             data = extract_json(raw)
             if data and data.get("drift"):
                 drifted.append({"order": node.order, "reason": data.get("reason", "")})
@@ -223,6 +213,7 @@ def _check_voice_drift(project, nodes, snap):
 
 def _enforce_fifo(project) -> None:
     from apps.projects.models import TextAnalysisSnapshot
+
     qs = TextAnalysisSnapshot.objects.filter(project=project).order_by("-computed_at")
     ids_to_delete = list(qs.values_list("id", flat=True)[MAX_SNAPSHOTS:])
     if ids_to_delete:

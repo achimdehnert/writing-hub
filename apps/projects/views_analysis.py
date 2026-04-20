@@ -1,6 +1,7 @@
 """
 Analysis + Budget + Batch Views — ADR-161
 """
+
 from __future__ import annotations
 
 from django.contrib import messages
@@ -18,21 +19,24 @@ class ProjectAnalysisView(LoginRequiredMixin, View):
 
     def get(self, request, pk):
         project = get_object_or_404(BookProject, pk=pk)
-        snapshots = TextAnalysisSnapshot.objects.filter(
-            project=project
-        ).order_by("-computed_at")[:5]
+        snapshots = TextAnalysisSnapshot.objects.filter(project=project).order_by("-computed_at")[:5]
         latest = snapshots.first()
-        return render(request, self.template_name, {
-            "project": project,
-            "latest": latest,
-            "snapshots": snapshots,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "project": project,
+                "latest": latest,
+                "snapshots": snapshots,
+            },
+        )
 
     def post(self, request, pk):
         project = get_object_or_404(BookProject, pk=pk)
         check_voice = bool(request.POST.get("check_voice_drift"))
         try:
             from .services.text_analysis_service import compute_text_analysis
+
             compute_text_analysis(
                 project,
                 check_voice_drift=check_voice,
@@ -55,6 +59,7 @@ class ProjectBudgetView(LoginRequiredMixin, View):
         error = None
         try:
             from .services.budget_service import compute_budget
+
             allocation = compute_budget(project)
         except Exception as exc:
             error = str(exc)
@@ -67,19 +72,25 @@ class ProjectBudgetView(LoginRequiredMixin, View):
             under = set(allocation.under_budget_nodes or [])
             for n in version.nodes.order_by("order"):
                 key = str(n.id)
-                nodes_with_budget.append({
-                    "node": n,
-                    "budget": node_budgets.get(key),
-                    "over": key in over,
-                    "under": key in under,
-                })
+                nodes_with_budget.append(
+                    {
+                        "node": n,
+                        "budget": node_budgets.get(key),
+                        "over": key in over,
+                        "under": key in under,
+                    }
+                )
 
-        return render(request, self.template_name, {
-            "project": project,
-            "allocation": allocation,
-            "nodes_with_budget": nodes_with_budget,
-            "error": error,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "project": project,
+                "allocation": allocation,
+                "nodes_with_budget": nodes_with_budget,
+                "error": error,
+            },
+        )
 
 
 class ProjectBatchView(LoginRequiredMixin, View):
@@ -90,16 +101,19 @@ class ProjectBatchView(LoginRequiredMixin, View):
     def get(self, request, pk):
         project = get_object_or_404(BookProject, pk=pk)
         from apps.authoring.models_jobs import BatchWriteJob
-        jobs = BatchWriteJob.objects.filter(
-            project=project
-        ).order_by("-created_at")[:10]
+
+        jobs = BatchWriteJob.objects.filter(project=project).order_by("-created_at")[:10]
         version = project.outline_versions.filter(is_active=True).first()
         nodes = list(version.nodes.order_by("order")) if version else []
-        return render(request, self.template_name, {
-            "project": project,
-            "jobs": jobs,
-            "nodes": nodes,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "project": project,
+                "jobs": jobs,
+                "nodes": nodes,
+            },
+        )
 
     def post(self, request, pk):
         project = get_object_or_404(BookProject, pk=pk)
@@ -110,6 +124,7 @@ class ProjectBatchView(LoginRequiredMixin, View):
         max_chapters = min(int(request.POST.get("max_chapters", 10)), 10)
         from apps.authoring.models_jobs import BatchWriteJob
         from apps.authoring.tasks import run_batch_write
+
         job = BatchWriteJob.objects.create(
             project=project,
             requested_by=request.user,
@@ -130,11 +145,14 @@ class ProjectBatchStatusView(LoginRequiredMixin, View):
     def get(self, request, pk, job_id):
         project = get_object_or_404(BookProject, pk=pk)
         from apps.authoring.models_jobs import BatchWriteJob
-        job = get_object_or_404(
-            BatchWriteJob, pk=job_id, project=project
-        )
+
+        job = get_object_or_404(BatchWriteJob, pk=job_id, project=project)
         is_done = job.status in ("done", "failed", "canceled")
-        return render(request, "projects/batch_status_partial.html", {
-            "job": job,
-            "is_done": is_done,
-        })
+        return render(
+            request,
+            "projects/batch_status_partial.html",
+            {
+                "job": job,
+                "is_done": is_done,
+            },
+        )

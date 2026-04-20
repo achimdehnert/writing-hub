@@ -4,15 +4,16 @@ BudgetService — ADR-161
 Berechnet Wortanzahl-Budget pro Akt und Kapitel.
 Pure Service — kein Model, kein LLM.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
 ACT_PROPORTIONS = {
-    "act_1":  0.25,
+    "act_1": 0.25,
     "act_2a": 0.25,
     "act_2b": 0.25,
-    "act_3":  0.25,
+    "act_3": 0.25,
 }
 TOLERANCE = 0.20
 
@@ -42,9 +43,13 @@ def compute_budget(project) -> BudgetAllocation:
 
     if not version:
         return BudgetAllocation(
-            target_total=target, act_budgets={}, node_budgets={},
-            current_written=0, remaining_budget=target,
-            over_budget_nodes=[], under_budget_nodes=[],
+            target_total=target,
+            act_budgets={},
+            node_budgets={},
+            current_written=0,
+            remaining_budget=target,
+            over_budget_nodes=[],
+            under_budget_nodes=[],
             completion_pct=0.0,
         )
 
@@ -60,10 +65,7 @@ def compute_budget(project) -> BudgetAllocation:
         bucket = act if act in act_node_map else "act_1"
         act_node_map[bucket].append(n)
 
-    act_budgets = {
-        act: int(target * prop)
-        for act, prop in ACT_PROPORTIONS.items()
-    }
+    act_budgets = {act: int(target * prop) for act, prop in ACT_PROPORTIONS.items()}
 
     node_budgets = {}
     for act, act_nodes in act_node_map.items():
@@ -104,13 +106,9 @@ def _suggest_rebalancing(alloc: BudgetAllocation, nodes) -> list[str]:
     suggestions = []
     if alloc.over_budget_nodes:
         suggestions.append(
-            f"{len(alloc.over_budget_nodes)} Kapitel >20% über Budget — "
-            "erwäge Szenen zu kürzen oder aufzuteilen."
+            f"{len(alloc.over_budget_nodes)} Kapitel >20% über Budget — erwäge Szenen zu kürzen oder aufzuteilen."
         )
-    remaining_unwritten = sum(
-        1 for n in nodes
-        if str(n.id) in alloc.node_budgets and not n.word_count
-    )
+    remaining_unwritten = sum(1 for n in nodes if str(n.id) in alloc.node_budgets and not n.word_count)
     if alloc.remaining_budget > 0 and remaining_unwritten > 0:
         avg = alloc.remaining_budget // remaining_unwritten
         suggestions.append(

@@ -1,6 +1,7 @@
 """
 Projects — Forms (Input-Validation via Django ModelForm)
 """
+
 from __future__ import annotations
 
 from django import forms
@@ -25,11 +26,17 @@ class PublisherProfileForm(forms.ModelForm):
         ]
         widgets = {
             "name": forms.TextInput(attrs={"class": "form-control", "placeholder": "Verlagsname"}),
-            "imprint": forms.TextInput(attrs={"class": "form-control", "placeholder": "z.B. Sachbuch-Reihe, Belletristik-Label"}),
+            "imprint": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "z.B. Sachbuch-Reihe, Belletristik-Label"}
+            ),
             "logo_url": forms.URLInput(attrs={"class": "form-control", "placeholder": "https://..."}),
-            "default_copyright_holder": forms.TextInput(attrs={"class": "form-control", "placeholder": "z.B. Mein Verlag GmbH"}),
+            "default_copyright_holder": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "z.B. Mein Verlag GmbH"}
+            ),
             "default_language": forms.Select(attrs={"class": "form-select"}),
-            "default_bisac_category": forms.TextInput(attrs={"class": "form-control", "placeholder": "z.B. FICTION / Literary"}),
+            "default_bisac_category": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "z.B. FICTION / Literary"}
+            ),
             "default_age_rating": forms.Select(attrs={"class": "form-select"}),
             "website": forms.URLInput(attrs={"class": "form-control", "placeholder": "https://mein-verlag.de"}),
         }

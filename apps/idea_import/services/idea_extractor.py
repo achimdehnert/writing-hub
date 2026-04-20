@@ -3,6 +3,7 @@ IdeaExtractorService — Sync-Variante des IdeaExtractorAgent.
 
 Portiert aus bfagent — LLM-Calls ausschliesslich via LLMRouter (ADR-095).
 """
+
 from __future__ import annotations
 
 import logging

@@ -1,6 +1,7 @@
 """
 Lektorat — Prüfungs-Framework (ADR-083)
 """
+
 import logging
 
 from django.contrib import messages
@@ -19,9 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 def _get_chapters(project):
-    version = OutlineVersion.objects.filter(
-        project=project, is_active=True
-    ).order_by("-created_at").first()
+    version = OutlineVersion.objects.filter(project=project, is_active=True).order_by("-created_at").first()
     if not version:
         return []
     return list(version.nodes.order_by("order"))
@@ -77,6 +76,7 @@ class LektoratSessionStartView(LoginRequiredMixin, View):
                     continue
                 checked_count += 1
                 from apps.core.prompt_utils import render_prompt
+
                 prompt_msgs = render_prompt(
                     "projects/lektorat_analyze",
                     order=node.order,
@@ -127,7 +127,9 @@ class LektoratSessionStartView(LoginRequiredMixin, View):
             else:
                 session.summary = f"{total_issues} Probleme in {checked_count}/{len(chapters)} Kapiteln gefunden."
                 session.save(update_fields=["status", "issues_found", "finished_at", "summary"])
-                messages.success(request, f"Lektorat abgeschlossen: {total_issues} Probleme in {checked_count} Kapiteln gefunden.")
+                messages.success(
+                    request, f"Lektorat abgeschlossen: {total_issues} Probleme in {checked_count} Kapiteln gefunden."
+                )
 
         except Exception as exc:
             logger.exception("LektoratSessionStart error: %s", exc)
@@ -150,8 +152,8 @@ class LektoratSessionDetailView(LoginRequiredMixin, DetailView):
         ctx = super().get_context_data(**kwargs)
         session_pk = self.kwargs["session_pk"]
         session = get_object_or_404(LektoratSession, pk=session_pk, project=self.object)
-        issues = LektoratIssue.objects.filter(session=session).select_related("node").order_by(
-            "node__order", "-severity"
+        issues = (
+            LektoratIssue.objects.filter(session=session).select_related("node").order_by("node__order", "-severity")
         )
         issue_map = {}
         for issue in issues:
@@ -171,7 +173,8 @@ class LektoratIssueResolveView(LoginRequiredMixin, View):
 
     def post(self, request, pk, issue_pk):
         issue = get_object_or_404(
-            LektoratIssue, pk=issue_pk,
+            LektoratIssue,
+            pk=issue_pk,
             session__project__owner=request.user,
         )
         issue.is_resolved = not issue.is_resolved
@@ -187,7 +190,8 @@ class LektoratIssueFixView(LoginRequiredMixin, View):
         from apps.core.prompt_utils import render_prompt
 
         issue = get_object_or_404(
-            LektoratIssue, pk=issue_pk,
+            LektoratIssue,
+            pk=issue_pk,
             session__project__owner=request.user,
         )
 

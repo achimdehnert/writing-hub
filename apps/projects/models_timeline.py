@@ -6,6 +6,7 @@ ForeshadowingEntry: Chekhov's Guns (Setup-Payoff-Paare)
 PlannedFlashback: Rückblenden-Planung
 OutlineSequence: Mesostruktur-Zwischenebene
 """
+
 from __future__ import annotations
 
 import uuid
@@ -56,17 +57,22 @@ class MasterTimeline(models.Model):
     narrative_model = models.ForeignKey(
         NarrativeModelLookup,
         on_delete=models.SET_NULL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         related_name="timelines",
         verbose_name="Erzähl-Zeitmodell",
     )
     story_time_span = models.CharField(
-        max_length=200, blank=True, default="",
+        max_length=200,
+        blank=True,
+        default="",
         verbose_name="Story-Zeitraum",
         help_text="z.B. '3 Wochen', 'Sommer 1989', '200 Jahre Zukunft'",
     )
     story_start_date = models.CharField(
-        max_length=100, blank=True, default="",
+        max_length=100,
+        blank=True,
+        default="",
         verbose_name="Story-Startpunkt",
         help_text="Narrativer Startpunkt (kein DateField — kann fiktiv sein).",
     )
@@ -93,25 +99,30 @@ class TimelineEntry(models.Model):
     """
 
     ENTRY_TYPES = [
-        ("pre_story",  "Pre-Story (Vorgeschichte)"),
-        ("story",      "Story (Handlung)"),
+        ("pre_story", "Pre-Story (Vorgeschichte)"),
+        ("story", "Story (Handlung)"),
         ("post_story", "Post-Story (Implied Future)"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     timeline = models.ForeignKey(
-        MasterTimeline, on_delete=models.CASCADE, related_name="entries",
+        MasterTimeline,
+        on_delete=models.CASCADE,
+        related_name="entries",
     )
     node = models.ForeignKey(
         "projects.OutlineNode",
         on_delete=models.SET_NULL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         related_name="timeline_entries",
         verbose_name="Verknüpfte Szene/Kapitel",
     )
     entry_type = models.CharField(max_length=20, choices=ENTRY_TYPES, default="story")
     story_date = models.CharField(
-        max_length=100, blank=True, default="",
+        max_length=100,
+        blank=True,
+        default="",
         help_text="Narrativer Zeitpunkt z.B. 'Tag 3, 14:00'",
     )
     event_description = models.TextField(verbose_name="Ereignis-Beschreibung")
@@ -173,9 +184,9 @@ class ForeshadowingEntry(models.Model):
     """
 
     STATUS = [
-        ("open",      "Geplant (noch nicht eingebaut)"),
-        ("planted",   "Eingebaut (wartet auf Auflösung)"),
-        ("resolved",  "Aufgelöst"),
+        ("open", "Geplant (noch nicht eingebaut)"),
+        ("planted", "Eingebaut (wartet auf Auflösung)"),
+        ("resolved", "Aufgelöst"),
         ("abandoned", "Aufgegeben"),
     ]
 
@@ -187,7 +198,9 @@ class ForeshadowingEntry(models.Model):
     )
     foreshadow_type = models.ForeignKey(
         ForeshadowingTypeLookup,
-        on_delete=models.SET_NULL, null=True, blank=True,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
     label = models.CharField(
         max_length=200,
@@ -199,29 +212,36 @@ class ForeshadowingEntry(models.Model):
         help_text="Was wird eingeführt? Wie? In welchem Kontext?",
     )
     payoff_description = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Payoff",
         help_text="Wie wird es aufgelöst?",
     )
     thematic_meaning = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Thematische Bedeutung",
     )
     introduced_in = models.ForeignKey(
         "projects.OutlineNode",
-        on_delete=models.SET_NULL, null=True, blank=True,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="foreshadowing_setups",
         verbose_name="Eingeführt in",
     )
     resolved_in = models.ForeignKey(
         "projects.OutlineNode",
-        on_delete=models.SET_NULL, null=True, blank=True,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="foreshadowing_payoffs",
         verbose_name="Aufgelöst in",
     )
     status = models.CharField(max_length=20, choices=STATUS, default="open")
     abandonment_reason = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Grund für Aufgabe",
     )
     is_planted = models.BooleanField(
@@ -230,7 +250,9 @@ class ForeshadowingEntry(models.Model):
     )
     setup_node = models.ForeignKey(
         "projects.OutlineNode",
-        on_delete=models.SET_NULL, null=True, blank=True,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="foreshadowing_setups_alt",
         verbose_name="Setup-Node (Fair-Play-Check)",
     )
@@ -263,8 +285,8 @@ class PlannedFlashback(models.Model):
     """
 
     TECHNIQUES = [
-        ("hard_cut",      "Hard Cut (abrupter Wechsel)"),
-        ("trigger",       "Trigger (Sinneseindruck)"),
+        ("hard_cut", "Hard Cut (abrupter Wechsel)"),
+        ("trigger", "Trigger (Sinneseindruck)"),
         ("chapter_break", "Kapitelwechsel (ganzes Kapitel als Rückblende)"),
     ]
 
@@ -276,7 +298,9 @@ class PlannedFlashback(models.Model):
     )
     trigger_node = models.ForeignKey(
         "projects.OutlineNode",
-        on_delete=models.SET_NULL, null=True, blank=True,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="flashback_triggers",
         verbose_name="Ausgelöst in Szene",
     )
@@ -287,7 +311,8 @@ class PlannedFlashback(models.Model):
     )
     technique = models.CharField(max_length=20, choices=TECHNIQUES, default="trigger")
     return_technique = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Rückkehr-Technik",
     )
     created_at = models.DateTimeField(auto_now_add=True)

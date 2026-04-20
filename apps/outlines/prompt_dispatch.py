@@ -10,6 +10,7 @@ This replaces direct render_prompt() calls in views/services with
 content-type-aware dispatch that uses the correct prompt for
 fiction vs. academic vs. nonfiction outlines.
 """
+
 import logging
 
 from apps.core.prompt_utils import render_prompt
@@ -53,22 +54,28 @@ def render_outline_prompt(
         if messages:
             logger.debug(
                 "Outline prompt from DB: group=%s key=%s v%s",
-                group, template_key, db_template.version,
+                group,
+                template_key,
+                db_template.version,
             )
             return messages
         logger.warning(
             "DB template rendered empty: group=%s key=%s v%s",
-            group, template_key, db_template.version,
+            group,
+            template_key,
+            db_template.version,
         )
     except OutlinePromptTemplate.DoesNotExist:
         logger.debug(
             "No DB prompt for group=%s key=%s, using file fallback",
-            group, template_key,
+            group,
+            template_key,
         )
     except OutlinePromptTemplate.MultipleObjectsReturned:
         logger.error(
             "Multiple active prompts for group=%s key=%s! Using first.",
-            group, template_key,
+            group,
+            template_key,
         )
         db_template = OutlinePromptTemplate.objects.filter(
             content_type_group=group,

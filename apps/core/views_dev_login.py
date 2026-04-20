@@ -4,6 +4,7 @@ Dev Auto-Login via signed token — for Playwright/automated testing.
 Security: Token is signed with SECRET_KEY, expires after 5 minutes.
 Same principle as password-reset links (django.core.signing).
 """
+
 import logging
 
 from django.contrib.auth import get_user_model, login

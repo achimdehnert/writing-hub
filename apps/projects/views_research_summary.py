@@ -2,6 +2,7 @@
 Research Summary Views — KI-Zusammenfassung von Suchergebnissen
 und outline-getriebene Kapitel-Recherche für wissenschaftliche Projekte.
 """
+
 from __future__ import annotations
 
 import json
@@ -64,14 +65,16 @@ class ResearchSummarizeAjaxView(LoginRequiredMixin, View):
             llm_api_key=llm_key or None,
         )
 
-        return JsonResponse({
-            "ok": True,
-            "summary": result.get("summary", ""),
-            "key_points": result.get("key_points", []),
-            "ai_generated": result.get("ai_generated", False),
-            "source_count": result.get("source_count", len(papers)),
-            "top_papers": result.get("top_papers", [])[:5],
-        })
+        return JsonResponse(
+            {
+                "ok": True,
+                "summary": result.get("summary", ""),
+                "key_points": result.get("key_points", []),
+                "ai_generated": result.get("ai_generated", False),
+                "source_count": result.get("source_count", len(papers)),
+                "top_papers": result.get("top_papers", [])[:5],
+            }
+        )
 
 
 class OutlineResearchView(LoginRequiredMixin, View):
@@ -85,34 +88,37 @@ class OutlineResearchView(LoginRequiredMixin, View):
     template_name = "projects/outline_research.html"
 
     def _get_project(self, request, pk):
-        return get_object_or_404(
-            BookProject, pk=pk, owner=request.user, is_active=True
-        )
+        return get_object_or_404(BookProject, pk=pk, owner=request.user, is_active=True)
 
     def get(self, request, pk):
         project = self._get_project(request, pk)
         outline = (
-            OutlineVersion.objects.filter(project=project)
-            .prefetch_related("nodes")
-            .order_by("-created_at")
-            .first()
+            OutlineVersion.objects.filter(project=project).prefetch_related("nodes").order_by("-created_at").first()
         )
         nodes = []
         if outline:
             nodes = list(
                 outline.nodes.order_by("order").values(
-                    "id", "title", "description",
-                    "beat_type", "target_words", "order",
+                    "id",
+                    "title",
+                    "description",
+                    "beat_type",
+                    "target_words",
+                    "order",
                 )
             )
-        return render(request, self.template_name, {
-            "project": project,
-            "outline": outline,
-            "nodes": nodes,
-            "summary_styles": SUMMARY_STYLES,
-            "citation_styles_list": SUMMARY_CITATION_FORMATS,
-            "has_llm": bool(getattr(settings, "TOGETHER_API_KEY", "")),
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "project": project,
+                "outline": outline,
+                "nodes": nodes,
+                "summary_styles": SUMMARY_STYLES,
+                "citation_styles_list": SUMMARY_CITATION_FORMATS,
+                "has_llm": bool(getattr(settings, "TOGETHER_API_KEY", "")),
+            },
+        )
 
 
 class OutlineNodeResearchAjaxView(LoginRequiredMixin, View):
@@ -126,9 +132,7 @@ class OutlineNodeResearchAjaxView(LoginRequiredMixin, View):
     """
 
     def post(self, request, pk):
-        project = get_object_or_404(
-            BookProject, pk=pk, owner=request.user, is_active=True
-        )
+        project = get_object_or_404(BookProject, pk=pk, owner=request.user, is_active=True)
 
         node_id = request.POST.get("node_id", "")
         style = request.POST.get("style", "scientific")
@@ -155,15 +159,17 @@ class OutlineNodeResearchAjaxView(LoginRequiredMixin, View):
         papers = result.get("papers", [])[:8]
         citations_created = _persist_papers_as_citations(project, node, papers)
 
-        return JsonResponse({
-            "ok": True,
-            "node_title": node.title,
-            "target_words": node.target_words,
-            "writing_brief": result.get("writing_brief", ""),
-            "summary": result.get("summary", ""),
-            "key_points": result.get("key_points", []),
-            "papers": papers,
-            "ai_generated": result.get("ai_generated", False),
-            "source_count": result.get("source_count", 0),
-            "citations_created": citations_created,
-        })
+        return JsonResponse(
+            {
+                "ok": True,
+                "node_title": node.title,
+                "target_words": node.target_words,
+                "writing_brief": result.get("writing_brief", ""),
+                "summary": result.get("summary", ""),
+                "key_points": result.get("key_points", []),
+                "papers": papers,
+                "ai_generated": result.get("ai_generated", False),
+                "source_count": result.get("source_count", 0),
+                "citations_created": citations_created,
+            }
+        )

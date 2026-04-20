@@ -8,6 +8,7 @@ Prüft die existierende UI gegen Qualitätskriterien:
 - Filter: Suche + Dropdowns funktional
 - Projekt-Cards: Strukturierte Darstellung
 """
+
 import pytest
 
 

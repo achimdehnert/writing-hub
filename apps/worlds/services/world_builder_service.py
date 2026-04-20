@@ -23,11 +23,13 @@ logger = logging.getLogger(__name__)
 
 def _get_router():
     from apps.authoring.services.llm_router import LLMRouter
+
     return LLMRouter()
 
 
 def _get_routing_error():
     from apps.authoring.services.llm_router import LLMRoutingError
+
     return LLMRoutingError
 
 
@@ -170,7 +172,8 @@ class WorldBuilderService:
                     is_public=is_public,
                     notes=(
                         f"Kultur: {result.culture}\nBewohner: {result.inhabitants}"
-                        if result.culture or result.inhabitants else None
+                        if result.culture or result.inhabitants
+                        else None
                     ),
                 )
             )
@@ -202,9 +205,7 @@ class WorldBuilderService:
             logger.error("WorldBuilderService.link_to_project: %s", exc)
             return False
 
-    def get_project_worlds(
-        self, project_id: str
-    ) -> list:
+    def get_project_worlds(self, project_id: str) -> list:
         """
         Alle Welten eines Projekts aus WeltenHub laden.
         Gibt Liste von weltenfw.schema.world.WorldSchema zurueck.
@@ -244,6 +245,7 @@ class WorldBuilderService:
             return ""
 
         from apps.core.prompt_utils import render_prompt
+
         messages = render_prompt(
             "worlds/world_expand",
             world_name=world.name,
@@ -252,9 +254,7 @@ class WorldBuilderService:
         )
 
         try:
-            content = self._router.completion(
-                "world_expand", messages, quality_level=quality_level
-            )
+            content = self._router.completion("world_expand", messages, quality_level=quality_level)
             # WeltenHub aktualisieren
             update_data = {aspect: content}
             client.worlds.update(weltenhub_world_id, WorldUpdateInput(**update_data))
@@ -266,6 +266,7 @@ class WorldBuilderService:
     def _get_project_title(self, project_id: str) -> str:
         try:
             from apps.projects.models import BookProject
+
             return BookProject.objects.get(pk=project_id).title
         except Exception:
             return str(project_id)
@@ -280,6 +281,7 @@ class WorldBuilderService:
     ) -> list[dict]:
         """promptfw render_prompt() — raises PromptRenderError on failure."""
         from apps.core.prompt_utils import render_prompt
+
         return render_prompt(
             "worlds/world_generate",
             world_ctx_str=world_ctx_str,
@@ -292,6 +294,7 @@ class WorldBuilderService:
     @staticmethod
     def _parse_world_response(raw: str) -> WorldBuildResult:
         from promptfw.parsing import extract_json
+
         data = extract_json(raw)
         if data is None:
             logger.warning("_parse_world_response: keine JSON-Antwort")

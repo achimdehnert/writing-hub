@@ -12,9 +12,7 @@ class IdeaImportDraftListView(generics.ListAPIView):
     serializer_class = IdeaImportDraftSerializer
 
     def get_queryset(self):
-        return IdeaImportDraft.objects.filter(
-            project__owner=self.request.user
-        ).select_related("project")
+        return IdeaImportDraft.objects.filter(project__owner=self.request.user).select_related("project")
 
 
 class IdeaImportDraftDetailView(generics.RetrieveAPIView):
@@ -29,9 +27,7 @@ class IdeaImportCommitView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
-        draft = IdeaImportDraft.objects.filter(
-            pk=pk, project__owner=request.user
-        ).first()
+        draft = IdeaImportDraft.objects.filter(pk=pk, project__owner=request.user).first()
         if not draft:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -54,9 +50,7 @@ class IdeaImportDiscardView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
-        draft = IdeaImportDraft.objects.filter(
-            pk=pk, project__owner=request.user
-        ).first()
+        draft = IdeaImportDraft.objects.filter(pk=pk, project__owner=request.user).first()
         if not draft:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
 

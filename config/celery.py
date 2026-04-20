@@ -1,6 +1,7 @@
 """
 Celery application for Writing Hub.
 """
+
 import os
 
 from celery import Celery

@@ -3,6 +3,7 @@ Series App — Buchserien, SharedCharacter, SharedWorld (ADR-083)
 
 Extrahiert aus bfagent/apps/writing_hub/models_series.py (relevante Teile).
 """
+
 from __future__ import annotations
 
 import uuid
@@ -47,9 +48,7 @@ class SeriesVolume(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     series = models.ForeignKey("BookSeries", on_delete=models.CASCADE, related_name="volumes")
-    project = models.ForeignKey(
-        "projects.BookProject", on_delete=models.CASCADE, related_name="series_volumes"
-    )
+    project = models.ForeignKey("projects.BookProject", on_delete=models.CASCADE, related_name="series_volumes")
 
     volume_number = models.PositiveIntegerField(default=1)
     subtitle = models.CharField(max_length=300, blank=True)

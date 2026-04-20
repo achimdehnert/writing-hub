@@ -8,6 +8,7 @@ Usage:
     python manage.py seed_genre_promises
     python manage.py seed_genre_promises --force
 """
+
 from django.core.management.base import BaseCommand
 
 from apps.core.models_lookups_drama import GenrePromiseLookup
@@ -69,8 +70,7 @@ GENRE_PROMISES = [
             "einen kompetenten Ermittler und eine befriedigende Auflösung."
         ),
         "reader_expectation": (
-            "Fair Play: alle Hinweise auf den Täter sind im Text. "
-            "Kein Deus-ex-Machina. Ermittler zeigt Methodik."
+            "Fair Play: alle Hinweise auf den Täter sind im Text. Kein Deus-ex-Machina. Ermittler zeigt Methodik."
         ),
         "must_haves": [
             "Verbrechen (oder Geheimnis) bis Seite/Szene 10%",
@@ -192,6 +192,6 @@ class Command(BaseCommand):
             else:
                 skipped += 1
 
-        self.stdout.write(self.style.SUCCESS(
-            f"\nGenrePromiseLookup: {created} neu, {updated} aktualisiert, {skipped} übersprungen."
-        ))
+        self.stdout.write(
+            self.style.SUCCESS(f"\nGenrePromiseLookup: {created} neu, {updated} aktualisiert, {skipped} übersprungen.")
+        )

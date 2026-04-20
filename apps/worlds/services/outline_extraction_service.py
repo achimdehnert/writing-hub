@@ -7,6 +7,7 @@ und legt sie als lokale ProjectCharacterLink / ProjectLocationLink an.
 
 Optional: LLM-basierte Verfeinerung der extrahierten Grunddaten.
 """
+
 from __future__ import annotations
 
 import logging
@@ -29,9 +30,7 @@ def extract_from_outline(project) -> dict:
     """
     from apps.projects.models import OutlineVersion
 
-    outline = OutlineVersion.objects.filter(
-        project=project, is_active=True
-    ).first()
+    outline = OutlineVersion.objects.filter(project=project, is_active=True).first()
     if not outline:
         return {"characters": [], "locations": []}
 
@@ -46,15 +45,10 @@ def extract_from_outline(project) -> dict:
         messages = _build_extraction_prompt(outline_text, project)
         raw = router.completion("character_generate", messages)
         from promptfw.parsing import extract_json
+
         data = extract_json(raw) or {}
-        characters = [
-            c for c in data.get("characters", [])
-            if isinstance(c, dict) and c.get("name")
-        ]
-        locations = [
-            loc for loc in data.get("locations", [])
-            if isinstance(loc, dict) and loc.get("name")
-        ]
+        characters = [c for c in data.get("characters", []) if isinstance(c, dict) and c.get("name")]
+        locations = [loc for loc in data.get("locations", []) if isinstance(loc, dict) and loc.get("name")]
         return {"characters": characters, "locations": locations}
     except (LLMRoutingError, Exception) as exc:
         logger.error("extract_from_outline LLM-Fehler: %s", exc)
@@ -75,9 +69,7 @@ def save_extracted_to_project(project, extracted: dict, world_link=None) -> dict
         name = char.get("name", "").strip()
         if not name:
             continue
-        existing = ProjectCharacterLink.objects.filter(
-            project=project, name__iexact=name
-        ).exists()
+        existing = ProjectCharacterLink.objects.filter(project=project, name__iexact=name).exists()
         if existing:
             continue
         ProjectCharacterLink.objects.create(
@@ -97,9 +89,7 @@ def save_extracted_to_project(project, extracted: dict, world_link=None) -> dict
         name = loc.get("name", "").strip()
         if not name:
             continue
-        existing = ProjectLocationLink.objects.filter(
-            project=project, name__iexact=name
-        ).exists()
+        existing = ProjectLocationLink.objects.filter(project=project, name__iexact=name).exists()
         if existing:
             continue
         ProjectLocationLink.objects.create(
@@ -130,6 +120,7 @@ def refine_character_with_llm(character_link) -> bool:
         messages = render_prompt("worlds/character_refine", char_ctx=ctx)
         raw = router.completion("character_generate", messages)
         from promptfw.parsing import extract_json
+
         data = extract_json(raw) or {}
         if data.get("personality"):
             character_link.personality = data["personality"]
@@ -163,6 +154,7 @@ def refine_location_with_llm(location_link) -> bool:
         messages = render_prompt("worlds/location_refine", char_ctx=ctx)
         raw = router.completion("world_locations", messages)
         from promptfw.parsing import extract_json
+
         data = extract_json(raw) or {}
         if data.get("description"):
             location_link.description = data["description"]
@@ -210,18 +202,38 @@ def _extract_fallback(nodes) -> dict:
     Regex-Fallback: Einfache Namenserkennung aus Outline-Nodes
     wenn LLM nicht verfügbar.
     """
-    all_text = " ".join(
-        f"{n.title} {n.description or ''}" for n in nodes
-    )
-    name_pattern = re.compile(r'\b([A-ZÄÖÜ][a-zäöüß]{2,})\b')
+    all_text = " ".join(f"{n.title} {n.description or ''}" for n in nodes)
+    name_pattern = re.compile(r"\b([A-ZÄÖÜ][a-zäöüß]{2,})\b")
     raw_names = name_pattern.findall(all_text)
     stop_words = {
-        "Der", "Die", "Das", "Ein", "Eine", "Und", "Oder", "Aber",
-        "Wenn", "Dann", "Noch", "Hier", "Dort", "Alle", "Jede",
-        "Szene", "Kapitel", "Ort", "Geschichte", "Roman", "Buch",
-        "Projekt", "Handlung", "Beschreibung", "Titel",
+        "Der",
+        "Die",
+        "Das",
+        "Ein",
+        "Eine",
+        "Und",
+        "Oder",
+        "Aber",
+        "Wenn",
+        "Dann",
+        "Noch",
+        "Hier",
+        "Dort",
+        "Alle",
+        "Jede",
+        "Szene",
+        "Kapitel",
+        "Ort",
+        "Geschichte",
+        "Roman",
+        "Buch",
+        "Projekt",
+        "Handlung",
+        "Beschreibung",
+        "Titel",
     }
     from collections import Counter
+
     counts = Counter(n for n in raw_names if n not in stop_words)
     characters = [
         {"name": name, "description": "", "is_protagonist": i == 0}
@@ -229,14 +241,11 @@ def _extract_fallback(nodes) -> dict:
         if _ >= 2
     ]
 
-    loc_pattern = re.compile(r'\(Ort:\s*([^)]+)\)')
+    loc_pattern = re.compile(r"\(Ort:\s*([^)]+)\)")
     loc_names = set()
     for n in nodes:
         for match in loc_pattern.finditer(n.description or ""):
             loc_names.add(match.group(1).strip())
-    locations = [
-        {"name": name, "description": ""}
-        for name in sorted(loc_names)
-    ]
+    locations = [{"name": name, "description": ""} for name in sorted(loc_names)]
 
     return {"characters": characters, "locations": locations}

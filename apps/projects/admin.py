@@ -1,21 +1,43 @@
 from django.contrib import admin
 
 from .models import (
-    AudienceLookup, AuthorStyleLookup, BetaReaderFeedback,
-    BetaReaderSession, BookProject, ChapterNote, ComparableTitle,
-    ContentTypeLookup, GenreConventionProfile, GenreLookup,
-    OutlineFramework, OutlineFrameworkBeat, OutlineNode,
-    OutlineSequence, OutlineVersion, PeerReviewFinding,
-    PeerReviewSession, PhaseChecklistItem, PitchDocument,
-    ProjectCitation, ProjectGenrePromise, ProjectMilestone,
-    ProjectTemplate, ProjectTurningPoint, PublisherProfile,
-    ResearchNote, SubplotArc, TextAnalysisSnapshot,
+    AudienceLookup,
+    AuthorStyleLookup,
+    BetaReaderFeedback,
+    BetaReaderSession,
+    BookProject,
+    ChapterNote,
+    ComparableTitle,
+    ContentTypeLookup,
+    GenreConventionProfile,
+    GenreLookup,
+    OutlineFramework,
+    OutlineFrameworkBeat,
+    OutlineNode,
+    OutlineSequence,
+    OutlineVersion,
+    PeerReviewFinding,
+    PeerReviewSession,
+    PhaseChecklistItem,
+    PitchDocument,
+    ProjectCitation,
+    ProjectGenrePromise,
+    ProjectMilestone,
+    ProjectTemplate,
+    ProjectTurningPoint,
+    PublisherProfile,
+    ResearchNote,
+    SubplotArc,
+    TextAnalysisSnapshot,
 )
 from .models_narrative import DialogueScene
 from .models_timeline import (
-    ForeshadowingEntry, ForeshadowingTypeLookup,
-    MasterTimeline, NarrativeModelLookup,
-    PlannedFlashback, TimelineEntry,
+    ForeshadowingEntry,
+    ForeshadowingTypeLookup,
+    MasterTimeline,
+    NarrativeModelLookup,
+    PlannedFlashback,
+    TimelineEntry,
 )
 
 
@@ -61,6 +83,7 @@ class OutlineFrameworkAdmin(admin.ModelAdmin):
 
     def beat_count(self, obj):
         return obj.beats.count()
+
     beat_count.short_description = "Beats"
 
 
@@ -112,10 +135,17 @@ class SubplotArcAdmin(admin.ModelAdmin):
         ("Allgemein", {"fields": ["id", "project", "story_label", "title"]}),
         ("Träger-Figur", {"fields": ["carried_by_character_id", "carried_by_name"]}),
         ("Dramaturgik", {"fields": ["thematic_mirror", "embodies_need"]}),
-        ("Position", {"fields": [
-            "begins_at_percent", "ends_at_percent",
-            "begins_at_node", "ends_at_node",
-        ]}),
+        (
+            "Position",
+            {
+                "fields": [
+                    "begins_at_percent",
+                    "ends_at_percent",
+                    "begins_at_node",
+                    "ends_at_node",
+                ]
+            },
+        ),
         ("Anmerkungen", {"fields": ["intersection_notes"]}),
         ("Meta", {"fields": ["created_at", "updated_at"]}),
     ]
@@ -182,6 +212,7 @@ class GenreConventionProfileAdmin(admin.ModelAdmin):
 
     def convention_count(self, obj):
         return len(obj.conventions or [])
+
     convention_count.short_description = "Konventionen"
 
 
@@ -203,6 +234,7 @@ class BetaReaderSessionAdmin(admin.ModelAdmin):
 
     def open_feedback_count(self, obj):
         return obj.open_feedback_count
+
     open_feedback_count.short_description = "Offen"
 
 
@@ -213,11 +245,19 @@ class TextAnalysisSnapshotAdmin(admin.ModelAdmin):
     search_fields = ["project__title"]
     raw_id_fields = ["project"]
     readonly_fields = [
-        "id", "dead_scene_count", "dead_scene_node_ids",
-        "character_screen_time", "chapter_word_counts",
-        "pacing_variance", "pacing_issues", "dialogue_ratios",
-        "voice_drift_checked", "voice_drift_detected", "voice_drift_chapters",
-        "chapters_analyzed", "computed_at",
+        "id",
+        "dead_scene_count",
+        "dead_scene_node_ids",
+        "character_screen_time",
+        "chapter_word_counts",
+        "pacing_variance",
+        "pacing_issues",
+        "dialogue_ratios",
+        "voice_drift_checked",
+        "voice_drift_detected",
+        "voice_drift_chapters",
+        "chapters_analyzed",
+        "computed_at",
     ]
 
 
@@ -290,16 +330,21 @@ class DialogueSceneInline(admin.TabularInline):
     model = DialogueScene
     extra = 0
     fields = [
-        "speaker_a_name", "speaker_b_name",
-        "dialogue_outcome", "sort_order",
+        "speaker_a_name",
+        "speaker_b_name",
+        "dialogue_outcome",
+        "sort_order",
     ]
 
 
 @admin.register(DialogueScene)
 class DialogueSceneAdmin(admin.ModelAdmin):
     list_display = [
-        "node", "speaker_a_name", "speaker_b_name",
-        "dialogue_outcome", "sort_order",
+        "node",
+        "speaker_a_name",
+        "speaker_b_name",
+        "dialogue_outcome",
+        "sort_order",
     ]
     list_filter = ["dialogue_outcome"]
     search_fields = ["speaker_a_name", "speaker_b_name", "node__title"]
@@ -373,4 +418,3 @@ class PhaseChecklistItemAdmin(admin.ModelAdmin):
     search_fields = ["label", "project__title"]
     raw_id_fields = ["project"]
     readonly_fields = ["id", "created_at"]
-

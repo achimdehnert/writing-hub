@@ -4,6 +4,7 @@ Publisher Profile — Verlagsprofil verwalten (UC 6.9)
 Solo-Verleger: Ein Profil anlegen, das bei jedem neuen Buch als Default
 für PublishingProfile (Verlagsname, Copyright, Sprache, BISAC) dient.
 """
+
 from __future__ import annotations
 
 from django.contrib import messages

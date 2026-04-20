@@ -1,6 +1,7 @@
 """
 Knowledge Views — Recherche-Notizen + Beta-Leser (ADR-160)
 """
+
 from __future__ import annotations
 
 from django.contrib import messages
@@ -23,14 +24,16 @@ class ResearchDashboardView(LoginRequiredMixin, View):
 
     def get(self, request, pk):
         project = get_object_or_404(BookProject, pk=pk)
-        notes = ResearchNote.objects.filter(project=project).order_by(
-            "-is_verified", "note_type", "sort_order"
+        notes = ResearchNote.objects.filter(project=project).order_by("-is_verified", "note_type", "sort_order")
+        return render(
+            request,
+            self.template_name,
+            {
+                "project": project,
+                "notes": notes,
+                "note_type_choices": ResearchNote.NOTE_TYPES,
+            },
         )
-        return render(request, self.template_name, {
-            "project": project,
-            "notes": notes,
-            "note_type_choices": ResearchNote.NOTE_TYPES,
-        })
 
     def post(self, request, pk):
         project = get_object_or_404(BookProject, pk=pk)
@@ -71,15 +74,17 @@ class BetaReaderDashboardView(LoginRequiredMixin, View):
 
     def get(self, request, pk):
         project = get_object_or_404(BookProject, pk=pk)
-        sessions = BetaReaderSession.objects.filter(project=project).order_by(
-            "-created_at"
+        sessions = BetaReaderSession.objects.filter(project=project).order_by("-created_at")
+        return render(
+            request,
+            self.template_name,
+            {
+                "project": project,
+                "sessions": sessions,
+                "anon_choices": BetaReaderSession.ANON_CHOICES,
+                "focus_choices": BetaReaderSession.FEEDBACK_FOCUS,
+            },
         )
-        return render(request, self.template_name, {
-            "project": project,
-            "sessions": sessions,
-            "anon_choices": BetaReaderSession.ANON_CHOICES,
-            "focus_choices": BetaReaderSession.FEEDBACK_FOCUS,
-        })
 
     def post(self, request, pk):
         project = get_object_or_404(BookProject, pk=pk)
@@ -107,12 +112,16 @@ class BetaReaderSessionDetailView(LoginRequiredMixin, View):
         project = get_object_or_404(BookProject, pk=pk)
         session = get_object_or_404(BetaReaderSession, pk=session_pk, project=project)
         feedbacks = session.feedbacks.order_by("chapter_order", "feedback_type")
-        return render(request, self.template_name, {
-            "project": project,
-            "session": session,
-            "feedbacks": feedbacks,
-            "feedback_type_choices": BetaReaderFeedback.FEEDBACK_TYPES,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "project": project,
+                "session": session,
+                "feedbacks": feedbacks,
+                "feedback_type_choices": BetaReaderFeedback.FEEDBACK_TYPES,
+            },
+        )
 
     def post(self, request, pk, session_pk):
         project = get_object_or_404(BookProject, pk=pk)
@@ -137,6 +146,7 @@ class BetaReaderSessionDetailView(LoginRequiredMixin, View):
 
         elif action == "complete_session":
             from django.utils import timezone
+
             session.is_completed = True
             session.completed_at = timezone.now()
             session.save(update_fields=["is_completed", "completed_at"])

@@ -4,6 +4,7 @@ Health-Score Views — ADR-157
 GET  /projects/<pk>/health/          → vollständige Health-Seite
 GET  /projects/<pk>/health/partial/  → HTMX-Partial (Score-Badge only)
 """
+
 from __future__ import annotations
 
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -34,9 +35,9 @@ class ProjectHealthView(LoginRequiredMixin, DetailView):
         ctx["failed_checks"] = [c for c in result.checks if not c.passed]
         ctx["top_issues"] = result.top_issues
         ctx["level_label"] = {
-            "solid":      ("Solide", "success"),
+            "solid": ("Solide", "success"),
             "developing": ("In Entwicklung", "warning"),
-            "skeleton":   ("Grundriss", "danger"),
+            "skeleton": ("Grundriss", "danger"),
         }.get(result.level, (result.level, "secondary"))
         return ctx
 
@@ -50,10 +51,10 @@ class ProjectHealthPartialView(LoginRequiredMixin, View):
         color = {"solid": "#22c55e", "developing": "#f59e0b", "skeleton": "#ef4444"}[result.level]
         html = (
             f'<span class="health-badge" style="'
-            f'background:{color}22;color:{color};border:1px solid {color}44;'
-            f'display:inline-flex;align-items:center;gap:.35rem;'
+            f"background:{color}22;color:{color};border:1px solid {color}44;"
+            f"display:inline-flex;align-items:center;gap:.35rem;"
             f'padding:.2rem .6rem;border-radius:999px;font-size:.78rem;font-weight:600;">'
             f'<i class="bi bi-heart-pulse"></i> {result.score}%'
-            f'</span>'
+            f"</span>"
         )
         return HttpResponse(html)

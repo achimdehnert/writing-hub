@@ -62,9 +62,7 @@ def render_prompt(template_name: str, **context: Any) -> list[dict]:
     except PromptNotFoundError:
         logger.debug("DB prompt not found for '%s', trying file fallback", action_code)
     except PromptValidationError as exc:
-        raise PromptRenderError(
-            f"Prompt validation failed for '{action_code}': {exc}"
-        ) from exc
+        raise PromptRenderError(f"Prompt validation failed for '{action_code}': {exc}") from exc
     except Exception as exc:
         logger.warning("DB render failed for '%s': %s", action_code, exc)
 
@@ -119,9 +117,7 @@ def _render_from_file(template_name: str, context: dict) -> list[dict]:
                 frontmatter.update(parsed)
 
         if not frontmatter:
-            raise ValueError(
-                "Frontmatter must contain at least one YAML dict section"
-            )
+            raise ValueError("Frontmatter must contain at least one YAML dict section")
 
         messages: list[dict[str, str]] = []
         for role in ("system", "user", "assistant"):
@@ -132,16 +128,12 @@ def _render_from_file(template_name: str, context: dict) -> list[dict]:
                     messages.append({"role": role, "content": rendered})
 
         if not messages:
-            raise PromptRenderError(
-                f"promptfw returned empty messages for '{template_name}'"
-            )
+            raise PromptRenderError(f"promptfw returned empty messages for '{template_name}'")
         return messages
     except PromptRenderError:
         raise
     except Exception as exc:
-        raise PromptRenderError(
-            f"promptfw render failed for '{template_name}': {exc}"
-        ) from exc
+        raise PromptRenderError(f"promptfw render failed for '{template_name}': {exc}") from exc
 
 
 def prompt_exists(template_name: str) -> bool:
@@ -150,9 +142,7 @@ def prompt_exists(template_name: str) -> bool:
     try:
         from promptfw.contrib.django.models import PromptTemplate
 
-        if PromptTemplate.objects.filter(
-            action_code=action_code, is_active=True, deleted_at__isnull=True
-        ).exists():
+        if PromptTemplate.objects.filter(action_code=action_code, is_active=True, deleted_at__isnull=True).exists():
             return True
     except Exception:
         pass

@@ -28,12 +28,15 @@ class WorldListView(APIView):
     GET  /worlds/?project=<id>  — ProjectWorldLinks des Users
     POST /worlds/               — Neue Welt per LLM generieren
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        qs = ProjectWorldLink.objects.filter(
-            project__owner=request.user
-        ).select_related("project").order_by("-created_at")
+        qs = (
+            ProjectWorldLink.objects.filter(project__owner=request.user)
+            .select_related("project")
+            .order_by("-created_at")
+        )
 
         project_id = request.query_params.get("project")
         if project_id:
@@ -48,6 +51,7 @@ class WorldListView(APIView):
             return Response({"detail": "project_id erforderlich."}, status=status.HTTP_400_BAD_REQUEST)
 
         from apps.worlds.services import WorldBuilderService
+
         svc = WorldBuilderService()
         result = svc.generate_world(
             project_id=project_id,
@@ -67,29 +71,32 @@ class WorldListView(APIView):
         if world_id:
             svc.link_to_project(project_id, world_id)
 
-        return Response({
-            "name": result.name,
-            "description": result.description,
-            "weltenhub_world_id": str(world_id) if world_id else None,
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            {
+                "name": result.name,
+                "description": result.description,
+                "weltenhub_world_id": str(world_id) if world_id else None,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class WorldDetailView(APIView):
     """
     GET /worlds/<pk>/ — Welt-Details (lokal + optional WeltenHub)
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
-        link = get_object_or_404(
-            ProjectWorldLink, pk=pk, project__owner=request.user
-        )
+        link = get_object_or_404(ProjectWorldLink, pk=pk, project__owner=request.user)
         data = ProjectWorldLinkSerializer(link).data
 
         # WeltenHub enrichment
         if link.weltenhub_world_id:
             try:
                 from weltenfw.django import get_client
+
                 world = get_client().worlds.get(link.weltenhub_world_id)
                 data["weltenhub"] = {
                     "name": world.name,
@@ -120,23 +127,21 @@ class WorldCharacterListView(APIView):
     GET  /worlds/<pk>/characters/           — Lokale Charaktere des Projekts
     POST /worlds/<pk>/characters/generate/  — Per LLM generieren (lokal + optional WeltenHub)
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, world_pk):
-        link = get_object_or_404(
-            ProjectWorldLink, pk=world_pk, project__owner=request.user
-        )
+        link = get_object_or_404(ProjectWorldLink, pk=world_pk, project__owner=request.user)
         chars = ProjectCharacterLink.objects.filter(project=link.project)
         serializer = ProjectCharacterLinkSerializer(chars, many=True)
         return Response(serializer.data)
 
     def post(self, request, world_pk):
-        link = get_object_or_404(
-            ProjectWorldLink, pk=world_pk, project__owner=request.user
-        )
+        link = get_object_or_404(ProjectWorldLink, pk=world_pk, project__owner=request.user)
         count = int(request.data.get("count", 5))
 
         from apps.worlds.services import WorldCharacterService
+
         svc = WorldCharacterService()
         result = svc.generate_cast(
             weltenhub_world_id=str(link.weltenhub_world_id or "00000000-0000-0000-0000-000000000000"),
@@ -174,11 +179,14 @@ class WorldCharacterListView(APIView):
                     source="llm",
                 )
 
-        return Response({
-            "generated": len(result.characters),
-            "saved_to_weltenhub": saved_to_wh,
-            "characters": result.characters,
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            {
+                "generated": len(result.characters),
+                "saved_to_weltenhub": saved_to_wh,
+                "characters": result.characters,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class WorldLocationListView(APIView):
@@ -186,23 +194,21 @@ class WorldLocationListView(APIView):
     GET  /worlds/<pk>/locations/           — Lokale Orte des Projekts
     POST /worlds/<pk>/locations/generate/  — Per LLM generieren
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, world_pk):
-        link = get_object_or_404(
-            ProjectWorldLink, pk=world_pk, project__owner=request.user
-        )
+        link = get_object_or_404(ProjectWorldLink, pk=world_pk, project__owner=request.user)
         locs = ProjectLocationLink.objects.filter(project=link.project)
         serializer = ProjectLocationLinkSerializer(locs, many=True)
         return Response(serializer.data)
 
     def post(self, request, world_pk):
-        link = get_object_or_404(
-            ProjectWorldLink, pk=world_pk, project__owner=request.user
-        )
+        link = get_object_or_404(ProjectWorldLink, pk=world_pk, project__owner=request.user)
         count = int(request.data.get("count", 5))
 
         from apps.worlds.services import WorldLocationService
+
         svc = WorldLocationService()
         result = svc.generate_locations(
             weltenhub_world_id=str(link.weltenhub_world_id or "00000000-0000-0000-0000-000000000000"),
@@ -236,47 +242,53 @@ class WorldLocationListView(APIView):
                     source="llm",
                 )
 
-        return Response({
-            "generated": len(result.locations),
-            "saved_to_weltenhub": saved_to_wh,
-            "locations": result.locations,
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            {
+                "generated": len(result.locations),
+                "saved_to_weltenhub": saved_to_wh,
+                "locations": result.locations,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class OutlineExtractView(APIView):
     """
     POST /worlds/<pk>/outline-extract/  — Charaktere + Orte aus Outline extrahieren
     """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
-        link = get_object_or_404(
-            ProjectWorldLink, pk=pk, project__owner=request.user
-        )
+        link = get_object_or_404(ProjectWorldLink, pk=pk, project__owner=request.user)
 
         from apps.worlds.services import extract_from_outline, save_extracted_to_project
+
         extracted = extract_from_outline(link.project)
         counts = save_extracted_to_project(link.project, extracted, world_link=link)
 
-        return Response({
-            "characters_created": counts["characters_created"],
-            "locations_created": counts["locations_created"],
-            "extracted": extracted,
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            {
+                "characters_created": counts["characters_created"],
+                "locations_created": counts["locations_created"],
+                "extracted": extracted,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class CharacterRefineView(APIView):
     """
     POST /worlds/characters/<pk>/refine/  — Charakter per KI verfeinern
     """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
-        pcl = get_object_or_404(
-            ProjectCharacterLink, pk=pk, project__owner=request.user
-        )
+        pcl = get_object_or_404(ProjectCharacterLink, pk=pk, project__owner=request.user)
 
         from apps.worlds.services import refine_character_with_llm
+
         ok = refine_character_with_llm(pcl)
         if not ok:
             return Response(
@@ -292,14 +304,14 @@ class LocationRefineView(APIView):
     """
     POST /worlds/locations/<pk>/refine/  — Ort per KI verfeinern
     """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
-        pll = get_object_or_404(
-            ProjectLocationLink, pk=pk, project__owner=request.user
-        )
+        pll = get_object_or_404(ProjectLocationLink, pk=pk, project__owner=request.user)
 
         from apps.worlds.services import refine_location_with_llm
+
         ok = refine_location_with_llm(pll)
         if not ok:
             return Response(

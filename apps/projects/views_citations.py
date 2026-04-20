@@ -4,6 +4,7 @@ für akademische/wissenschaftliche BookProjects.
 
 Quellen werden in ProjectCitation (DB) gespeichert (Issue #8).
 """
+
 from __future__ import annotations
 
 import json
@@ -109,51 +110,44 @@ class CitationDashboardView(LoginRequiredMixin, View):
     template_name = "projects/citations.html"
 
     def _get_project(self, request, pk):
-        return get_object_or_404(
-            BookProject, pk=pk, owner=request.user, is_active=True
-        )
+        return get_object_or_404(BookProject, pk=pk, owner=request.user, is_active=True)
 
     def _get_chapters(self, project):
         """Return active outline nodes for chapter assignment."""
-        active_outline = OutlineVersion.objects.filter(
-            project=project, is_active=True
-        ).order_by("-created_at").first()
+        active_outline = OutlineVersion.objects.filter(project=project, is_active=True).order_by("-created_at").first()
         if not active_outline:
             return [], False
-        nodes = list(
-            active_outline.nodes.order_by("order")
-            .values_list("pk", "order", "title", "research_queries")
-        )
+        nodes = list(active_outline.nodes.order_by("order").values_list("pk", "order", "title", "research_queries"))
         has_queries = any(rq for _, _, _, rq in nodes)
         return nodes, has_queries
 
     def _render(self, request, project, style=None):
         """Render citations dashboard with current DB state."""
-        citations_qs = ProjectCitation.objects.filter(
-            project=project
-        ).select_related("node")
+        citations_qs = ProjectCitation.objects.filter(project=project).select_related("node")
         citations_dicts = [_model_to_dict(c) for c in citations_qs]
         profile = FORMAT_PROFILES.get(project.content_type, {})
         default_style = profile.get("default_bib_style", "apa")
         style = style or request.GET.get("style", default_style)
         bibliography = format_bibliography(citations_dicts, style=style) if citations_dicts else ""
         chapters, has_research_queries = self._get_chapters(project)
-        default_sources = DEFAULT_SOURCES_BY_CONTENT_TYPE.get(
-            project.content_type, [s[0] for s in SEARCH_SOURCES]
+        default_sources = DEFAULT_SOURCES_BY_CONTENT_TYPE.get(project.content_type, [s[0] for s in SEARCH_SOURCES])
+        return render(
+            request,
+            self.template_name,
+            {
+                "project": project,
+                "citations": citations_qs,
+                "citations_dicts": citations_dicts,
+                "bibliography": bibliography,
+                "citation_styles": BIBLIOGRAPHY_STYLES,
+                "active_style": style,
+                "bibtex_export": export_bibtex(citations_dicts) if citations_dicts else "",
+                "search_sources": SEARCH_SOURCES,
+                "chapters": chapters,
+                "has_research_queries": has_research_queries,
+                "default_sources": default_sources,
+            },
         )
-        return render(request, self.template_name, {
-            "project": project,
-            "citations": citations_qs,
-            "citations_dicts": citations_dicts,
-            "bibliography": bibliography,
-            "citation_styles": BIBLIOGRAPHY_STYLES,
-            "active_style": style,
-            "bibtex_export": export_bibtex(citations_dicts) if citations_dicts else "",
-            "search_sources": SEARCH_SOURCES,
-            "chapters": chapters,
-            "has_research_queries": has_research_queries,
-            "default_sources": default_sources,
-        })
 
     def get(self, request, pk):
         project = self._get_project(request, pk)
@@ -209,9 +203,7 @@ class CitationDashboardView(LoginRequiredMixin, View):
         elif action == "remove":
             citation_id = request.POST.get("citation_id", "")
             if citation_id:
-                deleted, _ = ProjectCitation.objects.filter(
-                    pk=citation_id, project=project
-                ).delete()
+                deleted, _ = ProjectCitation.objects.filter(pk=citation_id, project=project).delete()
                 if deleted:
                     messages.success(request, "Quelle entfernt.")
 
@@ -223,15 +215,18 @@ class CitationDashboardView(LoginRequiredMixin, View):
                 authors_raw = paper.get("authors", [])
                 if authors_raw and isinstance(authors_raw[0], str):
                     paper["authors"] = [
-                        {"family": a.split()[-1] if a.split() else a,
-                         "given": " ".join(a.split()[:-1]) if len(a.split()) > 1 else "",
-                         "orcid": ""}
+                        {
+                            "family": a.split()[-1] if a.split() else a,
+                            "given": " ".join(a.split()[:-1]) if len(a.split()) > 1 else "",
+                            "orcid": "",
+                        }
                         for a in authors_raw
                     ]
                 citation, created = _create_citation_from_dict(project, paper, added_via="search")
                 if created and node_id:
                     node = OutlineNode.objects.filter(
-                        pk=node_id, outline_version__project=project,
+                        pk=node_id,
+                        outline_version__project=project,
                     ).first()
                     if node:
                         citation.node = node
@@ -247,9 +242,7 @@ class CitationDashboardView(LoginRequiredMixin, View):
             citation_id = request.POST.get("citation_id", "")
             node_id = request.POST.get("node_id", "") or None
             if citation_id:
-                citation = ProjectCitation.objects.filter(
-                    pk=citation_id, project=project
-                ).first()
+                citation = ProjectCitation.objects.filter(pk=citation_id, project=project).first()
                 if citation:
                     if node_id:
                         node = OutlineNode.objects.filter(
@@ -305,43 +298,36 @@ class ResearchQueriesAjaxView(LoginRequiredMixin, View):
     """
 
     def _get_outline_chapters(self, project):
-        active_outline = OutlineVersion.objects.filter(
-            project=project, is_active=True
-        ).order_by("-created_at").first()
+        active_outline = OutlineVersion.objects.filter(project=project, is_active=True).order_by("-created_at").first()
         if not active_outline:
             return None, []
         return active_outline, list(active_outline.nodes.order_by("order"))
 
     def get(self, request, pk):
         """Return cached research queries from DB."""
-        project = get_object_or_404(
-            BookProject, pk=pk, owner=request.user, is_active=True
-        )
+        project = get_object_or_404(BookProject, pk=pk, owner=request.user, is_active=True)
         _, chapters = self._get_outline_chapters(project)
         result = []
         for ch in chapters:
             if ch.research_queries:
-                result.append({
-                    "chapter_id": str(ch.pk),
-                    "chapter_order": ch.order,
-                    "chapter_title": ch.title,
-                    "queries": ch.research_queries,
-                })
+                result.append(
+                    {
+                        "chapter_id": str(ch.pk),
+                        "chapter_order": ch.order,
+                        "chapter_title": ch.title,
+                        "queries": ch.research_queries,
+                    }
+                )
         return JsonResponse({"ok": True, "chapters": result, "from_cache": True})
 
     def post(self, request, pk):
         """Generate new research queries via LLM and save to DB."""
-        project = get_object_or_404(
-            BookProject, pk=pk, owner=request.user, is_active=True
-        )
+        project = get_object_or_404(BookProject, pk=pk, owner=request.user, is_active=True)
         _, chapters = self._get_outline_chapters(project)
         if not chapters:
             return JsonResponse({"ok": False, "error": "Kein Outline mit Kapiteln vorhanden."})
 
-        chapters_block = "\n".join(
-            f"{ch.order}. {ch.title}\n   {(ch.description or '')[:200]}"
-            for ch in chapters
-        )
+        chapters_block = "\n".join(f"{ch.order}. {ch.title}\n   {(ch.description or '')[:200]}" for ch in chapters)
         chapter_map = {str(ch.pk): ch for ch in chapters}
         order_map = {ch.order: ch for ch in chapters}
 
@@ -364,6 +350,7 @@ class ResearchQueriesAjaxView(LoginRequiredMixin, View):
                 timeout=60,
             )
             from promptfw.parsing import extract_json_list
+
             result = extract_json_list(raw)
             if not result:
                 return JsonResponse({"ok": False, "error": "Keine Ergebnisse generiert."})
@@ -383,12 +370,14 @@ class ResearchQueriesAjaxView(LoginRequiredMixin, View):
             for ch in chapters:
                 ch.refresh_from_db(fields=["research_queries"])
                 if ch.research_queries:
-                    saved.append({
-                        "chapter_id": str(ch.pk),
-                        "chapter_order": ch.order,
-                        "chapter_title": ch.title,
-                        "queries": ch.research_queries,
-                    })
+                    saved.append(
+                        {
+                            "chapter_id": str(ch.pk),
+                            "chapter_order": ch.order,
+                            "chapter_title": ch.title,
+                            "queries": ch.research_queries,
+                        }
+                    )
             return JsonResponse({"ok": True, "chapters": saved})
         except LLMRoutingError as exc:
             return JsonResponse({"ok": False, "error": str(exc)})
@@ -414,10 +403,7 @@ class LiteraturrechercheAjaxView(LoginRequiredMixin, View):
 
         sources_raw = request.POST.get("sources", "")
         if sources_raw:
-            sources = [
-                s.strip() for s in sources_raw.split(",")
-                if s.strip() in VALID_SEARCH_SOURCES
-            ] or None
+            sources = [s.strip() for s in sources_raw.split(",") if s.strip() in VALID_SEARCH_SOURCES] or None
         else:
             sources = None
 
@@ -431,11 +417,13 @@ class LiteraturrechercheAjaxView(LoginRequiredMixin, View):
             result = smart_search_papers(query, sources=sources, max_results=max_results)
         except SearchError as exc:
             return JsonResponse({"ok": False, "error": str(exc)})
-        return JsonResponse({
-            "ok": True,
-            "papers": result["papers"],
-            "count": len(result["papers"]),
-            "queries_used": result["queries_used"],
-            "total_found": result["total_found"],
-            "total_after_filter": result["total_after_filter"],
-        })
+        return JsonResponse(
+            {
+                "ok": True,
+                "papers": result["papers"],
+                "count": len(result["papers"]),
+                "queries_used": result["queries_used"],
+                "total_found": result["total_found"],
+                "total_after_filter": result["total_after_filter"],
+            }
+        )

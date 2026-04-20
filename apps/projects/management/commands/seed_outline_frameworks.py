@@ -5,6 +5,7 @@ Usage:
     python manage.py seed_outline_frameworks
     python manage.py seed_outline_frameworks --force   # Überschreibt bestehende
 """
+
 from django.core.management.base import BaseCommand
 
 from apps.projects.models import OutlineFramework, OutlineFrameworkBeat
@@ -333,7 +334,5 @@ class Command(BaseCommand):
             fw_data["beats"] = beats_data
 
         self.stdout.write(
-            self.style.SUCCESS(
-                f"Frameworks: {created} erstellt, {updated} aktualisiert, {skipped} übersprungen"
-            )
+            self.style.SUCCESS(f"Frameworks: {created} erstellt, {updated} aktualisiert, {skipped} übersprungen")
         )

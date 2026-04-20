@@ -7,6 +7,7 @@ Idempotent — kann beliebig oft ausgeführt werden.
 Ausführen nach erster Migration:
     python manage.py seed_quality_dimensions
 """
+
 from django.core.management.base import BaseCommand
 
 
@@ -85,6 +86,4 @@ class Command(BaseCommand):
                 updated_count += 1
                 self.stdout.write(f"  ↩️  Aktualisiert: {code}")
 
-        self.stdout.write(self.style.SUCCESS(
-            f"\nFertig: {created_count} erstellt, {updated_count} aktualisiert."
-        ))
+        self.stdout.write(self.style.SUCCESS(f"\nFertig: {created_count} erstellt, {updated_count} aktualisiert."))

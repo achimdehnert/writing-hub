@@ -32,27 +32,24 @@ class TestSeriesHTMLViews:
         assert response.status_code == 200
 
     def test_series_create_post(self):
-        response = self.client.post("/serien/neu/", {
-            "title": "Meine Testserie",
-            "genre": "Fantasy",
-            "description": "Eine Testserie",
-        })
+        response = self.client.post(
+            "/serien/neu/",
+            {
+                "title": "Meine Testserie",
+                "genre": "Fantasy",
+                "description": "Eine Testserie",
+            },
+        )
         assert response.status_code in (301, 302)
-        assert BookSeries.objects.filter(
-            title="Meine Testserie", owner=self.user
-        ).exists()
+        assert BookSeries.objects.filter(title="Meine Testserie", owner=self.user).exists()
 
     def test_series_edit_get(self):
-        series = BookSeries.objects.create(
-            title="Edit Me", owner=self.user
-        )
+        series = BookSeries.objects.create(title="Edit Me", owner=self.user)
         response = self.client.get(f"/serien/{series.pk}/bearbeiten/")
         assert response.status_code == 200
 
     def test_series_edit_post(self):
-        series = BookSeries.objects.create(
-            title="Original", owner=self.user
-        )
+        series = BookSeries.objects.create(title="Original", owner=self.user)
         response = self.client.post(
             f"/serien/{series.pk}/bearbeiten/",
             {"title": "Geändert", "genre": "", "description": ""},
@@ -62,16 +59,12 @@ class TestSeriesHTMLViews:
         assert series.title == "Geändert"
 
     def test_series_delete_get(self):
-        series = BookSeries.objects.create(
-            title="Delete Me", owner=self.user
-        )
+        series = BookSeries.objects.create(title="Delete Me", owner=self.user)
         response = self.client.get(f"/serien/{series.pk}/loeschen/")
         assert response.status_code == 200
 
     def test_series_delete_post(self):
-        series = BookSeries.objects.create(
-            title="Gone", owner=self.user
-        )
+        series = BookSeries.objects.create(title="Gone", owner=self.user)
         pk = series.pk
         response = self.client.post(f"/serien/{pk}/loeschen/")
         assert response.status_code in (301, 302)

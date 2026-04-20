@@ -6,6 +6,7 @@ GenrePromiseLookup:     Genre-Versprechen für LLM-Layer 10.
 
 app_label = "core" — beide Tabellen werden app-übergreifend referenziert.
 """
+
 from __future__ import annotations
 
 from django.db import models
@@ -43,16 +44,22 @@ class TurningPointTypeLookup(models.Model):
         help_text="Typische Position im Roman (0–100%)",
     )
     default_position_normalized = models.DecimalField(
-        max_digits=4, decimal_places=3,
-        null=True, blank=True,
+        max_digits=4,
+        decimal_places=3,
+        null=True,
+        blank=True,
         help_text="Normiert (0.0–1.0) — für outlinefw-Kompatibilität",
     )
     outlinefw_beat_name = models.CharField(
-        max_length=80, blank=True, default="",
+        max_length=80,
+        blank=True,
+        default="",
         help_text="Mapping auf outlinefw BeatDefinition-Name (falls vorhanden)",
     )
     mirrors_type_code = models.SlugField(
-        max_length=30, blank=True, default="",
+        max_length=30,
+        blank=True,
+        default="",
         help_text="Code des gespiegelten Typs (z.B. closing_image → opening_image)",
     )
     sort_order = models.PositiveSmallIntegerField(default=0)
@@ -70,9 +77,8 @@ class TurningPointTypeLookup(models.Model):
     def save(self, *args, **kwargs):
         if self.default_position_percent and self.default_position_normalized is None:
             from decimal import Decimal
-            self.default_position_normalized = Decimal(
-                str(round(self.default_position_percent / 100, 3))
-            )
+
+            self.default_position_normalized = Decimal(str(round(self.default_position_percent / 100, 3)))
         super().save(*args, **kwargs)
 
 
@@ -99,7 +105,8 @@ class GenrePromiseLookup(models.Model):
         help_text="Was verspricht dieses Genre dem Leser implizit? (1–3 Sätze)",
     )
     reader_expectation = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Leser-Erwartung",
         help_text="Was erwartet der Leser konkret? (für LLM-Prompt)",
     )
@@ -113,7 +120,8 @@ class GenrePromiseLookup(models.Model):
     )
 
     llm_prompt_block = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="LLM-Prompt-Block (Layer 10)",
         help_text="Fertiger Prompt-Block für Genre-Context-Injection.",
     )

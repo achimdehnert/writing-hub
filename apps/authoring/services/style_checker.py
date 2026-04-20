@@ -82,11 +82,13 @@ class StyleChecker:
         for pat, label, severity in patterns:
             matches = re.findall(pat, text or "", re.IGNORECASE)
             if matches:
-                findings.append({
-                    "pattern": pat,
-                    "label": label,
-                    "severity": severity,
-                    "match_count": len(matches),
-                    "examples": matches[:3],
-                })
+                findings.append(
+                    {
+                        "pattern": pat,
+                        "label": label,
+                        "severity": severity,
+                        "match_count": len(matches),
+                        "examples": matches[:3],
+                    }
+                )
         return findings

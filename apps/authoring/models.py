@@ -153,7 +153,9 @@ class QualityDimension(models.Model):
     name_en = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     weight = models.DecimalField(
-        max_digits=3, decimal_places=2, default=1.0,
+        max_digits=3,
+        decimal_places=2,
+        default=1.0,
         help_text="Gewichtung für Overall-Score Berechnung",
     )
     is_active = models.BooleanField(default=True)
@@ -189,9 +191,7 @@ class GateDecisionType(models.Model):
     description = models.TextField(blank=True)
     color = models.CharField(max_length=20, default="secondary")
     icon = models.CharField(max_length=50, default="bi-question-circle")
-    allows_commit = models.BooleanField(
-        default=False, help_text="Erlaubt Kapitel-Commit/Lock"
-    )
+    allows_commit = models.BooleanField(default=False, help_text="Erlaubt Kapitel-Commit/Lock")
     sort_order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -221,15 +221,21 @@ class ProjectQualityConfig(models.Model):
         related_name="quality_config",
     )
     min_overall_score = models.DecimalField(
-        max_digits=4, decimal_places=2, default="7.50",
+        max_digits=4,
+        decimal_places=2,
+        default="7.50",
         validators=[MinValueValidator(0), MaxValueValidator(10)],
     )
     auto_approve_threshold = models.DecimalField(
-        max_digits=4, decimal_places=2, default="8.50",
+        max_digits=4,
+        decimal_places=2,
+        default="8.50",
         validators=[MinValueValidator(0), MaxValueValidator(10)],
     )
     auto_reject_threshold = models.DecimalField(
-        max_digits=4, decimal_places=2, default="5.00",
+        max_digits=4,
+        decimal_places=2,
+        default="5.00",
         validators=[MinValueValidator(0), MaxValueValidator(10)],
     )
     require_manual_approval = models.BooleanField(default=False)
@@ -279,12 +285,14 @@ class ChapterQualityScore(models.Model):
         related_name="chapter_scores",
     )
     overall_score = models.DecimalField(
-        max_digits=4, decimal_places=2,
+        max_digits=4,
+        decimal_places=2,
         validators=[MinValueValidator(0), MaxValueValidator(10)],
         help_text="Gewichteter Durchschnitt aller Dimension-Scores",
     )
     findings = models.JSONField(
-        default=dict, blank=True,
+        default=dict,
+        blank=True,
         help_text="Strukturierte Findings: {deviations: [], suggestions: []}",
     )
     notes = models.TextField(blank=True)
@@ -313,14 +321,11 @@ class ChapterDimensionScore(models.Model):
     """Einzelne Dimension-Bewertung für einen ChapterQualityScore."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    quality_score = models.ForeignKey(
-        ChapterQualityScore, on_delete=models.CASCADE, related_name="dimension_scores"
-    )
-    dimension = models.ForeignKey(
-        QualityDimension, on_delete=models.PROTECT, related_name="chapter_scores"
-    )
+    quality_score = models.ForeignKey(ChapterQualityScore, on_delete=models.CASCADE, related_name="dimension_scores")
+    dimension = models.ForeignKey(QualityDimension, on_delete=models.PROTECT, related_name="chapter_scores")
     score = models.DecimalField(
-        max_digits=4, decimal_places=2,
+        max_digits=4,
+        decimal_places=2,
         validators=[MinValueValidator(0), MaxValueValidator(10)],
     )
     notes = models.TextField(blank=True)
@@ -352,21 +357,11 @@ class AuthorStyleDNA(models.Model):
         related_name="style_dnas",
     )
     name = models.CharField(max_length=200, help_text="Name des Stilprofils")
-    is_primary = models.BooleanField(
-        default=False, help_text="Primäres Profil des Autors"
-    )
-    signature_moves = models.JSONField(
-        default=list, help_text="Charakteristische Stilmittel (Liste von Strings)"
-    )
-    do_list = models.JSONField(
-        default=list, help_text="Erlaubte/empfohlene Stilmittel"
-    )
-    dont_list = models.JSONField(
-        default=list, help_text="Verbotene Stilmittel"
-    )
-    taboo_list = models.JSONField(
-        default=list, help_text="Tabu-Wörter (niemals verwenden)"
-    )
+    is_primary = models.BooleanField(default=False, help_text="Primäres Profil des Autors")
+    signature_moves = models.JSONField(default=list, help_text="Charakteristische Stilmittel (Liste von Strings)")
+    do_list = models.JSONField(default=list, help_text="Erlaubte/empfohlene Stilmittel")
+    dont_list = models.JSONField(default=list, help_text="Verbotene Stilmittel")
+    taboo_list = models.JSONField(default=list, help_text="Tabu-Wörter (niemals verwenden)")
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

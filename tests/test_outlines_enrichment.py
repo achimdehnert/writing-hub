@@ -4,6 +4,7 @@ Tests for apps.outlines.services — enrich_node() via DB-backed prompt dispatch
 Tests the render_outline_prompt + LLMRouter integration: content-type dispatch,
 result mapping, error handling. Also covers the retriever registration.
 """
+
 import pytest
 from unittest.mock import MagicMock, patch
 
@@ -71,9 +72,7 @@ class TestEnrichNodeWithPromptDispatch:
 
         assert self.node.description == "Neue Beschreibung"
         assert self.node.emotional_arc == "aufsteigend"
-        self.node.save.assert_called_once_with(
-            update_fields=["description", "emotional_arc"]
-        )
+        self.node.save.assert_called_once_with(update_fields=["description", "emotional_arc"])
 
     @patch("apps.outlines.prompt_dispatch.get_active_template", return_value=None)
     @patch("apps.outlines.prompt_dispatch.render_outline_prompt")
@@ -172,22 +171,26 @@ class TestRetrieverRegistration:
         # Django AppConfig.ready() already called register_all() during setup
         # The retrievers are registered via @register_retriever decorator at import time
         from apps.outlines.retrievers import _get_project_context
+
         assert callable(_get_project_context)
 
     def test_should_have_outline_siblings_retriever(self):
         """outline_siblings retriever must be registered."""
         from apps.outlines.retrievers import _get_outline_siblings
+
         assert callable(_get_outline_siblings)
 
     def test_project_context_returns_fallback_without_instance(self):
         """project_context retriever returns empty list without instance."""
         from apps.outlines.retrievers import _get_project_context
+
         result = _get_project_context(owner_id=1, instance=None)
         assert result == []
 
     def test_outline_siblings_returns_empty_without_instance(self):
         """outline_siblings retriever returns empty list without instance."""
         from apps.outlines.retrievers import _get_outline_siblings
+
         result = _get_outline_siblings(owner_id=1, instance=None)
         assert result == []
 
@@ -217,11 +220,13 @@ class TestFieldprefillContract:
     def test_should_have_prefill_fields_function(self):
         """fieldprefill must export prefill_fields."""
         from fieldprefill import prefill_fields
+
         assert callable(prefill_fields)
 
     def test_should_have_as_dict_on_result(self):
         """PrefillResult must have as_dict() method."""
         from fieldprefill.result import PrefillResult
+
         r = PrefillResult(content='{"a": 1}')
         assert hasattr(r, "as_dict")
         assert r.as_dict() == {"a": 1}
@@ -229,6 +234,7 @@ class TestFieldprefillContract:
     def test_should_have_get_on_result(self):
         """PrefillResult must have get() method."""
         from fieldprefill.result import PrefillResult
+
         r = PrefillResult(content='{"key": "val"}')
         assert r.get("key") == "val"
         assert r.get("missing", "default") == "default"
@@ -236,7 +242,7 @@ class TestFieldprefillContract:
     def test_version_at_least_0_2_0(self):
         """fieldprefill must be >= 0.2.0 for multi-field support."""
         import fieldprefill
+
         parts = fieldprefill.__version__.split(".")
         major, minor = int(parts[0]), int(parts[1])
-        assert (major, minor) >= (0, 2), \
-            f"Need fieldprefill >= 0.2.0, got {fieldprefill.__version__}"
+        assert (major, minor) >= (0, 2), f"Need fieldprefill >= 0.2.0, got {fieldprefill.__version__}"

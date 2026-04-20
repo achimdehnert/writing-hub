@@ -10,13 +10,21 @@ Diagnostiziert die aktuelle aifw-DB-Konfiguration und zeigt:
 Usage:
     python manage.py check_aifw_config
 """
+
 from decouple import config as decouple_config
 from django.core.management.base import BaseCommand
 
 WRITING_HUB_CODES = [
-    "outline.generate", "outline_generate", "chapter_outline",
-    "chapter_write", "chapter_brief", "chapter_analyze",
-    "idea_extraction", "idea_generate", "character_generate", "style_check",
+    "outline.generate",
+    "outline_generate",
+    "chapter_outline",
+    "chapter_write",
+    "chapter_brief",
+    "chapter_analyze",
+    "idea_extraction",
+    "idea_generate",
+    "character_generate",
+    "style_check",
 ]
 
 
@@ -57,8 +65,7 @@ class Command(BaseCommand):
             status = "+" if (m.is_active and name_ok) else "!"
             warn = " LEER!" if not name_ok else ""
             self.stdout.write(
-                f"  {status} [{m.provider.name}] name='{m.name}'{warn} "
-                f"default={m.is_default} active={m.is_active}"
+                f"  {status} [{m.provider.name}] name='{m.name}'{warn} default={m.is_default} active={m.is_active}"
             )
 
         # ActionTypes
@@ -75,18 +82,14 @@ class Command(BaseCommand):
                 for row in rows:
                     model = row.default_model
                     if model and model.name.strip():
-                        self.stdout.write(self.style.SUCCESS(
-                            f"  + {code}: model='{model.name}' active={row.is_active}"
-                        ))
+                        self.stdout.write(
+                            self.style.SUCCESS(f"  + {code}: model='{model.name}' active={row.is_active}")
+                        )
                     else:
-                        self.stdout.write(self.style.ERROR(
-                            f"  ! {code}: KEIN MODELL (default_model=None oder leer)"
-                        ))
+                        self.stdout.write(self.style.ERROR(f"  ! {code}: KEIN MODELL (default_model=None oder leer)"))
 
         if missing:
-            self.stdout.write(self.style.WARNING(
-                "\nFix: python manage.py setup_aifw_actions --force"
-            ))
+            self.stdout.write(self.style.WARNING("\nFix: python manage.py setup_aifw_actions --force"))
         else:
             self.stdout.write(self.style.SUCCESS("\nAlle Action-Codes konfiguriert."))
 

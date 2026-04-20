@@ -8,4 +8,5 @@ class OutlinesConfig(AppConfig):
 
     def ready(self):
         from apps.outlines.retrievers import register_all
+
         register_all()

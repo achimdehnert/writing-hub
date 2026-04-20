@@ -4,6 +4,7 @@ DocumentNormalizerService — Dokument-Formate → plain text.
 Unterstützte Formate: txt, md, docx, pdf, freetext
 Portiert aus bfagent (ADR-081).
 """
+
 from __future__ import annotations
 
 import logging

@@ -1,6 +1,7 @@
 """
 Projects — Template Views (UC 1.5 Projekt-Vorlagen)
 """
+
 import logging
 
 from django.contrib import messages
@@ -22,12 +23,14 @@ class TemplateListView(LoginRequiredMixin, View):
     def get(self, request):
         templates = ProjectTemplate.objects.filter(
             is_active=True,
-        ).filter(
-            Q(owner=request.user) | Q(owner__isnull=True)
+        ).filter(Q(owner=request.user) | Q(owner__isnull=True))
+        return render(
+            request,
+            self.template_name,
+            {
+                "templates": templates,
+            },
         )
-        return render(request, self.template_name, {
-            "templates": templates,
-        })
 
 
 class TemplateApplyView(LoginRequiredMixin, View):

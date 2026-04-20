@@ -2,6 +2,7 @@
 Seed default ProjectTemplate entries (UC 1.5).
 Usage: python manage.py seed_templates
 """
+
 from django.core.management.base import BaseCommand
 
 from apps.projects.models import ProjectTemplate
@@ -82,6 +83,6 @@ class Command(BaseCommand):
             )
             if was_created:
                 created += 1
-        self.stdout.write(self.style.SUCCESS(
-            f"{created} Templates angelegt, {len(DEFAULTS) - created} existierten bereits."
-        ))
+        self.stdout.write(
+            self.style.SUCCESS(f"{created} Templates angelegt, {len(DEFAULTS) - created} existierten bereits.")
+        )

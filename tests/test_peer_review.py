@@ -6,6 +6,7 @@ Tests:
   - Models: PeerReviewSession, PeerReviewFinding
   - Views: Dashboard, Start (mocked LLM), Session Detail
 """
+
 import pytest
 from django.contrib.auth.models import User
 from django.test import Client
@@ -32,6 +33,7 @@ from apps.projects.services.peer_review_service import (
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def user(db):
     return User.objects.create_user(username="pr_testuser", password="pass123")
@@ -46,12 +48,8 @@ def auth_client(user):
 
 @pytest.fixture
 def scientific_project(db, user):
-    ct, _ = ContentTypeLookup.objects.get_or_create(
-        slug="paper", defaults={"name": "Paper", "order": 10}
-    )
-    genre, _ = GenreLookup.objects.get_or_create(
-        name="Wissenschaft", defaults={"order": 10}
-    )
+    ct, _ = ContentTypeLookup.objects.get_or_create(slug="paper", defaults={"name": "Paper", "order": 10})
+    genre, _ = GenreLookup.objects.get_or_create(name="Wissenschaft", defaults={"order": 10})
     return BookProject.objects.create(
         title="Test Scientific Paper",
         owner=user,
@@ -64,12 +62,8 @@ def scientific_project(db, user):
 
 @pytest.fixture
 def novel_project(db, user):
-    ct, _ = ContentTypeLookup.objects.get_or_create(
-        slug="roman", defaults={"name": "Roman", "order": 1}
-    )
-    genre, _ = GenreLookup.objects.get_or_create(
-        name="Fantasy", defaults={"order": 1}
-    )
+    ct, _ = ContentTypeLookup.objects.get_or_create(slug="roman", defaults={"name": "Roman", "order": 1})
+    genre, _ = GenreLookup.objects.get_or_create(name="Fantasy", defaults={"order": 1})
     return BookProject.objects.create(
         title="Test Novel",
         owner=user,
@@ -103,9 +97,9 @@ def outline_with_chapters(scientific_project):
 # Service: Eligibility
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestPeerReviewEligibility:
-
     def test_scientific_project_eligible(self, scientific_project):
         assert is_peer_review_eligible(scientific_project) is True
 
@@ -133,8 +127,8 @@ class TestPeerReviewEligibility:
 # Service: Parsing
 # ---------------------------------------------------------------------------
 
-class TestParseFunctions:
 
+class TestParseFunctions:
     def test_parse_findings_valid(self):
         raw = """Here is the analysis:
         [{"type": "weakness", "category": "validity", "severity": "major",
@@ -181,8 +175,8 @@ class TestParseFunctions:
 # Service: Agents Configuration
 # ---------------------------------------------------------------------------
 
-class TestAgentsConfiguration:
 
+class TestAgentsConfiguration:
     def test_four_agents_defined(self):
         assert len(PEER_REVIEW_AGENTS) == 4
 
@@ -200,9 +194,9 @@ class TestAgentsConfiguration:
 # Models
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestPeerReviewModels:
-
     def test_session_creation(self, scientific_project, user):
         session = PeerReviewSession.objects.create(
             project=scientific_project,
@@ -211,8 +205,7 @@ class TestPeerReviewModels:
             verdict="minor_revisions",
             chapter_count=4,
             finding_count=12,
-            scores={"originality": 7, "methodology": 8, "argumentation": 6,
-                    "sources": 5, "structure": 9},
+            scores={"originality": 7, "methodology": 8, "argumentation": 6, "sources": 5, "structure": 9},
         )
         assert str(session) == "Peer Review: Test Scientific Paper [Minor Revisions]"
         assert session.avg_score == 7.0
@@ -247,10 +240,13 @@ class TestPeerReviewModels:
     def test_finding_str(self, scientific_project, user, outline_with_chapters):
         _, chapters = outline_with_chapters
         session = PeerReviewSession.objects.create(
-            project=scientific_project, created_by=user,
+            project=scientific_project,
+            created_by=user,
         )
         finding = PeerReviewFinding.objects.create(
-            session=session, node=chapters[0], agent="sources",
+            session=session,
+            node=chapters[0],
+            agent="sources",
             feedback="Quellenarbeit ist hervorragend.",
         )
         assert "[Quellen-Prüfer]" in str(finding)
@@ -260,9 +256,9 @@ class TestPeerReviewModels:
 # Views: Dashboard
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestPeerReviewViews:
-
     def test_dashboard_200(self, auth_client, scientific_project):
         response = auth_client.get(f"/projekte/{scientific_project.pk}/peer-review/")
         assert response.status_code == 200
@@ -275,15 +271,11 @@ class TestPeerReviewViews:
         assert response.context["is_eligible"] is False
 
     def test_start_no_outline_redirects(self, auth_client, scientific_project):
-        response = auth_client.post(
-            f"/projekte/{scientific_project.pk}/peer-review/start/"
-        )
+        response = auth_client.post(f"/projekte/{scientific_project.pk}/peer-review/start/")
         assert response.status_code == 302
 
     def test_start_not_eligible_redirects(self, auth_client, novel_project):
-        response = auth_client.post(
-            f"/projekte/{novel_project.pk}/peer-review/start/"
-        )
+        response = auth_client.post(f"/projekte/{novel_project.pk}/peer-review/start/")
         assert response.status_code == 302
 
     def test_session_detail_200(self, auth_client, scientific_project, user):
@@ -293,9 +285,7 @@ class TestPeerReviewViews:
             status="done",
             verdict="minor_revisions",
         )
-        response = auth_client.get(
-            f"/projekte/{scientific_project.pk}/peer-review/{session.pk}/"
-        )
+        response = auth_client.get(f"/projekte/{scientific_project.pk}/peer-review/{session.pk}/")
         assert response.status_code == 200
         assert "session" in response.context
         assert response.context["session"].verdict == "minor_revisions"
@@ -303,23 +293,22 @@ class TestPeerReviewViews:
     def test_finding_resolve_toggle(self, auth_client, scientific_project, user, outline_with_chapters):
         _, chapters = outline_with_chapters
         session = PeerReviewSession.objects.create(
-            project=scientific_project, created_by=user,
+            project=scientific_project,
+            created_by=user,
         )
         finding = PeerReviewFinding.objects.create(
-            session=session, node=chapters[0], agent="methodology",
+            session=session,
+            node=chapters[0],
+            agent="methodology",
             feedback="Test finding",
         )
-        response = auth_client.post(
-            f"/projekte/{scientific_project.pk}/peer-review/finding/{finding.pk}/resolve/"
-        )
+        response = auth_client.post(f"/projekte/{scientific_project.pk}/peer-review/finding/{finding.pk}/resolve/")
         assert response.status_code == 200
         data = response.json()
         assert data["ok"] is True
         assert data["is_resolved"] is True
 
-        response2 = auth_client.post(
-            f"/projekte/{scientific_project.pk}/peer-review/finding/{finding.pk}/resolve/"
-        )
+        response2 = auth_client.post(f"/projekte/{scientific_project.pk}/peer-review/finding/{finding.pk}/resolve/")
         data2 = response2.json()
         assert data2["is_resolved"] is False
 
@@ -328,9 +317,9 @@ class TestPeerReviewViews:
 # Context Keys
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestPeerReviewContextKeys:
-
     def test_dashboard_context(self, auth_client, scientific_project):
         response = auth_client.get(f"/projekte/{scientific_project.pk}/peer-review/")
         ctx = response.context
@@ -341,11 +330,11 @@ class TestPeerReviewContextKeys:
 
     def test_session_context(self, auth_client, scientific_project, user):
         session = PeerReviewSession.objects.create(
-            project=scientific_project, created_by=user, status="done",
+            project=scientific_project,
+            created_by=user,
+            status="done",
         )
-        response = auth_client.get(
-            f"/projekte/{scientific_project.pk}/peer-review/{session.pk}/"
-        )
+        response = auth_client.get(f"/projekte/{scientific_project.pk}/peer-review/{session.pk}/")
         ctx = response.context
         assert "session" in ctx
         assert "findings" in ctx

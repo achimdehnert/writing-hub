@@ -4,6 +4,7 @@ Preparation Pipeline Service — flexible Vorbereitung zwischen Outline und Schr
 Content-Type-abhängige Vorbereitungsschritte (Recherche, Charaktere, Welten, Fakten)
 mit Completion-Check. Kein Schritt ist blockierend.
 """
+
 from __future__ import annotations
 
 import logging
@@ -68,10 +69,12 @@ def _check_completion(key: str, project: Any, chapters: list | None) -> bool:
 
     if key == "characters":
         from apps.worlds.models import ProjectCharacterLink
+
         return ProjectCharacterLink.objects.filter(project=project).exists()
 
     if key == "worlds":
         from apps.worlds.models import ProjectWorldLink
+
         return ProjectWorldLink.objects.filter(project=project).exists()
 
     if key == "facts":
@@ -95,11 +98,13 @@ def _get_detail(key: str, project: Any, chapters: list | None) -> str:
 
     if key == "characters":
         from apps.worlds.models import ProjectCharacterLink
+
         count = ProjectCharacterLink.objects.filter(project=project).count()
         return f"{count} Charaktere" if count else ""
 
     if key == "worlds":
         from apps.worlds.models import ProjectWorldLink
+
         count = ProjectWorldLink.objects.filter(project=project).count()
         return f"{count} Welten" if count else ""
 

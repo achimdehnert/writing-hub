@@ -200,9 +200,7 @@ def distribute_chapter_targets(
     if chapter_count == 1:
         return [project_target]
 
-    profile = CHAPTER_WEIGHT_PROFILES.get(
-        content_type, CHAPTER_WEIGHT_PROFILES["default"]
-    )
+    profile = CHAPTER_WEIGHT_PROFILES.get(content_type, CHAPTER_WEIGHT_PROFILES["default"])
     avg = project_target / chapter_count
 
     def _round(v: float) -> int:

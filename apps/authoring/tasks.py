@@ -77,13 +77,12 @@ def write_chapter_task(
 
         try:
             from apps.projects.models import BookProject, OutlineNode, ProjectCitation
+
             node = OutlineNode.objects.filter(pk=chapter_ref).first()
             project_obj = BookProject.objects.filter(pk=project_id).first()
             if node and project_obj:
                 context.research_notes = node.notes or ""
-                db_cits = ProjectCitation.objects.filter(
-                    project=project_obj, node=node
-                ).order_by("-created_at")[:20]
+                db_cits = ProjectCitation.objects.filter(project=project_obj, node=node).order_by("-created_at")[:20]
                 if db_cits.exists():
                     cit_lines = [f"## Zugeordnete Quellen ({db_cits.count()})"]
                     for c in db_cits:
@@ -157,7 +156,7 @@ def run_batch_write(self, job_id: str) -> dict:
     job.status = "running"
     job.save(update_fields=["status", "updated_at"])
 
-    node_ids = (job.node_ids or [])[:job.max_chapters]
+    node_ids = (job.node_ids or [])[: job.max_chapters]
     prev_content = ""
 
     for i, node_id in enumerate(node_ids):
@@ -169,6 +168,7 @@ def run_batch_write(self, job_id: str) -> dict:
                 ChapterContext,
                 ChapterWriterHandler,
             )
+
             context = ChapterContext.from_project(
                 project_id=str(job.project.id),
                 chapter_ref=str(node.id),
@@ -192,11 +192,13 @@ def run_batch_write(self, job_id: str) -> dict:
                 job.completed_count += 1
             else:
                 job.failed_count += 1
-                job.error_log.append({
-                    "index": i,
-                    "node_id": node_id,
-                    "error": result.get("error", "Unknown error"),
-                })
+                job.error_log.append(
+                    {
+                        "index": i,
+                        "node_id": node_id,
+                        "error": result.get("error", "Unknown error"),
+                    }
+                )
         except Exception as exc:
             log.error("batch_chapter_failed", index=i, node_id=node_id, error=str(exc))
             job.failed_count += 1
@@ -283,9 +285,11 @@ def run_essay_pipeline(self, job_id: str) -> dict:
         # ── Done ──────────────────────────────────────────────────
         job.status = "done"
         job.current_step = "done"
-        total_words = sum(n.word_count for n in project.outline_versions.filter(
-            is_active=True
-        ).first().nodes.all()) if project.outline_versions.filter(is_active=True).exists() else 0
+        total_words = (
+            sum(n.word_count for n in project.outline_versions.filter(is_active=True).first().nodes.all())
+            if project.outline_versions.filter(is_active=True).exists()
+            else 0
+        )
         job.add_log(f"Fertig! {total_words:,} Woerter geschrieben.")
         job.save(update_fields=["status", "current_step", "updated_at"])
         log.info("essay_pipeline_done", total_words=total_words)
@@ -352,29 +356,36 @@ def _pipeline_generate_outline(project, user, job):
         beats = list(fw_obj.beats.order_by("order"))
         if beats:
             words_per = (project.target_word_count or DEFAULT_PROJECT_TARGET_WORDS) // len(beats)
-            OutlineNode.objects.bulk_create([
-                OutlineNode(
-                    outline_version=version,
-                    title=b.name,
-                    description=b.description,
-                    beat_type="chapter",
-                    beat_phase=b.name,
-                    target_words=words_per,
-                    order=b.order,
-                )
-                for b in beats
-            ])
+            OutlineNode.objects.bulk_create(
+                [
+                    OutlineNode(
+                        outline_version=version,
+                        title=b.name,
+                        description=b.description,
+                        beat_type="chapter",
+                        beat_phase=b.name,
+                        target_words=words_per,
+                        order=b.order,
+                    )
+                    for b in beats
+                ]
+            )
             return list(version.nodes.order_by("order"))
 
     # Ultra-Fallback
     words_per = (project.target_word_count or DEFAULT_PROJECT_TARGET_WORDS) // 5
-    OutlineNode.objects.bulk_create([
-        OutlineNode(
-            outline_version=version, title=t,
-            beat_type="chapter", target_words=words_per, order=i + 1,
-        )
-        for i, t in enumerate(FALLBACK_CHAPTER_TITLES)
-    ])
+    OutlineNode.objects.bulk_create(
+        [
+            OutlineNode(
+                outline_version=version,
+                title=t,
+                beat_type="chapter",
+                target_words=words_per,
+                order=i + 1,
+            )
+            for i, t in enumerate(FALLBACK_CHAPTER_TITLES)
+        ]
+    )
     return list(version.nodes.order_by("order"))
 
 
@@ -447,9 +458,8 @@ def _pipeline_write_chapters(project, user, nodes, job):
             context.research_notes = node.notes or ""
             try:
                 from apps.projects.models import ProjectCitation
-                db_cits = ProjectCitation.objects.filter(
-                    project=project, node=node
-                ).order_by("-created_at")[:20]
+
+                db_cits = ProjectCitation.objects.filter(project=project, node=node).order_by("-created_at")[:20]
                 if db_cits.exists():
                     cit_lines = [f"## Zugeordnete Quellen ({db_cits.count()})"]
                     for c in db_cits:
@@ -490,6 +500,7 @@ def _pipeline_peer_review(project, user, job):
     """Run peer review on the completed essay."""
     try:
         from apps.projects.services.peer_review_service import run_peer_review
+
         session_id = run_peer_review(project, user)
         if session_id:
             job.add_log(f"Peer Review abgeschlossen (Session {session_id})")

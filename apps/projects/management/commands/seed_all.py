@@ -15,6 +15,7 @@ Usage:
     python manage.py seed_all --skip-aifw
     python manage.py seed_all --skip-fixtures
 """
+
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
 

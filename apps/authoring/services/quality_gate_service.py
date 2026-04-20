@@ -61,7 +61,9 @@ class QualityGateService:
 
         logger.info(
             "evaluate chapter_ref=%s overall=%s decision=%s",
-            chapter_ref, overall, decision.code,
+            chapter_ref,
+            overall,
+            decision.code,
         )
 
         with transaction.atomic():
@@ -76,10 +78,7 @@ class QualityGateService:
             )
 
             dimensions = {
-                d.code: d
-                for d in QualityDimension.objects.filter(
-                    code__in=dimension_scores.keys(), is_active=True
-                )
+                d.code: d for d in QualityDimension.objects.filter(code__in=dimension_scores.keys(), is_active=True)
             }
             for code, value in dimension_scores.items():
                 if code in dimensions:
@@ -96,9 +95,7 @@ class QualityGateService:
     def _compute_weighted_score(self, scores: dict[str, Decimal]) -> Decimal:
         from apps.authoring.models import QualityDimension
 
-        dimensions = QualityDimension.objects.filter(
-            code__in=scores.keys(), is_active=True
-        )
+        dimensions = QualityDimension.objects.filter(code__in=scores.keys(), is_active=True)
         total_weight = Decimal("0")
         weighted_sum = Decimal("0")
 

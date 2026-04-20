@@ -4,6 +4,7 @@ REFLEX Zirkel 2 — UI Audit: Projekt-Detailseite (UC-003)
 Tests validieren AK-1 bis AK-16 der UC-003.
 Nutzt Django Test Client (kein Playwright — schnell, DB-nah).
 """
+
 import pytest
 from django.urls import reverse
 
@@ -20,7 +21,9 @@ def _seed_project(db):
     user = User.objects.first()
     if not user:
         user = User.objects.create_superuser(
-            username="reflex-test", email="test@iil.gmbh", password="test",
+            username="reflex-test",
+            email="test@iil.gmbh",
+            password="test",
         )
 
     project = BookProject.objects.filter(owner=user).first()
@@ -38,7 +41,10 @@ def _seed_project(db):
     version = OutlineVersion.objects.filter(project=project, is_active=True).first()
     if not version:
         version = OutlineVersion.objects.create(
-            project=project, name="Test-Outline", is_active=True, source="three_act",
+            project=project,
+            name="Test-Outline",
+            is_active=True,
+            source="three_act",
         )
         for i in range(3):
             OutlineNode.objects.create(
@@ -196,10 +202,9 @@ class TestProjektDetailAudit:
         assert idx_char > 0, "Charaktere-Karte nicht in Workflow-Phasen gefunden"
         a_start = workflow_content.rfind("<a ", 0, idx_char)
         div_start = workflow_content.rfind("workflow-card", 0, idx_char)
-        card_block = workflow_content[min(a_start, div_start) if a_start >= 0 else div_start:idx_char]
+        card_block = workflow_content[min(a_start, div_start) if a_start >= 0 else div_start : idx_char]
         assert "onclick" in card_block or "href=" in card_block, (
-            "Charaktere-Workflow-Karte hat weder onclick noch href — "
-            "cursor:pointer ohne Handler = toter Klick"
+            "Charaktere-Workflow-Karte hat weder onclick noch href — cursor:pointer ohne Handler = toter Klick"
         )
 
     def test_should_have_weltenbau_onclick(self):
@@ -213,10 +218,9 @@ class TestProjektDetailAudit:
         assert idx_welt > 0, "Weltenbau-Karte nicht in Workflow-Phasen gefunden"
         a_start = workflow_content.rfind("<a ", 0, idx_welt)
         div_start = workflow_content.rfind("workflow-card", 0, idx_welt)
-        card_block = workflow_content[min(a_start, div_start) if a_start >= 0 else div_start:idx_welt]
+        card_block = workflow_content[min(a_start, div_start) if a_start >= 0 else div_start : idx_welt]
         assert "onclick" in card_block or "href=" in card_block, (
-            "Weltenbau-Workflow-Karte hat weder onclick noch href — "
-            "cursor:pointer ohne Handler = toter Klick"
+            "Weltenbau-Workflow-Karte hat weder onclick noch href — cursor:pointer ohne Handler = toter Klick"
         )
 
     # ── Robustheit: ALLE Workflow-Karten müssen onclick haben ────
@@ -224,6 +228,7 @@ class TestProjektDetailAudit:
     def test_should_have_onclick_on_all_workflow_cards(self):
         """Regression: Jede workflow-card mit cursor:pointer MUSS onclick haben."""
         import re
+
         r = self.client.get(self.url)
         content = r.content.decode()
         # Finde alle workflow-card divs
@@ -234,8 +239,7 @@ class TestProjektDetailAudit:
             card_html = match.group()
             if "cursor:pointer" in card_html:
                 assert "onclick" in card_html or "data-bs-toggle" in card_html, (
-                    f"Workflow-Karte mit cursor:pointer aber ohne onclick/modal: "
-                    f"{card_html[:120]}..."
+                    f"Workflow-Karte mit cursor:pointer aber ohne onclick/modal: {card_html[:120]}..."
                 )
 
     # ── Auth: Login required ──────────────────────────────────────
@@ -243,6 +247,7 @@ class TestProjektDetailAudit:
     def test_should_require_login(self):
         """E-1: Nicht eingeloggt → Redirect zu Login."""
         from django.test import Client
+
         anon = Client(SERVER_NAME="writing.iil.pet")
         r = anon.get(self.url)
         assert r.status_code in (302, 400)

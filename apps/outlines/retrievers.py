@@ -7,6 +7,7 @@ enrichment of outline nodes. Called from OutlinesConfig.ready().
 Pattern: same as risk-hub doc_template_retrievers.py — register retrievers
 that provide existing project content as LLM context.
 """
+
 import logging
 
 from fieldprefill.prompts import register_system_prompt
@@ -34,6 +35,7 @@ def _get_project_context(owner_id, instance=None):
         project = instance.outline_version.project
     try:
         from apps.authoring.services.project_context_service import ProjectContextService
+
         ctx_svc = ProjectContextService()
         proj_ctx = ctx_svc.get_context(str(project.pk))
         block = proj_ctx.to_prompt_block()
@@ -62,9 +64,9 @@ def _get_outline_siblings(owner_id, instance=None):
         return []
     try:
         from apps.projects.models import OutlineNode
+
         siblings = (
-            OutlineNode.objects
-            .filter(outline_version=instance.outline_version)
+            OutlineNode.objects.filter(outline_version=instance.outline_version)
             .exclude(pk=instance.pk)
             .order_by("order")
             .values_list("order", "title", "description")[:20]

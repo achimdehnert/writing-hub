@@ -4,6 +4,7 @@ Worlds App Models — writing-hub
 SSoT ist WeltenHub via iil-weltenfw REST Client.
 Lokal werden nur Referenz-Links (UUIDs) gespeichert.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -15,6 +16,7 @@ class ProjectWorldLink(models.Model):
     """
     Verknüpft ein lokales BookProject mit einer WeltenHub-Welt (UUID).
     """
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey(
         "projects.BookProject",
@@ -22,15 +24,20 @@ class ProjectWorldLink(models.Model):
         related_name="world_links",
     )
     weltenhub_world_id = models.UUIDField(
-        db_index=True, null=True, blank=True,
+        db_index=True,
+        null=True,
+        blank=True,
         help_text="UUID der Welt in WeltenHub (leer = nur lokal)",
     )
     name = models.CharField(
-        max_length=200, default="", blank=True,
+        max_length=200,
+        default="",
+        blank=True,
         verbose_name="Name (lokal)",
     )
     role = models.CharField(
-        max_length=20, default="primary",
+        max_length=20,
+        default="primary",
         choices=[("primary", "Primärwelt"), ("secondary", "Nebenwelt"), ("parallel", "Parallelwelt")],
     )
     notes = models.TextField(blank=True)
@@ -49,6 +56,7 @@ class ProjectWorldLink(models.Model):
 
     def get_world(self):
         from weltenfw.django import get_client
+
         return get_client().worlds.get(self.weltenhub_world_id)
 
 
@@ -60,31 +68,31 @@ class ProjectCharacterLink(models.Model):
     """
 
     NARRATIVE_ROLES = [
-        ("protagonist",        "Protagonist — Hauptfigur mit Arc"),
-        ("antagonist",         "Antagonist — Gegenkraft mit eigener Logik"),
-        ("deuteragonist",      "Deuteragonist — zweite Hauptfigur (B-Story)"),
-        ("mentor",             "Mentor — gibt Werkzeug/Weisheit"),
-        ("ally",               "Verbündeter — Spiegel und Unterstützung"),
-        ("love_interest",      "Liebesinteresse — verkörpert das Need"),
-        ("trickster",          "Trickster — Humor und Dekonstruktion"),
-        ("herald",             "Herold — bringt den Ruf"),
-        ("shapeshifter",       "Gestaltenwandler — zweifelt Loyalität an"),
-        ("shadow",             "Schatten — was wäre der Protagonist wenn..."),
+        ("protagonist", "Protagonist — Hauptfigur mit Arc"),
+        ("antagonist", "Antagonist — Gegenkraft mit eigener Logik"),
+        ("deuteragonist", "Deuteragonist — zweite Hauptfigur (B-Story)"),
+        ("mentor", "Mentor — gibt Werkzeug/Weisheit"),
+        ("ally", "Verbündeter — Spiegel und Unterstützung"),
+        ("love_interest", "Liebesinteresse — verkörpert das Need"),
+        ("trickster", "Trickster — Humor und Dekonstruktion"),
+        ("herald", "Herold — bringt den Ruf"),
+        ("shapeshifter", "Gestaltenwandler — zweifelt Loyalität an"),
+        ("shadow", "Schatten — was wäre der Protagonist wenn..."),
         ("threshold_guardian", "Schwellenwächter — testet Entschlossenheit"),
-        ("supporting",         "Nebenfigur — dramaturgische Funktion"),
+        ("supporting", "Nebenfigur — dramaturgische Funktion"),
     ]
 
     ANTAGONIST_TYPES = [
-        ("person",      "Person / Gruppe"),
-        ("system",      "System / Institution / Gesellschaft"),
-        ("nature",      "Natur / Umwelt / Schicksal"),
-        ("inner_self",  "Inneres Selbst — die eigene dunkle Seite"),
+        ("person", "Person / Gruppe"),
+        ("system", "System / Institution / Gesellschaft"),
+        ("nature", "Natur / Umwelt / Schicksal"),
+        ("inner_self", "Inneres Selbst — die eigene dunkle Seite"),
         ("combination", "Kombination mehrerer Typen"),
     ]
 
     CHARACTER_STATUS = [
-        ("alive",   "Lebt"),
-        ("dead",    "Tot"),
+        ("alive", "Lebt"),
+        ("dead", "Tot"),
         ("missing", "Vermisst"),
         ("unknown", "Unbekannt"),
     ]
@@ -96,24 +104,31 @@ class ProjectCharacterLink(models.Model):
         related_name="character_links",
     )
     weltenhub_character_id = models.UUIDField(
-        db_index=True, null=True, blank=True,
+        db_index=True,
+        null=True,
+        blank=True,
         help_text="UUID des Charakters in WeltenHub (leer = nur lokal)",
     )
     name = models.CharField(
-        max_length=200, default="", blank=True,
+        max_length=200,
+        default="",
+        blank=True,
         verbose_name="Name (lokal)",
         help_text="Lokaler Cache / Fallback wenn WeltenHub nicht erreichbar",
     )
     description = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Beschreibung (lokal)",
     )
     personality = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Persönlichkeit (lokal)",
     )
     backstory = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Hintergrundgeschichte (lokal)",
     )
     is_protagonist = models.BooleanField(
@@ -121,8 +136,15 @@ class ProjectCharacterLink(models.Model):
         verbose_name="Protagonist",
     )
     source = models.CharField(
-        max_length=20, default="manual", blank=True,
-        choices=[("manual", "Manuell"), ("outline", "Aus Outline"), ("llm", "Per LLM generiert"), ("weltenhub", "WeltenHub")],
+        max_length=20,
+        default="manual",
+        blank=True,
+        choices=[
+            ("manual", "Manuell"),
+            ("outline", "Aus Outline"),
+            ("llm", "Per LLM generiert"),
+            ("weltenhub", "WeltenHub"),
+        ],
         verbose_name="Quelle",
     )
     project_arc = models.TextField(blank=True, help_text="Projekt-spezifischer Charakterbogen (override)")
@@ -148,62 +170,74 @@ class ProjectCharacterLink(models.Model):
 
     # Antagonisten-Felder (ADR-157)
     antagonist_type = models.CharField(
-        max_length=20, choices=ANTAGONIST_TYPES,
-        blank=True, default="",
+        max_length=20,
+        choices=ANTAGONIST_TYPES,
+        blank=True,
+        default="",
         verbose_name="Antagonisten-Typ",
     )
     antagonist_logic = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Antagonisten-Logik",
         help_text="Warum glaubt der Antagonist, das Richtige zu tun?",
     )
     mirror_to_protagonist = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Spiegel zum Protagonisten",
         help_text="Was zeigt diese Figur, was der Protagonist sein KÖNNTE?",
     )
     shared_trait_with_protagonist = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Gemeinsamkeit mit Protagonisten",
     )
     information_advantage = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Informationsvorsprung",
         help_text="Nur für externe Antagonisten (person, system, nature).",
     )
 
     # Stimme / Sprechmuster (Speed-Matters-Erweiterung)
     voice_pattern = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Stimme / Sprechmuster",
         help_text="Wie redet die Figur? Kurzsätze, Füllwörter, Dialekt, Schweigen als Mittel.",
     )
 
     # Geheimnis (strukturiert: Was, vor wem, warum)
     secret_what = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Geheimnis — Was",
         help_text="Was verbirgt die Figur?",
     )
     secret_from_whom = models.CharField(
         max_length=200,
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Geheimnis — Vor wem",
     )
     secret_why = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Geheimnis — Warum",
     )
 
     # Plot-Status
     character_status = models.CharField(
-        max_length=20, choices=CHARACTER_STATUS,
+        max_length=20,
+        choices=CHARACTER_STATUS,
         default="alive",
         verbose_name="Status im Plot",
     )
     first_appearance = models.CharField(
         max_length=100,
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Erster Auftritt",
         help_text="Kapitel oder Szene, in der die Figur erstmals erscheint.",
     )
@@ -223,11 +257,13 @@ class ProjectCharacterLink(models.Model):
 
     def get_character(self):
         from weltenfw.django import get_client
+
         return get_client().characters.get(self.weltenhub_character_id)
 
     @property
     def carries_b_story(self) -> bool:
         from projects.models import SubplotArc
+
         return SubplotArc.objects.filter(
             project=self.project,
             story_label="b_story",
@@ -244,16 +280,16 @@ class CharacterRelationship(models.Model):
     """
 
     RELATIONSHIP_TYPES = [
-        ("knows",       "Kennt"),
-        ("friend",      "Freundschaft"),
-        ("love",        "Liebesbeziehung"),
-        ("family",      "Familie / Verwandtschaft"),
-        ("rival",       "Rivalität"),
-        ("enemy",       "Feindschaft"),
-        ("mentor",      "Mentor → Schüler"),
-        ("protects",    "Beschützt"),
-        ("distrusts",   "Misstraut"),
-        ("depends_on",  "Abhängig von"),
+        ("knows", "Kennt"),
+        ("friend", "Freundschaft"),
+        ("love", "Liebesbeziehung"),
+        ("family", "Familie / Verwandtschaft"),
+        ("rival", "Rivalität"),
+        ("enemy", "Feindschaft"),
+        ("mentor", "Mentor → Schüler"),
+        ("protects", "Beschützt"),
+        ("distrusts", "Misstraut"),
+        ("depends_on", "Abhängig von"),
         ("betrayed_by", "Verraten von"),
         ("secret_from", "Verbirgt Geheimnis vor"),
     ]
@@ -282,13 +318,15 @@ class CharacterRelationship(models.Model):
         verbose_name="Beziehungstyp",
     )
     description = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Beschreibung",
         help_text="Freitext: Was macht diese Beziehung besonders?",
     )
     since_chapter = models.CharField(
         max_length=100,
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Seit Kapitel/Szene",
         help_text="Ab welchem Punkt existiert diese Beziehung?",
     )
@@ -321,6 +359,7 @@ class ProjectLocationLink(models.Model):
     Verknüpft ein lokales BookProject mit einem WeltenHub-Ort (UUID).
     SSoT: WeltenHub. Hier nur UUID-Referenz + projektspezifische Notizen.
     """
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey(
         "projects.BookProject",
@@ -328,28 +367,42 @@ class ProjectLocationLink(models.Model):
         related_name="location_links",
     )
     weltenhub_location_id = models.UUIDField(
-        db_index=True, null=True, blank=True,
+        db_index=True,
+        null=True,
+        blank=True,
         help_text="UUID des Ortes in WeltenHub (leer = nur lokal)",
     )
     name = models.CharField(
-        max_length=200, default="", blank=True,
+        max_length=200,
+        default="",
+        blank=True,
         verbose_name="Name (lokal)",
     )
     description = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Beschreibung (lokal)",
     )
     atmosphere = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Atmosphäre",
     )
     significance = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Bedeutung für die Geschichte",
     )
     source = models.CharField(
-        max_length=20, default="manual", blank=True,
-        choices=[("manual", "Manuell"), ("outline", "Aus Outline"), ("llm", "Per LLM generiert"), ("weltenhub", "WeltenHub")],
+        max_length=20,
+        default="manual",
+        blank=True,
+        choices=[
+            ("manual", "Manuell"),
+            ("outline", "Aus Outline"),
+            ("llm", "Per LLM generiert"),
+            ("weltenhub", "WeltenHub"),
+        ],
         verbose_name="Quelle",
     )
     notes = models.TextField(blank=True, help_text="Projekt-spezifische Notizen zum Ort")
@@ -367,6 +420,7 @@ class ProjectLocationLink(models.Model):
 
     def get_location(self):
         from weltenfw.django import get_client
+
         return get_client().locations.get(self.weltenhub_location_id)
 
 
@@ -375,6 +429,7 @@ class ProjectSceneLink(models.Model):
     Verknüpft ein lokales BookProject mit einer WeltenHub-Szene (UUID).
     SSoT: WeltenHub. Hier nur UUID-Referenz + lokaler Kapitel-Bezug.
     """
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey(
         "projects.BookProject",
@@ -388,7 +443,8 @@ class ProjectSceneLink(models.Model):
     outline_node = models.ForeignKey(
         "projects.OutlineNode",
         on_delete=models.SET_NULL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         related_name="scene_links",
         help_text="Lokales Kapitel das dieser Szene entspricht",
     )
@@ -407,4 +463,5 @@ class ProjectSceneLink(models.Model):
 
     def get_scene(self):
         from weltenfw.django import get_client
+
         return get_client().scenes.get(self.weltenhub_scene_id)

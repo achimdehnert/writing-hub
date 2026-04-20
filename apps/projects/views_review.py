@@ -1,6 +1,7 @@
 """
 Review & Redaktion — HTML Views (ADR-083)
 """
+
 import logging
 
 from django.contrib import messages
@@ -29,9 +30,7 @@ def _get_project(user, pk):
 
 
 def _get_chapters(project):
-    version = OutlineVersion.objects.filter(
-        project=project, is_active=True
-    ).order_by("-created_at").first()
+    version = OutlineVersion.objects.filter(project=project, is_active=True).order_by("-created_at").first()
     if not version:
         return []
     return list(version.nodes.order_by("order"))
@@ -48,11 +47,10 @@ class ProjectReviewView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         from .models import ChapterReview
+
         project = self.object
         chapters = _get_chapters(project)
-        reviews = ChapterReview.objects.filter(
-            node__outline_version__project=project
-        ).select_related("node")
+        reviews = ChapterReview.objects.filter(node__outline_version__project=project).select_related("node")
         open_reviews = reviews.filter(is_resolved=False).count()
         done_reviews = reviews.filter(is_resolved=True).count()
         review_map = {}
@@ -79,11 +77,9 @@ class ProjectReviewChapterView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         from .models import ChapterReview
+
         node_pk = self.kwargs["node_pk"]
-        node = get_object_or_404(
-            OutlineNode, pk=node_pk,
-            outline_version__project=self.object
-        )
+        node = get_object_or_404(OutlineNode, pk=node_pk, outline_version__project=self.object)
         reviews = ChapterReview.objects.filter(node=node).order_by("-created_at")
         ctx["node"] = node
         ctx["reviews"] = reviews
@@ -95,10 +91,8 @@ class ProjectReviewChapterView(LoginRequiredMixin, DetailView):
 class ChapterReviewAddView(LoginRequiredMixin, View):
     def post(self, request, pk, node_pk):
         from .models import ChapterReview
-        node = get_object_or_404(
-            OutlineNode, pk=node_pk,
-            outline_version__project__owner=request.user
-        )
+
+        node = get_object_or_404(OutlineNode, pk=node_pk, outline_version__project__owner=request.user)
         feedback = request.POST.get("feedback", "").strip()
         if not feedback:
             messages.warning(request, "Bitte Feedback eingeben.")
@@ -118,10 +112,8 @@ class ChapterReviewAddView(LoginRequiredMixin, View):
 class ChapterReviewResolveView(LoginRequiredMixin, View):
     def post(self, request, pk, review_pk):
         from .models import ChapterReview
-        review = get_object_or_404(
-            ChapterReview, pk=review_pk,
-            node__outline_version__project__owner=request.user
-        )
+
+        review = get_object_or_404(ChapterReview, pk=review_pk, node__outline_version__project__owner=request.user)
         review.is_resolved = not review.is_resolved
         review.save(update_fields=["is_resolved"])
         return JsonResponse({"ok": True, "is_resolved": review.is_resolved})
@@ -134,10 +126,7 @@ class ChapterAIReviewView(LoginRequiredMixin, View):
         from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
         from .models import ChapterReview
 
-        node = get_object_or_404(
-            OutlineNode, pk=node_pk,
-            outline_version__project__owner=request.user
-        )
+        node = get_object_or_404(OutlineNode, pk=node_pk, outline_version__project__owner=request.user)
         agent_key = request.POST.get("agent", "lector")
         agent = next((a for a in AI_REVIEW_AGENTS if a["key"] == agent_key), AI_REVIEW_AGENTS[2])
 
@@ -149,6 +138,7 @@ class ChapterAIReviewView(LoginRequiredMixin, View):
         profile = FORMAT_PROFILES.get(project.content_type, {})
 
         from apps.core.prompt_utils import render_prompt
+
         template_map = {
             "story_editor": "projects/review_story_editor",
             "lector": "projects/review_lector",
@@ -216,12 +206,14 @@ class ChapterAIReviewView(LoginRequiredMixin, View):
 
         is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
         if is_ajax:
-            return JsonResponse({
-                "ok": not error_msg,
-                "created": created,
-                "chapter": node.title,
-                "error": error_msg if error_msg else "",
-            })
+            return JsonResponse(
+                {
+                    "ok": not error_msg,
+                    "created": created,
+                    "chapter": node.title,
+                    "error": error_msg if error_msg else "",
+                }
+            )
 
         return redirect("projects:review_chapter", pk=pk, node_pk=node_pk)
 
@@ -237,11 +229,10 @@ class ProjectEditingView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         from .models import ChapterEditing
+
         project = self.object
         chapters = _get_chapters(project)
-        editings = ChapterEditing.objects.filter(
-            node__outline_version__project=project
-        ).select_related("node")
+        editings = ChapterEditing.objects.filter(node__outline_version__project=project).select_related("node")
         open_suggestions = editings.filter(is_accepted__isnull=True).count()
         editing_map = {}
         for e in editings:
@@ -265,11 +256,9 @@ class ChapterEditingView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         from .models import ChapterEditing
+
         node_pk = self.kwargs["node_pk"]
-        node = get_object_or_404(
-            OutlineNode, pk=node_pk,
-            outline_version__project=self.object
-        )
+        node = get_object_or_404(OutlineNode, pk=node_pk, outline_version__project=self.object)
         editings = ChapterEditing.objects.filter(node=node).order_by("-created_at")
         ctx["node"] = node
         ctx["editings"] = editings
@@ -290,10 +279,7 @@ class ChapterAIEditingView(LoginRequiredMixin, View):
         from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
         from .models import ChapterEditing
 
-        node = get_object_or_404(
-            OutlineNode, pk=node_pk,
-            outline_version__project__owner=request.user
-        )
+        node = get_object_or_404(OutlineNode, pk=node_pk, outline_version__project__owner=request.user)
         is_ajax = self._is_ajax(request)
 
         if not node.content or not node.content.strip():
@@ -368,12 +354,14 @@ class ChapterAIEditingView(LoginRequiredMixin, View):
             messages.error(request, error_msg)
 
         if is_ajax:
-            return JsonResponse({
-                "ok": not error_msg,
-                "created": created,
-                "chapter": node.title,
-                "error": error_msg,
-            })
+            return JsonResponse(
+                {
+                    "ok": not error_msg,
+                    "created": created,
+                    "chapter": node.title,
+                    "error": error_msg,
+                }
+            )
 
         return redirect("projects:editing_chapter", pk=pk, node_pk=node_pk)
 
@@ -383,10 +371,8 @@ class ChapterEditingSuggestionView(LoginRequiredMixin, View):
 
     def post(self, request, pk, editing_pk):
         from .models import ChapterEditing
-        editing = get_object_or_404(
-            ChapterEditing, pk=editing_pk,
-            node__outline_version__project__owner=request.user
-        )
+
+        editing = get_object_or_404(ChapterEditing, pk=editing_pk, node__outline_version__project__owner=request.user)
         action = request.POST.get("action")
         if action == "accept":
             editing.is_accepted = True

@@ -14,10 +14,10 @@ from django.db import models
 
 
 class JobStatus(models.TextChoices):
-    PENDING  = "pending",  "Ausstehend"
-    RUNNING  = "running",  "Läuft"
-    DONE     = "done",     "Fertig"
-    FAILED   = "failed",   "Fehlgeschlagen"
+    PENDING = "pending", "Ausstehend"
+    RUNNING = "running", "Läuft"
+    DONE = "done", "Fertig"
+    FAILED = "failed", "Fehlgeschlagen"
     CANCELED = "canceled", "Abgebrochen"
 
 
@@ -96,7 +96,8 @@ class BatchWriteJob(models.Model):
     requested_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         related_name="batch_write_jobs",
     )
     node_ids = models.JSONField(
@@ -107,7 +108,9 @@ class BatchWriteJob(models.Model):
         help_text="Sicherheits-Limit pro Batch-Job",
     )
     status = models.CharField(
-        max_length=10, choices=JobStatus.choices, default=JobStatus.PENDING,
+        max_length=10,
+        choices=JobStatus.choices,
+        default=JobStatus.PENDING,
         db_index=True,
     )
     current_index = models.PositiveSmallIntegerField(default=0)
@@ -148,13 +151,13 @@ class EssayPipelineJob(models.Model):
     """
 
     class PipelineStep(models.TextChoices):
-        CREATED     = "created",     "Projekt erstellt"
-        OUTLINE     = "outline",     "Outline wird generiert"
-        RESEARCH    = "research",    "Literaturrecherche"
-        WRITING     = "writing",     "Kapitel werden geschrieben"
-        REVIEW      = "review",      "Peer Review"
-        DONE        = "done",        "Fertig"
-        FAILED      = "failed",      "Fehlgeschlagen"
+        CREATED = "created", "Projekt erstellt"
+        OUTLINE = "outline", "Outline wird generiert"
+        RESEARCH = "research", "Literaturrecherche"
+        WRITING = "writing", "Kapitel werden geschrieben"
+        REVIEW = "review", "Peer Review"
+        DONE = "done", "Fertig"
+        FAILED = "failed", "Fehlgeschlagen"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey(
@@ -165,15 +168,20 @@ class EssayPipelineJob(models.Model):
     requested_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         related_name="essay_pipeline_jobs",
     )
     status = models.CharField(
-        max_length=10, choices=JobStatus.choices, default=JobStatus.PENDING,
+        max_length=10,
+        choices=JobStatus.choices,
+        default=JobStatus.PENDING,
         db_index=True,
     )
     current_step = models.CharField(
-        max_length=20, choices=PipelineStep.choices, default=PipelineStep.CREATED,
+        max_length=20,
+        choices=PipelineStep.choices,
+        default=PipelineStep.CREATED,
     )
     framework = models.CharField(max_length=50, default=DEFAULT_FRAMEWORK)
     do_research = models.BooleanField(default=False)

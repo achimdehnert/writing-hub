@@ -9,6 +9,7 @@ Orchestriert 4 spezialisierte Review-Agenten:
 
 Erzeugt anschließend ein Gesamtgutachten (Editor-in-Chief).
 """
+
 from __future__ import annotations
 
 import logging
@@ -59,11 +60,7 @@ def run_peer_review(
     if not active_agents:
         active_agents = PEER_REVIEW_AGENTS
 
-    version = (
-        OutlineVersion.objects.filter(project=project, is_active=True)
-        .order_by("-created_at")
-        .first()
-    )
+    version = OutlineVersion.objects.filter(project=project, is_active=True).order_by("-created_at").first()
     if not version:
         logger.warning("No active outline for project %s", project.pk)
         return ""
@@ -88,11 +85,19 @@ def run_peer_review(
         session.status = "done"
         session.finding_count = total_findings
         session.finished_at = timezone.now()
-        session.save(update_fields=[
-            "status", "finding_count", "finished_at",
-            "verdict", "summary", "strengths", "main_issues",
-            "recommendations", "scores",
-        ])
+        session.save(
+            update_fields=[
+                "status",
+                "finding_count",
+                "finished_at",
+                "verdict",
+                "summary",
+                "strengths",
+                "main_issues",
+                "recommendations",
+                "scores",
+            ]
+        )
     except Exception as exc:
         logger.exception("PeerReview error for project %s: %s", project.pk, exc)
         session.status = "error"
@@ -158,12 +163,16 @@ def _run_agents(session, project, chapters, agents) -> int:
             except LLMRoutingError as exc:
                 logger.warning(
                     "PeerReview LLM error agent=%s node=%s: %s",
-                    agent["key"], node.pk, exc,
+                    agent["key"],
+                    node.pk,
+                    exc,
                 )
             except Exception as exc:
                 logger.warning(
                     "PeerReview agent=%s node=%s error: %s",
-                    agent["key"], node.pk, exc,
+                    agent["key"],
+                    node.pk,
+                    exc,
                 )
 
     return total
@@ -183,18 +192,14 @@ def _generate_verdict(session, project, chapters, total_findings: int):
         if ch_findings:
             summary_parts = [f"### {ch.title}"]
             for f in ch_findings[:5]:
-                summary_parts.append(
-                    f"- [{f.get_agent_display()}] ({f.severity}) {f.feedback[:150]}"
-                )
+                summary_parts.append(f"- [{f.get_agent_display()}] ({f.severity}) {f.feedback[:150]}")
             section_summaries.append("\n".join(summary_parts))
 
     finding_summary_parts = []
     for sev in ("critical", "major", "minor"):
         sev_findings = [f for f in findings if f.severity == sev]
         if sev_findings:
-            finding_summary_parts.append(
-                f"**{sev.upper()}**: {len(sev_findings)} Findings"
-            )
+            finding_summary_parts.append(f"**{sev.upper()}**: {len(sev_findings)} Findings")
             for f in sev_findings[:3]:
                 finding_summary_parts.append(f"  - {f.feedback[:100]}")
 
@@ -240,5 +245,3 @@ def _parse_findings(raw: str) -> list[dict[str, Any]]:
 def _parse_verdict(raw: str) -> dict[str, Any] | None:
     """Parse JSON verdict object from LLM response."""
     return extract_json(raw)
-
-

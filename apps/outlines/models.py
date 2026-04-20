@@ -14,6 +14,7 @@ Content-Type Groups:
   academic   → academic, scientific
   nonfiction → nonfiction, essay
 """
+
 from django.conf import settings
 from django.db import models
 
@@ -105,10 +106,7 @@ class OutlinePromptTemplate(models.Model):
 
     def __str__(self):
         active = " ✓" if self.is_active else ""
-        return (
-            f"{self.get_content_type_group_display()} / "
-            f"{self.get_template_key_display()} v{self.version}{active}"
-        )
+        return f"{self.get_content_type_group_display()} / {self.get_template_key_display()} v{self.version}{active}"
 
     def save(self, *args, **kwargs):
         if not self.version:
@@ -205,7 +203,4 @@ class OutlineQualityRating(models.Model):
         verbose_name_plural = "Outline Qualitätsbewertungen"
 
     def __str__(self):
-        return (
-            f"{self.outline_node.title} — "
-            f"{self.get_rating_display()} ({self.created_at:%Y-%m-%d})"
-        )
+        return f"{self.outline_node.title} — {self.get_rating_display()} ({self.created_at:%Y-%m-%d})"

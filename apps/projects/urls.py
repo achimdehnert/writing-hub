@@ -42,31 +42,59 @@ urlpatterns = [
     path("<uuid:pk>/manuscript/", views_manuscript.ProjectManuscriptView.as_view(), name="manuscript"),
     # Publishing
     path("<uuid:pk>/publishing/", views_publishing.ProjectPublishingView.as_view(), name="publishing"),
-    path("<uuid:pk>/publishing/keywords-ai/", views_publishing.PublishingKeywordsAIView.as_view(), name="publishing_keywords_ai"),
+    path(
+        "<uuid:pk>/publishing/keywords-ai/",
+        views_publishing.PublishingKeywordsAIView.as_view(),
+        name="publishing_keywords_ai",
+    ),
     # Export
     path("<uuid:pk>/export/", views_export.ProjectExportView.as_view(), name="export"),
     # Versionen / Snapshots
     path("<uuid:pk>/versions/", views_versions.ProjectVersionsView.as_view(), name="versions"),
     path("<uuid:pk>/versions/create/", views_versions.SnapshotCreateView.as_view(), name="snapshot_create"),
     path("<uuid:pk>/versions/<uuid:snapshot_pk>/", views_versions.SnapshotDetailView.as_view(), name="snapshot_detail"),
-    path("<uuid:pk>/versions/<uuid:snapshot_pk>/delete/", views_versions.SnapshotDeleteView.as_view(), name="snapshot_delete"),
+    path(
+        "<uuid:pk>/versions/<uuid:snapshot_pk>/delete/",
+        views_versions.SnapshotDeleteView.as_view(),
+        name="snapshot_delete",
+    ),
     # Review
     path("<uuid:pk>/review/", views_review.ProjectReviewView.as_view(), name="review"),
     path("<uuid:pk>/review/<uuid:node_pk>/", views_review.ProjectReviewChapterView.as_view(), name="review_chapter"),
     path("<uuid:pk>/review/<uuid:node_pk>/add/", views_review.ChapterReviewAddView.as_view(), name="review_add"),
     path("<uuid:pk>/review/<uuid:node_pk>/ai/", views_review.ChapterAIReviewView.as_view(), name="review_ai"),
-    path("<uuid:pk>/review/resolve/<uuid:review_pk>/", views_review.ChapterReviewResolveView.as_view(), name="review_resolve"),
+    path(
+        "<uuid:pk>/review/resolve/<uuid:review_pk>/",
+        views_review.ChapterReviewResolveView.as_view(),
+        name="review_resolve",
+    ),
     # Redaktion / Editing
     path("<uuid:pk>/editing/", views_review.ProjectEditingView.as_view(), name="editing"),
     path("<uuid:pk>/editing/<uuid:node_pk>/", views_review.ChapterEditingView.as_view(), name="editing_chapter"),
     path("<uuid:pk>/editing/<uuid:node_pk>/ai/", views_review.ChapterAIEditingView.as_view(), name="editing_ai"),
-    path("<uuid:pk>/editing/suggest/<uuid:editing_pk>/", views_review.ChapterEditingSuggestionView.as_view(), name="editing_suggest"),
+    path(
+        "<uuid:pk>/editing/suggest/<uuid:editing_pk>/",
+        views_review.ChapterEditingSuggestionView.as_view(),
+        name="editing_suggest",
+    ),
     # Lektorat
     path("<uuid:pk>/lektorat/", views_lektorat.ProjectLektoratView.as_view(), name="lektorat"),
     path("<uuid:pk>/lektorat/start/", views_lektorat.LektoratSessionStartView.as_view(), name="lektorat_start"),
-    path("<uuid:pk>/lektorat/<uuid:session_pk>/", views_lektorat.LektoratSessionDetailView.as_view(), name="lektorat_session"),
-    path("<uuid:pk>/lektorat/issue/<uuid:issue_pk>/resolve/", views_lektorat.LektoratIssueResolveView.as_view(), name="lektorat_resolve"),
-    path("<uuid:pk>/lektorat/issue/<uuid:issue_pk>/fix/", views_lektorat.LektoratIssueFixView.as_view(), name="lektorat_fix"),
+    path(
+        "<uuid:pk>/lektorat/<uuid:session_pk>/",
+        views_lektorat.LektoratSessionDetailView.as_view(),
+        name="lektorat_session",
+    ),
+    path(
+        "<uuid:pk>/lektorat/issue/<uuid:issue_pk>/resolve/",
+        views_lektorat.LektoratIssueResolveView.as_view(),
+        name="lektorat_resolve",
+    ),
+    path(
+        "<uuid:pk>/lektorat/issue/<uuid:issue_pk>/fix/",
+        views_lektorat.LektoratIssueFixView.as_view(),
+        name="lektorat_fix",
+    ),
     # Health-Score (ADR-157)
     path("<uuid:pk>/health/", views_health.ProjectHealthView.as_view(), name="health"),
     path("<uuid:pk>/health/partial/", views_health.ProjectHealthPartialView.as_view(), name="health_partial"),
@@ -78,49 +106,103 @@ urlpatterns = [
     # Wissens-Infrastruktur: Recherche + Beta-Leser (ADR-160)
     path("<uuid:pk>/research/", views_knowledge.ResearchDashboardView.as_view(), name="research_dashboard"),
     path("<uuid:pk>/beta/", views_knowledge.BetaReaderDashboardView.as_view(), name="beta_dashboard"),
-    path("<uuid:pk>/beta/<uuid:session_pk>/", views_knowledge.BetaReaderSessionDetailView.as_view(), name="beta_session"),
+    path(
+        "<uuid:pk>/beta/<uuid:session_pk>/", views_knowledge.BetaReaderSessionDetailView.as_view(), name="beta_session"
+    ),
     # Pitch-Paket / Publikationsvorbereitung (ADR-159)
     path("<uuid:pk>/pitch/", views_publishing.PitchDashboardView.as_view(), name="pitch_dashboard"),
-    path("<uuid:pk>/pitch/<str:pitch_type>/generate/", views_publishing.GeneratePitchView.as_view(), name="pitch_generate"),
+    path(
+        "<uuid:pk>/pitch/<str:pitch_type>/generate/",
+        views_publishing.GeneratePitchView.as_view(),
+        name="pitch_generate",
+    ),
     # Drama-Dashboard (ADR-154)
     path("<uuid:pk>/drama/", views_html.DramaDashboardView.as_view(), name="drama_dashboard"),
     path("node/<uuid:node_pk>/drama-update/", views_html.DramaNodeUpdateView.as_view(), name="drama_node_update"),
-    path("<uuid:pk>/drama/turning-point/add/", views_html.DramaTurningPointAddView.as_view(), name="drama_turning_point_add"),
+    path(
+        "<uuid:pk>/drama/turning-point/add/",
+        views_html.DramaTurningPointAddView.as_view(),
+        name="drama_turning_point_add",
+    ),
     # Zitations-Management (academic/scientific projects)
     path("<uuid:pk>/citations/", views_citations.CitationDashboardView.as_view(), name="citations"),
     path("<uuid:pk>/citations/doi/", views_citations.CitationDOILookupAjaxView.as_view(), name="citation_doi"),
     path("<uuid:pk>/citations/isbn/", views_citations.CitationISBNLookupAjaxView.as_view(), name="citation_isbn"),
-    path("<uuid:pk>/citations/research-queries/", views_citations.ResearchQueriesAjaxView.as_view(), name="citation_research_queries"),
+    path(
+        "<uuid:pk>/citations/research-queries/",
+        views_citations.ResearchQueriesAjaxView.as_view(),
+        name="citation_research_queries",
+    ),
     path("<uuid:pk>/citations/search/", views_citations.LiteraturrechercheAjaxView.as_view(), name="citation_search"),
-    path("<uuid:pk>/citations/summarize/", views_research_summary.ResearchSummarizeAjaxView.as_view(), name="citation_summarize"),
+    path(
+        "<uuid:pk>/citations/summarize/",
+        views_research_summary.ResearchSummarizeAjaxView.as_view(),
+        name="citation_summarize",
+    ),
     path("<uuid:pk>/outline-research/", views_research_summary.OutlineResearchView.as_view(), name="outline_research"),
-    path("<uuid:pk>/outline-research/node/", views_research_summary.OutlineNodeResearchAjaxView.as_view(), name="outline_node_research"),
+    path(
+        "<uuid:pk>/outline-research/node/",
+        views_research_summary.OutlineNodeResearchAjaxView.as_view(),
+        name="outline_node_research",
+    ),
     # Peer Review (wissenschaftliche Projekte)
     path("<uuid:pk>/peer-review/", views_peer_review.PeerReviewDashboardView.as_view(), name="peer_review"),
     path("<uuid:pk>/peer-review/start/", views_peer_review.PeerReviewStartView.as_view(), name="peer_review_start"),
-    path("<uuid:pk>/peer-review/<uuid:session_pk>/", views_peer_review.PeerReviewSessionView.as_view(), name="peer_review_session"),
-    path("<uuid:pk>/peer-review/finding/<uuid:finding_pk>/resolve/", views_peer_review.PeerReviewFindingResolveView.as_view(), name="peer_review_resolve"),
+    path(
+        "<uuid:pk>/peer-review/<uuid:session_pk>/",
+        views_peer_review.PeerReviewSessionView.as_view(),
+        name="peer_review_session",
+    ),
+    path(
+        "<uuid:pk>/peer-review/finding/<uuid:finding_pk>/resolve/",
+        views_peer_review.PeerReviewFindingResolveView.as_view(),
+        name="peer_review_resolve",
+    ),
     # Verlagsprofil (UC 6.9)
     path("publisher/", views_publisher.PublisherProfileView.as_view(), name="publisher_profile"),
     # Meilensteine (UC 6.3)
     path("<uuid:pk>/milestones/", views_milestones.ProjectMilestonesView.as_view(), name="milestones"),
-    path("<uuid:pk>/milestones/<uuid:milestone_pk>/toggle/", views_milestones.MilestoneToggleView.as_view(), name="milestone_toggle"),
-    path("<uuid:pk>/milestones/<uuid:milestone_pk>/delete/", views_milestones.MilestoneDeleteView.as_view(), name="milestone_delete"),
+    path(
+        "<uuid:pk>/milestones/<uuid:milestone_pk>/toggle/",
+        views_milestones.MilestoneToggleView.as_view(),
+        name="milestone_toggle",
+    ),
+    path(
+        "<uuid:pk>/milestones/<uuid:milestone_pk>/delete/",
+        views_milestones.MilestoneDeleteView.as_view(),
+        name="milestone_delete",
+    ),
     # Workflow / Rollenwechsel / Checkliste (UC 6.1a, 6.4)
     path("<uuid:pk>/workflow/", views_workflow.ProjectWorkflowView.as_view(), name="workflow"),
-    path("<uuid:pk>/workflow/checklist/<uuid:item_pk>/toggle/", views_workflow.ChecklistToggleView.as_view(), name="checklist_toggle"),
+    path(
+        "<uuid:pk>/workflow/checklist/<uuid:item_pk>/toggle/",
+        views_workflow.ChecklistToggleView.as_view(),
+        name="checklist_toggle",
+    ),
     path("<uuid:pk>/workflow/checklist/add/", views_workflow.ChecklistAddView.as_view(), name="checklist_add"),
     # Kapitel-Notizen (UC 6.5)
     path("<uuid:pk>/note/<uuid:node_pk>/add/", views_workflow.ChapterNoteAddView.as_view(), name="chapter_note_add"),
-    path("<uuid:pk>/note/<uuid:note_pk>/resolve/", views_workflow.ChapterNoteResolveView.as_view(), name="chapter_note_resolve"),
+    path(
+        "<uuid:pk>/note/<uuid:note_pk>/resolve/",
+        views_workflow.ChapterNoteResolveView.as_view(),
+        name="chapter_note_resolve",
+    ),
     # Projekt-Vorlagen (UC 1.5)
     path("templates/", views_templates.TemplateListView.as_view(), name="template_list"),
     path("templates/<uuid:template_pk>/apply/", views_templates.TemplateApplyView.as_view(), name="template_apply"),
     # Quick Project (autonome Essay-Pipeline)
     path("quick/", views_quick_project.QuickProjectView.as_view(), name="quick_project"),
     path("quick/start/", views_quick_project.QuickProjectStartView.as_view(), name="quick_project_start"),
-    path("quick/<uuid:pk>/<uuid:job_id>/", views_quick_project.QuickProjectProgressView.as_view(), name="quick_project_progress"),
-    path("quick/<uuid:pk>/<uuid:job_id>/status/", views_quick_project.QuickProjectStatusView.as_view(), name="quick_project_status"),
+    path(
+        "quick/<uuid:pk>/<uuid:job_id>/",
+        views_quick_project.QuickProjectProgressView.as_view(),
+        name="quick_project_progress",
+    ),
+    path(
+        "quick/<uuid:pk>/<uuid:job_id>/status/",
+        views_quick_project.QuickProjectStatusView.as_view(),
+        name="quick_project_status",
+    ),
     # AJAX Helpers
     path("api/genres/", views_html.GenresByContentTypeView.as_view(), name="api_genres_by_ct"),
     # REST API

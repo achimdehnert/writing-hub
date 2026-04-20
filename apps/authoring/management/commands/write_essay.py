@@ -138,11 +138,7 @@ class Command(BaseCommand):
         max_iterations = options["max_iterations"]
         dry_run = options["dry_run"]
 
-        self.stdout.write(self.style.MIGRATE_HEADING(
-            f"\n{'=' * 60}\n"
-            f"  AUTONOME ESSAY-PIPELINE\n"
-            f"{'=' * 60}"
-        ))
+        self.stdout.write(self.style.MIGRATE_HEADING(f"\n{'=' * 60}\n  AUTONOME ESSAY-PIPELINE\n{'=' * 60}"))
         self.stdout.write(f"  Titel:       {title}")
         self.stdout.write(f"  Thema:       {topic or '(aus Titel abgeleitet)'}")
         self.stdout.write(f"  Framework:   {framework}")
@@ -169,18 +165,14 @@ class Command(BaseCommand):
         # ── Step 1: Projekt anlegen ───────────────────────────────
         self.stdout.write(self.style.MIGRATE_HEADING("\n[1/6] Projekt anlegen..."))
         project = self._create_project(user, title, topic, framework, target_words)
-        self.stdout.write(self.style.SUCCESS(
-            f"  ✓ Projekt erstellt: {project.pk}"
-        ))
+        self.stdout.write(self.style.SUCCESS(f"  ✓ Projekt erstellt: {project.pk}"))
 
         # ── Step 2: Outline generieren ────────────────────────────
         self.stdout.write(self.style.MIGRATE_HEADING("\n[2/6] Outline generieren..."))
         outline, nodes = self._generate_outline(project, user, framework, chapter_count)
         if not nodes:
             raise CommandError("Outline-Generierung fehlgeschlagen — keine Kapitel erzeugt.")
-        self.stdout.write(self.style.SUCCESS(
-            f"  ✓ {len(nodes)} Kapitel generiert"
-        ))
+        self.stdout.write(self.style.SUCCESS(f"  ✓ {len(nodes)} Kapitel generiert"))
         for node in nodes:
             words = node.target_words or "—"
             self.stdout.write(f"    {node.order}. {node.title} ({words} Wörter)")
@@ -221,9 +213,7 @@ class Command(BaseCommand):
             if not user:
                 user = User.objects.filter(email__iexact=owner_ref).first()
             if not user:
-                raise CommandError(
-                    f"User '{owner_ref}' nicht gefunden (weder username noch email)."
-                )
+                raise CommandError(f"User '{owner_ref}' nicht gefunden (weder username noch email).")
             return user
         user = User.objects.filter(is_superuser=True).first()
         if not user:
@@ -248,9 +238,7 @@ class Command(BaseCommand):
 
         content_type = CONTENT_TYPE_MAP.get(framework, "academic")
 
-        ct_lookup = ContentTypeLookup.objects.filter(
-            slug__in=["academic", "wissenschaftlich", "scientific"]
-        ).first()
+        ct_lookup = ContentTypeLookup.objects.filter(slug__in=["academic", "wissenschaftlich", "scientific"]).first()
 
         project = BookProject.objects.create(
             owner=user,
@@ -296,9 +284,7 @@ class Command(BaseCommand):
                 return version, nodes
 
         # Fallback: Manuelles Outline aus Framework-Beats
-        self.stdout.write(self.style.WARNING(
-            "  ⚠ KI-Outline fehlgeschlagen, verwende Framework-Beats als Fallback"
-        ))
+        self.stdout.write(self.style.WARNING("  ⚠ KI-Outline fehlgeschlagen, verwende Framework-Beats als Fallback"))
         if hasattr(result, "error_message") and result.error_message:
             self.stdout.write(f"    Grund: {result.error_message}")
 
@@ -307,9 +293,7 @@ class Command(BaseCommand):
     def _create_fallback_outline(self, project, user, framework, chapter_count):
         from apps.projects.models import OutlineFramework, OutlineNode, OutlineVersion
 
-        OutlineVersion.objects.filter(
-            project=project, is_active=True
-        ).update(is_active=False)
+        OutlineVersion.objects.filter(project=project, is_active=True).update(is_active=False)
 
         version = OutlineVersion.objects.create(
             project=project,
@@ -324,39 +308,45 @@ class Command(BaseCommand):
             beats = list(fw_obj.beats.order_by("order"))
             if beats:
                 words_per = (project.target_word_count or DEFAULT_PROJECT_TARGET_WORDS) // len(beats)
-                OutlineNode.objects.bulk_create([
-                    OutlineNode(
-                        outline_version=version,
-                        title=b.name,
-                        description=b.description,
-                        beat_type="chapter",
-                        beat_phase=b.name,
-                        target_words=words_per,
-                        order=b.order,
-                    )
-                    for b in beats
-                ])
+                OutlineNode.objects.bulk_create(
+                    [
+                        OutlineNode(
+                            outline_version=version,
+                            title=b.name,
+                            description=b.description,
+                            beat_type="chapter",
+                            beat_phase=b.name,
+                            target_words=words_per,
+                            order=b.order,
+                        )
+                        for b in beats
+                    ]
+                )
                 return version, list(version.nodes.order_by("order"))
 
         # Ultra-Fallback: generische Kapitel
         count = chapter_count or 5
         words_per = (project.target_word_count or DEFAULT_PROJECT_TARGET_WORDS) // count
-        OutlineNode.objects.bulk_create([
-            OutlineNode(
-                outline_version=version,
-                title=t,
-                beat_type="chapter",
-                target_words=words_per,
-                order=i + 1,
-            )
-            for i, t in enumerate([
-                "Einleitung",
-                "Theoretischer Rahmen",
-                "Methodik",
-                "Ergebnisse & Analyse",
-                "Fazit & Ausblick",
-            ][:count])
-        ])
+        OutlineNode.objects.bulk_create(
+            [
+                OutlineNode(
+                    outline_version=version,
+                    title=t,
+                    beat_type="chapter",
+                    target_words=words_per,
+                    order=i + 1,
+                )
+                for i, t in enumerate(
+                    [
+                        "Einleitung",
+                        "Theoretischer Rahmen",
+                        "Methodik",
+                        "Ergebnisse & Analyse",
+                        "Fazit & Ausblick",
+                    ][:count]
+                )
+            ]
+        )
         return version, list(version.nodes.order_by("order"))
 
     def _research_chapters(self, project, nodes):
@@ -380,12 +370,7 @@ class Command(BaseCommand):
                 brief = result.get("writing_brief", "")
 
                 if brief and node.description:
-                    node.notes = (
-                        f"## Recherche-Ergebnis\n\n"
-                        f"{brief}\n\n"
-                        f"---\n"
-                        f"Quellen: {paper_count} Papers"
-                    )
+                    node.notes = f"## Recherche-Ergebnis\n\n{brief}\n\n---\nQuellen: {paper_count} Papers"
                 elif brief:
                     node.description = brief
                     node.notes = f"Quellen: {paper_count} Papers"
@@ -402,7 +387,9 @@ class Command(BaseCommand):
         )
 
         svc = ChapterProductionService(
-            project_id=str(project.pk), user=user, llm_overrides=llm_overrides,
+            project_id=str(project.pk),
+            user=user,
+            llm_overrides=llm_overrides,
         )
         total_words = 0
 
@@ -433,9 +420,7 @@ class Command(BaseCommand):
                     if result.gate:
                         gate = f", Gate: {result.gate.decision}"
 
-                    self.stdout.write(self.style.SUCCESS(
-                        f" ✓ ({wc} Wörter, {result.iterations} Iter.{score}{gate})"
-                    ))
+                    self.stdout.write(self.style.SUCCESS(f" ✓ ({wc} Wörter, {result.iterations} Iter.{score}{gate})"))
                 else:
                     error = result.error or "Unbekannter Fehler"
                     self.stdout.write(self.style.ERROR(f" ✗ ({error})"))
@@ -454,18 +439,17 @@ class Command(BaseCommand):
             session_id = run_peer_review(project, user)
             if session_id:
                 from apps.projects.models import PeerReviewSession
+
                 session = PeerReviewSession.objects.get(pk=session_id)
                 verdict = session.verdict or "—"
                 findings = session.finding_count or 0
-                self.stdout.write(self.style.SUCCESS(
-                    f"  ✓ Review abgeschlossen: {verdict} ({findings} Findings)"
-                ))
+                self.stdout.write(self.style.SUCCESS(f"  ✓ Review abgeschlossen: {verdict} ({findings} Findings)"))
                 if session.summary:
                     self.stdout.write(f"    {session.summary[:200]}")
             else:
-                self.stdout.write(self.style.WARNING(
-                    "  ⚠ Peer Review konnte nicht gestartet werden (keine Kapitel mit Inhalt?)"
-                ))
+                self.stdout.write(
+                    self.style.WARNING("  ⚠ Peer Review konnte nicht gestartet werden (keine Kapitel mit Inhalt?)")
+                )
         except Exception as exc:
             self.stdout.write(self.style.ERROR(f"  ✗ Peer Review fehlgeschlagen: {exc}"))
             logger.exception("Peer review failed for project %s", project.pk)
@@ -484,18 +468,12 @@ class Command(BaseCommand):
 
         base_url = getattr(settings, "SITE_URL", "https://writing.iil.pet")
 
-        self.stdout.write(self.style.MIGRATE_HEADING(
-            f"\n{'=' * 60}\n"
-            f"  ERGEBNIS\n"
-            f"{'=' * 60}"
-        ))
+        self.stdout.write(self.style.MIGRATE_HEADING(f"\n{'=' * 60}\n  ERGEBNIS\n{'=' * 60}"))
         self.stdout.write(f"  Projekt:     {project.title}")
         self.stdout.write(f"  Projekt-ID:  {project.pk}")
         self.stdout.write(f"  Kapitel:     {written}/{total} geschrieben")
         self.stdout.write(f"  Wörter:      {total_words:,}")
         self.stdout.write(f"  Dauer:       {elapsed:.0f}s ({elapsed / 60:.1f} min)")
         self.stdout.write("")
-        self.stdout.write(self.style.SUCCESS(
-            f"  → Web-UI: {base_url}/projekte/{project.pk}/"
-        ))
+        self.stdout.write(self.style.SUCCESS(f"  → Web-UI: {base_url}/projekte/{project.pk}/"))
         self.stdout.write("")

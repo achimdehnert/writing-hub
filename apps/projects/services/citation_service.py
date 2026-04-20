@@ -5,6 +5,7 @@ Provides sync Django wrappers around the async researchfw CitationService.
 Used by academic/scientific BookProject views for DOI/ISBN lookup,
 BibTeX import, and bibliography formatting.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -17,9 +18,11 @@ logger = logging.getLogger(__name__)
 class SearchError(Exception):
     """User-facing search error (rate limit, timeout, etc.)."""
 
+
 try:
     from iil_researchfw import Citation, CitationService, CitationStyle, Author, SourceType
     from iil_researchfw.search import AcademicSearchService
+
     _RESEARCHFW_AVAILABLE = True
 except ImportError:
     _RESEARCHFW_AVAILABLE = False
@@ -31,6 +34,7 @@ try:
     from iil_researchfw.search.smart import SmartSearchService
     from iil_researchfw.analysis.summary import AISummaryService, make_together_llm
     from iil_researchfw.analysis.relevance import RelevanceScorer
+
     _SMART_SEARCH_AVAILABLE = True
 except ImportError:
     logger.info("iil-researchfw smart search/analysis not available — using basic search")
@@ -38,6 +42,7 @@ except ImportError:
 _BRAVE_AVAILABLE = False
 try:
     from iil_researchfw.search.brave import BraveSearchService
+
     _BRAVE_AVAILABLE = True
 except ImportError:
     logger.info("iil-researchfw brave search not available")
@@ -45,6 +50,7 @@ except ImportError:
 
 def _run_async(coro: Any, timeout: int = 60) -> Any:
     """Run an async coroutine synchronously (Django context) with timeout."""
+
     async def _with_timeout():
         return await asyncio.wait_for(coro, timeout=timeout)
 
@@ -52,6 +58,7 @@ def _run_async(coro: Any, timeout: int = 60) -> Any:
         loop = asyncio.get_event_loop()
         if loop.is_running():
             import concurrent.futures
+
             with concurrent.futures.ThreadPoolExecutor() as pool:
                 future = pool.submit(asyncio.run, _with_timeout())
                 return future.result(timeout=timeout + 5)
@@ -164,6 +171,7 @@ def search_web(
         logger.warning("search_web: BraveSearchService not available")
         return []
     from decouple import config as dconfig
+
     api_key = dconfig("BRAVE_API_KEY", default="")
     if not api_key:
         logger.warning("search_web: BRAVE_API_KEY not configured")
@@ -175,9 +183,7 @@ def search_web(
         exc_str = str(exc)
         if "429" in exc_str or "rate limit" in exc_str.lower():
             logger.warning("Brave rate limit for query: %s", query[:80])
-            raise SearchError(
-                "Brave API Rate-Limit erreicht. Bitte 1–2 Sekunden warten und erneut versuchen."
-            ) from exc
+            raise SearchError("Brave API Rate-Limit erreicht. Bitte 1–2 Sekunden warten und erneut versuchen.") from exc
         logger.exception("Brave web search failed for query: %s", query[:80])
         return []
     return [
@@ -231,11 +237,13 @@ def search_papers(
 
     if _RESEARCHFW_AVAILABLE:
         svc = AcademicSearchService()
-        papers = _run_async(svc.search(
-            query,
-            sources=academic_requested if academic_requested else None,
-            max_results=max_results,
-        ))
+        papers = _run_async(
+            svc.search(
+                query,
+                sources=academic_requested if academic_requested else None,
+                max_results=max_results,
+            )
+        )
         results.extend([_paper_to_dict(p) for p in papers])
 
     return results[:max_results]
@@ -268,6 +276,7 @@ def smart_search_papers(
         return {"papers": [], "queries_used": [], "total_found": 0, "total_after_filter": 0}
 
     from django.conf import settings
+
     api_key = getattr(settings, "TOGETHER_API_KEY", "") or getattr(settings, "OPENAI_API_KEY", "")
 
     from apps.projects.constants import ACADEMIC_SOURCES
@@ -357,22 +366,14 @@ def summarize_papers(
     scorer = RelevanceScorer()
     scored = scorer.score(
         query or "research",
-        [{"title": p.get("title", ""), "abstract": p.get("abstract", "")}
-         for p in papers],
+        [{"title": p.get("title", ""), "abstract": p.get("abstract", "")} for p in papers],
         fields=["title", "abstract"],
     )
     scored_top = scored[:10]
-    top_papers = papers[:min(10, len(papers))]
+    top_papers = papers[: min(10, len(papers))]
     if scored_top:
-        idx_map = {
-            id(papers[i]): i
-            for i in range(len(papers))
-        }
-        top_papers = [
-            papers[idx_map[id(s.item)]]
-            for s in scored_top
-            if id(s.item) in idx_map
-        ] or top_papers
+        idx_map = {id(papers[i]): i for i in range(len(papers))}
+        top_papers = [papers[idx_map[id(s.item)]] for s in scored_top if id(s.item) in idx_map] or top_papers
 
     findings = [
         {
@@ -386,6 +387,7 @@ def summarize_papers(
     ]
 
     from django.conf import settings
+
     key = llm_api_key or getattr(settings, "TOGETHER_API_KEY", "")
     llm_fn = make_together_llm(api_key=key) if key else None
     svc = AISummaryService(llm_fn=llm_fn)
@@ -462,10 +464,7 @@ def research_outline_node(
         description_hint = f"\n\n**Kapitel-Anforderung:** {node_description}"
 
     writing_brief = (
-        f"## Schreib-Grundlage: {node_title}\n\n"
-        + summary_result.get("summary", "")
-        + description_hint
-        + word_hint
+        f"## Schreib-Grundlage: {node_title}\n\n" + summary_result.get("summary", "") + description_hint + word_hint
     )
 
     return {
@@ -499,9 +498,7 @@ def research_chapter_sources(
     """
     from apps.projects.models import OutlineNode
 
-    node = OutlineNode.objects.select_related(
-        "outline_version__project"
-    ).get(pk=node_id)
+    node = OutlineNode.objects.select_related("outline_version__project").get(pk=node_id)
     project = node.outline_version.project
 
     query_parts = [node.title]
@@ -605,9 +602,7 @@ def format_research_notes(papers: list[dict[str, Any]], chapter_title: str) -> s
             if isinstance(authors[0], str):
                 author_str = "; ".join(authors[:3])
             else:
-                author_str = "; ".join(
-                    a.get("family", "") for a in authors[:3]
-                )
+                author_str = "; ".join(a.get("family", "") for a in authors[:3])
             if len(authors) > 3:
                 author_str += " et al."
         else:
@@ -666,10 +661,7 @@ def _paper_to_dict(p: Any) -> dict[str, Any]:
 def _citation_to_dict(c: Any) -> dict[str, Any]:
     return {
         "title": c.title,
-        "authors": [
-            {"family": a.family, "given": a.given, "orcid": a.orcid}
-            for a in c.authors
-        ],
+        "authors": [{"family": a.family, "given": a.given, "orcid": a.orcid} for a in c.authors],
         "year": c.year,
         "source_type": c.source_type.value if hasattr(c.source_type, "value") else str(c.source_type),
         "journal": c.journal,

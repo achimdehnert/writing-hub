@@ -10,6 +10,7 @@ Covers:
   - Template rendering with Jinja2 variables
   - Template stats aggregation
 """
+
 import pytest
 
 from apps.outlines.models import (
@@ -20,6 +21,7 @@ from apps.outlines.models import (
 
 
 # ── Content-Type Mapping ────────────────────────────────────────────
+
 
 class TestContentTypeGroupMapping:
     """Test content_type → group mapping logic."""
@@ -54,12 +56,11 @@ class TestContentTypeGroupMapping:
 
         for choice_value, _label in BookProject.ContentType.choices:
             group = get_content_type_group(choice_value)
-            assert group in ("fiction", "academic", "nonfiction"), (
-                f"Unmapped content_type: {choice_value}"
-            )
+            assert group in ("fiction", "academic", "nonfiction"), f"Unmapped content_type: {choice_value}"
 
 
 # ── OutlinePromptTemplate Model ─────────────────────────────────────
+
 
 @pytest.mark.django_db
 class TestOutlinePromptTemplateModel:
@@ -153,6 +154,7 @@ class TestOutlinePromptTemplateModel:
 
 # ── Prompt Dispatch ──────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestRenderOutlinePrompt:
     """Test render_outline_prompt dispatch logic."""
@@ -242,6 +244,7 @@ class TestRenderOutlinePrompt:
 
 # ── Active Template Lookup ───────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestGetActiveTemplate:
     """Test get_active_template for quality feedback linking."""
@@ -273,6 +276,7 @@ class TestGetActiveTemplate:
 
 # ── Quality Rating ───────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestOutlineQualityRating:
     """Test quality rating model and template stats."""
@@ -284,20 +288,12 @@ class TestOutlineQualityRating:
     @pytest.fixture
     def _setup_data(self, django_user_model):
         """Create test data for rating tests."""
-        user = django_user_model.objects.create_user(
-            username="testuser", password="testpass"
-        )
+        user = django_user_model.objects.create_user(username="testuser", password="testpass")
         from apps.projects.models import BookProject, OutlineNode, OutlineVersion
 
-        project = BookProject.objects.create(
-            title="Test", owner=user, content_type="scientific"
-        )
-        outline = OutlineVersion.objects.create(
-            project=project, name="v1", source="academic_essay"
-        )
-        node = OutlineNode.objects.create(
-            outline_version=outline, title="Methodik", order=1
-        )
+        project = BookProject.objects.create(title="Test", owner=user, content_type="scientific")
+        outline = OutlineVersion.objects.create(project=project, name="v1", source="academic_essay")
+        node = OutlineNode.objects.create(outline_version=outline, title="Methodik", order=1)
         tpl = OutlinePromptTemplate.objects.create(
             content_type_group="academic",
             template_key="enrich_node",
@@ -353,6 +349,7 @@ class TestOutlineQualityRating:
 
 
 # ── Seed Data ────────────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 class TestSeedData:

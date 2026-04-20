@@ -4,6 +4,7 @@ Idea Import — Staging-Modell für KI-extrahierte Buchideen (ADR-081, ADR-083)
 Portiert aus bfagent/apps/writing_hub/models_idea_import.py.
 Angepasst für writing-hub: FK zu projects.BookProject statt bfagent.BookProjects.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -37,21 +38,27 @@ class IdeaImportDraft(models.Model):
     created_by = models.ForeignKey(
         "auth.User",
         on_delete=models.SET_NULL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         related_name="idea_import_drafts",
         verbose_name="Erstellt von",
     )
 
     source_filename = models.CharField(
-        max_length=255, blank=True, verbose_name="Quelldatei",
+        max_length=255,
+        blank=True,
+        verbose_name="Quelldatei",
         help_text="Originaler Dateiname (leer bei Freitext)",
     )
     source_format = models.CharField(
-        max_length=10, blank=True, verbose_name="Quellformat",
+        max_length=10,
+        blank=True,
+        verbose_name="Quellformat",
         help_text="txt | md | docx | pdf | freetext",
     )
     source_text = models.TextField(
-        blank=True, verbose_name="Normalisierter Quelltext",
+        blank=True,
+        verbose_name="Normalisierter Quelltext",
         help_text="Normalisierter Quelltext (max. 20.000 Zeichen = Extraktions-Limit)",
     )
 
@@ -60,15 +67,21 @@ class IdeaImportDraft(models.Model):
         help_text="ExtractedIdea als JSON (Pydantic-Snapshot)",
     )
     extraction_model = models.CharField(
-        max_length=100, blank=True, verbose_name="Verwendetes LLM",
+        max_length=100,
+        blank=True,
+        verbose_name="Verwendetes LLM",
     )
 
     status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.PENDING_REVIEW,
-        db_index=True, verbose_name="Status",
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING_REVIEW,
+        db_index=True,
+        verbose_name="Status",
     )
     committed_sections = models.JSONField(
-        default=list, verbose_name="Committete Sektionen",
+        default=list,
+        verbose_name="Committete Sektionen",
         help_text='z.B. ["metadata", "outline", "characters"]',
     )
     commit_notes = models.TextField(blank=True, verbose_name="Commit-Notizen")

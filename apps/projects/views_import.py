@@ -6,6 +6,7 @@ Unterstützte Formate:
   - Planungsdok:  Beat-Sheets, Charakterbögen, Story-Arcs (Heading-Struktur)
   - Gemischt:     Kombination aus Prosa und Metadaten
 """
+
 from __future__ import annotations
 
 import logging
@@ -78,11 +79,13 @@ def _parse_manuscript(text: str) -> list[dict]:
 
         if matched:
             if current_title is not None:
-                chapters.append({
-                    "order": current_order,
-                    "title": current_title,
-                    "content": "\n".join(current_lines).strip(),
-                })
+                chapters.append(
+                    {
+                        "order": current_order,
+                        "title": current_title,
+                        "content": "\n".join(current_lines).strip(),
+                    }
+                )
             try:
                 current_order = int(matched.group(1))
             except (IndexError, ValueError):
@@ -95,11 +98,13 @@ def _parse_manuscript(text: str) -> list[dict]:
                 current_lines.append(line)
 
     if current_title is not None:
-        chapters.append({
-            "order": current_order,
-            "title": current_title,
-            "content": "\n".join(current_lines).strip(),
-        })
+        chapters.append(
+            {
+                "order": current_order,
+                "title": current_title,
+                "content": "\n".join(current_lines).strip(),
+            }
+        )
 
     return chapters
 
@@ -116,11 +121,13 @@ def _parse_planning(text: str) -> list[dict]:
             depth = len(m.group(1))
             if depth <= 2:
                 if current_title is not None:
-                    sections.append({
-                        "order": order,
-                        "title": current_title,
-                        "content": "\n".join(current_lines).strip(),
-                    })
+                    sections.append(
+                        {
+                            "order": order,
+                            "title": current_title,
+                            "content": "\n".join(current_lines).strip(),
+                        }
+                    )
                     order += 1
                 current_title = m.group(2).strip()
                 current_lines = []
@@ -131,11 +138,13 @@ def _parse_planning(text: str) -> list[dict]:
                 current_lines.append(line)
 
     if current_title is not None:
-        sections.append({
-            "order": order,
-            "title": current_title,
-            "content": "\n".join(current_lines).strip(),
-        })
+        sections.append(
+            {
+                "order": order,
+                "title": current_title,
+                "content": "\n".join(current_lines).strip(),
+            }
+        )
 
     return sections
 
@@ -174,6 +183,7 @@ class ProjectImportView(LoginRequiredMixin, View):
     GET  — zeigt Import-Formular
     POST — verarbeitet hochgeladene .md Dateien und legt Projekt an
     """
+
     template_name = "projects/import.html"
 
     def get(self, request):
@@ -195,21 +205,23 @@ class ProjectImportView(LoginRequiredMixin, View):
             try:
                 text = f.read().decode("utf-8", errors="replace")
                 parsed = parse_markdown(f.name, text)
-                results.append({
-                    "filename": f.name,
-                    "title": parsed["title"],
-                    "format": parsed["format"],
-                    "chapter_count": len(parsed["chapters"]),
-                    "word_count": parsed["word_count"],
-                    "chapters": [
-                        {
-                            "order": ch["order"],
-                            "title": ch["title"],
-                            "preview": ch["content"][:200] + "..." if len(ch["content"]) > 200 else ch["content"],
-                        }
-                        for ch in parsed["chapters"]
-                    ],
-                })
+                results.append(
+                    {
+                        "filename": f.name,
+                        "title": parsed["title"],
+                        "format": parsed["format"],
+                        "chapter_count": len(parsed["chapters"]),
+                        "word_count": parsed["word_count"],
+                        "chapters": [
+                            {
+                                "order": ch["order"],
+                                "title": ch["title"],
+                                "preview": ch["content"][:200] + "..." if len(ch["content"]) > 200 else ch["content"],
+                            }
+                            for ch in parsed["chapters"]
+                        ],
+                    }
+                )
             except Exception as exc:
                 logger.warning("Import preview error file=%s: %s", f.name, exc)
                 results.append({"filename": f.name, "error": str(exc)})
@@ -267,7 +279,9 @@ class ProjectImportView(LoginRequiredMixin, View):
                 created_projects.append(project)
                 logger.info(
                     "Import OK user=%s project=%s chapters=%d",
-                    request.user.username, project.pk, len(parsed["chapters"]),
+                    request.user.username,
+                    project.pk,
+                    len(parsed["chapters"]),
                 )
 
             except Exception as exc:
@@ -277,7 +291,7 @@ class ProjectImportView(LoginRequiredMixin, View):
         if len(created_projects) == 1:
             messages.success(
                 request,
-                f'Projekt \u201e{created_projects[0].title}\u201c erfolgreich importiert.',
+                f"Projekt \u201e{created_projects[0].title}\u201c erfolgreich importiert.",
             )
             return redirect("projects:detail", pk=created_projects[0].pk)
         elif created_projects:

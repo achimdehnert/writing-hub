@@ -1,6 +1,7 @@
 """
 Projects App — Buchprojekte, Outline, Kapitel, Review, Editing, Lektorat, Snapshots, Publishing (ADR-083)
 """
+
 from __future__ import annotations
 
 import datetime
@@ -44,8 +45,10 @@ class ContentTypeLookup(models.Model):
 class GenreLookup(models.Model):
     name = models.CharField(max_length=100, unique=True)
     content_type = models.ForeignKey(
-        ContentTypeLookup, on_delete=models.SET_NULL,
-        null=True, blank=True,
+        ContentTypeLookup,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="genres",
         verbose_name="Inhaltstyp",
         help_text="Leer = für alle Inhaltstypen verfügbar",
@@ -120,8 +123,13 @@ class OutlineFramework(models.Model):
         """Group label for template {% regroup %} tag."""
         _NONFICTION = {"sachbuch", "sachbuch_kurz"}
         _ACADEMIC = {
-            "imrad", "dissertation", "expose", "systematic_review",
-            "research_proposal", "scientific_essay", "academic_essay",
+            "imrad",
+            "dissertation",
+            "expose",
+            "systematic_review",
+            "research_proposal",
+            "scientific_essay",
+            "academic_essay",
         }
         _UNIVERSAL = {"blank"}
         if self.key in _NONFICTION:
@@ -134,9 +142,7 @@ class OutlineFramework(models.Model):
 
 
 class OutlineFrameworkBeat(models.Model):
-    framework = models.ForeignKey(
-        OutlineFramework, on_delete=models.CASCADE, related_name="beats"
-    )
+    framework = models.ForeignKey(OutlineFramework, on_delete=models.CASCADE, related_name="beats")
     order = models.PositiveSmallIntegerField(default=0)
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
@@ -155,30 +161,47 @@ class OutlineFrameworkBeat(models.Model):
 
 class BookProject(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="book_projects"
-    )
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="book_projects")
     bfagent_id = models.IntegerField(null=True, blank=True, db_index=True)
     series = models.ForeignKey(
-        "series.BookSeries", on_delete=models.SET_NULL,
-        null=True, blank=True, related_name="projects", verbose_name="Serie",
+        "series.BookSeries",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="projects",
+        verbose_name="Serie",
     )
     title = models.CharField(max_length=300)
     description = models.TextField(blank=True)
     content_type_lookup = models.ForeignKey(
-        ContentTypeLookup, on_delete=models.SET_NULL, null=True, blank=True,
-        verbose_name="Inhaltstyp", related_name="projects",
+        ContentTypeLookup,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Inhaltstyp",
+        related_name="projects",
     )
     genre_lookup = models.ForeignKey(
-        GenreLookup, on_delete=models.SET_NULL, null=True, blank=True,
-        verbose_name="Genre", related_name="projects",
+        GenreLookup,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Genre",
+        related_name="projects",
     )
     audience_lookup = models.ForeignKey(
-        AudienceLookup, on_delete=models.SET_NULL, null=True, blank=True,
-        verbose_name="Zielgruppe", related_name="projects",
+        AudienceLookup,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Zielgruppe",
+        related_name="projects",
     )
     writing_style = models.ForeignKey(
-        "authors.WritingStyle", on_delete=models.SET_NULL, null=True, blank=True,
+        "authors.WritingStyle",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         verbose_name="Prim\u00e4rer Schreibstil",
         related_name="projects",
     )
@@ -198,9 +221,7 @@ class BookProject(models.Model):
         ACADEMIC = "academic", "Akademische Arbeit (Monographie, Dissertation)"
         SCIENTIFIC = "scientific", "Wissenschaftliches Paper (IMRaD)"
 
-    content_type = models.CharField(
-        max_length=30, choices=ContentType.choices, default=ContentType.NOVEL
-    )
+    content_type = models.CharField(max_length=30, choices=ContentType.choices, default=ContentType.NOVEL)
     genre = models.CharField(max_length=100, blank=True)
     target_audience = models.CharField(max_length=200, blank=True)
     target_word_count = models.PositiveIntegerField(null=True, blank=True)
@@ -219,12 +240,11 @@ class BookProject(models.Model):
 
     def save(self, *args, **kwargs):
         update_fields = kwargs.get("update_fields")
-        if (
-            self.content_type_lookup_id
-            and (update_fields is None or "content_type_lookup" in update_fields
-                 or "content_type_lookup_id" in update_fields)
+        if self.content_type_lookup_id and (
+            update_fields is None or "content_type_lookup" in update_fields or "content_type_lookup_id" in update_fields
         ):
             from .constants import LOOKUP_SLUG_TO_MODEL_CONTENT_TYPE
+
             ct_slug = getattr(self.content_type_lookup, "slug", None)
             if ct_slug:
                 mapped = LOOKUP_SLUG_TO_MODEL_CONTENT_TYPE.get(ct_slug)
@@ -243,11 +263,12 @@ class BookProject(models.Model):
 
 class OutlineVersion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    project = models.ForeignKey(
-        "BookProject", on_delete=models.CASCADE, related_name="outline_versions"
-    )
+    project = models.ForeignKey("BookProject", on_delete=models.CASCADE, related_name="outline_versions")
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
     name = models.CharField(max_length=200)
     version_label = models.CharField(max_length=200, blank=True, default="")
@@ -309,18 +330,22 @@ class ProjectTurningPoint(models.Model):
     turning_point_type = models.ForeignKey(
         "core.TurningPointTypeLookup",
         on_delete=models.SET_NULL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         related_name="project_turning_points",
     )
     node = models.ForeignKey(
         "projects.OutlineNode",
         on_delete=models.SET_NULL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         related_name="turning_point_markers",
         verbose_name="Verknüpfte Szene",
     )
     label = models.CharField(
-        max_length=200, blank=True, default="",
+        max_length=200,
+        blank=True,
+        default="",
         verbose_name="Bezeichnung (Override)",
         help_text="Leer = Typ-Label verwenden",
     )
@@ -333,7 +358,8 @@ class ProjectTurningPoint(models.Model):
     mirrors_node = models.ForeignKey(
         "projects.OutlineNode",
         on_delete=models.SET_NULL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         related_name="mirrored_by_turning_points",
         verbose_name="Gespiegelte Szene",
         help_text="Nur für closing_image: die OutlineNode des Opening Image.",
@@ -372,7 +398,9 @@ class OutlineSequence(models.Model):
         related_name="sequences",
     )
     act = models.CharField(
-        max_length=20, blank=True, default="",
+        max_length=20,
+        blank=True,
+        default="",
         verbose_name="Akt-Zugehörigkeit",
         help_text="z.B. 'act_1', 'act_2a', 'act_3'",
     )
@@ -383,7 +411,8 @@ class OutlineSequence(models.Model):
     )
     start_state = models.TextField(blank=True, default="", verbose_name="Ausgangslage")
     end_state = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Endzustand",
         help_text="Positiv (Ziel erreicht) oder negativ (Komplikation)?",
     )
@@ -401,9 +430,7 @@ class OutlineSequence(models.Model):
 
 class OutlineNode(ComputedFieldsMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    outline_version = models.ForeignKey(
-        "OutlineVersion", on_delete=models.CASCADE, related_name="nodes"
-    )
+    outline_version = models.ForeignKey("OutlineVersion", on_delete=models.CASCADE, related_name="nodes")
     title = models.CharField(max_length=300)
     description = models.TextField(blank=True)
 
@@ -422,46 +449,57 @@ class OutlineNode(ComputedFieldsMixin):
     writing_style = models.ForeignKey(
         "authors.WritingStyle",
         on_delete=models.SET_NULL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         verbose_name="Schreibstil f\u00fcr dieses Kapitel",
         related_name="outline_nodes",
     )
     sequence = models.ForeignKey(
         "projects.OutlineSequence",
         on_delete=models.SET_NULL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         related_name="nodes",
         verbose_name="Sequenz-Zugehörigkeit",
     )
     OUTCOME_CHOICES = [
-        ("yes",     "Yes (Ziel erreicht)"),
-        ("no",      "No (Ziel verfehlt)"),
+        ("yes", "Yes (Ziel erreicht)"),
+        ("no", "No (Ziel verfehlt)"),
         ("yes_but", "Yes, but (mit Komplikation)"),
-        ("no_and",  "No, and (Lage verschlechtert)"),
+        ("no_and", "No, and (Lage verschlechtert)"),
     ]
     outcome = models.CharField(
-        max_length=10, choices=OUTCOME_CHOICES, blank=True, default="",
+        max_length=10,
+        choices=OUTCOME_CHOICES,
+        blank=True,
+        default="",
         verbose_name="Szenen-Outcome",
     )
     tension_numeric = models.PositiveSmallIntegerField(
-        null=True, blank=True,
+        null=True,
+        blank=True,
         verbose_name="Spannungswert (1–10)",
         help_text="Subjektiver Spannungswert 1–10 für die Spannungskurve",
     )
     emotion_start = models.CharField(
-        max_length=100, blank=True, default="",
+        max_length=100,
+        blank=True,
+        default="",
         verbose_name="Emotion Beginn",
         help_text="Dominante Emotion zu Szenen-Beginn (z.B. 'Hoffnung')",
     )
     emotion_end = models.CharField(
-        max_length=100, blank=True, default="",
+        max_length=100,
+        blank=True,
+        default="",
         verbose_name="Emotion Ende",
         help_text="Dominante Emotion am Szenen-Ende (z.B. 'Verzweiflung')",
     )
     order = models.PositiveIntegerField(default=0)
     notes = models.TextField(blank=True)
     research_queries = models.JSONField(
-        default=list, blank=True,
+        default=list,
+        blank=True,
         verbose_name="Recherchefragen",
         help_text="KI-generierte Suchbegriffe für Literaturrecherche",
     )
@@ -494,12 +532,16 @@ class OutlineNode(ComputedFieldsMixin):
 class ChapterReview(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     node = models.ForeignKey(
-        OutlineNode, on_delete=models.CASCADE, related_name="reviews",
+        OutlineNode,
+        on_delete=models.CASCADE,
+        related_name="reviews",
         verbose_name="Kapitel",
     )
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        null=True, blank=True,
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
     reviewer = models.CharField(max_length=200, default="Autor", verbose_name="Reviewer")
     FEEDBACK_TYPES = [
@@ -508,9 +550,7 @@ class ChapterReview(models.Model):
         ("issue", "Problem"),
         ("question", "Frage"),
     ]
-    feedback_type = models.CharField(
-        max_length=20, choices=FEEDBACK_TYPES, default="suggestion"
-    )
+    feedback_type = models.CharField(max_length=20, choices=FEEDBACK_TYPES, default="suggestion")
     feedback = models.TextField(verbose_name="Feedback")
     text_reference = models.TextField(blank=True, verbose_name="Textreferenz")
     is_resolved = models.BooleanField(default=False)
@@ -531,12 +571,16 @@ class ChapterReview(models.Model):
 class ChapterEditing(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     node = models.ForeignKey(
-        OutlineNode, on_delete=models.CASCADE, related_name="editings",
+        OutlineNode,
+        on_delete=models.CASCADE,
+        related_name="editings",
         verbose_name="Kapitel",
     )
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        null=True, blank=True,
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
     SUGGESTION_TYPES = [
         ("style", "Stil"),
@@ -546,9 +590,7 @@ class ChapterEditing(models.Model):
         ("pacing", "Pacing"),
         ("character", "Charakter"),
     ]
-    suggestion_type = models.CharField(
-        max_length=30, choices=SUGGESTION_TYPES, default="style"
-    )
+    suggestion_type = models.CharField(max_length=30, choices=SUGGESTION_TYPES, default="style")
     original_text = models.TextField(blank=True)
     suggestion = models.TextField(verbose_name="Vorschlag")
     explanation = models.TextField(blank=True)
@@ -570,10 +612,15 @@ class ChapterEditing(models.Model):
 class LektoratSession(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey(
-        BookProject, on_delete=models.CASCADE, related_name="lektorat_sessions",
+        BookProject,
+        on_delete=models.CASCADE,
+        related_name="lektorat_sessions",
     )
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
     name = models.CharField(max_length=200, default="Lektorat")
     STATUS = [
@@ -602,10 +649,14 @@ class LektoratSession(models.Model):
 class LektoratIssue(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     session = models.ForeignKey(
-        LektoratSession, on_delete=models.CASCADE, related_name="issues",
+        LektoratSession,
+        on_delete=models.CASCADE,
+        related_name="issues",
     )
     node = models.ForeignKey(
-        OutlineNode, on_delete=models.CASCADE, related_name="lektorat_issues",
+        OutlineNode,
+        on_delete=models.CASCADE,
+        related_name="lektorat_issues",
     )
     ISSUE_TYPES = [
         ("consistency", "Konsistenz"),
@@ -647,10 +698,15 @@ class ManuscriptSnapshot(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey(
-        BookProject, on_delete=models.CASCADE, related_name="snapshots",
+        BookProject,
+        on_delete=models.CASCADE,
+        related_name="snapshots",
     )
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
     name = models.CharField(max_length=200)
     notes = models.TextField(blank=True)
@@ -684,7 +740,9 @@ class PublishingProfile(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.OneToOneField(
-        BookProject, on_delete=models.CASCADE, related_name="publishing_profile",
+        BookProject,
+        on_delete=models.CASCADE,
+        related_name="publishing_profile",
     )
     # Identifiers
     isbn = models.CharField(max_length=20, blank=True)
@@ -792,21 +850,28 @@ class SubplotArc(models.Model):
         related_name="subplot_arcs",
     )
     story_label = models.CharField(
-        max_length=10, choices=STORY_LABELS, default="b_story", db_index=True,
+        max_length=10,
+        choices=STORY_LABELS,
+        default="b_story",
+        db_index=True,
     )
     title = models.CharField(max_length=200, verbose_name="Subplot-Bezeichnung")
 
     carried_by_character_id = models.UUIDField(
-        null=True, blank=True,
+        null=True,
+        blank=True,
         verbose_name="Träger-Figur (WeltenHub UUID)",
     )
     carried_by_name = models.CharField(
-        max_length=200, blank=True, default="",
+        max_length=200,
+        blank=True,
+        default="",
         verbose_name="Träger-Figur (Cache)",
     )
 
     thematic_mirror = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Thematischer Spiegel",
         help_text="Wie spiegelt dieser Subplot das Thema der A-Story?",
     )
@@ -828,14 +893,16 @@ class SubplotArc(models.Model):
     begins_at_node = models.ForeignKey(
         "OutlineNode",
         on_delete=models.SET_NULL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         related_name="subplot_begins",
         verbose_name="Beginnt in Kapitel/Szene",
     )
     ends_at_node = models.ForeignKey(
         "OutlineNode",
         on_delete=models.SET_NULL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         related_name="subplot_ends",
         verbose_name="Endet in Kapitel/Szene",
     )
@@ -862,10 +929,9 @@ class SubplotArc(models.Model):
 
     def clean(self):
         from django.core.exceptions import ValidationError
+
         if self.begins_at_percent >= self.ends_at_percent:
-            raise ValidationError(
-                "begins_at_percent muss kleiner als ends_at_percent sein."
-            )
+            raise ValidationError("begins_at_percent muss kleiner als ends_at_percent sein.")
 
     def b_story_phase(self, current_percent: int) -> str:
         if current_percent < self.begins_at_percent:
@@ -901,9 +967,9 @@ class TextAnalysisSnapshot(models.Model):
     """
 
     TRIGGERED_BY = [
-        ("manual",   "Manuell ausgelöst"),
+        ("manual", "Manuell ausgelöst"),
         ("lektorat", "Nach Lektorat"),
-        ("save",     "Nach Kapitel-Speichern"),
+        ("save", "Nach Kapitel-Speichern"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -932,7 +998,8 @@ class TextAnalysisSnapshot(models.Model):
         help_text="[{order: int, word_count: int, title: str}]",
     )
     pacing_variance = models.FloatField(
-        null=True, blank=True,
+        null=True,
+        blank=True,
         help_text="Standardabweichung der Kapitel-Wortanzahlen",
     )
     pacing_issues = models.JSONField(
@@ -955,7 +1022,9 @@ class TextAnalysisSnapshot(models.Model):
     chapters_analyzed = models.PositiveSmallIntegerField(default=0)
     computed_at = models.DateTimeField(auto_now=True)
     triggered_by = models.CharField(
-        max_length=20, choices=TRIGGERED_BY, default="manual",
+        max_length=20,
+        choices=TRIGGERED_BY,
+        default="manual",
     )
 
     class Meta:
@@ -970,11 +1039,7 @@ class TextAnalysisSnapshot(models.Model):
 
     @property
     def has_issues(self) -> bool:
-        return (
-            self.dead_scene_count > 0
-            or bool(self.pacing_issues)
-            or self.voice_drift_detected
-        )
+        return self.dead_scene_count > 0 or bool(self.pacing_issues) or self.voice_drift_detected
 
     @property
     def antagonist_underrepresented(self) -> bool:
@@ -997,12 +1062,12 @@ class ComparableTitle(models.Model):
     """
 
     COMP_RELATION = [
-        ("similar_theme",     "Ähnliches Thema"),
-        ("similar_tone",      "Ähnlicher Ton"),
+        ("similar_theme", "Ähnliches Thema"),
+        ("similar_tone", "Ähnlicher Ton"),
         ("similar_structure", "Ähnliche Struktur"),
-        ("same_audience",     "Gleiche Zielgruppe"),
-        ("same_subgenre",     "Gleiches Subgenre"),
-        ("contrast",          "Kontrast — 'wie X, aber Y'"),
+        ("same_audience", "Gleiche Zielgruppe"),
+        ("same_subgenre", "Gleiches Subgenre"),
+        ("contrast", "Kontrast — 'wie X, aber Y'"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -1015,12 +1080,15 @@ class ComparableTitle(models.Model):
     author = models.CharField(max_length=200, verbose_name="Autor")
     publisher = models.CharField(max_length=200, blank=True, default="")
     publication_year = models.PositiveSmallIntegerField(
-        null=True, blank=True,
+        null=True,
+        blank=True,
         verbose_name="Erscheinungsjahr",
         help_text="Für Validierung: Comps sollten < 5 Jahre alt sein.",
     )
     relation_type = models.CharField(
-        max_length=20, choices=COMP_RELATION, default="similar_theme",
+        max_length=20,
+        choices=COMP_RELATION,
+        default="similar_theme",
     )
     similarity_note = models.TextField(blank=True, default="", verbose_name="Worin ähnlich")
     difference_note = models.TextField(blank=True, default="", verbose_name="Worin anders")
@@ -1062,11 +1130,11 @@ class PitchDocument(ComputedFieldsMixin):
     """
 
     PITCH_TYPES = [
-        ("logline",   "Logline — 1 Satz"),
+        ("logline", "Logline — 1 Satz"),
         ("one_pager", "One-Pager — EN"),
         ("expose_de", "Exposé — DE Verlagsstandard"),
-        ("synopsis",  "Synopsis — vollständige Handlung"),
-        ("query",     "Query Letter — US/UK"),
+        ("synopsis", "Synopsis — vollständige Handlung"),
+        ("query", "Query Letter — US/UK"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -1081,7 +1149,8 @@ class PitchDocument(ComputedFieldsMixin):
     is_ai_generated = models.BooleanField(default=False)
     ai_agent = models.CharField(max_length=100, blank=True, default="")
     is_current = models.BooleanField(
-        default=True, db_index=True,
+        default=True,
+        db_index=True,
         help_text="Aktive Version dieses Typs (nur eine gleichzeitig).",
     )
     version = models.PositiveSmallIntegerField(default=1)
@@ -1114,11 +1183,11 @@ class ResearchNote(models.Model):
     """
 
     NOTE_TYPES = [
-        ("fact",       "Fakt — verifiziert"),
-        ("question",   "Offene Frage"),
-        ("rule",       "Regel / Gesetz / Technologie"),
+        ("fact", "Fakt — verifiziert"),
+        ("question", "Offene Frage"),
+        ("rule", "Regel / Gesetz / Technologie"),
         ("atmosphere", "Atmosphäre / Detail"),
-        ("quote",      "Zitat"),
+        ("quote", "Zitat"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -1131,7 +1200,9 @@ class ResearchNote(models.Model):
     title = models.CharField(max_length=300, verbose_name="Bezeichnung")
     content = models.TextField(verbose_name="Inhalt")
     source = models.CharField(
-        max_length=500, blank=True, default="",
+        max_length=500,
+        blank=True,
+        default="",
         help_text="URL, Buchtitel, Experteninterview",
     )
     is_verified = models.BooleanField(
@@ -1211,17 +1282,17 @@ class BetaReaderSession(models.Model):
     """
 
     ANON_CHOICES = [
-        ("open",      "Offen — alles sichtbar"),
+        ("open", "Offen — alles sichtbar"),
         ("anon_meta", "Text only — keine Metadaten"),
         ("anon_full", "Vollständig anonym"),
     ]
     FEEDBACK_FOCUS = [
-        ("general",   "Allgemein"),
-        ("pacing",    "Pacing & Tempo"),
+        ("general", "Allgemein"),
+        ("pacing", "Pacing & Tempo"),
         ("character", "Figuren-Sympathie"),
-        ("clarity",   "Verständlichkeit"),
-        ("tension",   "Spannungsverlauf"),
-        ("ending",    "Schluss / Auflösung"),
+        ("clarity", "Verständlichkeit"),
+        ("tension", "Spannungsverlauf"),
+        ("ending", "Schluss / Auflösung"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -1235,7 +1306,9 @@ class BetaReaderSession(models.Model):
     feedback_focus = models.CharField(max_length=20, choices=FEEDBACK_FOCUS, default="general")
     manuscript_snapshot = models.ForeignKey(
         "ManuscriptSnapshot",
-        on_delete=models.SET_NULL, null=True, blank=True,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="beta_sessions",
     )
     reader_name = models.CharField(max_length=200, blank=True, default="")
@@ -1267,13 +1340,13 @@ class BetaReaderFeedback(models.Model):
     """
 
     FEEDBACK_TYPES = [
-        ("confusion",    "Unklarheit / Verwirrung"),
-        ("boredom",      "Langeweile / Tempo zu langsam"),
+        ("confusion", "Unklarheit / Verwirrung"),
+        ("boredom", "Langeweile / Tempo zu langsam"),
         ("tension_drop", "Spannungsabfall"),
-        ("highlight",    "Besonders gut"),
+        ("highlight", "Besonders gut"),
         ("character_ok", "Figur sympathisch"),
         ("char_problem", "Figur-Problem"),
-        ("general",      "Allgemeines Feedback"),
+        ("general", "Allgemeines Feedback"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -1285,7 +1358,8 @@ class BetaReaderFeedback(models.Model):
     node = models.ForeignKey(
         "OutlineNode",
         on_delete=models.SET_NULL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         related_name="beta_feedbacks",
     )
     feedback_type = models.CharField(max_length=20, choices=FEEDBACK_TYPES, default="general")
@@ -1329,15 +1403,22 @@ class PeerReviewSession(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey(
-        BookProject, on_delete=models.CASCADE, related_name="peer_reviews",
+        BookProject,
+        on_delete=models.CASCADE,
+        related_name="peer_reviews",
     )
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        null=True, blank=True,
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
     verdict = models.CharField(
-        max_length=20, choices=VERDICT_CHOICES, blank=True, default="",
+        max_length=20,
+        choices=VERDICT_CHOICES,
+        blank=True,
+        default="",
     )
     summary = models.TextField(blank=True, default="")
     strengths = models.JSONField(default=list)
@@ -1399,10 +1480,14 @@ class PeerReviewFinding(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     session = models.ForeignKey(
-        PeerReviewSession, on_delete=models.CASCADE, related_name="findings",
+        PeerReviewSession,
+        on_delete=models.CASCADE,
+        related_name="findings",
     )
     node = models.ForeignKey(
-        OutlineNode, on_delete=models.CASCADE, related_name="peer_findings",
+        OutlineNode,
+        on_delete=models.CASCADE,
+        related_name="peer_findings",
     )
     agent = models.CharField(max_length=30, choices=AGENT_CHOICES)
     finding_type = models.CharField(max_length=20, choices=FINDING_TYPES, default="suggestion")
@@ -1428,11 +1513,17 @@ class ProjectCitation(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey(
-        BookProject, on_delete=models.CASCADE, related_name="citations",
+        BookProject,
+        on_delete=models.CASCADE,
+        related_name="citations",
     )
     node = models.ForeignKey(
-        OutlineNode, on_delete=models.SET_NULL, null=True, blank=True,
-        related_name="citations", verbose_name="Kapitel-Zuordnung",
+        OutlineNode,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="citations",
+        verbose_name="Kapitel-Zuordnung",
     )
     title = models.CharField(max_length=500)
     authors_json = models.JSONField(default=list, blank=True)
@@ -1450,7 +1541,9 @@ class ProjectCitation(models.Model):
         ("thesis", "Dissertation / Thesis"),
     ]
     source_type = models.CharField(
-        max_length=30, choices=SOURCE_TYPES, default="journal",
+        max_length=30,
+        choices=SOURCE_TYPES,
+        default="journal",
     )
 
     ADDED_VIA_CHOICES = [
@@ -1461,7 +1554,9 @@ class ProjectCitation(models.Model):
         ("manual", "Manuell"),
     ]
     added_via = models.CharField(
-        max_length=20, choices=ADDED_VIA_CHOICES, default="search",
+        max_length=20,
+        choices=ADDED_VIA_CHOICES,
+        default="search",
     )
 
     journal = models.CharField(max_length=300, blank=True, default="")
@@ -1518,7 +1613,9 @@ class PublisherProfile(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="publisher_profiles",
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="publisher_profiles",
     )
     name = models.CharField(max_length=300, verbose_name="Verlagsname")
     imprint = models.CharField(max_length=300, blank=True, verbose_name="Imprint")
@@ -1558,7 +1655,9 @@ class ProjectMilestone(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey(
-        BookProject, on_delete=models.CASCADE, related_name="milestones",
+        BookProject,
+        on_delete=models.CASCADE,
+        related_name="milestones",
     )
     title = models.CharField(max_length=300, verbose_name="Meilenstein")
     PHASE_CHOICES = [
@@ -1569,7 +1668,10 @@ class ProjectMilestone(models.Model):
         ("production", "Publikation & Export"),
     ]
     phase = models.CharField(
-        max_length=30, choices=PHASE_CHOICES, blank=True, default="",
+        max_length=30,
+        choices=PHASE_CHOICES,
+        blank=True,
+        default="",
         verbose_name="Phase",
     )
     due_date = models.DateField(verbose_name="Fälligkeitsdatum")
@@ -1613,20 +1715,26 @@ class ProjectTemplate(models.Model):
     name = models.CharField(max_length=300, verbose_name="Template-Name")
     description = models.TextField(blank=True)
     content_type = models.CharField(
-        max_length=30, choices=BookProject.ContentType.choices,
+        max_length=30,
+        choices=BookProject.ContentType.choices,
         default=BookProject.ContentType.NOVEL,
     )
     framework_key = models.CharField(
-        max_length=100, blank=True, default="three_act",
+        max_length=100,
+        blank=True,
+        default="three_act",
         verbose_name="Outline-Framework",
     )
     default_target_words = models.PositiveIntegerField(
-        default=60000, verbose_name="Ziel-Wortzahl",
+        default=60000,
+        verbose_name="Ziel-Wortzahl",
     )
     default_genre = models.CharField(max_length=100, blank=True)
     default_audience = models.CharField(max_length=200, blank=True)
     chapter_count_hint = models.PositiveIntegerField(
-        null=True, blank=True, verbose_name="Kapitelanzahl (Richtwert)",
+        null=True,
+        blank=True,
+        verbose_name="Kapitelanzahl (Richtwert)",
     )
     is_active = models.BooleanField(default=True)
     is_system = models.BooleanField(
@@ -1634,8 +1742,11 @@ class ProjectTemplate(models.Model):
         help_text="System-Templates können nicht gelöscht werden.",
     )
     owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-        null=True, blank=True, related_name="project_templates",
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="project_templates",
         help_text="NULL = globales Template für alle User.",
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -1664,11 +1775,15 @@ class ChapterNote(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     node = models.ForeignKey(
-        OutlineNode, on_delete=models.CASCADE, related_name="chapter_notes",
+        OutlineNode,
+        on_delete=models.CASCADE,
+        related_name="chapter_notes",
     )
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        null=True, blank=True,
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
     ROLE_CHOICES = [
         ("autor", "Autor"),
@@ -1676,7 +1791,9 @@ class ChapterNote(models.Model):
         ("verleger", "Verleger"),
     ]
     role = models.CharField(
-        max_length=20, choices=ROLE_CHOICES, default="autor",
+        max_length=20,
+        choices=ROLE_CHOICES,
+        default="autor",
         verbose_name="Geschrieben als",
     )
     content = models.TextField(verbose_name="Notiz")
@@ -1706,10 +1823,13 @@ class PhaseChecklistItem(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey(
-        BookProject, on_delete=models.CASCADE, related_name="checklist_items",
+        BookProject,
+        on_delete=models.CASCADE,
+        related_name="checklist_items",
     )
     phase = models.CharField(
-        max_length=30, choices=ProjectMilestone.PHASE_CHOICES,
+        max_length=30,
+        choices=ProjectMilestone.PHASE_CHOICES,
         verbose_name="Phase",
     )
     label = models.CharField(max_length=300, verbose_name="Checkpunkt")
@@ -1731,4 +1851,3 @@ class PhaseChecklistItem(models.Model):
 
 # ADR-158: DialogueScene discoverable machen
 from apps.projects.models_narrative import DialogueScene  # noqa: E402, F401
-

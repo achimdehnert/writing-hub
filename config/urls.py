@@ -1,6 +1,7 @@
 """
 URL configuration for Writing Hub.
 """
+
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
@@ -15,7 +16,7 @@ urlpatterns = [
     path("healthz/", readiness, name="healthz"),
     path("readyz/", readiness, name="readyz"),
     path("admin/", admin.site.urls),
-        path("oidc/", include("mozilla_django_oidc.urls")),
+    path("oidc/", include("mozilla_django_oidc.urls")),
     path("accounts/", include("django.contrib.auth.urls")),
     path("", include("apps.core.urls", namespace="core")),
     path("projekte/", include("apps.projects.urls", namespace="projects")),

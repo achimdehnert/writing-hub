@@ -11,6 +11,7 @@ Packages:
   - iil-authoringfw: CharacterProfile — typisiertes Schema
   - iil-weltenfw:   get_client().characters.create/list — WeltenHub API
 """
+
 from __future__ import annotations
 
 import logging
@@ -22,11 +23,13 @@ logger = logging.getLogger(__name__)
 
 def _get_router():
     from apps.authoring.services.llm_router import LLMRouter
+
     return LLMRouter()
 
 
 def _get_routing_error():
     from apps.authoring.services.llm_router import LLMRoutingError
+
     return LLMRoutingError
 
 
@@ -82,9 +85,7 @@ class WorldCharacterService:
         )
 
         try:
-            raw = self._router.completion(
-                "character_generate", messages, quality_level=quality_level
-            )
+            raw = self._router.completion("character_generate", messages, quality_level=quality_level)
             chars = self._parse_characters(raw)
             return CharacterGenerationResult(success=True, characters=chars)
         except _get_routing_error() as exc:
@@ -117,14 +118,15 @@ class WorldCharacterService:
         char_ctx = self._build_character_context(char)
 
         from apps.core.prompt_utils import render_prompt
+
         messages = render_prompt("worlds/character_enrich", char_ctx=char_ctx)
 
         try:
             raw = self._router.completion(
-                "character_generate", messages,
-                quality_level=quality_level, priority="quality"
+                "character_generate", messages, quality_level=quality_level, priority="quality"
             )
             from promptfw.parsing import extract_json
+
             data = extract_json(raw) or {}
             client.characters.update(
                 weltenhub_character_id,
@@ -223,6 +225,7 @@ class WorldCharacterService:
         Nutzt list(world=world_id) Filter — kein iter_all() mehr.
         """
         from weltenfw.django import get_client
+
         try:
             page = get_client().characters.list(world=str(weltenhub_world_id))
             return list(page.results)
@@ -233,6 +236,7 @@ class WorldCharacterService:
     def _get_world_context(self, world_id: UUID) -> str:
         try:
             from weltenfw.django import get_client
+
             world = get_client().worlds.get(world_id)
             return f"Welt: {world.name}\nBeschreibung: {world.description or ''}"
         except Exception:
@@ -241,6 +245,7 @@ class WorldCharacterService:
     def _get_project_context(self, project_id: str) -> str:
         try:
             from apps.projects.models import BookProject
+
             p = BookProject.objects.get(pk=project_id)
             return f"Projekt: {p.title}\nGenre: {p.genre}"
         except Exception:
@@ -264,6 +269,7 @@ class WorldCharacterService:
     ) -> list[dict]:
         """promptfw render_prompt() — raises PromptRenderError on failure."""
         from apps.core.prompt_utils import render_prompt
+
         return render_prompt(
             "worlds/character_generate",
             world_ctx=world_ctx,
@@ -278,12 +284,11 @@ class WorldCharacterService:
         """authoringfw.CharacterProfile für Prompt-Kontext."""
         try:
             from authoringfw import CharacterProfile
+
             profile = CharacterProfile(
                 name=char.name,
                 role="protagonist" if char.is_protagonist else "supporting",
-                personality_traits=[
-                    t.strip() for t in (char.personality or "").split(",") if t.strip()
-                ][:5],
+                personality_traits=[t.strip() for t in (char.personality or "").split(",") if t.strip()][:5],
                 backstory=char.backstory or "",
             )
             return profile.to_context_string()
@@ -293,6 +298,7 @@ class WorldCharacterService:
     @staticmethod
     def _parse_characters(raw: str) -> list[dict]:
         from promptfw.parsing import extract_json, extract_json_list
+
         data = extract_json_list(raw)
         if not data:
             obj = extract_json(raw)
@@ -303,4 +309,5 @@ class WorldCharacterService:
     def _extract_json_object(raw: str) -> dict:
         """Deprecated: use promptfw.parsing.extract_json() instead."""
         from promptfw.parsing import extract_json
+
         return extract_json(raw) or {}

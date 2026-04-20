@@ -17,6 +17,7 @@ Erwartetes MD-Format (Sektionen per ## Heading):
   ## Stil-Prompt | ## Style Prompt
   ## Quelltext | ## Source Text | ## Beispieltext
 """
+
 from __future__ import annotations
 
 import logging
@@ -32,30 +33,63 @@ logger = logging.getLogger(__name__)
 # Section heading aliases (case-insensitive)
 _SECTION_MAP: dict[str, list[str]] = {
     "description": [
-        "beschreibung", "description", "desc", "ueber", "about",
+        "beschreibung",
+        "description",
+        "desc",
+        "ueber",
+        "about",
     ],
     "do_list": [
-        "do", "erlaubt", "empfohlen", "dos", "do-liste", "regeln do",
+        "do",
+        "erlaubt",
+        "empfohlen",
+        "dos",
+        "do-liste",
+        "regeln do",
     ],
     "dont_list": [
-        "don't", "dont", "don'ts", "donts", "vermeiden", "nicht",
-        "don't-liste", "dont-liste",
+        "don't",
+        "dont",
+        "don'ts",
+        "donts",
+        "vermeiden",
+        "nicht",
+        "don't-liste",
+        "dont-liste",
     ],
     "taboo_list": [
-        "taboo", "tabu", "taboo-woerter", "tabu-woerter",
-        "taboo-liste", "tabu-liste", "verboten",
+        "taboo",
+        "tabu",
+        "taboo-woerter",
+        "tabu-woerter",
+        "taboo-liste",
+        "tabu-liste",
+        "verboten",
     ],
     "signature_moves": [
-        "signature moves", "signature-moves", "stilmittel",
-        "charakteristisch", "besonderheiten", "merkmale",
+        "signature moves",
+        "signature-moves",
+        "stilmittel",
+        "charakteristisch",
+        "besonderheiten",
+        "merkmale",
     ],
     "style_prompt": [
-        "stil-prompt", "style prompt", "style-prompt",
-        "schreibanweisung", "prompt", "anweisung",
+        "stil-prompt",
+        "style prompt",
+        "style-prompt",
+        "schreibanweisung",
+        "prompt",
+        "anweisung",
     ],
     "source_text": [
-        "quelltext", "source text", "source", "beispieltext",
-        "textprobe", "originaltext", "referenztext",
+        "quelltext",
+        "source text",
+        "source",
+        "beispieltext",
+        "textprobe",
+        "originaltext",
+        "referenztext",
     ],
 }
 
@@ -69,6 +103,7 @@ for _field_name, _aliases in _SECTION_MAP.items():
 @dataclass
 class StyleImportResult:
     """Ergebnis eines MD-Imports."""
+
     name: str = ""
     description: str = ""
     do_list: list[str] = field(default_factory=list)
@@ -82,10 +117,7 @@ class StyleImportResult:
 
     @property
     def has_structured_data(self) -> bool:
-        return bool(
-            self.do_list or self.dont_list
-            or self.taboo_list or self.signature_moves
-        )
+        return bool(self.do_list or self.dont_list or self.taboo_list or self.signature_moves)
 
 
 # Regex: match ## heading (with optional trailing colon or dash)
@@ -240,7 +272,9 @@ def import_style_from_markdown(
 
     logger.info(
         "Imported WritingStyle %s from MD: sections=%s, has_structured=%s",
-        style.pk, parsed.sections_found, parsed.has_structured_data,
+        style.pk,
+        parsed.sections_found,
+        parsed.has_structured_data,
     )
 
     return style, parsed

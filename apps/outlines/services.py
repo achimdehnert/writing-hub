@@ -9,6 +9,7 @@ for existing content, call prefill_fields() with context, map results back.
 
 Extracted from views.py per platform service-layer convention (ADR-041).
 """
+
 import logging
 
 from apps.projects.constants import FORMAT_PROFILES, TENSION_TO_ARC
@@ -87,9 +88,7 @@ class OutlineGenerationService:
                 if detail_level in ("full", "detail") and summary:
                     desc_parts = [summary]
                     if key_events:
-                        desc_parts.append(
-                            "\n".join(f"• {e}" for e in key_events)
-                        )
+                        desc_parts.append("\n".join(f"• {e}" for e in key_events))
                     node.description = "\n\n".join(desc_parts)
 
                 # Map tension → emotional_arc
@@ -101,15 +100,21 @@ class OutlineGenerationService:
                 if project.target_word_count and not node.target_words:
                     node.target_words = project.target_word_count // total
 
-                node.save(update_fields=[
-                    "beat_phase", "act", "description",
-                    "emotional_arc", "target_words",
-                ])
+                node.save(
+                    update_fields=[
+                        "beat_phase",
+                        "act",
+                        "description",
+                        "emotional_arc",
+                        "target_words",
+                    ]
+                )
                 updated += 1
             except Exception as exc:
                 logger.warning(
                     "generate_full: failed mapping node %s: %s",
-                    node.order, exc,
+                    node.order,
+                    exc,
                 )
                 errors.append(f"Node {node.order}: {exc}")
 

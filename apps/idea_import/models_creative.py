@@ -5,6 +5,7 @@ Workflow:
   CreativeSession (Brainstorming → Refining → Premise → Done)
     └─ BookIdea (3-5 KI-generierte Buchideen pro Session)
 """
+
 import uuid
 
 from django.conf import settings
@@ -54,13 +55,12 @@ class CreativeSession(models.Model):
         blank=True,
         help_text="Optionaler Stil-Hinweis für die KI-Generierung",
     )
-    phase = models.CharField(
-        max_length=20, choices=Phase.choices, default=Phase.BRAINSTORMING
-    )
+    phase = models.CharField(max_length=20, choices=Phase.choices, default=Phase.BRAINSTORMING)
     selected_idea = models.ForeignKey(
         "BookIdea",
         on_delete=models.SET_NULL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         related_name="selected_for_sessions",
     )
     premise = models.TextField(
@@ -70,7 +70,8 @@ class CreativeSession(models.Model):
     created_project = models.ForeignKey(
         "projects.BookProject",
         on_delete=models.SET_NULL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         related_name="creative_sessions",
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -116,9 +117,7 @@ class BookIdea(models.Model):
     )
     genre = models.CharField(max_length=100, blank=True)
     themes = models.JSONField(default=list, help_text="Themen als Liste")
-    rating = models.SmallIntegerField(
-        choices=Rating.choices, default=Rating.UNRATED
-    )
+    rating = models.SmallIntegerField(choices=Rating.choices, default=Rating.UNRATED)
     is_refined = models.BooleanField(default=False)
     refined_logline = models.TextField(blank=True)
     premise = models.TextField(blank=True)

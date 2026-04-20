@@ -263,23 +263,28 @@ class ChapterContext:
         worlds: list = []
         try:
             from apps.worlds.models import ProjectCharacterLink, ProjectWorldLink
+
             for link in ProjectWorldLink.objects.filter(project=project)[:3]:
                 w = link.get_world()
                 if w:
-                    worlds.append({
-                        "name": getattr(w, "name", ""),
-                        "description": getattr(w, "description", ""),
-                        "atmosphere": getattr(w, "atmosphere", ""),
-                    })
+                    worlds.append(
+                        {
+                            "name": getattr(w, "name", ""),
+                            "description": getattr(w, "description", ""),
+                            "atmosphere": getattr(w, "atmosphere", ""),
+                        }
+                    )
             for link in ProjectCharacterLink.objects.filter(project=project)[:10]:
                 c = link.get_character()
                 if c:
-                    characters.append({
-                        "name": getattr(c, "name", ""),
-                        "role": link.narrative_role or getattr(c, "role", ""),
-                        "description": getattr(c, "description", "") or getattr(c, "backstory", ""),
-                        "motivation": getattr(c, "motivation", ""),
-                    })
+                    characters.append(
+                        {
+                            "name": getattr(c, "name", ""),
+                            "role": link.narrative_role or getattr(c, "role", ""),
+                            "description": getattr(c, "description", "") or getattr(c, "backstory", ""),
+                            "motivation": getattr(c, "motivation", ""),
+                        }
+                    )
         except Exception as exc:
             logger.debug("World/character context not available: %s", exc)
 
@@ -303,9 +308,8 @@ class ChapterContext:
         if not style_dna:
             try:
                 from apps.authoring.models import AuthorStyleDNA
-                dna_obj = AuthorStyleDNA.objects.filter(
-                    author=project.owner, is_primary=True
-                ).first()
+
+                dna_obj = AuthorStyleDNA.objects.filter(author=project.owner, is_primary=True).first()
                 if dna_obj:
                     style_dna = {
                         "name": dna_obj.name,
@@ -359,6 +363,7 @@ class ChapterWriterHandler:
     def _write_template(self, context: ChapterContext) -> str:
         """Convention: chapter_write_{content_type}, fallback to default."""
         from apps.core.prompt_utils import prompt_exists
+
         ct_tpl = f"authoring/chapter_write_{context.content_type}"
         if prompt_exists(ct_tpl):
             return ct_tpl
@@ -367,6 +372,7 @@ class ChapterWriterHandler:
     def _render_write_messages(self, context: ChapterContext) -> list[dict]:
         """Render write messages via convention-based template (unified interface)."""
         from authoringfw import get_content_type_config
+
         ct_config = get_content_type_config(context.content_type)
         style_block = "\n".join(f"- {c}" for c in ct_config.style_profile.to_constraints())
         tpl = self._write_template(context)
@@ -384,9 +390,7 @@ class ChapterWriterHandler:
 
         messages = self._render_write_messages(context)
         try:
-            raw = router.completion(
-                "chapter_generation", messages, max_tokens=max_tokens
-            )
+            raw = router.completion("chapter_generation", messages, max_tokens=max_tokens)
         except LLMRoutingError as exc:
             logger.error("_write_single failed: %s", exc)
             return {"success": False, "error": str(exc)}
@@ -444,9 +448,7 @@ class ChapterWriterHandler:
                 {"role": "user", "content": chunk_prompt},
             ]
             try:
-                chunk_content = router.completion(
-                    "chapter_generation", messages, max_tokens=self.MAX_TOKENS
-                )
+                chunk_content = router.completion("chapter_generation", messages, max_tokens=self.MAX_TOKENS)
             except LLMRoutingError as exc:
                 logger.error("Chunk %d error: %s", chunk_num + 1, exc)
                 if all_content:
@@ -480,14 +482,14 @@ class ChapterWriterHandler:
                 {"role": "user", "content": cont_prompt},
             ]
             try:
-                continuation = router.completion(
-                    "chapter_generation", messages, max_tokens=self.MAX_TOKENS
-                )
+                continuation = router.completion("chapter_generation", messages, max_tokens=self.MAX_TOKENS)
                 full_content = full_content.rstrip() + "\n\n" + continuation.strip()
                 current_words = len(full_content.split())
                 logger.info(
                     "Continuation %d: %d/%d words",
-                    continuations, current_words, context.target_word_count,
+                    continuations,
+                    current_words,
+                    context.target_word_count,
                 )
             except LLMRoutingError as exc:
                 logger.warning("Continuation %d failed: %s", continuations, exc)

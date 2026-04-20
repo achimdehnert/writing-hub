@@ -8,6 +8,7 @@ Usage:
     python manage.py seed_turning_point_types
     python manage.py seed_turning_point_types --force
 """
+
 from decimal import Decimal
 
 from django.core.management.base import BaseCommand
@@ -170,6 +171,8 @@ class Command(BaseCommand):
             else:
                 skipped += 1
 
-        self.stdout.write(self.style.SUCCESS(
-            f"\nTurningPointTypeLookup: {created} neu, {updated} aktualisiert, {skipped} übersprungen."
-        ))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"\nTurningPointTypeLookup: {created} neu, {updated} aktualisiert, {skipped} übersprungen."
+            )
+        )

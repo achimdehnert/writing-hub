@@ -4,6 +4,7 @@ Tests for apps.authoring.services.outline_service — OutlineGeneratorService.
 These tests verify the contract between writing-hub and iil-outlinefw.
 They would have caught the 'framework' vs 'framework_key' parameter mismatch.
 """
+
 import pytest
 from unittest.mock import MagicMock, patch
 
@@ -52,20 +53,14 @@ class TestOutlineGeneratorServiceContract:
         call_kwargs = mock_instance.generate.call_args.kwargs
 
         # Contract assertions - these are the critical checks
-        assert "framework_key" in call_kwargs, \
-            "Must use 'framework_key', not 'framework' (outlinefw API)"
-        assert "context" in call_kwargs, \
-            "Must pass 'context' parameter"
-        assert "chapter_count" not in call_kwargs, \
-            "outlinefw.generate() does not accept 'chapter_count'"
-        assert "framework" not in call_kwargs, \
-            "Wrong parameter name: use 'framework_key' instead of 'framework'"
+        assert "framework_key" in call_kwargs, "Must use 'framework_key', not 'framework' (outlinefw API)"
+        assert "context" in call_kwargs, "Must pass 'context' parameter"
+        assert "chapter_count" not in call_kwargs, "outlinefw.generate() does not accept 'chapter_count'"
+        assert "framework" not in call_kwargs, "Wrong parameter name: use 'framework_key' instead of 'framework'"
 
     @patch("apps.authoring.services.outline_service._project_context_from_db")
     @patch("apps.authoring.services.outline_service.OutlineGenerator")
-    def test_generate_passes_quality_parameter(
-        self, MockGenerator, mock_ctx_from_db, mock_project_context
-    ):
+    def test_generate_passes_quality_parameter(self, MockGenerator, mock_ctx_from_db, mock_project_context):
         """Quality parameter should be passed through correctly."""
         from apps.authoring.services.outline_service import OutlineGeneratorService
 
@@ -118,16 +113,12 @@ class TestOutlineGeneratorServiceIntegration:
             params = list(sig.parameters.keys())
 
             # These are the parameters we expect
-            assert "framework_key" in params, \
-                "outlinefw API changed: 'framework_key' parameter missing"
-            assert "context" in params, \
-                "outlinefw API changed: 'context' parameter missing"
+            assert "framework_key" in params, "outlinefw API changed: 'framework_key' parameter missing"
+            assert "context" in params, "outlinefw API changed: 'context' parameter missing"
 
             # These should NOT be parameters
-            assert "framework" not in params, \
-                "outlinefw API uses 'framework_key', not 'framework'"
-            assert "chapter_count" not in params, \
-                "outlinefw API does not have 'chapter_count' parameter"
+            assert "framework" not in params, "outlinefw API uses 'framework_key', not 'framework'"
+            assert "chapter_count" not in params, "outlinefw API does not have 'chapter_count' parameter"
 
         except ImportError:
             pytest.skip("outlinefw not installed")

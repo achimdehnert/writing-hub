@@ -5,6 +5,7 @@ Multi-Agent Review für akademische/wissenschaftliche Projekte:
   - Methodik, Argumentation, Quellen, Struktur
   - Gesamtgutachten mit Verdict + Scores
 """
+
 import logging
 
 from django.contrib import messages
@@ -80,8 +81,7 @@ class PeerReviewStartView(LoginRequiredMixin, View):
             verdict_label = session.get_verdict_display() if session.verdict else "—"
             messages.success(
                 request,
-                f"Peer Review abgeschlossen: {session.finding_count} Findings, "
-                f"Verdict: {verdict_label}",
+                f"Peer Review abgeschlossen: {session.finding_count} Findings, Verdict: {verdict_label}",
             )
 
         return redirect("projects:peer_review_session", pk=pk, session_pk=session_id)
@@ -101,11 +101,17 @@ class PeerReviewSessionView(LoginRequiredMixin, DetailView):
         ctx = super().get_context_data(**kwargs)
         session_pk = self.kwargs["session_pk"]
         session = get_object_or_404(
-            PeerReviewSession, pk=session_pk, project=self.object,
+            PeerReviewSession,
+            pk=session_pk,
+            project=self.object,
         )
-        findings = PeerReviewFinding.objects.filter(
-            session=session,
-        ).select_related("node").order_by("node__order", "-severity", "agent")
+        findings = (
+            PeerReviewFinding.objects.filter(
+                session=session,
+            )
+            .select_related("node")
+            .order_by("node__order", "-severity", "agent")
+        )
 
         findings_by_agent = {}
         findings_by_chapter = {}

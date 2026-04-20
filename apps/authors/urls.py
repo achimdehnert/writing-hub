@@ -16,7 +16,9 @@ urlpatterns = [
     path("stil/<uuid:pk>/bearbeiten/", views.WritingStyleUpdateView.as_view(), name="style_update"),
     path("stil/<uuid:pk>/analysieren/", views.WritingStyleAnalyzeView.as_view(), name="style_analyze"),
     path("stil/<uuid:pk>/status/", views.WritingStyleStatusView.as_view(), name="style_status"),
-    path("stil/<uuid:pk>/regeln-extrahieren/", views.WritingStyleExtractRulesView.as_view(), name="style_extract_rules"),
+    path(
+        "stil/<uuid:pk>/regeln-extrahieren/", views.WritingStyleExtractRulesView.as_view(), name="style_extract_rules"
+    ),
     path("stil/<uuid:pk>/beispiele/", views.WritingStyleSamplesView.as_view(), name="style_samples"),
     path("stil/<uuid:pk>/beispiel/<str:situation>/bearbeiten/", views.SampleUpdateView.as_view(), name="sample_update"),
     path("stil/<uuid:pk>/loeschen/", views.WritingStyleDeleteView.as_view(), name="style_delete"),

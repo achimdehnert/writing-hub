@@ -4,6 +4,7 @@ API App — Service-to-Service REST-Endpunkte für bfagent → writing-hub (ADR-
 Auth: JWT oder Shared Secret via Authorization-Header.
 Phase 3: Vollständige Implementierung aller Endpunkte.
 """
+
 import time
 
 from django.conf import settings
@@ -37,6 +38,7 @@ class WorldsApiView(APIView):
     Liefert die ProjectWorldLinks des Users (lokale Verknüpfungen zu WeltenHub-Welten).
     SSoT für Welt-Daten ist WeltenHub — hier werden nur die Link-UUIDs zurückgegeben.
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -59,6 +61,7 @@ class WorldCharactersApiView(APIView):
     Liefert ProjectCharacterLinks für Projekte des Users, die mit dieser WeltenHub-Welt verknüpft sind.
     SSoT für Charakter-Daten ist WeltenHub — hier werden nur die Link-UUIDs zurückgegeben.
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, world_id):
@@ -78,6 +81,7 @@ class ProjectOutlineApiView(APIView):
     GET /api/v1/projects/<id>/outline/
     Liefert den aktiven Outline-Stand eines Projekts.
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, project_id):
@@ -101,6 +105,7 @@ class IdeaImportApiView(APIView):
 
     Phase 3: LLM-Extraktion wird als Celery-Task ausgeführt (ADR-081 Befund 1).
     """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -120,14 +125,17 @@ class HealthApiView(APIView):
     GET /api/v1/health/
     Service-Health-Check für bfagent-Monitoring.
     """
+
     permission_classes = []
 
     def get(self, request):
-        return Response({
-            "status": "ok",
-            "service": "writing-hub",
-            "version": "phase-3",
-        })
+        return Response(
+            {
+                "status": "ok",
+                "service": "writing-hub",
+                "version": "phase-3",
+            }
+        )
 
 
 class HealthExtendedApiView(APIView):
@@ -139,6 +147,7 @@ class HealthExtendedApiView(APIView):
     - App-Version
     Kein Auth erforderlich.
     """
+
     permission_classes = []
 
     def get(self, request):

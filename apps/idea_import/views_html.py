@@ -1,6 +1,7 @@
 """
 Idea Import — HTML Frontend Views
 """
+
 import logging
 import uuid
 
@@ -31,8 +32,7 @@ class IdeaListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         return (
-            IdeaImportDraft.objects
-            .filter(project__owner=self.request.user)
+            IdeaImportDraft.objects.filter(project__owner=self.request.user)
             .exclude(status=IdeaImportDraft.Status.DISCARDED)
             .select_related("project")
             .order_by("-created_at")
@@ -57,10 +57,12 @@ class IdeaUploadView(LoginRequiredMixin, View):
 
     def post(self, request):
         from apps.idea_import.services.document_normalizer import (
-            DocumentNormalizerService, UnsupportedFormatError,
+            DocumentNormalizerService,
+            UnsupportedFormatError,
         )
         from apps.idea_import.services.idea_extractor import (
-            extract_ideas, available_sections,
+            extract_ideas,
+            available_sections,
         )
 
         project_id = request.POST.get("project_id")
@@ -130,15 +132,20 @@ class IdeaReviewView(LoginRequiredMixin, View):
 
     def get(self, request, pk):
         from apps.idea_import.services.idea_extractor import available_sections, section_summary
+
         draft = get_object_or_404(IdeaImportDraft, pk=pk, project__owner=request.user)
         data = draft.extracted_data or {}
-        return render(request, "ideas/idea_review.html", {
-            "draft": draft,
-            "data": data,
-            "sections": available_sections(data),
-            "summary": section_summary(data),
-            "confidence": data.get("confidence_scores", {}),
-        })
+        return render(
+            request,
+            "ideas/idea_review.html",
+            {
+                "draft": draft,
+                "data": data,
+                "sections": available_sections(data),
+                "summary": section_summary(data),
+                "confidence": data.get("confidence_scores", {}),
+            },
+        )
 
     def post(self, request, pk):
         draft = get_object_or_404(IdeaImportDraft, pk=pk, project__owner=request.user)
@@ -161,6 +168,7 @@ class IdeaReviewView(LoginRequiredMixin, View):
 
         try:
             from django.db import transaction
+
             with transaction.atomic():
                 if "metadata" in approved:
                     stats["metadata"] = _commit_metadata(project, data)
@@ -172,10 +180,7 @@ class IdeaReviewView(LoginRequiredMixin, View):
                     stats["world"] = _commit_world(project, data)
 
             committed_all = set(approved) >= set(_available_sections_from_data(data))
-            draft.status = (
-                IdeaImportDraft.Status.COMMITTED if committed_all
-                else IdeaImportDraft.Status.PARTIAL
-            )
+            draft.status = IdeaImportDraft.Status.COMMITTED if committed_all else IdeaImportDraft.Status.PARTIAL
             draft.committed_sections = approved
             draft.save(update_fields=["status", "committed_sections"])
 
@@ -199,6 +204,7 @@ class IdeaReviewView(LoginRequiredMixin, View):
 
 def _available_sections_from_data(data: dict) -> list[str]:
     from apps.idea_import.services.idea_extractor import available_sections
+
     return available_sections(data)
 
 
@@ -227,19 +233,23 @@ def _commit_outline(project, data: dict, user) -> int:
 
     all_beats = []
     for i, b in enumerate(beats):
-        all_beats.append({
-            "title": b.get("title", f"Beat {i+1}"),
-            "description": b.get("description", ""),
-            "beat_type": b.get("beat_type", "chapter"),
-            "order": b.get("order", i + 1),
-        })
+        all_beats.append(
+            {
+                "title": b.get("title", f"Beat {i + 1}"),
+                "description": b.get("description", ""),
+                "beat_type": b.get("beat_type", "chapter"),
+                "order": b.get("order", i + 1),
+            }
+        )
     for i, ch in enumerate(chapters):
-        all_beats.append({
-            "title": ch.get("title", f"Kapitel {ch.get('number', i+1)}"),
-            "description": ch.get("summary", ""),
-            "beat_type": "chapter",
-            "order": ch.get("number", len(beats) + i + 1),
-        })
+        all_beats.append(
+            {
+                "title": ch.get("title", f"Kapitel {ch.get('number', i + 1)}"),
+                "description": ch.get("summary", ""),
+                "beat_type": "chapter",
+                "order": ch.get("number", len(beats) + i + 1),
+            }
+        )
 
     if not all_beats:
         return 0
@@ -254,17 +264,19 @@ def _commit_outline(project, data: dict, user) -> int:
     ct = getattr(project, "content_type", DEFAULT_CONTENT_TYPE) or DEFAULT_CONTENT_TYPE
     ptarget = project.target_word_count or DEFAULT_PROJECT_TARGET_WORDS
     targets = distribute_chapter_targets(ptarget, len(all_beats), ct)
-    OutlineNode.objects.bulk_create([
-        OutlineNode(
-            outline_version=version,
-            title=b["title"],
-            description=b["description"],
-            beat_type=b["beat_type"],
-            order=b["order"],
-            target_words=targets[i],
-        )
-        for i, b in enumerate(all_beats)
-    ])
+    OutlineNode.objects.bulk_create(
+        [
+            OutlineNode(
+                outline_version=version,
+                title=b["title"],
+                description=b["description"],
+                beat_type=b["beat_type"],
+                order=b["order"],
+                target_words=targets[i],
+            )
+            for i, b in enumerate(all_beats)
+        ]
+    )
     return len(all_beats)
 
 

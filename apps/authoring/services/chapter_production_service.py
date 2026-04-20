@@ -132,6 +132,7 @@ class ChapterProductionService:
     def _resolve_content_type(self) -> str:
         try:
             from apps.projects.models import BookProject
+
             project = BookProject.objects.get(pk=self._project_id)
             return project.content_type or DEFAULT_CONTENT_TYPE
         except Exception as exc:
@@ -141,6 +142,7 @@ class ChapterProductionService:
     def _load_content_type_config(self):
         """Load style + chunk_vocab from authoringfw bundled YAML."""
         from authoringfw import get_content_type_config
+
         return get_content_type_config(self._content_type)
 
     def _write_template(self) -> str:
@@ -163,7 +165,9 @@ class ChapterProductionService:
             if prompt_exists(group_template):
                 logger.info(
                     "Template fallback: %s → %s (group: %s)",
-                    self._content_type, group_template, group,
+                    self._content_type,
+                    group_template,
+                    group,
                 )
                 return group_template
         return _DEFAULT_TEMPLATE
@@ -174,6 +178,7 @@ class ChapterProductionService:
             from promptfw import PromptStack
             from django.conf import settings
             import os
+
             templates_dir = getattr(settings, "PROMPT_TEMPLATES_DIR", None)
             if templates_dir and os.path.isdir(templates_dir):
                 return PromptStack.from_directory(templates_dir)
@@ -185,6 +190,7 @@ class ChapterProductionService:
     def _resolve_quality_level(self) -> int | None:
         try:
             from apps.projects.models import BookProject
+
             project = BookProject.objects.get(pk=self._project_id)
             tier = getattr(project, "subscription_tier", None)
             if tier:
@@ -216,14 +222,10 @@ class ChapterProductionService:
 
         try:
             project = BookProject.objects.get(pk=self._project_id)
-            version = OutlineVersion.objects.filter(
-                project=project, is_active=True
-            ).order_by("-created_at").first()
+            version = OutlineVersion.objects.filter(project=project, is_active=True).order_by("-created_at").first()
             node = None
             if version:
-                node = OutlineNode.objects.filter(
-                    outline_version=version, pk=chapter_id
-                ).first()
+                node = OutlineNode.objects.filter(outline_version=version, pk=chapter_id).first()
 
             ctx_block = self._get_context_block()
             style_block = self._get_style_constraints()
@@ -241,7 +243,9 @@ class ChapterProductionService:
             )
 
             content = self._router.completion(
-                "chapter_brief", messages, quality_level=self._quality_level,
+                "chapter_brief",
+                messages,
+                quality_level=self._quality_level,
                 **{k: v for k, v in self._llm_overrides.items() if k == "model"},
             )
             return BriefResult(success=True, brief=content)
@@ -252,9 +256,7 @@ class ChapterProductionService:
             logger.exception("generate_brief Fehler")
             return BriefResult(success=False, error=str(exc))
 
-    def write_chapter(
-        self, chapter_id: str, brief: str, target_words: int = DEFAULT_TARGET_WORD_COUNT
-    ) -> WriteResult:
+    def write_chapter(self, chapter_id: str, brief: str, target_words: int = DEFAULT_TARGET_WORD_COUNT) -> WriteResult:
         """Stage 2: Kapitel schreiben via aifw action_code=chapter_write.
 
         Uses chunked generation (authoringfw pattern) for chapters
@@ -270,11 +272,19 @@ class ChapterProductionService:
         try:
             if target_words <= words_per_chunk:
                 return self._write_single(
-                    brief, target_words, ctx_block, style_block, dynamic_max_tokens,
+                    brief,
+                    target_words,
+                    ctx_block,
+                    style_block,
+                    dynamic_max_tokens,
                 )
             return self._write_chunked(
-                brief, target_words, ctx_block, style_block,
-                dynamic_max_tokens, words_per_chunk,
+                brief,
+                target_words,
+                ctx_block,
+                style_block,
+                dynamic_max_tokens,
+                words_per_chunk,
             )
         except LLMRoutingError as exc:
             return WriteResult(success=False, error=str(exc))
@@ -283,8 +293,12 @@ class ChapterProductionService:
             return WriteResult(success=False, error=str(exc))
 
     def _write_single(
-        self, brief: str, target_words: int,
-        ctx_block: str, style_block: str, max_tokens: int,
+        self,
+        brief: str,
+        target_words: int,
+        ctx_block: str,
+        style_block: str,
+        max_tokens: int,
     ) -> WriteResult:
         """Single-shot chapter generation."""
         messages = render_prompt(
@@ -297,23 +311,31 @@ class ChapterProductionService:
         write_overrides = {"max_tokens": max_tokens}
         write_overrides.update(self._llm_overrides)
         content = self._router.completion(
-            "chapter_write", messages,
-            quality_level=self._quality_level, priority="quality",
+            "chapter_write",
+            messages,
+            quality_level=self._quality_level,
+            priority="quality",
             **write_overrides,
         )
         content = _strip_chapter_heading(content)
         return WriteResult(success=True, content=content, word_count=len(content.split()))
 
     def _write_chunked(
-        self, brief: str, target_words: int,
-        ctx_block: str, style_block: str,
-        max_tokens: int, words_per_chunk: int,
+        self,
+        brief: str,
+        target_words: int,
+        ctx_block: str,
+        style_block: str,
+        max_tokens: int,
+        words_per_chunk: int,
     ) -> WriteResult:
         """Multi-chunk chapter generation for long chapters."""
         num_chunks = (target_words // words_per_chunk) + 1
         logger.info(
             "Chunked generation: %d words in %d chunks of ~%d words",
-            target_words, num_chunks, words_per_chunk,
+            target_words,
+            num_chunks,
+            words_per_chunk,
         )
 
         vocab = self._ct_config.chunk_vocab
@@ -358,24 +380,31 @@ class ChapterProductionService:
 
             try:
                 chunk_content = self._router.completion(
-                    "chapter_write", messages,
-                    quality_level=self._quality_level, priority="quality",
+                    "chapter_write",
+                    messages,
+                    quality_level=self._quality_level,
+                    priority="quality",
                     **write_overrides,
                 )
                 all_parts.append(chunk_content.strip())
                 logger.info(
                     "Chunk %d/%d: %d words",
-                    chunk_num + 1, num_chunks, len(chunk_content.split()),
+                    chunk_num + 1,
+                    num_chunks,
+                    len(chunk_content.split()),
                 )
             except (LLMRoutingError, Exception) as exc:
                 if all_parts:
                     logger.warning(
                         "Chunk %d/%d failed, returning partial: %s",
-                        chunk_num + 1, num_chunks, exc,
+                        chunk_num + 1,
+                        num_chunks,
+                        exc,
                     )
                     partial = "\n\n".join(all_parts)
                     return WriteResult(
-                        success=True, content=partial,
+                        success=True,
+                        content=partial,
                         word_count=len(partial.split()),
                     )
                 raise
@@ -383,7 +412,8 @@ class ChapterProductionService:
         full_content = "\n\n".join(all_parts)
         full_content = _strip_chapter_heading(full_content)
         return WriteResult(
-            success=True, content=full_content,
+            success=True,
+            content=full_content,
             word_count=len(full_content.split()),
         )
 
@@ -400,8 +430,11 @@ class ChapterProductionService:
                 content=content,
             )
             from promptfw.parsing import extract_json
+
             raw = self._router.completion(
-                "chapter_analyze", messages, quality_level=self._quality_level,
+                "chapter_analyze",
+                messages,
+                quality_level=self._quality_level,
                 **{k: v for k, v in self._llm_overrides.items() if k == "model"},
             )
             data = extract_json(raw)
@@ -442,9 +475,12 @@ class ChapterProductionService:
         brief_result = self.generate_brief(chapter_id)
         if not brief_result.success:
             return ProductionResult(
-                success=False, stage=ProductionStage.BRIEF,
-                chapter_id=chapter_id, brief=brief_result,
-                error=brief_result.error, duration_seconds=time.time() - start,
+                success=False,
+                stage=ProductionStage.BRIEF,
+                chapter_id=chapter_id,
+                brief=brief_result,
+                error=brief_result.error,
+                duration_seconds=time.time() - start,
             )
 
         write_result = None
@@ -455,9 +491,13 @@ class ChapterProductionService:
             write_result = self.write_chapter(chapter_id, brief_result.brief, target_words)
             if not write_result.success:
                 return ProductionResult(
-                    success=False, stage=ProductionStage.WRITE,
-                    chapter_id=chapter_id, brief=brief_result, write=write_result,
-                    iterations=iteration, error=write_result.error,
+                    success=False,
+                    stage=ProductionStage.WRITE,
+                    chapter_id=chapter_id,
+                    brief=brief_result,
+                    write=write_result,
+                    iterations=iteration,
+                    error=write_result.error,
                     duration_seconds=time.time() - start,
                 )
             analyze_result = self.analyze_chapter(chapter_id, write_result.content)
@@ -475,7 +515,9 @@ class ChapterProductionService:
 
         return ProductionResult(
             success=True,
-            stage=ProductionStage.COMMIT if (auto_commit and gate_result and gate_result.allows_commit) else ProductionStage.GATE,
+            stage=ProductionStage.COMMIT
+            if (auto_commit and gate_result and gate_result.allows_commit)
+            else ProductionStage.GATE,
             chapter_id=chapter_id,
             brief=brief_result,
             write=write_result,
@@ -487,8 +529,12 @@ class ChapterProductionService:
 
 
 def get_chapter_production_service(
-    project_id: str, user=None, llm_overrides: dict | None = None,
+    project_id: str,
+    user=None,
+    llm_overrides: dict | None = None,
 ) -> ChapterProductionService:
     return ChapterProductionService(
-        project_id=project_id, user=user, llm_overrides=llm_overrides,
+        project_id=project_id,
+        user=user,
+        llm_overrides=llm_overrides,
     )

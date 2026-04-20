@@ -1,6 +1,7 @@
 """
 Outlines Admin — Prompt-Template Management + Quality Ratings
 """
+
 from django.contrib import admin
 
 from apps.outlines.models import OutlinePromptTemplate, OutlineQualityRating
@@ -20,21 +21,30 @@ class OutlinePromptTemplateAdmin(admin.ModelAdmin):
     search_fields = ["system_prompt", "user_prompt_template", "notes"]
     readonly_fields = ["version", "created_at", "updated_at"]
     fieldsets = [
-        (None, {
-            "fields": [
-                "content_type_group",
-                "template_key",
-                "is_active",
-                "version",
-            ],
-        }),
-        ("Prompts", {
-            "fields": ["system_prompt", "user_prompt_template"],
-            "classes": ["wide"],
-        }),
-        ("Meta", {
-            "fields": ["notes", "created_by", "created_at", "updated_at"],
-        }),
+        (
+            None,
+            {
+                "fields": [
+                    "content_type_group",
+                    "template_key",
+                    "is_active",
+                    "version",
+                ],
+            },
+        ),
+        (
+            "Prompts",
+            {
+                "fields": ["system_prompt", "user_prompt_template"],
+                "classes": ["wide"],
+            },
+        ),
+        (
+            "Meta",
+            {
+                "fields": ["notes", "created_by", "created_at", "updated_at"],
+            },
+        ),
     ]
     actions = ["activate_selected"]
 
@@ -46,8 +56,9 @@ class OutlinePromptTemplateAdmin(admin.ModelAdmin):
             avg=Avg("rating"),
         )
         if stats["count"]:
-            return f'{stats["avg"]:.1f}★ ({stats["count"]}x)'
+            return f"{stats['avg']:.1f}★ ({stats['count']}x)"
         return "—"
+
     rating_summary.short_description = "Bewertung"
 
     @admin.action(description="Ausgewählte aktivieren (deaktiviert andere gleiche Keys)")

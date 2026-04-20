@@ -4,6 +4,7 @@ Manuscript — Lese-Ansicht des kompletten Manuskripts (ADR-083)
 Zeigt: Hero-Header, Statistiken, Inhaltsverzeichnis, Kapitel-Inhalt.
 Kapiteltext liegt in OutlineNode.content.
 """
+
 from __future__ import annotations
 
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -26,9 +27,7 @@ class ProjectManuscriptView(LoginRequiredMixin, DetailView):
         ctx = super().get_context_data(**kwargs)
         project = self.object
 
-        active_outline = OutlineVersion.objects.filter(
-            project=project, is_active=True
-        ).order_by("-created_at").first()
+        active_outline = OutlineVersion.objects.filter(project=project, is_active=True).order_by("-created_at").first()
 
         chapters = []
         total_words = 0
@@ -37,15 +36,17 @@ class ProjectManuscriptView(LoginRequiredMixin, DetailView):
             for node in active_outline.nodes.order_by("order"):
                 wc = node.word_count or (len(node.content.split()) if node.content else 0)
                 total_words += wc
-                chapters.append({
-                    "id": str(node.pk),
-                    "order": node.order,
-                    "title": node.title,
-                    "description": node.description,
-                    "content": node.content,
-                    "word_count": wc,
-                    "has_content": bool(node.content and node.content.strip()),
-                })
+                chapters.append(
+                    {
+                        "id": str(node.pk),
+                        "order": node.order,
+                        "title": node.title,
+                        "description": node.description,
+                        "content": node.content,
+                        "word_count": wc,
+                        "has_content": bool(node.content and node.content.strip()),
+                    }
+                )
 
         pages = max(1, total_words // 250) if total_words else 0
         reading_minutes = max(1, total_words // 200) if total_words else 0

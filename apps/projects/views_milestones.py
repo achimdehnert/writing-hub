@@ -1,6 +1,7 @@
 """
 Projects — Milestone & Deadline Views (UC 6.3)
 """
+
 import logging
 
 from django.contrib import messages
@@ -24,11 +25,15 @@ class ProjectMilestonesView(LoginRequiredMixin, View):
         milestones = project.milestones.all()
         upcoming = milestones.filter(is_completed=False).order_by("due_date")
         completed = milestones.filter(is_completed=True).order_by("-completed_at")
-        return render(request, self.template_name, {
-            "project": project,
-            "upcoming": upcoming,
-            "completed": completed,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "project": project,
+                "upcoming": upcoming,
+                "completed": completed,
+            },
+        )
 
     def post(self, request, pk):
         project = get_object_or_404(BookProject, pk=pk, owner=request.user)

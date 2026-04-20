@@ -12,6 +12,7 @@ from .serializers import BookSeriesSerializer
 
 # ── REST API Views ──────────────────────────────────────────────────────
 
+
 class BookSeriesListView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = BookSeriesSerializer
@@ -30,16 +31,14 @@ class BookSeriesDetailView(generics.RetrieveUpdateAPIView):
 
 # ── HTML Frontend Views ─────────────────────────────────────────────────
 
+
 class SeriesListView(LoginRequiredMixin, ListView):
     model = BookSeries
     template_name = "series/series_list.html"
     context_object_name = "series_list"
 
     def get_queryset(self):
-        return (
-            BookSeries.objects.filter(owner=self.request.user)
-            .prefetch_related("projects")
-        )
+        return BookSeries.objects.filter(owner=self.request.user).prefetch_related("projects")
 
 
 class SeriesCreateView(LoginRequiredMixin, CreateView):

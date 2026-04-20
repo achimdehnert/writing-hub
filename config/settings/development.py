@@ -1,6 +1,7 @@
 """
 Writing Hub — Development Settings
 """
+
 import os
 from pathlib import Path as _Path
 
@@ -11,10 +12,12 @@ DEBUG = True
 # ── Shared Secrets (ADR-159) ──────────────────────────────────────────────
 _SECRETS_DIR = _Path.home() / "shared" / "secrets"
 
+
 def _read_secret(name: str) -> str:
     """Read a secret from shared secrets dir, return empty string if missing."""
     p = _SECRETS_DIR / name
     return p.read_text().strip() if p.exists() else ""
+
 
 # Set as Django settings AND env vars (litellm reads os.environ directly)
 OPENAI_API_KEY = _read_secret("openai_api_key")  # noqa: F405

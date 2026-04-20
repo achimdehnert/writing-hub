@@ -8,8 +8,8 @@ Prüft die existierende UI gegen Qualitätskriterien:
 - Content-Types: Alle Optionen vorhanden
 - Genre-Auswahl: Alle Genres vorhanden
 """
-import pytest
 
+import pytest
 
 
 NEUES_PROJEKT_URL = "/projekte/new/"
@@ -30,10 +30,10 @@ class TestNeuesProjektFormAudit:
     def test_should_require_login(self):
         """Unauthentifizierter Zugriff wird umgeleitet."""
         from django.test import Client
+
         anon = Client(SERVER_NAME="writing.iil.pet")
         r = anon.get(NEUES_PROJEKT_URL)
-        assert r.status_code in (301, 302, 400, 403), \
-            f"Expected redirect/forbidden, got {r.status_code}"
+        assert r.status_code in (301, 302, 400, 403), f"Expected redirect/forbidden, got {r.status_code}"
 
     # ── Content-Type Auswahl ───────────────────────────────────────
 
@@ -42,9 +42,15 @@ class TestNeuesProjektFormAudit:
         r = auth_client.get(NEUES_PROJEKT_URL)
         content = r.content.decode()
         expected = [
-            "Roman", "Sachbuch", "Kurzgeschichte", "Drehbuch",
-            "Essay", "Novelle", "Graphic Novel",
-            "Akademische Arbeit", "Wissenschaftliches Paper",
+            "Roman",
+            "Sachbuch",
+            "Kurzgeschichte",
+            "Drehbuch",
+            "Essay",
+            "Novelle",
+            "Graphic Novel",
+            "Akademische Arbeit",
+            "Wissenschaftliches Paper",
         ]
         for ct in expected:
             assert ct in content, f"Content-Type '{ct}' fehlt im Formular"
@@ -64,11 +70,21 @@ class TestNeuesProjektFormAudit:
         r = auth_client.get(NEUES_PROJEKT_URL)
         content = r.content.decode()
         expected_genres = [
-            "Fantasy", "Science-Fiction", "Thriller", "Krimi",
-            "Romantik", "Horror", "Historischer Roman",
-            "Literarische Fiktion", "Young Adult", "Kinderbuch",
-            "Autobiografie", "Sachbuch", "Reisebericht",
-            "Humor", "Mystery",
+            "Fantasy",
+            "Science-Fiction",
+            "Thriller",
+            "Krimi",
+            "Romantik",
+            "Horror",
+            "Historischer Roman",
+            "Literarische Fiktion",
+            "Young Adult",
+            "Kinderbuch",
+            "Autobiografie",
+            "Sachbuch",
+            "Reisebericht",
+            "Humor",
+            "Mystery",
         ]
         for genre in expected_genres:
             assert genre in content, f"Genre '{genre}' fehlt"
@@ -114,31 +130,40 @@ class TestNeuesProjektFormAudit:
 
     def test_should_reject_empty_title(self, auth_client):
         """Formular lehnt leeren Titel ab."""
-        r = auth_client.post(NEUES_PROJEKT_URL, data={
-            "content_type": "novel",
-            "title": "",
-            "target_word_count": 50000,
-        })
+        r = auth_client.post(
+            NEUES_PROJEKT_URL,
+            data={
+                "content_type": "novel",
+                "title": "",
+                "target_word_count": 50000,
+            },
+        )
         # Should stay on form (200 with errors) or redirect back
         assert r.status_code in (200, 302)
         if r.status_code == 200:
             content = r.content.decode()
             # Form should show an error
-            assert "required" in content.lower() or "pflicht" in content.lower() \
-                or "error" in content.lower() or "fehler" in content.lower() \
+            assert (
+                "required" in content.lower()
+                or "pflicht" in content.lower()
+                or "error" in content.lower()
+                or "fehler" in content.lower()
                 or "field is required" in content.lower()
+            )
 
     def test_should_create_project_with_valid_data(self, auth_client):
         """Projekt wird mit gültigen Daten erstellt → Redirect."""
-        r = auth_client.post(NEUES_PROJEKT_URL, data={
-            "content_type": "novel",
-            "title": "REFLEX Test-Projekt (wird gelöscht)",
-            "genre": "fantasy",
-            "target_word_count": 50000,
-        })
+        r = auth_client.post(
+            NEUES_PROJEKT_URL,
+            data={
+                "content_type": "novel",
+                "title": "REFLEX Test-Projekt (wird gelöscht)",
+                "genre": "fantasy",
+                "target_word_count": 50000,
+            },
+        )
         # Success: Redirect to project detail or list
-        assert r.status_code in (200, 301, 302), \
-            f"Expected redirect after create, got {r.status_code}"
+        assert r.status_code in (200, 301, 302), f"Expected redirect after create, got {r.status_code}"
 
     # ── Autoren-Sektion ────────────────────────────────────────────
 

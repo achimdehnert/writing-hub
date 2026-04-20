@@ -13,6 +13,7 @@ Prüft die Charakter-UI gegen Qualitätskriterien:
 Jeder View-Test hat @reflex_link → generiert klickbare Links in
 tests/ui/feedback/reflex-links.md nach dem Testlauf.
 """
+
 import uuid
 
 import pytest
@@ -31,7 +32,9 @@ def _seed_world_with_character(db):
     user = User.objects.first()
     if not user:
         user = User.objects.create_superuser(
-            username="reflex-test", email="test@iil.gmbh", password="test",
+            username="reflex-test",
+            email="test@iil.gmbh",
+            password="test",
         )
 
     project = BookProject.objects.filter(owner=user).first()
@@ -99,6 +102,7 @@ class TestWeltenListeAudit:
 # ═══════════════════════════════════════════════════════════════════════
 # Charakter-Erstellen — Formular-Audit
 # ═══════════════════════════════════════════════════════════════════════
+
 
 @pytest.mark.django_db
 class TestCharacterCreateFormAudit:
@@ -183,12 +187,14 @@ class TestCharacterCreateFormAudit:
         voice_pos = content.find('name="voice_pattern"')
         secret_pos = content.find('name="secret_what"')
         notes_pos = content.find('name="notes"')
-        assert name_pos < personality_pos < voice_pos < secret_pos < notes_pos, \
+        assert name_pos < personality_pos < voice_pos < secret_pos < notes_pos, (
             "Felder-Reihenfolge stimmt nicht: Name < Personality < Voice < Secret < Notes"
+        )
 
     def test_should_require_login(self):
         """Unauthentifizierter Zugriff wird zu Login umgeleitet."""
         from django.test import Client
+
         anon = Client(SERVER_NAME="writing.iil.pet")
         r = anon.get(self.url)
         assert r.status_code == 302
@@ -198,6 +204,7 @@ class TestCharacterCreateFormAudit:
 # ═══════════════════════════════════════════════════════════════════════
 # Charakter-Verknüpfen — View erreichbar
 # ═══════════════════════════════════════════════════════════════════════
+
 
 @pytest.mark.django_db
 class TestCharacterLinkViewAudit:
@@ -219,6 +226,7 @@ class TestCharacterLinkViewAudit:
 # ═══════════════════════════════════════════════════════════════════════
 # Welt-Detail — Charakter-Karten Kurzprofil
 # ═══════════════════════════════════════════════════════════════════════
+
 
 @pytest.mark.django_db
 class TestWorldDetailCharacterCardsAudit:
@@ -264,6 +272,7 @@ class TestWorldDetailCharacterCardsAudit:
 # ═══════════════════════════════════════════════════════════════════════
 # ProjectCharacterLink Model — Feld-Audit
 # ═══════════════════════════════════════════════════════════════════════
+
 
 @pytest.mark.django_db
 class TestCharacterModelFieldsAudit:
@@ -313,6 +322,7 @@ class TestCharacterModelFieldsAudit:
     def test_should_have_character_status_choices(self):
         """CHARACTER_STATUS hat 4 Optionen."""
         from apps.worlds.models import ProjectCharacterLink
+
         assert len(ProjectCharacterLink.CHARACTER_STATUS) == 4
         keys = [k for k, _ in ProjectCharacterLink.CHARACTER_STATUS]
         assert "alive" in keys
@@ -323,11 +333,13 @@ class TestCharacterModelFieldsAudit:
     def test_should_have_12_narrative_roles(self):
         """NARRATIVE_ROLES hat 12 Optionen (ADR-157)."""
         from apps.worlds.models import ProjectCharacterLink
+
         assert len(ProjectCharacterLink.NARRATIVE_ROLES) == 12
 
     def test_should_persist_and_reload(self):
         """Felder ueberleben save/reload."""
         from apps.worlds.models import ProjectCharacterLink
+
         reloaded = ProjectCharacterLink.objects.get(pk=self.char_link.pk)
         assert reloaded.voice_pattern == self.char_link.voice_pattern
         assert reloaded.secret_what == self.char_link.secret_what
@@ -355,6 +367,7 @@ class TestAutorenGenreAudit:
     def test_should_have_genre_profile_model(self, db):
         """GenreProfile-Modell ist importierbar und hat Felder."""
         from apps.authors.models import GenreProfile
+
         assert hasattr(GenreProfile, "slug")
         assert hasattr(GenreProfile, "name_short")
         assert hasattr(GenreProfile, "icon")
@@ -363,6 +376,7 @@ class TestAutorenGenreAudit:
     def test_should_have_situation_type_model(self, db):
         """SituationType-Modell hat llm_prompt_hint."""
         from apps.authors.models import SituationType
+
         assert hasattr(SituationType, "slug")
         assert hasattr(SituationType, "label")
         assert hasattr(SituationType, "llm_prompt_hint")
@@ -373,6 +387,7 @@ class TestAutorenGenreAudit:
 # Anon-Zugriff — alle Views hinter Login
 # ═══════════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.django_db
 class TestAnonAccessDenied:
     """Unauthentifizierter Zugriff auf Charakter-Views wird umgeleitet."""
@@ -381,6 +396,7 @@ class TestAnonAccessDenied:
     def setup(self, db):
         _, self.world_link, _ = _seed_world_with_character(db)
         from django.test import Client
+
         self.anon = Client(SERVER_NAME="writing.iil.pet")
 
     def test_should_redirect_welten_liste(self):

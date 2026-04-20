@@ -187,6 +187,7 @@ class IdeaGeneratorService:
     @staticmethod
     def _parse_ideas(raw: str) -> list[IdeaResult]:
         from promptfw.parsing import extract_json, extract_json_list
+
         items = extract_json_list(raw)
         if not items:
             obj = extract_json(raw)
@@ -211,6 +212,7 @@ class IdeaGeneratorService:
     @staticmethod
     def _parse_premise(raw: str) -> PremiseResult:
         from promptfw.parsing import extract_json
+
         data = extract_json(raw)
         if data is None:
             return PremiseResult(success=False, error="Keine JSON-Antwort vom LLM")

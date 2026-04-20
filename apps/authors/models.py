@@ -8,6 +8,7 @@ Struktur:
   WritingStyle (1 Author → N Styles, 1 GenreProfile)
   WritingStyleSample (1 Style → N Beispieltexte, 1 SituationType)
 """
+
 import uuid
 
 from django.conf import settings
@@ -16,6 +17,7 @@ from django.db import models
 
 class GenreProfile(models.Model):
     """Genre mit eigener Situationstypen-Konfiguration."""
+
     slug = models.SlugField(max_length=80, unique=True)
     name = models.CharField(max_length=120)
     name_short = models.CharField(max_length=40)
@@ -40,6 +42,7 @@ class GenreProfile(models.Model):
 
 class SituationType(models.Model):
     """Ein Situationstyp innerhalb eines GenreProfiles."""
+
     genre_profile = models.ForeignKey(
         GenreProfile,
         on_delete=models.CASCADE,
@@ -68,6 +71,7 @@ class SituationType(models.Model):
 
 class Author(models.Model):
     """Autor-Profil (kann Pen-Name oder realer Name sein)."""
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -137,6 +141,7 @@ class WritingStyle(models.Model):
         blank=True,
         help_text="Kondensierter Prompt-Baustein für LLM-Generierung",
     )
+
     # Akademische / fachspezifische Felder
     class CitationStyle(models.TextChoices):
         APA = "apa", "APA 7th"
@@ -201,9 +206,7 @@ class WritingStyle(models.Model):
         default=list,
         help_text="Charakteristische Stilmittel dieses Autors",
     )
-    status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.DRAFT
-    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     error_message = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

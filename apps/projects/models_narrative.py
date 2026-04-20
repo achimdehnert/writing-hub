@@ -6,6 +6,7 @@ DialogueScene: Subtext-Struktur für Dialog-Szenen.
 Hinweis: SubplotArc und ProjectGenrePromise sind in apps/projects/models.py
 definiert (Migration 0015). Keine Duplikate hier.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -30,12 +31,12 @@ class DialogueScene(models.Model):
     """
 
     DIALOGUE_OUTCOMES = [
-        ("status_quo",   "Status Quo — nichts ändert sich (Ausnahme!)"),
-        ("info_shift",   "Info-Shift — Wissensstand verändert sich"),
-        ("power_shift",  "Power-Shift — Machtverhältnis kippt"),
+        ("status_quo", "Status Quo — nichts ändert sich (Ausnahme!)"),
+        ("info_shift", "Info-Shift — Wissensstand verändert sich"),
+        ("power_shift", "Power-Shift — Machtverhältnis kippt"),
         ("relationship", "Beziehungs-Shift — Nähe/Distanz verändert"),
-        ("revelation",   "Enthüllung — etwas kommt ans Licht"),
-        ("decision",     "Entscheidungs-Katalysator"),
+        ("revelation", "Enthüllung — etwas kommt ans Licht"),
+        ("decision", "Entscheidungs-Katalysator"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -47,44 +48,55 @@ class DialogueScene(models.Model):
     )
 
     speaker_a_character_id = models.UUIDField(
-        null=True, blank=True,
+        null=True,
+        blank=True,
         verbose_name="Figur A (WeltenHub UUID)",
     )
     speaker_a_name = models.CharField(
-        max_length=200, blank=True, default="",
+        max_length=200,
+        blank=True,
+        default="",
         verbose_name="Figur A (Cache)",
     )
     speaker_b_character_id = models.UUIDField(
-        null=True, blank=True,
+        null=True,
+        blank=True,
         verbose_name="Figur B (WeltenHub UUID)",
     )
     speaker_b_name = models.CharField(
-        max_length=200, blank=True, default="",
+        max_length=200,
+        blank=True,
+        default="",
         verbose_name="Figur B (Cache)",
     )
 
     goal_a = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Ziel Figur A im Dialog",
         help_text="Was will Figur A durch dieses Gespräch erreichen?",
     )
     goal_b = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Ziel Figur B im Dialog",
     )
 
     subtext_a = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Subtext Figur A",
         help_text="Was meint Figur A wirklich — darf es aber nicht sagen?",
     )
     subtext_b = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Subtext Figur B",
     )
 
     info_asymmetry = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Informations-Asymmetrie",
         help_text="Was weiß eine Figur, was die andere nicht weiß?",
     )
@@ -96,7 +108,8 @@ class DialogueScene(models.Model):
         verbose_name="Dialog-Outcome",
     )
     outcome_description = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Outcome-Beschreibung",
         help_text="Was ändert sich konkret durch diesen Dialog?",
     )
@@ -122,21 +135,10 @@ class DialogueScene(models.Model):
             f"ZIEL {self.speaker_b_name}: {self.goal_b}",
         ]
         if self.subtext_a:
-            lines.append(
-                f"SUBTEXT {self.speaker_a_name}: {self.subtext_a} "
-                f"(darf NICHT direkt gesagt werden)"
-            )
+            lines.append(f"SUBTEXT {self.speaker_a_name}: {self.subtext_a} (darf NICHT direkt gesagt werden)")
         if self.subtext_b:
-            lines.append(
-                f"SUBTEXT {self.speaker_b_name}: {self.subtext_b} "
-                f"(darf NICHT direkt gesagt werden)"
-            )
+            lines.append(f"SUBTEXT {self.speaker_b_name}: {self.subtext_b} (darf NICHT direkt gesagt werden)")
         if self.info_asymmetry:
             lines.append(f"INFORMATIONS-ASYMMETRIE: {self.info_asymmetry}")
-        lines.append(
-            f"ERWARTETER OUTCOME: {self.get_dialogue_outcome_display()} — "
-            f"{self.outcome_description}"
-        )
+        lines.append(f"ERWARTETER OUTCOME: {self.get_dialogue_outcome_display()} — {self.outcome_description}")
         return "\n".join(lines)
-
-

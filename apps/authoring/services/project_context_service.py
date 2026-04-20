@@ -67,28 +67,28 @@ class ProjectContext:
         if self.characters:
             lines.append("\n## Charaktere")
             for ch in self.characters:
-                role = ch.get('narrative_role') or ch.get('role', '?')
-                desc = ch.get('description', '')[:CHAR_DESC_MAX_CHARS]
-                motivation = ch.get('motivation', '')
+                role = ch.get("narrative_role") or ch.get("role", "?")
+                desc = ch.get("description", "")[:CHAR_DESC_MAX_CHARS]
+                motivation = ch.get("motivation", "")
                 line = f"- {ch.get('name', '?')} ({role}): {desc}"
                 if motivation:
                     line += f" | Motivation: {motivation[:CHAR_MOTIVATION_MAX_CHARS]}"
-                if ch.get('voice_pattern'):
+                if ch.get("voice_pattern"):
                     line += f" | Stimme: {ch['voice_pattern'][:VOICE_PATTERN_MAX_CHARS]}"
-                if ch.get('secret'):
+                if ch.get("secret"):
                     line += f" | Geheimnis: {ch['secret'][:VOICE_PATTERN_MAX_CHARS]}"
-                if ch.get('want'):
+                if ch.get("want"):
                     line += f" | Will: {ch['want'][:CHAR_MOTIVATION_MAX_CHARS]}"
-                if ch.get('need'):
+                if ch.get("need"):
                     line += f" | Braucht: {ch['need'][:CHAR_MOTIVATION_MAX_CHARS]}"
-                if ch.get('flaw'):
+                if ch.get("flaw"):
                     line += f" | Schwaeche: {ch['flaw'][:CHAR_MOTIVATION_MAX_CHARS]}"
                 lines.append(line)
         if self.worlds:
             lines.append("\n## Weltenbau")
             for w in self.worlds:
-                desc = w.get('description', '')[:WORLD_DESC_MAX_CHARS]
-                atmosphere = w.get('atmosphere', '')
+                desc = w.get("description", "")[:WORLD_DESC_MAX_CHARS]
+                atmosphere = w.get("atmosphere", "")
                 line = f"- {w.get('name', '?')}: {desc}"
                 if atmosphere:
                     line += f" | Atmosphaere: {atmosphere[:WORLD_DESC_MAX_CHARS]}"
@@ -101,23 +101,15 @@ class ProjectContext:
                 lines.append(f"Stil-Profil: {self.author_style['name']}")
             if self.author_style.get("signature_moves"):
                 lines.append(
-                    "Stilmittel: "
-                    + ", ".join(self.author_style["signature_moves"][:MAX_STYLE_SIGNATURE_MOVES])
+                    "Stilmittel: " + ", ".join(self.author_style["signature_moves"][:MAX_STYLE_SIGNATURE_MOVES])
                 )
             if self.author_style.get("do_list"):
-                lines.append(
-                    "DO (empfohlen): "
-                    + ", ".join(self.author_style["do_list"][:MAX_STYLE_SIGNATURE_MOVES])
-                )
+                lines.append("DO (empfohlen): " + ", ".join(self.author_style["do_list"][:MAX_STYLE_SIGNATURE_MOVES]))
             if self.author_style.get("dont_list"):
-                lines.append(
-                    "DONT (vermeiden): "
-                    + ", ".join(self.author_style["dont_list"][:MAX_STYLE_DONT_ITEMS])
-                )
+                lines.append("DONT (vermeiden): " + ", ".join(self.author_style["dont_list"][:MAX_STYLE_DONT_ITEMS]))
             if self.author_style.get("taboo_list"):
                 lines.append(
-                    "TABU (niemals verwenden): "
-                    + ", ".join(self.author_style["taboo_list"][:MAX_STYLE_TABOO_ITEMS])
+                    "TABU (niemals verwenden): " + ", ".join(self.author_style["taboo_list"][:MAX_STYLE_TABOO_ITEMS])
                 )
         return "\n".join(lines)
 
@@ -156,15 +148,13 @@ class ProjectContextService:
             for link in char_links:
                 try:
                     from weltenfw.django import get_client
+
                     char = get_client().characters.get(link.weltenhub_character_id)
                     char_entry = {
                         "name": getattr(char, "name", str(link.weltenhub_character_id)),
                         "role": link.project_role or getattr(char, "role", ""),
                         "narrative_role": link.get_narrative_role_display(),
-                        "description": (
-                            getattr(char, "description", "")
-                            or getattr(char, "backstory", "")
-                        ),
+                        "description": (getattr(char, "description", "") or getattr(char, "backstory", "")),
                         "motivation": getattr(char, "motivation", ""),
                     }
                     if link.voice_pattern:
@@ -191,12 +181,15 @@ class ProjectContextService:
             for link in world_links:
                 try:
                     from weltenfw.django import get_client
+
                     world = get_client().worlds.get(link.weltenhub_world_id)
-                    worlds.append({
-                        "name": getattr(world, "name", str(link.weltenhub_world_id)),
-                        "description": getattr(world, "description", ""),
-                        "atmosphere": getattr(world, "atmosphere", ""),
-                    })
+                    worlds.append(
+                        {
+                            "name": getattr(world, "name", str(link.weltenhub_world_id)),
+                            "description": getattr(world, "description", ""),
+                            "atmosphere": getattr(world, "atmosphere", ""),
+                        }
+                    )
                 except Exception as exc:
                     logger.debug("World context unavailable: %s", exc)
             ctx.worlds = worlds
@@ -205,13 +198,9 @@ class ProjectContextService:
 
         # Aktive Outline
         try:
-            version = OutlineVersion.objects.filter(
-                project=project, is_active=True
-            ).order_by("-created_at").first()
+            version = OutlineVersion.objects.filter(project=project, is_active=True).order_by("-created_at").first()
             if version:
-                nodes = OutlineNode.objects.filter(
-                    outline_version=version
-                ).order_by("order")
+                nodes = OutlineNode.objects.filter(outline_version=version).order_by("order")
                 ctx.outline_nodes = [
                     {
                         "order": n.order,
@@ -229,6 +218,7 @@ class ProjectContextService:
             ws = project.writing_style
             if ws:
                 from apps.authors.services import get_style_prompt_for_writing
+
                 ctx.writing_style_prompt = get_style_prompt_for_writing(ws)
                 ctx.author_style = {
                     "name": ws.name,
@@ -242,9 +232,7 @@ class ProjectContextService:
 
         if not ctx.author_style:
             try:
-                style_dna = AuthorStyleDNA.objects.filter(
-                    author=project.owner, is_primary=True
-                ).first()
+                style_dna = AuthorStyleDNA.objects.filter(author=project.owner, is_primary=True).first()
                 if style_dna:
                     ctx.author_style = {
                         "name": style_dna.name,

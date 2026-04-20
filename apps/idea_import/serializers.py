@@ -10,11 +10,19 @@ class IdeaImportDraftSerializer(serializers.ModelSerializer):
     class Meta:
         model = IdeaImportDraft
         fields = [
-            "id", "project", "source_filename", "source_format",
-            "extracted_data", "extraction_model", "status",
-            "committed_sections", "commit_notes",
-            "available_sections", "confidence_overall",
-            "created_at", "committed_at",
+            "id",
+            "project",
+            "source_filename",
+            "source_format",
+            "extracted_data",
+            "extraction_model",
+            "status",
+            "committed_sections",
+            "commit_notes",
+            "available_sections",
+            "confidence_overall",
+            "created_at",
+            "committed_at",
         ]
         read_only_fields = ["id", "status", "created_at", "committed_at", "committed_sections"]
 

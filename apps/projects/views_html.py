@@ -1,6 +1,7 @@
 """
 Projects — HTML Frontend Views (ADR-083)
 """
+
 import json
 import logging
 
@@ -27,21 +28,20 @@ from .constants import (
     FW_LABELS_FALLBACK,
 )
 from .models import (
-    AudienceLookup, BookProject,
-    ContentTypeLookup, GenreLookup, OutlineFramework,
-    OutlineNode, OutlineVersion,
+    AudienceLookup,
+    BookProject,
+    ContentTypeLookup,
+    GenreLookup,
+    OutlineFramework,
+    OutlineNode,
+    OutlineVersion,
 )
 
 logger = logging.getLogger(__name__)
 
 
 def _get_frameworks():
-    return list(
-        OutlineFramework.objects
-        .filter(is_active=True)
-        .prefetch_related("beats")
-        .order_by("order", "name")
-    )
+    return list(OutlineFramework.objects.filter(is_active=True).prefetch_related("beats").order_by("order", "name"))
 
 
 def _fw_label(fw_key, frameworks):
@@ -61,10 +61,9 @@ def _fw_beat_count(fw_key, frameworks):
 def _get_authors(user):
     try:
         from apps.authors.models import Author
+
         return list(
-            Author.objects.filter(owner=user, is_active=True)
-            .prefetch_related("writing_styles")
-            .order_by("name")
+            Author.objects.filter(owner=user, is_active=True).prefetch_related("writing_styles").order_by("name")
         )
     except Exception:
         return []
@@ -74,10 +73,11 @@ def _get_all_styles(user):
     """Alle WritingStyles des Users, mit Author-Info."""
     try:
         from apps.authors.models import WritingStyle
+
         return list(
-            WritingStyle.objects.filter(
-                author__owner=user, is_active=True
-            ).select_related("author").order_by("author__name", "name")
+            WritingStyle.objects.filter(author__owner=user, is_active=True)
+            .select_related("author")
+            .order_by("author__name", "name")
         )
     except Exception:
         return []
@@ -86,9 +86,10 @@ def _get_all_styles(user):
 def _filter_projects(request):
     """Gemeinsame Filter-Logik für ProjectListView + ProjectListPartialView."""
     from django.db.models import Sum  # noqa: F811
-    qs = BookProject.objects.filter(
-        owner=request.user, is_active=True
-    ).select_related("genre_lookup", "content_type_lookup", "series")
+
+    qs = BookProject.objects.filter(owner=request.user, is_active=True).select_related(
+        "genre_lookup", "content_type_lookup", "series"
+    )
     series_id = request.GET.get("serie")
     genre_id = request.GET.get("genre")
     ct_id = request.GET.get("typ")
@@ -109,16 +110,14 @@ def _filter_projects(request):
         for row in OutlineNode.objects.filter(
             outline_version__project__in=qs,
             outline_version__is_active=True,
-        ).values("outline_version__project_id").annotate(
-            total=Sum("word_count")
         )
+        .values("outline_version__project_id")
+        .annotate(total=Sum("word_count"))
     }
     for p in qs:
         p.written_words = word_sums.get(p.pk, 0) or 0
         if p.target_word_count and p.target_word_count > 0:
-            p.progress_pct = min(
-                100, round(p.written_words / p.target_word_count * 100)
-            )
+            p.progress_pct = min(100, round(p.written_words / p.target_word_count * 100))
         else:
             p.progress_pct = 0
     return qs
@@ -129,6 +128,7 @@ PAGE_SIZE = 12
 
 def _paginate(qs, request):
     from django.core.paginator import Paginator
+
     paginator = Paginator(list(qs), PAGE_SIZE)
     page_number = request.GET.get("page", 1)
     return paginator.get_page(page_number)
@@ -144,15 +144,9 @@ class ProjectListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["series_options"] = BookSeries.objects.filter(
-            owner=self.request.user
-        ).order_by("title")
-        ctx["genre_options"] = GenreLookup.objects.all().order_by(
-            "order", "name"
-        )
-        ctx["ct_options"] = ContentTypeLookup.objects.all().order_by(
-            "order", "name"
-        )
+        ctx["series_options"] = BookSeries.objects.filter(owner=self.request.user).order_by("title")
+        ctx["genre_options"] = GenreLookup.objects.all().order_by("order", "name")
+        ctx["ct_options"] = ContentTypeLookup.objects.all().order_by("order", "name")
         ctx["filter_serie"] = self.request.GET.get("serie", "")
         ctx["filter_genre"] = self.request.GET.get("genre", "")
         ctx["filter_typ"] = self.request.GET.get("typ", "")
@@ -167,18 +161,24 @@ class ProjectListPartialView(LoginRequiredMixin, View):
 
     def get(self, request):
         qs = _filter_projects(request)
-        filter_active = any([
-            request.GET.get("q"),
-            request.GET.get("genre"),
-            request.GET.get("typ"),
-            request.GET.get("serie"),
-        ])
+        filter_active = any(
+            [
+                request.GET.get("q"),
+                request.GET.get("genre"),
+                request.GET.get("typ"),
+                request.GET.get("serie"),
+            ]
+        )
         page_obj = _paginate(qs, request)
-        return render(request, "projects/project_list_partial.html", {
-            "projects": page_obj,
-            "page_obj": page_obj,
-            "filter_active": filter_active,
-        })
+        return render(
+            request,
+            "projects/project_list_partial.html",
+            {
+                "projects": page_obj,
+                "page_obj": page_obj,
+                "filter_active": filter_active,
+            },
+        )
 
 
 class ProjectCreateView(LoginRequiredMixin, View):
@@ -230,16 +230,15 @@ class ProjectCreateView(LoginRequiredMixin, View):
         if style_ids:
             try:
                 from apps.authors.models import WritingStyle
-                styles = WritingStyle.objects.filter(
-                    pk__in=style_ids, author__owner=request.user
-                )
+
+                styles = WritingStyle.objects.filter(pk__in=style_ids, author__owner=request.user)
                 project.writing_styles.set(styles)
                 if styles:
                     project.writing_style = styles.first()
                     project.save(update_fields=["writing_style"])
             except Exception:
                 pass
-        messages.success(request, f'Projekt „{project.title}“ angelegt.')
+        messages.success(request, f"Projekt „{project.title}“ angelegt.")
         return redirect("projects:detail", pk=project.pk)
 
 
@@ -276,25 +275,28 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
             "scientific": "imrad",
             "essay": "scientific_essay",
         }
-        active_fw_key = selected.source if selected else _CT_DEFAULT_FW.get(
-            project.content_type, "three_act"
-        )
+        active_fw_key = selected.source if selected else _CT_DEFAULT_FW.get(project.content_type, "three_act")
         ctx["selected_outline_framework"] = active_fw_key
         ctx["selected_fw_beat_count"] = _fw_beat_count(active_fw_key, frameworks)
 
         from apps.idea_import.models import IdeaImportDraft
-        ctx["idea_drafts"] = IdeaImportDraft.objects.filter(
-            project=project
-        ).exclude(status=IdeaImportDraft.Status.DISCARDED).order_by("-created_at")[:10]
+
+        ctx["idea_drafts"] = (
+            IdeaImportDraft.objects.filter(project=project)
+            .exclude(status=IdeaImportDraft.Status.DISCARDED)
+            .order_by("-created_at")[:10]
+        )
 
         from apps.worlds.models import ProjectWorldLink, ProjectCharacterLink
+
         ctx["world_links"] = ProjectWorldLink.objects.filter(project=project)
         characters = ProjectCharacterLink.objects.filter(project=project).select_related()
         ctx["characters"] = characters
         ctx["character_count"] = characters.count()
 
         all_nodes = OutlineNode.objects.filter(
-            outline_version__project=project, outline_version__is_active=True,
+            outline_version__project=project,
+            outline_version__is_active=True,
         )
         total_words = sum(n.word_count for n in all_nodes if n.word_count)
         written_chapters = all_nodes.filter(word_count__gt=0).count()
@@ -318,8 +320,12 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
     model = BookProject
     template_name = "projects/project_form.html"
     fields = [
-        "title", "description", "series",
-        "content_type_lookup", "genre_lookup", "audience_lookup",
+        "title",
+        "description",
+        "series",
+        "content_type_lookup",
+        "genre_lookup",
+        "audience_lookup",
         "target_word_count",
     ]
 
@@ -341,9 +347,7 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
         ctx["audiences"] = AudienceLookup.objects.all().order_by("order", "name")
         ctx["authors"] = _get_authors(self.request.user)
         ctx["all_styles"] = _get_all_styles(self.request.user)
-        ctx["selected_style_ids"] = list(
-            self.object.writing_styles.values_list("pk", flat=True)
-        )
+        ctx["selected_style_ids"] = list(self.object.writing_styles.values_list("pk", flat=True))
         return ctx
 
     def form_valid(self, form):
@@ -351,9 +355,8 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
         style_ids = self.request.POST.getlist("writing_styles")
         try:
             from apps.authors.models import WritingStyle
-            styles = WritingStyle.objects.filter(
-                pk__in=style_ids, author__owner=self.request.user
-            )
+
+            styles = WritingStyle.objects.filter(pk__in=style_ids, author__owner=self.request.user)
             self.object.writing_styles.set(styles)
             first = styles.first()
             if first:
@@ -403,32 +406,36 @@ class OutlineCreateView(LoginRequiredMixin, View):
             ptarget = project.target_word_count or DEFAULT_PROJECT_TARGET_WORDS
             if beats:
                 targets = distribute_chapter_targets(ptarget, len(beats), ct)
-                OutlineNode.objects.bulk_create([
-                    OutlineNode(
-                        outline_version=version,
-                        title=b.name,
-                        beat_type="chapter",
-                        beat_phase=b.name,
-                        order=b.order,
-                        target_words=targets[i],
-                    )
-                    for i, b in enumerate(beats)
-                ])
-                messages.success(request, f'Outline „{name}“ mit {len(beats)} Beats angelegt.')
+                OutlineNode.objects.bulk_create(
+                    [
+                        OutlineNode(
+                            outline_version=version,
+                            title=b.name,
+                            beat_type="chapter",
+                            beat_phase=b.name,
+                            order=b.order,
+                            target_words=targets[i],
+                        )
+                        for i, b in enumerate(beats)
+                    ]
+                )
+                messages.success(request, f"Outline „{name}“ mit {len(beats)} Beats angelegt.")
             elif chapter_count > 0:
                 count = min(chapter_count, 50)
                 targets = distribute_chapter_targets(ptarget, count, ct)
-                OutlineNode.objects.bulk_create([
-                    OutlineNode(
-                        outline_version=version,
-                        title=f"Kapitel {i + 1}",
-                        beat_type="chapter",
-                        order=i + 1,
-                        target_words=targets[i],
-                    )
-                    for i in range(count)
-                ])
-                messages.success(request, f'Outline „{name}“ mit {chapter_count} leeren Kapiteln angelegt.')
+                OutlineNode.objects.bulk_create(
+                    [
+                        OutlineNode(
+                            outline_version=version,
+                            title=f"Kapitel {i + 1}",
+                            beat_type="chapter",
+                            order=i + 1,
+                            target_words=targets[i],
+                        )
+                        for i in range(count)
+                    ]
+                )
+                messages.success(request, f"Outline „{name}“ mit {chapter_count} leeren Kapiteln angelegt.")
             else:
                 messages.success(request, f'Outline „{name}" angelegt.')
             if request.POST.get("ai_generate") == "1" and project.description:
@@ -436,6 +443,7 @@ class OutlineCreateView(LoginRequiredMixin, View):
                     from apps.authoring.services.outline_service import (
                         OutlineGeneratorService,
                     )
+
                     svc = OutlineGeneratorService()
                     result = svc.generate_outline(
                         project_id=str(project.pk),
@@ -446,6 +454,7 @@ class OutlineCreateView(LoginRequiredMixin, View):
                         version.nodes.all().delete()
                         db_nodes = []
                         from apps.projects.models import OutlineNode as _ON
+
                         for i, node in enumerate(result.nodes):
                             beat = ""
                             try:
@@ -457,34 +466,31 @@ class OutlineCreateView(LoginRequiredMixin, View):
                                 summary = node.summary or node.description or ""
                             except Exception:
                                 pass
-                            db_nodes.append(_ON(
-                                outline_version=version,
-                                title=node.title,
-                                description=summary,
-                                beat_type=beat or "chapter",
-                                order=i + 1,
-                            ))
+                            db_nodes.append(
+                                _ON(
+                                    outline_version=version,
+                                    title=node.title,
+                                    description=summary,
+                                    beat_type=beat or "chapter",
+                                    order=i + 1,
+                                )
+                            )
                         ai_targets = distribute_chapter_targets(ptarget, len(db_nodes), ct)
                         for idx, dn in enumerate(db_nodes):
                             dn.target_words = ai_targets[idx]
                         _ON.objects.bulk_create(db_nodes)
-                        messages.success(
-                            request,
-                            f'KI-Outline „{name}" mit {len(result.nodes)} Kapiteln generiert.'
-                        )
+                        messages.success(request, f'KI-Outline „{name}" mit {len(result.nodes)} Kapiteln generiert.')
                     else:
                         err = getattr(result, "error_message", "") or ""
                         messages.warning(
                             request,
-                            f"Outline angelegt, KI-Generierung fehlgeschlagen: {err}" if err
-                            else "Outline angelegt, KI konnte keine Kapitel generieren."
+                            f"Outline angelegt, KI-Generierung fehlgeschlagen: {err}"
+                            if err
+                            else "Outline angelegt, KI konnte keine Kapitel generieren.",
                         )
                 except Exception as ai_exc:
                     logger.exception("KI-Generierung beim Anlegen fehlgeschlagen: %s", ai_exc)
-                    messages.warning(
-                        request,
-                        f"Outline angelegt, KI-Generierung fehlgeschlagen: {ai_exc}"
-                    )
+                    messages.warning(request, f"Outline angelegt, KI-Generierung fehlgeschlagen: {ai_exc}")
             url = reverse("projects:detail", kwargs={"pk": pk}) + f"?outline={version.pk}"
             return redirect(url)
         except Exception as exc:
@@ -499,6 +505,7 @@ class OutlineGenerateView(LoginRequiredMixin, View):
 
     def post(self, request, pk):
         from apps.authoring.services.outline_service import OutlineGeneratorService
+
         project = get_object_or_404(BookProject, pk=pk, owner=request.user)
         framework = request.POST.get("framework", "three_act").strip()
         chapter_count = int(request.POST.get("chapter_count", 12) or 12)
@@ -520,10 +527,7 @@ class OutlineGenerateView(LoginRequiredMixin, View):
                     framework=framework,
                     user=request.user,
                 )
-                messages.success(
-                    request,
-                    f"KI-Outline ({fw_label}, {len(result.nodes)} Beats) generiert."
-                )
+                messages.success(request, f"KI-Outline ({fw_label}, {len(result.nodes)} Beats) generiert.")
                 url = reverse("projects:detail", kwargs={"pk": pk})
                 if version_id:
                     url += f"?outline={version_id}"
@@ -548,22 +552,20 @@ class ChapterWriterView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         from apps.worlds.models import ProjectCharacterLink, ProjectWorldLink
-        active_outline = OutlineVersion.objects.filter(
-            project=self.object, is_active=True
-        ).order_by("-created_at").first()
-        chapters = list(
-            active_outline.nodes.select_related("writing_style", "writing_style__author")
-            .order_by("order")
-        ) if active_outline else []
+
+        active_outline = (
+            OutlineVersion.objects.filter(project=self.object, is_active=True).order_by("-created_at").first()
+        )
+        chapters = (
+            list(active_outline.nodes.select_related("writing_style", "writing_style__author").order_by("order"))
+            if active_outline
+            else []
+        )
         ctx["chapters"] = chapters
         ctx["chapter_count"] = len(chapters)
         ctx["active_outline"] = active_outline
-        ctx["characters"] = ProjectCharacterLink.objects.filter(
-            project=self.object
-        ).select_related()
-        ctx["world_links"] = ProjectWorldLink.objects.filter(
-            project=self.object
-        ).select_related()
+        ctx["characters"] = ProjectCharacterLink.objects.filter(project=self.object).select_related()
+        ctx["world_links"] = ProjectWorldLink.objects.filter(project=self.object).select_related()
         ctx["project_styles"] = self.object.get_all_styles()
         from apps.authoring.defaults import (
             AUTOSAVE_DELAY_MS,
@@ -574,9 +576,12 @@ class ChapterWriterView(LoginRequiredMixin, DetailView):
         )
         from apps.projects.services.preparation_service import get_preparation_status
         from .models import ProjectCitation
-        ctx["project_citations"] = ProjectCitation.objects.filter(
-            project=self.object
-        ).select_related("node").order_by("node__order", "-created_at")
+
+        ctx["project_citations"] = (
+            ProjectCitation.objects.filter(project=self.object)
+            .select_related("node")
+            .order_by("node__order", "-created_at")
+        )
         ctx["prep_status"] = get_preparation_status(self.object, chapters)
         ctx["defaults"] = {
             "target_word_count": DEFAULT_TARGET_WORD_COUNT,
@@ -592,9 +597,7 @@ class ChapterNodeStyleView(LoginRequiredMixin, View):
     """Setzt den Schreibstil für ein einzelnes Kapitel."""
 
     def post(self, request, node_pk):
-        node = get_object_or_404(
-            OutlineNode, pk=node_pk, outline_version__project__owner=request.user
-        )
+        node = get_object_or_404(OutlineNode, pk=node_pk, outline_version__project__owner=request.user)
         style_id = request.POST.get("writing_style") or None
         node.writing_style_id = style_id
         node.save(update_fields=["writing_style"])
@@ -605,22 +608,23 @@ class ChapterResearchView(LoginRequiredMixin, View):
     """Recherchiert Quellen für ein Kapitel und speichert in node.notes."""
 
     def post(self, request, node_pk):
-        node = get_object_or_404(
-            OutlineNode, pk=node_pk, outline_version__project__owner=request.user
-        )
+        node = get_object_or_404(OutlineNode, pk=node_pk, outline_version__project__owner=request.user)
         from .services.citation_service import research_chapter_sources
+
         try:
             result = research_chapter_sources(str(node.pk), max_results=15)
         except Exception as exc:
             logger.exception("ChapterResearchView error for node %s", node_pk)
             return JsonResponse({"ok": False, "error": str(exc)})
 
-        return JsonResponse({
-            "ok": True,
-            "paper_count": result.get("paper_count", 0),
-            "notes_preview": result.get("notes_preview", ""),
-            "citations_created": result.get("citations_created", 0),
-        })
+        return JsonResponse(
+            {
+                "ok": True,
+                "paper_count": result.get("paper_count", 0),
+                "notes_preview": result.get("notes_preview", ""),
+                "citations_created": result.get("citations_created", 0),
+            }
+        )
 
 
 class ChapterContentView(LoginRequiredMixin, View):
@@ -640,14 +644,16 @@ class ChapterContentView(LoginRequiredMixin, View):
     def get(self, request, node_pk):
         node = self._get_node(request, node_pk)
         style = node.get_effective_style()
-        return JsonResponse({
-            "content": node.content,
-            "word_count": node.word_count,
-            "updated_at": node.content_updated_at.isoformat() if node.content_updated_at else None,
-            "writing_style_id": str(node.writing_style_id) if node.writing_style_id else None,
-            "writing_style_name": str(style) if style else None,
-            "style_prompt": style.style_prompt if style else "",
-        })
+        return JsonResponse(
+            {
+                "content": node.content,
+                "word_count": node.word_count,
+                "updated_at": node.content_updated_at.isoformat() if node.content_updated_at else None,
+                "writing_style_id": str(node.writing_style_id) if node.writing_style_id else None,
+                "writing_style_name": str(style) if style else None,
+                "style_prompt": style.style_prompt if style else "",
+            }
+        )
 
     def post(self, request, node_pk):
         node = self._get_node(request, node_pk)
@@ -665,11 +671,13 @@ class ChapterContentView(LoginRequiredMixin, View):
                 setattr(node, model_field, coerce(body[json_key]))
                 update_fields.append(model_field)
         node.save(update_fields=update_fields)
-        return JsonResponse({
-            "ok": True,
-            "word_count": node.word_count,
-            "updated_at": node.content_updated_at.isoformat(),
-        })
+        return JsonResponse(
+            {
+                "ok": True,
+                "word_count": node.word_count,
+                "updated_at": node.content_updated_at.isoformat(),
+            }
+        )
 
 
 class DramaDashboardView(LoginRequiredMixin, View):
@@ -689,20 +697,23 @@ class DramaDashboardView(LoginRequiredMixin, View):
         turning_point_types = []
         try:
             from apps.core.models_lookups_drama import TurningPointTypeLookup
-            turning_point_types = list(
-                TurningPointTypeLookup.objects.order_by("sort_order")
-            )
+
+            turning_point_types = list(TurningPointTypeLookup.objects.order_by("sort_order"))
         except Exception:
             pass
 
-        return render(request, "projects/drama_dashboard.html", {
-            "project": project,
-            "chart_json": chart_json,
-            "chart_data": chart_data,
-            "turning_points": turning_points,
-            "turning_point_types": turning_point_types,
-            "health": health,
-        })
+        return render(
+            request,
+            "projects/drama_dashboard.html",
+            {
+                "project": project,
+                "chart_json": chart_json,
+                "chart_data": chart_data,
+                "turning_points": turning_points,
+                "turning_point_types": turning_point_types,
+                "health": health,
+            },
+        )
 
 
 class DramaNodeUpdateView(LoginRequiredMixin, View):
@@ -711,9 +722,7 @@ class DramaNodeUpdateView(LoginRequiredMixin, View):
     def post(self, request, node_pk):
         from django.http import HttpResponse
 
-        node = get_object_or_404(
-            OutlineNode, pk=node_pk, outline_version__project__owner=request.user
-        )
+        node = get_object_or_404(OutlineNode, pk=node_pk, outline_version__project__owner=request.user)
         tn = request.POST.get("tension_numeric", "")
         if tn:
             try:
@@ -728,9 +737,7 @@ class DramaNodeUpdateView(LoginRequiredMixin, View):
         node.save(update_fields=["tension_numeric", "outcome", "emotion_start", "emotion_end"])
 
         if request.headers.get("HX-Request"):
-            return HttpResponse(
-                f'<span class="badge bg-success text-white ms-1 small">✓ {node.title[:20]}</span>'
-            )
+            return HttpResponse(f'<span class="badge bg-success text-white ms-1 small">✓ {node.title[:20]}</span>')
         return redirect("projects:drama_dashboard", pk=node.outline_version.project.pk)
 
 
@@ -749,6 +756,7 @@ class DramaTurningPointAddView(LoginRequiredMixin, View):
         if tp_type_pk:
             try:
                 from apps.core.models_lookups_drama import TurningPointTypeLookup
+
                 tp_type = TurningPointTypeLookup.objects.filter(pk=tp_type_pk).first()
             except Exception:
                 pass

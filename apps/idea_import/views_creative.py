@@ -9,6 +9,7 @@ Phase-Workflow:
   5. Premise     — (POST) LLM generiert vollständige Premise
   6. Create      — (POST) Buchprojekt aus Idee anlegen
 """
+
 import logging
 
 from django.contrib import messages
@@ -32,16 +33,23 @@ class CreativeDashboardView(LoginRequiredMixin, View):
         recent = sessions.order_by("-updated_at")[:5]
         try:
             from apps.authors.models import WritingStyle
-            style_dnas = WritingStyle.objects.filter(
-                author__owner=request.user, is_active=True
-            ).select_related("author").order_by("author__name", "name")[:5]
+
+            style_dnas = (
+                WritingStyle.objects.filter(author__owner=request.user, is_active=True)
+                .select_related("author")
+                .order_by("author__name", "name")[:5]
+            )
         except Exception:
             style_dnas = []
-        return render(request, self.template_name, {
-            "active_session": active,
-            "recent_sessions": recent,
-            "style_dnas": style_dnas,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "active_session": active,
+                "recent_sessions": recent,
+                "style_dnas": style_dnas,
+            },
+        )
 
 
 class CreativeSessionStartView(LoginRequiredMixin, View):
@@ -75,16 +83,23 @@ class CreativeSessionView(LoginRequiredMixin, View):
         ideas = session.ideas.order_by("order")
         try:
             from apps.authors.models import WritingStyle
-            style_dnas = WritingStyle.objects.filter(
-                author__owner=request.user, is_active=True
-            ).select_related("author").order_by("name")[:10]
+
+            style_dnas = (
+                WritingStyle.objects.filter(author__owner=request.user, is_active=True)
+                .select_related("author")
+                .order_by("name")[:10]
+            )
         except Exception:
             style_dnas = []
-        return render(request, self.template_name, {
-            "session": session,
-            "ideas": ideas,
-            "style_dnas": style_dnas,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "session": session,
+                "ideas": ideas,
+                "style_dnas": style_dnas,
+            },
+        )
 
 
 class CreativeBrainstormView(LoginRequiredMixin, View):
@@ -107,7 +122,7 @@ class CreativeBrainstormView(LoginRequiredMixin, View):
             for i, idea_data in enumerate(ideas):
                 BookIdea.objects.create(
                     session=session,
-                    title=idea_data.get("title", f"Idee {i+1}"),
+                    title=idea_data.get("title", f"Idee {i + 1}"),
                     logline=idea_data.get("logline", ""),
                     hook=idea_data.get("hook", ""),
                     genre=idea_data.get("genre", session.genre),
@@ -141,7 +156,7 @@ class CreativeRefineView(LoginRequiredMixin, View):
             idea.themes = refined.get("themes", idea.themes)
             idea.is_refined = True
             idea.save()
-            messages.success(request, f'\u201e{idea.title}\u201c verfeinert.')
+            messages.success(request, f"\u201e{idea.title}\u201c verfeinert.")
         except Exception as exc:
             logger.exception("Refine error idea=%s: %s", idea_pk, exc)
             messages.error(request, f"Fehler: {exc}")
@@ -182,7 +197,7 @@ class CreativePremiseView(LoginRequiredMixin, View):
             session.phase = CreativeSession.Phase.PREMISE
             session.save(update_fields=["selected_idea", "premise", "phase"])
             label = "Exposé" if is_scientific else "Premise"
-            messages.success(request, f'{label} für \u201e{idea.title}\u201c generiert.')
+            messages.success(request, f"{label} für \u201e{idea.title}\u201c generiert.")
         except Exception as exc:
             logger.exception("Premise error idea=%s: %s", idea_pk, exc)
             messages.error(request, f"Fehler: {exc}")
@@ -209,6 +224,7 @@ class CreativeCreateProjectView(LoginRequiredMixin, View):
                 return redirect("ideas:creative_session", pk=pk)
 
         from apps.projects.models import BookProject
+
         title = request.POST.get("title", idea.title).strip() or idea.title
         description = session.premise or idea.logline
 
@@ -225,6 +241,7 @@ class CreativeCreateProjectView(LoginRequiredMixin, View):
         if content_type_slug:
             try:
                 from apps.projects.models import ContentTypeLookup
+
                 ct = ContentTypeLookup.objects.filter(slug=content_type_slug).first()
                 if ct:
                     project.content_type_lookup = ct
@@ -234,7 +251,7 @@ class CreativeCreateProjectView(LoginRequiredMixin, View):
         session.created_project = project
         session.phase = CreativeSession.Phase.DONE
         session.save(update_fields=["created_project", "phase"])
-        messages.success(request, f'Projekt \u201e{project.title}\u201c angelegt.')
+        messages.success(request, f"Projekt \u201e{project.title}\u201c angelegt.")
         return redirect("projects:detail", pk=project.pk)
 
 
@@ -250,8 +267,10 @@ class CreativeSessionDeleteView(LoginRequiredMixin, View):
 # LLM helpers
 # ---------------------------------------------------------------------------
 
+
 def _get_router():
     from apps.authoring.services.llm_router import LLMRouter
+
     return LLMRouter()
 
 

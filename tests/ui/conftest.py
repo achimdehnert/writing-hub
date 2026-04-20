@@ -12,6 +12,7 @@ Link Report:
   After each test run, generates tests/ui/feedback/reflex-links.md
   with clickable URLs for every tested page — open in browser to verify manually.
 """
+
 import os
 import json
 import logging
@@ -39,6 +40,7 @@ BASE_URL = os.environ.get("REFLEX_BASE_URL", "http://localhost:8000")
 # REFLEX Link Collector — tracks tested URLs per test class
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 class ReflexLinkCollector:
     """Collects tested URLs and generates a clickable report."""
 
@@ -46,16 +48,17 @@ class ReflexLinkCollector:
         self.base_url = base_url.rstrip("/")
         self.entries: list[dict] = []
 
-    def add(self, path: str, test_name: str, test_class: str = "",
-            status: str = "passed", description: str = ""):
-        self.entries.append({
-            "path": path,
-            "url": f"{self.base_url}{path}",
-            "test_name": test_name,
-            "test_class": test_class,
-            "status": status,
-            "description": description,
-        })
+    def add(self, path: str, test_name: str, test_class: str = "", status: str = "passed", description: str = ""):
+        self.entries.append(
+            {
+                "path": path,
+                "url": f"{self.base_url}{path}",
+                "test_name": test_name,
+                "test_class": test_class,
+                "status": status,
+                "description": description,
+            }
+        )
 
     def generate_markdown(self) -> str:
         """Generate a markdown report with clickable links."""
@@ -82,9 +85,7 @@ class ReflexLinkCollector:
             for e in entries:
                 icon = "✅" if e["status"] == "passed" else "❌"
                 desc = f" — {e['description']}" if e["description"] else ""
-                lines.append(
-                    f"- {icon} [{e['path']}]({e['url']}){desc}"
-                )
+                lines.append(f"- {icon} [{e['path']}]({e['url']}){desc}")
             lines.append("")
 
         # Quick-open section
@@ -122,10 +123,12 @@ def reflex_link(path: str, description: str = ""):
         def test_should_load_welten_liste(self, auth_client):
             ...
     """
+
     def decorator(func):
         func._reflex_path = path
         func._reflex_desc = description
         return func
+
     return decorator
 
 
@@ -173,6 +176,7 @@ def pytest_sessionfinish(session, exitstatus):
 
 # ── Django Test Client Fixture (primary — no browser needed) ──────────────
 
+
 @pytest.fixture
 def auth_client(db):
     """Authenticated Django test client.
@@ -202,39 +206,66 @@ def _seed_lookup_data():
     from apps.projects.models import ContentTypeLookup, GenreLookup, AudienceLookup
 
     if not ContentTypeLookup.objects.exists():
-        for i, (name, slug) in enumerate([
-            ("Roman", "novel"), ("Sachbuch", "nonfiction"),
-            ("Kurzgeschichte", "short_story"), ("Drehbuch", "screenplay"),
-            ("Essay", "essay"), ("Novelle", "novella"),
-            ("Graphic Novel", "graphic_novel"),
-            ("Akademische Arbeit", "academic"),
-            ("Wissenschaftliches Paper", "scientific"),
-        ]):
+        for i, (name, slug) in enumerate(
+            [
+                ("Roman", "novel"),
+                ("Sachbuch", "nonfiction"),
+                ("Kurzgeschichte", "short_story"),
+                ("Drehbuch", "screenplay"),
+                ("Essay", "essay"),
+                ("Novelle", "novella"),
+                ("Graphic Novel", "graphic_novel"),
+                ("Akademische Arbeit", "academic"),
+                ("Wissenschaftliches Paper", "scientific"),
+            ]
+        ):
             ContentTypeLookup.objects.create(name=name, slug=slug, order=i)
 
     if not GenreLookup.objects.exists():
-        for i, name in enumerate([
-            "Fantasy", "Science-Fiction", "Thriller", "Krimi", "Romantik",
-            "Horror", "Historischer Roman", "Literarische Fiktion",
-            "Young Adult", "Kinderbuch", "Autobiografie", "Sachbuch",
-            "Reisebericht", "Humor", "Mystery",
-        ]):
+        for i, name in enumerate(
+            [
+                "Fantasy",
+                "Science-Fiction",
+                "Thriller",
+                "Krimi",
+                "Romantik",
+                "Horror",
+                "Historischer Roman",
+                "Literarische Fiktion",
+                "Young Adult",
+                "Kinderbuch",
+                "Autobiografie",
+                "Sachbuch",
+                "Reisebericht",
+                "Humor",
+                "Mystery",
+            ]
+        ):
             GenreLookup.objects.create(name=name, order=i)
 
     if not AudienceLookup.objects.exists():
-        for i, name in enumerate([
-            "Erwachsene", "Young Adult", "Kinder (8-12)",
-            "Kleinkinder (3-7)", "Fachpublikum", "Allgemein",
-        ]):
+        for i, name in enumerate(
+            [
+                "Erwachsene",
+                "Young Adult",
+                "Kinder (8-12)",
+                "Kleinkinder (3-7)",
+                "Fachpublikum",
+                "Allgemein",
+            ]
+        ):
             AudienceLookup.objects.create(name=name, order=i)
 
     # Outline Frameworks (identisch mit Production)
     from apps.projects.models import OutlineFramework
+
     if not OutlineFramework.objects.exists():
         from django.core.management import call_command
+
         call_command("seed_outline_frameworks", verbosity=0)
 
     from apps.projects.models import BookProject
+
     User = get_user_model()
     owner = User.objects.first()
     if owner and not BookProject.objects.exists():
@@ -249,22 +280,21 @@ def _seed_lookup_data():
 
 # ── Signed Token Helper (for Playwright MCP / external browsers) ─────────
 
+
 def generate_dev_login_url(next_url="/projekte/"):
     """Generate a signed auto-login URL (5 min TTL).
 
     Use this to authenticate Playwright MCP or external browsers.
     """
     User = get_user_model()
-    user = (
-        User.objects.filter(is_superuser=True).first()
-        or User.objects.first()
-    )
+    user = User.objects.filter(is_superuser=True).first() or User.objects.first()
     assert user, "No users in database"
     token = signing.dumps({"uid": str(user.pk), "next": next_url})
     return f"/dev-login/?token={token}"
 
 
 # ── Snapshot Helpers ─────────────────────────────────────────────────────
+
 
 def save_snapshot(name: str, content: str) -> Path:
     """Save an ARIA or HTML snapshot for diffing."""

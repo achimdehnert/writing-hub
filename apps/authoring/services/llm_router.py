@@ -40,10 +40,12 @@ def _get_configuration_error_class():
     """aifw.exceptions.ConfigurationError laden — mit Fallback auf Exception."""
     try:
         from aifw.exceptions import ConfigurationError
+
         return ConfigurationError
     except (ImportError, ModuleNotFoundError):
         try:
             from aifw import ConfigurationError  # noqa: F401
+
             return ConfigurationError
         except (ImportError, AttributeError):
             return Exception
@@ -107,13 +109,9 @@ class LLMRouter:
                 )
                 result = future.result(timeout=effective_timeout)
         except concurrent.futures.TimeoutError:
-            raise LLMRoutingError(
-                f"LLM-Timeout ({effective_timeout}s) fuer '{action_code}'. Bitte erneut versuchen."
-            )
+            raise LLMRoutingError(f"LLM-Timeout ({effective_timeout}s) fuer '{action_code}'. Bitte erneut versuchen.")
         except ConfigurationError as exc:
-            raise LLMRoutingError(
-                f"aifw Konfigurationsfehler fuer '{action_code}': {exc}"
-            ) from exc
+            raise LLMRoutingError(f"aifw Konfigurationsfehler fuer '{action_code}': {exc}") from exc
 
         if result.success:
             logger.debug(
@@ -124,9 +122,7 @@ class LLMRouter:
             )
             return result.content
 
-        raise LLMRoutingError(
-            f"aifw completion fehlgeschlagen fuer '{action_code}': {result.error}"
-        )
+        raise LLMRoutingError(f"aifw completion fehlgeschlagen fuer '{action_code}': {result.error}")
 
     async def async_completion(
         self,
@@ -139,6 +135,7 @@ class LLMRouter:
     ) -> str:
         """Async LLM-Call via aifw mit Timeout-Schutz."""
         from aifw import completion as aifw_completion
+
         ConfigurationError = _get_configuration_error_class()
         effective_timeout = timeout or DEFAULT_TIMEOUT_SECONDS
 
@@ -154,13 +151,9 @@ class LLMRouter:
                 timeout=effective_timeout,
             )
         except asyncio.TimeoutError:
-            raise LLMRoutingError(
-                f"Async-Timeout ({effective_timeout}s) fuer '{action_code}'. Bitte erneut versuchen."
-            )
+            raise LLMRoutingError(f"Async-Timeout ({effective_timeout}s) fuer '{action_code}'. Bitte erneut versuchen.")
         except ConfigurationError as exc:
-            raise LLMRoutingError(
-                f"aifw Konfigurationsfehler fuer '{action_code}': {exc}"
-            ) from exc
+            raise LLMRoutingError(f"aifw Konfigurationsfehler fuer '{action_code}': {exc}") from exc
 
         if result.success:
             logger.debug(
@@ -171,9 +164,7 @@ class LLMRouter:
             )
             return result.content
 
-        raise LLMRoutingError(
-            f"aifw async completion fehlgeschlagen fuer '{action_code}': {result.error}"
-        )
+        raise LLMRoutingError(f"aifw async completion fehlgeschlagen fuer '{action_code}': {result.error}")
 
     def get_quality_level_for_tier(self, tier: str) -> int | None:
         """Tier-Name → quality_level. None = catch-all."""

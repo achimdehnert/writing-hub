@@ -3,6 +3,7 @@ SeriesContinuityService — ADR-155
 
 Erstellt LLM-Prompt-Kontext aus den Figur-Kontinuitätsdaten des Vorgänger-Bands.
 """
+
 from __future__ import annotations
 
 
@@ -21,9 +22,9 @@ def build_continuity_context(series, for_volume_number: int) -> str:
     if not prev_volume:
         return ""
 
-    continuities = SeriesCharacterContinuity.objects.filter(
-        series=series, volume=prev_volume
-    ).order_by("character_name")
+    continuities = SeriesCharacterContinuity.objects.filter(series=series, volume=prev_volume).order_by(
+        "character_name"
+    )
 
     lines = [f"=== KONTINUITÄT AUS BAND {for_volume_number - 1} ==="]
     for c in continuities:

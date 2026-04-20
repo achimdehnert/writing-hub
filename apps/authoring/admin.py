@@ -84,4 +84,12 @@ class BatchWriteJobAdmin(admin.ModelAdmin):
     list_filter = ["status"]
     search_fields = ["project__title"]
     raw_id_fields = ["project", "requested_by"]
-    readonly_fields = ["id", "completed_count", "failed_count", "error_log", "current_index", "created_at", "updated_at"]
+    readonly_fields = [
+        "id",
+        "completed_count",
+        "failed_count",
+        "error_log",
+        "current_index",
+        "created_at",
+        "updated_at",
+    ]
