@@ -11,7 +11,7 @@ DEBUG = False
 ALLOWED_HOSTS = ["*"]
 
 # CI migration check: USE_POSTGRES=0 → SQLite in-memory (graph check only)
-if os.environ.get("USE_POSTGRES", "1") == "0":
+if os.environ.get("USE_POSTGRES", "1") == "0":  # hardcoded-ok: test settings
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
