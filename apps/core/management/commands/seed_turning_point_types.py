@@ -15,7 +15,6 @@ from django.core.management.base import BaseCommand
 
 from apps.core.models_lookups_drama import TurningPointTypeLookup
 
-
 TURNING_POINTS = [
     {
         "code": "opening_image",

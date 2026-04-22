@@ -210,3 +210,62 @@ def get_style_prompt_for_writing(style: WritingStyle) -> str:
     if style.taboo_list:
         parts.append("TABOO (niemals): " + "; ".join(style.taboo_list[:5]))
     return "\n".join(parts)
+
+
+# ---------------------------------------------------------------------------
+# Query helpers (ADR-041)
+# ---------------------------------------------------------------------------
+
+
+def get_active_genres():
+    """Return all active GenreProfiles."""
+    from apps.authors.models import GenreProfile
+
+    return GenreProfile.objects.filter(is_active=True)
+
+
+def get_genre_by_pk(pk: int):
+    """Return a single active GenreProfile by pk, or None."""
+    from apps.authors.models import GenreProfile
+
+    return GenreProfile.objects.filter(pk=pk, is_active=True).first()
+
+
+def create_author(owner, name: str, bio: str = ""):
+    """Create and return a new Author."""
+    from apps.authors.models import Author
+
+    return Author.objects.create(owner=owner, name=name, bio=bio)
+
+
+def get_situation_type(genre_profile, slug: str):
+    """Return SituationType for genre_profile + slug, or None."""
+    from apps.authors.models import SituationType
+
+    if not genre_profile:
+        return None
+    return SituationType.objects.filter(genre_profile=genre_profile, slug=slug).first()
+
+
+def save_sample(style, situation: str, text: str, situation_type=None, notes: str = ""):
+    """Create or update a WritingStyleSample."""
+    from apps.authors.models import WritingStyleSample
+
+    obj, _ = WritingStyleSample.objects.update_or_create(
+        style=style,
+        situation=situation,
+        defaults={"text": text, "notes": notes, "situation_type": situation_type},
+    )
+    return obj
+
+
+def create_sample(style, situation: str, text: str, situation_type=None):
+    """Create a new WritingStyleSample (no upsert)."""
+    from apps.authors.models import WritingStyleSample
+
+    return WritingStyleSample.objects.create(
+        style=style,
+        situation=situation,
+        situation_type=situation_type,
+        text=text,
+    )

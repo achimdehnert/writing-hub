@@ -20,7 +20,7 @@ class SearchError(Exception):
 
 
 try:
-    from iil_researchfw import Citation, CitationService, CitationStyle, Author, SourceType
+    from iil_researchfw import Author, Citation, CitationService, CitationStyle, SourceType
     from iil_researchfw.search import AcademicSearchService
 
     _RESEARCHFW_AVAILABLE = True
@@ -31,9 +31,9 @@ except ImportError:
 # Optional: advanced features (SmartSearch, AI Summary) — may not exist in all versions
 _SMART_SEARCH_AVAILABLE = False
 try:
-    from iil_researchfw.search.smart import SmartSearchService
-    from iil_researchfw.analysis.summary import AISummaryService, make_together_llm
     from iil_researchfw.analysis.relevance import RelevanceScorer
+    from iil_researchfw.analysis.summary import AISummaryService, make_together_llm
+    from iil_researchfw.search.smart import SmartSearchService
 
     _SMART_SEARCH_AVAILABLE = True
 except ImportError:

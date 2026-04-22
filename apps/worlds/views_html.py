@@ -410,8 +410,9 @@ class CharacterLinkView(LoginRequiredMixin, View):
         linked_ids = set()
         try:
             from weltenfw.django import get_client
-            from apps.worlds.services import WorldCharacterService
+
             from apps.worlds.models import ProjectCharacterLink
+            from apps.worlds.services import WorldCharacterService
 
             client = get_client()
             world = client.worlds.get(link.weltenhub_world_id)
@@ -440,6 +441,7 @@ class CharacterLinkView(LoginRequiredMixin, View):
 
     def post(self, request, pk):
         from uuid import UUID
+
         from apps.worlds.services import WorldCharacterService
 
         link = get_object_or_404(ProjectWorldLink, pk=pk, project__owner=request.user)
@@ -573,7 +575,7 @@ class RelationshipAddView(LoginRequiredMixin, View):
     """POST: Neue Beziehung zwischen zwei Charakteren anlegen."""
 
     def post(self, request, pk):
-        from apps.worlds.models import ProjectCharacterLink, CharacterRelationship
+        from apps.worlds.models import CharacterRelationship, ProjectCharacterLink
 
         pcl = get_object_or_404(ProjectCharacterLink, pk=pk, project__owner=request.user)
         to_pk = request.POST.get("to_character")

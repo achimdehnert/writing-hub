@@ -26,7 +26,7 @@ from .outline_extraction_service import (
     refine_location_with_llm,
     save_extracted_to_project,
 )
-from .world_builder_service import WorldBuildResult, WorldBuilderService
+from .world_builder_service import WorldBuilderService, WorldBuildResult
 
 __all__ = [
     "CharacterGenerationResult",

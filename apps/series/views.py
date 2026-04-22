@@ -5,10 +5,9 @@ from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 
-from apps.projects.models import GenreLookup
 from .models import BookSeries
 from .serializers import BookSeriesSerializer
-
+from .services import get_genre_lookups
 
 # ── REST API Views ──────────────────────────────────────────────────────
 
@@ -49,7 +48,7 @@ class SeriesCreateView(LoginRequiredMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["genre_options"] = GenreLookup.objects.all().order_by("order", "name")
+        ctx["genre_options"] = get_genre_lookups()
         return ctx
 
     def form_valid(self, form):
@@ -72,7 +71,7 @@ class SeriesUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["genre_options"] = GenreLookup.objects.all().order_by("order", "name")
+        ctx["genre_options"] = get_genre_lookups()
         return ctx
 
     def form_valid(self, form):

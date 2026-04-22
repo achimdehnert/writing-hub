@@ -29,7 +29,7 @@ def get_preparation_status(
         completed_count: int
         total_count: int
     """
-    from django.urls import reverse, NoReverseMatch
+    from django.urls import NoReverseMatch, reverse
 
     content_type = getattr(project, "content_type", DEFAULT_CONTENT_TYPE) or DEFAULT_CONTENT_TYPE
     group = CONTENT_TYPE_GROUPS.get(content_type, "fiction")

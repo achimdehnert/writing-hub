@@ -7,11 +7,12 @@ Async-Pattern: POST start → Celery Task → GET status polling.
 
 import logging
 
-from apps.authoring.defaults import DEFAULT_TARGET_WORD_COUNT
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from apps.authoring.defaults import DEFAULT_TARGET_WORD_COUNT
 
 logger = logging.getLogger(__name__)
 

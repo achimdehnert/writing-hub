@@ -42,6 +42,7 @@ class DocumentNormalizerService:
     def _normalize_docx(cls, content: bytes) -> str:
         try:
             import io
+
             import docx
         except ImportError as exc:
             raise ImportError("python-docx nicht installiert: pip install python-docx") from exc
@@ -58,6 +59,7 @@ class DocumentNormalizerService:
     def _normalize_pdf(cls, content: bytes) -> str:
         try:
             import io
+
             from pypdf import PdfReader
         except ImportError as exc:
             raise ImportError("pypdf nicht installiert: pip install pypdf") from exc

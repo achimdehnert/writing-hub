@@ -155,8 +155,9 @@ class WorldLocationService:
         Alle Orte eines Projekts aus WeltenHub laden.
         Gibt Liste von weltenfw.schema.LocationSchema zurück.
         """
-        from apps.worlds.models import ProjectLocationLink
         from weltenfw.django import get_client
+
+        from apps.worlds.models import ProjectLocationLink
 
         links = ProjectLocationLink.objects.filter(project_id=project_id)
         client = get_client()
@@ -337,8 +338,9 @@ class WorldSceneService:
 
     def get_project_scenes(self, project_id: str) -> list:
         """Alle Szenen eines Projekts aus WeltenHub laden."""
-        from apps.worlds.models import ProjectSceneLink
         from weltenfw.django import get_client
+
+        from apps.worlds.models import ProjectSceneLink
 
         links = ProjectSceneLink.objects.filter(project_id=project_id)
         client = get_client()

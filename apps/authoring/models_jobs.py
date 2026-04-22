@@ -8,9 +8,9 @@ Polling-Endpunkt: GET /authoring/jobs/<chapter_ref>/status/
 import uuid
 
 from django.conf import settings
+from django.db import models
 
 from apps.authoring.defaults import DEFAULT_FRAMEWORK
-from django.db import models
 
 
 class JobStatus(models.TextChoices):

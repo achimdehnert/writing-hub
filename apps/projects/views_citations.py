@@ -332,8 +332,8 @@ class ResearchQueriesAjaxView(LoginRequiredMixin, View):
         chapter_map = {str(ch.pk): ch for ch in chapters}
         order_map = {ch.order: ch for ch in chapters}
 
-        from apps.core.prompt_utils import render_prompt
         from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
+        from apps.core.prompt_utils import render_prompt
 
         try:
             messages = render_prompt(

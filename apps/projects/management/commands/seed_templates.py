@@ -7,7 +7,6 @@ from django.core.management.base import BaseCommand
 
 from apps.projects.models import ProjectTemplate
 
-
 DEFAULTS = [
     {
         "name": "Roman (3-Akt, 80k)",

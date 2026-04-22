@@ -19,6 +19,7 @@ from apps.authoring.defaults import (
     MAX_STYLE_SUGGESTIONS,
 )
 from apps.core.prompt_utils import render_prompt
+
 from .constants import AI_REVIEW_AGENTS, FORMAT_PROFILES
 from .models import BookProject, OutlineNode, OutlineVersion
 
@@ -124,6 +125,7 @@ class ChapterAIReviewView(LoginRequiredMixin, View):
 
     def post(self, request, pk, node_pk):
         from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
+
         from .models import ChapterReview
 
         node = get_object_or_404(OutlineNode, pk=node_pk, outline_version__project__owner=request.user)
@@ -276,7 +278,9 @@ class ChapterAIEditingView(LoginRequiredMixin, View):
 
     def post(self, request, pk, node_pk):
         import concurrent.futures
+
         from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
+
         from .models import ChapterEditing
 
         node = get_object_or_404(OutlineNode, pk=node_pk, outline_version__project__owner=request.user)

@@ -1,8 +1,8 @@
 from django.contrib import admin
 
 from .models import (
-    AuthorStyleDNA,
     AuthoringSession,
+    AuthorStyleDNA,
     ChapterDimensionScore,
     ChapterQualityScore,
     GateDecisionType,

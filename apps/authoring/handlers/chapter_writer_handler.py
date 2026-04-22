@@ -39,9 +39,9 @@ from apps.authoring.defaults import (
     WORLD_ATMOSPHERE_MAX_CHARS,
     WORLD_DESC_MAX_CHARS,
 )
-from apps.core.prompt_utils import render_prompt
 from apps.authoring.services.chapter_production_service import _strip_chapter_heading
 from apps.authoring.services.llm_router import LLMRoutingError, router
+from apps.core.prompt_utils import render_prompt
 
 logger = logging.getLogger(__name__)
 

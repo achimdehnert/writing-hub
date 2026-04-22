@@ -8,16 +8,17 @@ from __future__ import annotations
 
 import json
 
-from apps.authoring.defaults import (
-    DEFAULT_AUDIENCE,
-    DEFAULT_FRAMEWORK,
-    DEFAULT_PROJECT_TARGET_WORDS,
-)
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
+
+from apps.authoring.defaults import (
+    DEFAULT_AUDIENCE,
+    DEFAULT_FRAMEWORK,
+    DEFAULT_PROJECT_TARGET_WORDS,
+)
 
 from .constants import FRAMEWORK_TO_CONTENT_TYPE
 from .models import BookProject, ContentTypeLookup, OutlineFramework

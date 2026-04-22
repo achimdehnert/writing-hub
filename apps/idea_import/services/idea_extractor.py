@@ -10,8 +10,8 @@ import logging
 
 from promptfw.parsing import extract_json
 
-from apps.core.prompt_utils import render_prompt
 from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
+from apps.core.prompt_utils import render_prompt
 
 logger = logging.getLogger(__name__)
 

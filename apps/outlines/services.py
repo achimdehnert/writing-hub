@@ -198,3 +198,46 @@ class OutlineGenerationService:
         except Exception as exc:
             logger.exception("enrich_node error node=%s: %s", node.pk, exc)
             return {"success": False, "error": str(exc)}
+
+
+# ---------------------------------------------------------------------------
+# Query helpers (ADR-041)
+# ---------------------------------------------------------------------------
+
+
+def get_outline_versions_for_project(project):
+    """Return all OutlineVersions for a project, newest first."""
+    from apps.outlines.models import OutlineVersion
+
+    return OutlineVersion.objects.filter(project=project).order_by("-created_at")
+
+
+def get_active_frameworks():
+    """Return all active OutlineFrameworks with prefetched beats."""
+    from apps.outlines.models import OutlineFramework
+
+    return (
+        OutlineFramework.objects.filter(is_active=True)
+        .prefetch_related("beats")
+        .order_by("order", "name")
+    )
+
+
+def deactivate_outline_versions(project) -> None:
+    """Mark all active OutlineVersions for a project as inactive."""
+    from apps.outlines.models import OutlineVersion
+
+    OutlineVersion.objects.filter(project=project, is_active=True).update(is_active=False)
+
+
+def create_outline_node(outline, title: str, order: int, target_words: int):
+    """Create and return a new OutlineNode."""
+    from apps.outlines.models import OutlineNode
+
+    return OutlineNode.objects.create(
+        outline_version=outline,
+        title=title,
+        beat_type="chapter",
+        order=order,
+        target_words=target_words,
+    )

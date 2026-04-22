@@ -2,4 +2,4 @@
 Review & Editing Models (ADR-083)
 """
 
-from .models import ChapterReview, ChapterEditing  # noqa: F401
+from .models import ChapterEditing, ChapterReview  # noqa: F401

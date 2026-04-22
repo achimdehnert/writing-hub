@@ -14,6 +14,7 @@ from django.views.generic import DetailView
 from promptfw.parsing import extract_json_list
 
 from apps.authoring.defaults import MAX_LEKTORAT_FINDINGS
+
 from .models import BookProject, LektoratIssue, LektoratSession, OutlineVersion
 
 logger = logging.getLogger(__name__)

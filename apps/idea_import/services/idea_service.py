@@ -12,8 +12,8 @@ import json
 import logging
 from dataclasses import dataclass, field
 
-from apps.core.prompt_utils import render_prompt
 from apps.authoring.services.llm_router import LLMRouter, LLMRoutingError
+from apps.core.prompt_utils import render_prompt
 
 logger = logging.getLogger(__name__)
 

@@ -21,6 +21,7 @@ from apps.authoring.defaults import (
     distribute_chapter_targets,
 )
 from apps.series.models import BookSeries
+
 from .constants import (
     DEFAULT_CONTENT_TYPES,
     FORMAT_PROFILES,
@@ -287,7 +288,7 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
             .order_by("-created_at")[:10]
         )
 
-        from apps.worlds.models import ProjectWorldLink, ProjectCharacterLink
+        from apps.worlds.models import ProjectCharacterLink, ProjectWorldLink
 
         ctx["world_links"] = ProjectWorldLink.objects.filter(project=project)
         characters = ProjectCharacterLink.objects.filter(project=project).select_related()
@@ -575,6 +576,7 @@ class ChapterWriterView(LoginRequiredMixin, DetailView):
             TOAST_DISPLAY_MS,
         )
         from apps.projects.services.preparation_service import get_preparation_status
+
         from .models import ProjectCitation
 
         ctx["project_citations"] = (

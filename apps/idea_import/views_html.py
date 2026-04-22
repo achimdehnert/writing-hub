@@ -17,6 +17,7 @@ from apps.authoring.defaults import (
     distribute_chapter_targets,
 )
 from apps.projects.models import BookProject
+
 from .models import IdeaImportDraft
 
 logger = logging.getLogger(__name__)
@@ -61,8 +62,8 @@ class IdeaUploadView(LoginRequiredMixin, View):
             UnsupportedFormatError,
         )
         from apps.idea_import.services.idea_extractor import (
-            extract_ideas,
             available_sections,
+            extract_ideas,
         )
 
         project_id = request.POST.get("project_id")
@@ -225,8 +226,9 @@ def _commit_metadata(project, data: dict) -> int:
 
 
 def _commit_outline(project, data: dict, user) -> int:
-    from apps.projects.models import OutlineVersion, OutlineNode
     from django.utils import timezone
+
+    from apps.projects.models import OutlineNode, OutlineVersion
 
     beats = data.get("outline_beats", [])
     chapters = data.get("chapters", [])

@@ -79,6 +79,7 @@ class WorldBuilderService:
         """promptfw.PromptStack laden (YAML-Templates aus templates/prompts/)."""
         try:
             import os
+
             from django.conf import settings
             from promptfw import PromptStack
 
@@ -211,6 +212,7 @@ class WorldBuilderService:
         Gibt Liste von weltenfw.schema.world.WorldSchema zurueck.
         """
         from weltenfw.django import get_client
+
         from apps.worlds.models import ProjectWorldLink
 
         links = ProjectWorldLink.objects.filter(project_id=project_id)

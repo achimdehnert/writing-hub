@@ -11,7 +11,13 @@ from django.views import View
 from django.views.generic import DetailView, ListView
 
 from apps.authoring.defaults import DEFAULT_PROJECT_TARGET_WORDS, DEFAULT_TARGET_WORD_COUNT
-from apps.projects.models import OutlineFramework, OutlineNode, OutlineVersion
+from apps.outlines.services import (
+    create_outline_node,
+    deactivate_outline_versions,
+    get_active_frameworks,
+    get_outline_versions_for_project,
+)
+from apps.projects.models import OutlineNode, OutlineVersion
 
 logger = logging.getLogger(__name__)
 
@@ -45,11 +51,9 @@ class OutlineDetailView(LoginRequiredMixin, DetailView):
         ctx["nodes"] = nodes
         ctx["node_count"] = len(nodes)
         ctx["project"] = project
-        ctx["all_versions"] = OutlineVersion.objects.filter(project=project).order_by("-created_at")
+        ctx["all_versions"] = get_outline_versions_for_project(project)
 
-        frameworks = list(
-            OutlineFramework.objects.filter(is_active=True).prefetch_related("beats").order_by("order", "name")
-        )
+        frameworks = list(get_active_frameworks())
         ctx["frameworks"] = frameworks
         active_fw = next((f for f in frameworks if f.key == outline.source), None)
         ctx["active_fw"] = active_fw
@@ -94,7 +98,7 @@ class OutlineDeleteView(LoginRequiredMixin, View):
 class OutlineSetActiveView(LoginRequiredMixin, View):
     def post(self, request, pk):
         outline = get_object_or_404(OutlineVersion, pk=pk, project__owner=request.user)
-        OutlineVersion.objects.filter(project=outline.project, is_active=True).update(is_active=False)
+        deactivate_outline_versions(outline.project)
         outline.is_active = True
         outline.save(update_fields=["is_active"])
         messages.success(request, f'„{outline.name}" ist jetzt die aktive Version.')
@@ -117,8 +121,8 @@ class OutlineSaveVersionView(LoginRequiredMixin, View):
 
 class OutlineNodeUpdateView(LoginRequiredMixin, View):
     def post(self, request, pk):
-        from django.template.loader import render_to_string
         from django.http import HttpResponse
+        from django.template.loader import render_to_string
 
         node = get_object_or_404(OutlineNode, pk=pk, outline_version__project__owner=request.user)
         node.title = request.POST.get("title", node.title).strip() or node.title
@@ -163,8 +167,8 @@ class OutlineNodeFilterView(LoginRequiredMixin, View):
     """HTMX: Filtert Kapitel-Liste nach beat_type und/oder act (Partial-Response)."""
 
     def get(self, request, pk):
-        from django.template.loader import render_to_string
         from django.http import HttpResponse
+        from django.template.loader import render_to_string
 
         outline = get_object_or_404(OutlineVersion, pk=pk, project__owner=request.user)
         qs = outline.nodes.order_by("order")
@@ -196,13 +200,7 @@ class OutlineNodeAddView(LoginRequiredMixin, View):
         title = request.POST.get("title", "").strip() or f"Kapitel {max_order + 1}"
         ptarget = outline.project.target_word_count or DEFAULT_PROJECT_TARGET_WORDS
         target_words = ptarget // (max_order + 1) or DEFAULT_TARGET_WORD_COUNT
-        OutlineNode.objects.create(
-            outline_version=outline,
-            title=title,
-            beat_type="chapter",
-            order=max_order + 1,
-            target_words=target_words,
-        )
+        create_outline_node(outline, title, order=max_order + 1, target_words=target_words)
         messages.success(request, f'Kapitel „{title}" hinzugefügt.')
         return redirect("outlines:detail", pk=pk)
 

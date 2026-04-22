@@ -30,6 +30,7 @@ from apps.authoring.defaults import (
     MAX_TOKENS_WRITE,
 )
 from apps.core.prompt_utils import render_prompt
+
 from .llm_router import LLMRouter, LLMRoutingError, get_quality_level_for_tier
 from .project_context_service import ProjectContextService
 
@@ -175,9 +176,10 @@ class ChapterProductionService:
     def _build_prompt_stack(self):
         """promptfw.PromptStack laden."""
         try:
-            from promptfw import PromptStack
-            from django.conf import settings
             import os
+
+            from django.conf import settings
+            from promptfw import PromptStack
 
             templates_dir = getattr(settings, "PROMPT_TEMPLATES_DIR", None)
             if templates_dir and os.path.isdir(templates_dir):
@@ -218,7 +220,7 @@ class ChapterProductionService:
 
     def generate_brief(self, chapter_id: str) -> BriefResult:
         """Stage 1: Kapitel-Brief via aifw action_code=chapter_brief."""
-        from apps.projects.models import OutlineVersion, OutlineNode, BookProject
+        from apps.projects.models import BookProject, OutlineNode, OutlineVersion
 
         try:
             project = BookProject.objects.get(pk=self._project_id)

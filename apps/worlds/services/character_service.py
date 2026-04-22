@@ -205,8 +205,9 @@ class WorldCharacterService:
 
     def get_project_characters(self, project_id: str) -> list:
         """Alle Charaktere eines Projekts aus WeltenHub laden."""
-        from apps.worlds.models import ProjectCharacterLink
         from weltenfw.django import get_client
+
+        from apps.worlds.models import ProjectCharacterLink
 
         links = ProjectCharacterLink.objects.filter(project_id=project_id)
         client = get_client()

@@ -8,7 +8,6 @@ from .models import (
     WritingStyleSample,
 )
 
-
 # --- Genre / SituationType ---
 
 

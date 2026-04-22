@@ -13,7 +13,6 @@ Usage:
 
 from django.core.management.base import BaseCommand
 
-
 TURNING_POINT_TYPES = [
     dict(
         code="opening_image",
@@ -272,8 +271,9 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("\nFertig."))
 
     def _seed_turning_point_types(self, force: bool) -> None:
-        from apps.core.models_lookups_drama import TurningPointTypeLookup
         from decimal import Decimal
+
+        from apps.core.models_lookups_drama import TurningPointTypeLookup
 
         self.stdout.write("\n[1] TurningPointTypeLookup ...")
         created = updated = skipped = 0

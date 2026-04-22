@@ -1,5 +1,6 @@
 from django.urls import path
-from . import views_html, views_creative
+
+from . import views_creative, views_html
 
 app_name = "ideas"
 

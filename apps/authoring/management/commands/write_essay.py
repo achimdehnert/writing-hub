@@ -25,14 +25,15 @@ import logging
 import time
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand, CommandError
+
 from apps.authoring.defaults import (
     DEFAULT_CONTENT_TYPE,
     DEFAULT_FRAMEWORK,
     DEFAULT_PROJECT_TARGET_WORDS,
     DEFAULT_TARGET_WORD_COUNT,
 )
-from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand, CommandError
 
 logger = logging.getLogger(__name__)
 

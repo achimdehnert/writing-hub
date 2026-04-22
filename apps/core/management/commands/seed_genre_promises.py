@@ -13,7 +13,6 @@ from django.core.management.base import BaseCommand
 
 from apps.core.models_lookups_drama import GenrePromiseLookup
 
-
 GENRE_PROMISES = [
     {
         "genre_slug": "thriller",

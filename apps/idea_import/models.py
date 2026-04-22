@@ -11,7 +11,6 @@ import uuid
 
 from django.db import models
 
-
 from .models_creative import BookIdea, CreativeSession  # noqa: F401
 
 

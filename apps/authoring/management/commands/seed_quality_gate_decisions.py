@@ -10,7 +10,6 @@ Ausführen nach erster Migration:
 
 from django.core.management.base import BaseCommand
 
-
 GATE_DECISIONS = [
     {
         "code": "approve",

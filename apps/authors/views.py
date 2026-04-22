@@ -12,8 +12,16 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 from django.views.generic import DetailView, ListView
 
-from .models import Author, GenreProfile, SituationType, WritingStyle, WritingStyleSample
 from . import services
+from .models import Author, WritingStyle, WritingStyleSample
+from .services import (
+    create_author,
+    create_sample,
+    get_active_genres,
+    get_genre_by_pk,
+    get_situation_type,
+    save_sample,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -36,11 +44,7 @@ class AuthorCreateView(LoginRequiredMixin, View):
         name = request.POST.get("name", "").strip()
         if not name:
             return render(request, self.template_name, {"error": "Name ist pflicht."})
-        author = Author.objects.create(
-            owner=request.user,
-            name=name,
-            bio=request.POST.get("bio", ""),
-        )
+        author = create_author(request.user, name, bio=request.POST.get("bio", ""))
         messages.success(request, f"Autor \u201e{author.name}\u201c angelegt.")
         return redirect("authors:detail", pk=author.pk)
 
@@ -88,13 +92,12 @@ class WritingStyleCreateView(LoginRequiredMixin, View):
 
     def get(self, request, pk):
         author = get_object_or_404(Author, pk=pk, owner=request.user)
-        genres = GenreProfile.objects.filter(is_active=True)
         return render(
             request,
             self.template_name,
             {
                 "author": author,
-                "genres": genres,
+                "genres": get_active_genres(),
                 **_style_choice_context(),
             },
         )
@@ -112,23 +115,19 @@ class WritingStyleCreateView(LoginRequiredMixin, View):
                 source_text = ""
 
         if not name:
-            genres = GenreProfile.objects.filter(is_active=True)
             return render(
                 request,
                 self.template_name,
                 {
                     "author": author,
-                    "genres": genres,
+                    "genres": get_active_genres(),
                     "error": "Name ist pflicht.",
                     "post": request.POST,
                     **_style_choice_context(),
                 },
             )
 
-        genre_profile = None
-        genre_pk = request.POST.get("genre_profile")
-        if genre_pk:
-            genre_profile = GenreProfile.objects.filter(pk=genre_pk, is_active=True).first()
+        genre_profile = get_genre_by_pk(request.POST.get("genre_profile"))
 
         style = WritingStyle.objects.create(
             author=author,
@@ -194,7 +193,7 @@ class WritingStyleDetailView(LoginRequiredMixin, DetailView):
                 }
             )
         ctx["situation_items"] = situation_items
-        ctx["genres"] = GenreProfile.objects.filter(is_active=True)
+        ctx["genres"] = get_active_genres()
         return ctx
 
 
@@ -203,7 +202,6 @@ class WritingStyleUpdateView(LoginRequiredMixin, View):
 
     def get(self, request, pk):
         style = get_object_or_404(WritingStyle, pk=pk, author__owner=request.user)
-        genres = GenreProfile.objects.filter(is_active=True)
         return render(
             request,
             self.template_name,
@@ -211,7 +209,7 @@ class WritingStyleUpdateView(LoginRequiredMixin, View):
                 "style": style,
                 "author": style.author,
                 "is_edit": True,
-                "genres": genres,
+                "genres": get_active_genres(),
                 "do_list_str": "\n".join(style.do_list or []),
                 "dont_list_str": "\n".join(style.dont_list or []),
                 "taboo_list_str": "\n".join(style.taboo_list or []),
@@ -250,7 +248,7 @@ class WritingStyleUpdateView(LoginRequiredMixin, View):
 
         genre_pk = request.POST.get("genre_profile")
         if genre_pk:
-            style.genre_profile = GenreProfile.objects.filter(pk=genre_pk, is_active=True).first()
+            style.genre_profile = get_genre_by_pk(genre_pk)
         elif genre_pk == "":
             style.genre_profile = None
         style.save()
@@ -375,17 +373,8 @@ class WritingStyleSamplesView(LoginRequiredMixin, View):
                     action_code="chapter_write",
                     messages=prompt_msgs,
                 )
-                situation_type = None
-                if style.genre_profile:
-                    situation_type = SituationType.objects.filter(
-                        genre_profile=style.genre_profile, slug=situation_key
-                    ).first()
-                WritingStyleSample.objects.create(
-                    style=style,
-                    situation=situation_key,
-                    situation_type=situation_type,
-                    text=result,
-                )
+                situation_type = get_situation_type(style.genre_profile, situation_key)
+                create_sample(style, situation_key, result, situation_type=situation_type)
                 return JsonResponse(
                     {
                         "ok": True,
@@ -430,7 +419,7 @@ class SampleUpdateView(LoginRequiredMixin, View):
         situation_label = situation
         llm_hint = ""
         if style.genre_profile:
-            st = SituationType.objects.filter(genre_profile=style.genre_profile, slug=situation).first()
+            st = get_situation_type(style.genre_profile, situation)
             if st:
                 situation_type = st
                 situation_label = st.label
@@ -455,11 +444,7 @@ class SampleUpdateView(LoginRequiredMixin, View):
                     action_code="chapter_write",
                     messages=prompt_msgs,
                 )
-                WritingStyleSample.objects.update_or_create(
-                    style=style,
-                    situation=situation,
-                    defaults={"text": result, "situation_type": situation_type},
-                )
+                save_sample(style, situation, result, situation_type=situation_type)
                 messages.success(request, f"Beispieltext ({situation_label}) neu generiert.")
             except Exception as exc:
                 messages.error(request, f"Fehler: {exc}")
@@ -467,11 +452,7 @@ class SampleUpdateView(LoginRequiredMixin, View):
             text = request.POST.get("text", "").strip()
             notes = request.POST.get("notes", "")
             if text:
-                WritingStyleSample.objects.update_or_create(
-                    style=style,
-                    situation=situation,
-                    defaults={"text": text, "notes": notes, "situation_type": situation_type},
-                )
+                save_sample(style, situation, text, situation_type=situation_type, notes=notes)
                 messages.success(request, "Beispieltext gespeichert.")
 
         return redirect("authors:style_detail", pk=style.pk)
