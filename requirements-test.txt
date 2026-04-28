@@ -1,14 +1,7 @@
-# Test dependencies for writing-hub (ADR-058)
--r requirements.txt
-
-# Platform testing utilities
-platform-context[testing]>=0.3.1
-
-# Test framework
+iil-testkit[smoke]>=0.4.0,<1
 pytest>=8.0
 pytest-django>=4.8
-pytest-cov>=4.1
-pytest-xdist>=3.5
-
-# Factories
+pytest-cov>=5.0
+pytest-xdist>=3.0
+beautifulsoup4>=4.12
 factory-boy>=3.3
